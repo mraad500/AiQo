@@ -8,39 +8,72 @@ final class MainTabBarController: UITabBarController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // إعداد التابات
+        setupViewControllers()
+        setupGlassStyle()
+
+        // 👇 حركة تصغير التاب بار لما تسحب للأسفل (iOS 18)
+        if #available(iOS 18.0, *) {
+            tabBarMinimizeBehavior = .onScrollDown
+        }
+    }
+
+    // MARK: - Tabs setup
+
+    private func setupViewControllers() {
+        // Home
         let home = UINavigationController(rootViewController: HomeViewController())
-        home.tabBarItem = .init(title: "Home", image: UIImage(systemName: "house.fill"), selectedImage: nil)
+        home.tabBarItem = UITabBarItem(
+            title: NSLocalizedString("tab.home", comment: "Home tab title"),
+            image: UIImage(systemName: "house.fill"),
+            selectedImage: nil
+        )
 
+        // Gym
         let gym = UINavigationController(rootViewController: GymViewController())
-        gym.tabBarItem = .init(title: "Gym", image: UIImage(systemName: "figure.strengthtraining.traditional"), selectedImage: nil)
+        gym.tabBarItem = UITabBarItem(
+            title: NSLocalizedString("tab.gym", comment: "Gym tab title"),
+            image: UIImage(systemName: "figure.strengthtraining.traditional"),
+            selectedImage: nil
+        )
 
+        // Kitchen
         let kitchen = UINavigationController(rootViewController: KitchenViewController())
-        kitchen.tabBarItem = .init(title: "Kitchen", image: UIImage(systemName: "fork.knife"), selectedImage: nil)
+        kitchen.tabBarItem = UITabBarItem(
+            title: NSLocalizedString("tab.kitchen", comment: "Kitchen tab title"),
+            image: UIImage(systemName: "fork.knife"),
+            selectedImage: UIImage(systemName: "fork.knife.circle.fill")
+        )
 
+        // Captain
         let captain = UINavigationController(rootViewController: CaptainViewController())
-        captain.tabBarItem = .init(title: "Captain", image: UIImage(systemName: "wand.and.stars"), selectedImage: nil)
+        captain.tabBarItem = UITabBarItem(
+            title: NSLocalizedString("tab.captain", comment: "Captain tab title"),
+            image: UIImage(systemName: "wand.and.stars"),
+            selectedImage: nil
+        )
 
         // نربطهم سوا
         viewControllers = [home, gym, kitchen, captain]
 
         // إعداد المظهر العام
         tabBar.isTranslucent = true
-        setupGlassStyle()
-
-        // 👇 حركة تصغير التاب بار لما تسحب للأسفل (iOS 18)
-        if #available(iOS 18.0, *) {
-            self.tabBarMinimizeBehavior = .onScrollDown
-        }
     }
 
     // MARK: - Glass / Blur Style
+
     private func setupGlassStyle() {
-        // إعداد الـ appearance الأساسي للتاب بار
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
         appearance.shadowColor = .clear
+
+        // لون الأيقونة المختارة (أصفر)
+        let selectedColor = UIColor.systemYellow
+        appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: selectedColor
+        ]
+
         tabBar.standardAppearance = appearance
         tabBar.scrollEdgeAppearance = appearance
 
@@ -55,7 +88,6 @@ final class MainTabBarController: UITabBarController {
             effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
         }
 
-        // نضبط حجمه ومكانه
         effectView.isUserInteractionEnabled = false
         effectView.frame = tabBar.bounds
         effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -63,13 +95,6 @@ final class MainTabBarController: UITabBarController {
         // نخلي الزجاج خلف الأيقونات
         tabBar.insertSubview(effectView, at: 0)
         glassView = effectView
-
-        // نضيف لون مميز للأيقونة المختارة (أصفر)
-        let selectedColor = UIColor.systemYellow
-        appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selectedColor]
-        tabBar.standardAppearance = appearance
-        tabBar.scrollEdgeAppearance = appearance
     }
 
     // نحدث حجم الزجاج إذا تغيّر التاب بار

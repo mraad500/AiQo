@@ -1,0 +1,211 @@
+/* 
+  Localizable.strings.strings
+  AiQo
+
+  Created by Mohammed Raad on 15/11/2025.
+  
+*/
+"tab.home"    = "الرئيسية";
+"tab.gym"     = "النادي";
+"tab.kitchen" = "المطبخ";
+"tab.captain" = "الكابتن";
+"screen.home.title" = "الرئيسية";
+"screen.home.tribe" = "القبيلة";
+"metric.steps.title" = "الخطوات";
+"metric.calories.title" = "السعرات";
+"metric.stand.title" = "الوقوف";
+"metric.water.title" = "الماء";
+"metric.sleep.title" = "النوم";
+"metric.distance.title" = "المسافة";
+"screen.gym.title"              = "النادي";
+"screen.gym.segment.exercises"  = "التمارين";
+"screen.gym.segment.news"       = "الأخبار";
+"screen.gym.segment.plan"       = "خُطتي";
+"screen.gym.segment.rewards"    = "المكافآت";
+"screen.gym.live.start"         = "ابدأ التمرين";
+"screen.gym.live.stop"          = "إيقاف";
+"sheet.workout.quickRunTitle"   = "الجري";
+"sheet.workout.button.start"    = "بدء";
+"sheet.workout.button.end"      = "إنهاء";
+"sheet.profile.title"           = "الملف الشخصي";
+/* Gym */
+"screen.gym.title" = "النادي";
+"screen.gym.segment.exercises" = "التمارين";
+"screen.gym.segment.news" = "الأخبار";
+"screen.gym.segment.plan" = "خُطتي";
+"screen.gym.segment.rewards" = "المكافآت";
+"screen.gym.live.start" = "ابدأ التمرين";
+"screen.gym.live.stop" = "أوقف";
+"sheet.workout.quickRunTitle" = "ركض سريع";
+"sheet.workout.button.start" = "ابدأ";
+"sheet.workout.button.end" = "إنهاء";
+"sheet.profile.title" = "الملف الشخصي";
+/* التمارين */
+"exercise.gratitude.title"      = "امتنان";
+"exercise.walk.indoor.title"    = "مشي داخل البيت";
+"exercise.walk.outdoor.title"   = "مشي خارج البيت";
+"exercise.run.indoor.title"     = "ركض داخل البيت";
+"exercise.run.outdoor.title"    = "ركض خارج البيت";
+/* News sections */
+"screen.news.section.results"      = "النتائج";
+"screen.news.section.favoriteTeam" = "الفريق المفضل";
+"screen.news.section.league"       = "الدوري";
+"screen.news.section.thisWeek"     = "هذا الأسبوع";
+/* News sheets */
+"screen.news.sheet.latestResults.title" = "أحدث النتائج";
+"screen.news.sheet.latestResults.empty" = "ماكو نتائج حديثة.";
+"screen.news.sheet.week.title"          = "مباريات هذا الأسبوع";
+"screen.news.sheet.week.empty"          = "ماكو مباريات هذا الأسبوع.";
+"screen.news.favorite.nextMatch"        = "المباراة القادمة";
+/* Rewards */
+"rewards.badge.5kSteps.title"            = "٥ آلاف خطوة";
+"rewards.badge.5kSteps.subtitle"         = "أول ٥ آلاف خطوة باليوم";
+"rewards.badge.hydration.title"          = "سلسلة الترطيب";
+"rewards.badge.hydration.subtitle"       = "٣ أيام شارب مي كافي";
+"rewards.badge.sleepHero.title"          = "بطل النوم";
+"rewards.badge.sleepHero.subtitle"       = "٧ ساعات نوم متواصلة";
+"rewards.badge.consistencyKing.title"    = "ملك الاستمرارية";
+"rewards.badge.consistencyKing.subtitle" = "٧ أيام متتالية داخل للجيم";
+/* News – matches & sections */
+"news.match.status.ft"          = "نهاية";
+"news.match1.date"              = "أمس • ٨:٠٠ م";
+"news.match2.date"              = "أمس • ٦:٣٠ م";
+/* News – favorite team */
+"news.favorite.nextMatch.time"  = "السبت • ٨:٠٠ م";
+"news.favorite.lastResult"      = "المباراة الأخيرة • فاز ٣–١ ضد إشبيلية";
+"news.favorite.formText"        = "السجل • ف • ف • ت • خ • ف";
+"news.favorite.nextMatch.line"  = "المباراة القادمة • ضد %@ • %@";
+/* News – league card */
+"news.league.highlightMatch"    = "مباراة الأسبوع • ريال مدريد ضد برشلونة";
+"news.league.highlightTime"     = "السبت • ٨:٠٠ م";
+"news.league.matchesCount"      = "٨ مباريات هذا الأسبوع";
+"news.league.liveBadge"         = "مباراة حية ١";
+"screen.kitchen.title" = "المطبخ";
+
+"kitchen.section.breakfast" = "الفطور";
+"kitchen.section.lunch"     = "الغداء";
+"kitchen.section.dinner"    = "العشاء";
+
+"kitchen.meal.breakfast.total" = "تقريبًا ٣٨٠–٤٥٠ سعرة";
+"kitchen.meal.lunch.total"     = "تقريبًا ٥٠٠–٦٠٠ سعرة";
+"kitchen.meal.dinner.total"    = "تقريبًا ٤٠٠–٥٠٠ سعرة";
+
+"kitchen.meal.breakfast.item1" = "بياض بيض مع خضار";
+"kitchen.meal.breakfast.item2" = "شوفان مع حليب";
+"kitchen.meal.breakfast.item3" = "فاكهة";
+
+"kitchen.meal.lunch.item1" = "صدر دجاج مشوي";
+"kitchen.meal.lunch.item2" = "رز بسمتي";
+"kitchen.meal.lunch.item3" = "لبن قليل الدسم";
+
+"kitchen.meal.dinner.item1" = "سمك أو تونة مشوية";
+"kitchen.meal.dinner.item2" = "خضار مطهوة على البخار";
+"kitchen.meal.dinner.item3" = "خبز أو كينوا حبة كاملة";
+
+"kitchen.item.calories" = "%d سعرة";
+
+"kitchen.button.regenerate"       = "إعادة توليد بالذكاء الاصطناعي";
+"kitchen.button.dietModification" = "تعديل النظام الغذائي";
+
+"kitchen.diet.title" = "تعديل النظام الغذائي";
+"kitchen.diet.body"  = "هنا راح تقدر تعدّل سعراتك اليومية، الماكروز، وتفضيلات الأكل.\n\nلاحقًا نربطها مع الذكاء الاصطناعي حتى يقترح لك خطة أكل خاصة بهدفك ووقتك.";
+"screen.captain.title" = "الكابتن حمّودي";
+
+"captain.firstMessage" = "هلو، آني الكابتن حمّودي. شلونك اليوم؟";
+"captain.placeholder"  = "اكتب للكابتن حمّودي…";
+
+"captain.errorMessage" = "صار خلل بسيط بالاتصال هسه، جرّب بعد شوية حبي 🌧️";
+"screen.profile.title" = "الملف الشخصي";
+"screen.profile.chip" = "الملف الشخصي";
+"screen.profile.subtitle" = "خل نرتّب جسمك وعقلك مع بعض";
+
+"screen.profile.section.body" = "بيانات جسمك";
+"screen.profile.section.app"  = "تطبيق AiQo";
+
+"screen.profile.metric.age"    = "العمر";
+"screen.profile.metric.height" = "الطول";
+"screen.profile.metric.weight" = "الوزن";
+"screen.profile.metric.goal"   = "الهدف";
+
+"screen.profile.metric.age.value"    = "%d سنة";
+"screen.profile.metric.height.value" = "%d سم";
+"screen.profile.metric.weight.value" = "%d كغم";
+"screen.profile.metric.goal.valuePrefix" = "";
+
+"screen.profile.metric.height.full" = "الطول (سم)";
+"screen.profile.metric.weight.full" = "الوزن (كغم)";
+
+"screen.profile.app.settings.title"    = "إعدادات التطبيق";
+"screen.profile.app.settings.subtitle" = "الإشعارات، الوحدات، اللغة";
+
+"screen.profile.app.support.title"    = "تواصل مع الدعم";
+"screen.profile.app.support.subtitle" = "إحنا وياك نساعدك";
+"screen.profile.app.support.message"  = "راسلنا على: support@aiqo.app\nأو DM على إنستغرام @hamoudi";
+
+"screen.profile.app.about.title"    = "عن تطبيق AiQo";
+"screen.profile.app.about.subtitle" = "رؤيتنا لصحة الجسد والعقل";
+
+"screen.profile.editName.title"       = "اسمك";
+"screen.profile.editName.message"     = "عدّل اسم العرض مالتك";
+"screen.profile.editName.placeholder" = "الاسم";
+
+"screen.profile.goal.message"    = "شنو هدفك الأساسي هالفترة؟";
+"screen.profile.goal.placeholder" = "تنشيف • قوة • طاقة أعلى";
+
+"action.cancel" = "إلغاء";
+"action.save"   = "حفظ";
+"action.ok"     = "حسِّن";
+"screen.gym.segment.heart" = "قلب";
+"screen.kitchen.title" = "المطبخ";
+"screen.kitchen.breakfast" = "الفطور";
+"screen.kitchen.lunch" = "الغداء";
+"screen.kitchen.dinner" = "العشاء";
+"screen.kitchen.regenerate" = "إعادة توليد بالذكاء الاصطناعي";
+"screen.kitchen.analyze" = "تحليل النظام الغذائي";
+"screen.kitchen.calorie" = "سعرة";
+/// Localizable (Arabic).strings
+"screen.kitchen.noMeals" = "لا توجد وجبات مسجلة لهذا القسم حالياً";
+"screen.kitchen.profileTitle" = "الملف الشخصي";
+"screen.kitchen.profileSubtitle" = "نافذة مؤقتة";
+"screen.kitchen.caloriesUnit" = "سعرة حرارية";
+"screen.kitchen.mealDetailsPlaceholder" = "تفاصيل الوجبة وتوزيع العناصر الغذائية ستظهر هنا لاحقاً";
+{
+  "id": "1",
+  "name_ar": "بياض بيض مع خضار",
+  "name_en": "Egg Whites with Veggies",
+  "calories_kcal": 250,
+  "meal_type": "breakfast"
+}
+"meal.steak" = "ستيك لحم مشوي";
+"meal.steak.calories" = "560 سعرة";
+
+"meal.tunaSalad" = "تونة مع سلطة";
+"meal.tunaSalad.calories" = "380 سعرة";
+"your_level_with_aiqo" = "مستواك مع AiQo";
+"level" = "المستوى";
+"points" = "نقطة";
+
+"your_body_data" = "بيانات جسمك";
+
+"age" = "سنة";
+"height" = "سم";
+"weight" = "كغم";
+
+"goal_strength" = "أقوى • أنحف";
+
+"gender" = "الجنس";
+"male" = "ذكر";
+"female" = "أنثى";
+
+"daily_goals" = "الأهداف اليومية";
+"steps_goal" = "هدف الخطوات";
+"calories_goal" = "هدف السعرات";
+
+"app_settings" = "إعدادات التطبيق";
+"app_settings_sub" = "الإشعارات، الوحدات، اللغة";
+
+"contact_support" = "الدعم الفني";
+"contact_support_sub" = "نحن هنا لمساعدتك";
+
+"about_aiqo" = "عن AiQo";
+"about_aiqo_sub" = "مهمتنا لرفاهية الإنسان";

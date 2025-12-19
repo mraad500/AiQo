@@ -1,0 +1,205 @@
+/* 
+  Localizable.strings.strings
+  AiQo
+
+  Created by Mohammed Raad on 15/11/2025.
+  
+*/
+"tab.home"    = "Home";
+"tab.gym"     = "Gym";
+"tab.kitchen" = "Kitchen";
+"tab.captain" = "Captain";
+"screen.home.title" = "Home";
+"screen.home.tribe" = "Tribe";
+"metric.steps.title" = "Steps";
+"metric.calories.title" = "Calories";
+"metric.stand.title" = "Stand";
+"metric.water.title" = "Water";
+"metric.sleep.title" = "Sleep";
+"metric.distance.title" = "Distance";
+"screen.gym.title"              = "Gym";
+"screen.gym.segment.exercises"  = "Exercises";
+"screen.gym.segment.news"       = "News";
+"screen.gym.segment.plan"       = "My Plan";
+"screen.gym.segment.rewards"    = "Rewards";
+"screen.gym.live.start"         = "Start workout";
+"screen.gym.live.stop"          = "Stop";
+"sheet.workout.quickRunTitle"   = "Running";
+"sheet.workout.button.start"    = "Start";
+"sheet.workout.button.end"      = "End";
+"sheet.profile.title"           = "Profile";
+/* Gym */
+"screen.gym.title" = "Gym";
+"screen.gym.segment.exercises" = "Exercises";
+"screen.gym.segment.news" = "News";
+"screen.gym.segment.plan" = "My Plan";
+"screen.gym.segment.rewards" = "Rewards";
+"screen.gym.live.start" = "Start workout";
+"screen.gym.live.stop" = "Stop";
+"sheet.workout.quickRunTitle" = "Quick run";
+"sheet.workout.button.start" = "Start";
+"sheet.workout.button.end" = "End";
+"sheet.profile.title" = "Profile";
+/* Exercises */
+"exercise.gratitude.title"      = "Gratitude";
+"exercise.walk.indoor.title"    = "Walk inside";
+"exercise.walk.outdoor.title"   = "Walking outside";
+"exercise.run.indoor.title"     = "Running indoor";
+"exercise.run.outdoor.title"    = "Running outside";
+/* News sections */
+"screen.news.section.results"      = "RESULTS";
+"screen.news.section.favoriteTeam" = "FAVORITE TEAM";
+"screen.news.section.league"       = "LEAGUE";
+"screen.news.section.thisWeek"     = "THIS WEEK";
+/* News sheets */
+"screen.news.sheet.latestResults.title" = "Latest Results";
+"screen.news.sheet.latestResults.empty" = "No recent results.";
+"screen.news.sheet.week.title"          = "Matches this week";
+"screen.news.sheet.week.empty"          = "No matches this week.";
+"screen.news.favorite.nextMatch"        = "Next match";
+/* Rewards */
+"rewards.badge.5kSteps.title"          = "5K Steps";
+"rewards.badge.5kSteps.subtitle"       = "First 5,000 steps in a day";
+"rewards.badge.hydration.title"        = "Hydration Streak";
+"rewards.badge.hydration.subtitle"     = "3 days with enough water";
+"rewards.badge.sleepHero.title"        = "Sleep Hero";
+"rewards.badge.sleepHero.subtitle"     = "7 hours of continuous sleep";
+"rewards.badge.consistencyKing.title"  = "Consistency King";
+"rewards.badge.consistencyKing.subtitle" = "7 consecutive days at the gym";
+/* News – matches & sections */
+"news.match.status.ft"          = "FT";
+"news.match1.date"              = "Yesterday • 8:00 PM";
+"news.match2.date"              = "Yesterday • 6:30 PM";
+/* News – favorite team */
+"news.favorite.nextMatch.time"  = "Sat • 8:00 PM";
+"news.favorite.lastResult"      = "Last match • Won 3–1 vs Sevilla";
+"news.favorite.formText"        = "Form • W • W • D • L • W";
+"news.favorite.nextMatch.line"  = "Next match • vs %@ • %@";
+/* News – league card */
+"news.league.highlightMatch"    = "Match of the week • Real Madrid vs Barcelona";
+"news.league.highlightTime"     = "Sat • 8:00 PM";
+"news.league.matchesCount"      = "8 matches scheduled this week";
+"news.league.liveBadge"         = "1 LIVE";
+"screen.kitchen.title" = "Kitchen";
+
+"kitchen.section.breakfast" = "Breakfast";
+"kitchen.section.lunch"     = "Lunch";
+"kitchen.section.dinner"    = "Dinner";
+
+"kitchen.meal.breakfast.total" = "Approx. 380–450 kcal";
+"kitchen.meal.lunch.total"     = "Approx. 500–600 kcal";
+"kitchen.meal.dinner.total"    = "Approx. 400–500 kcal";
+
+"kitchen.meal.breakfast.item1" = "Egg whites with veggies";
+"kitchen.meal.breakfast.item2" = "Oatmeal with milk";
+"kitchen.meal.breakfast.item3" = "Fruit";
+
+"kitchen.meal.lunch.item1" = "Grilled chicken breast";
+"kitchen.meal.lunch.item2" = "Basmati rice";
+"kitchen.meal.lunch.item3" = "Low-fat yogurt";
+
+"kitchen.meal.dinner.item1" = "Grilled fish or tuna";
+"kitchen.meal.dinner.item2" = "Steamed vegetables";
+"kitchen.meal.dinner.item3" = "Whole-grain bread or quinoa";
+
+"kitchen.item.calories" = "%d kcal";
+
+"kitchen.button.regenerate"       = "Regenerate with AI";
+"kitchen.button.dietModification" = "Diet modification";
+
+"kitchen.diet.title" = "Diet modification";
+"kitchen.diet.body"  = "Here you will be able to adjust your daily calories, macros and food preferences.\n\nLater we will connect this with AI to generate a customized meal plan for your goal and schedule.";
+"screen.captain.title" = "Captain Hamoudi";
+
+"captain.firstMessage" = "Hello, I am Captain Hamoudi. How are you?";
+"captain.placeholder"  = "Write to Captain Hamoudi…";
+
+"captain.errorMessage" = "There was a small connection issue now. Please try again in a moment.";
+"screen.profile.title" = "Profile";
+"screen.profile.chip" = "Profile";
+"screen.profile.subtitle" = "Let’s optimize your body & mind";
+
+"screen.profile.section.body" = "Your Body Data";
+"screen.profile.section.app"  = "AiQo";
+
+"screen.profile.metric.age"   = "Age";
+"screen.profile.metric.height" = "Height";
+"screen.profile.metric.weight" = "Weight";
+"screen.profile.metric.goal"   = "Goal";
+
+"screen.profile.metric.age.value"    = "%d years";
+"screen.profile.metric.height.value" = "%d cm";
+"screen.profile.metric.weight.value" = "%d kg";
+"screen.profile.metric.goal.valuePrefix" = "";
+
+"screen.profile.metric.height.full" = "Height (cm)";
+"screen.profile.metric.weight.full" = "Weight (kg)";
+
+"screen.profile.app.settings.title"    = "App Settings";
+"screen.profile.app.settings.subtitle" = "Notifications, units, language";
+
+"screen.profile.app.support.title"    = "Contact Support";
+"screen.profile.app.support.subtitle" = "We’re here to help you";
+"screen.profile.app.support.message"  = "Contact us at: support@aiqo.app\nor DM on Instagram @hamoudi";
+
+"screen.profile.app.about.title"    = "About AiQo";
+"screen.profile.app.about.subtitle" = "Our mission for human wellbeing";
+
+"screen.profile.editName.title"       = "Your Name";
+"screen.profile.editName.message"     = "Edit your display name";
+"screen.profile.editName.placeholder" = "Name";
+
+"screen.profile.goal.message"    = "What's your main goal now?";
+"screen.profile.goal.placeholder" = "Stronger • Leaner";
+
+"action.cancel" = "Cancel";
+"action.save"   = "Save";
+"action.ok"     = "OK";
+"screen.gym.segment.heart" = "Heart";
+"screen.kitchen.title" = "Kitchen";
+"screen.kitchen.breakfast" = "Breakfast";
+"screen.kitchen.lunch" = "Lunch";
+"screen.kitchen.dinner" = "Dinner";
+"screen.kitchen.regenerate" = "Regenerate with AI";
+"screen.kitchen.analyze" = "Nutrition Analysis";
+"screen.kitchen.caloriesUnit" = "kcal";
+"screen.kitchen.noMeals" = "No meals available for this section.";
+"screen.kitchen.profileTitle" = "Profile";
+"screen.kitchen.profileSubtitle" = "Temporary sheet";
+"screen.kitchen.mealDetailsPlaceholder" = "Meal details and nutrition breakdown will appear here soon.";
+"meal.eggVeggies" = "Egg Whites with Veggies";
+"meal.eggVeggies.calories" = "250 kcal";
+
+"meal.steak" = "Grilled Beef Steak";
+"meal.steak.calories" = "560 kcal";
+
+"meal.tunaSalad" = "Tuna Salad";
+"meal.tunaSalad.calories" = "380 kcal";
+"your_level_with_aiqo" = "Your Level with AiQo";
+"level" = "Level";
+"points" = "Points";
+
+"your_body_data" = "Your Body Data";
+
+"age" = "years";
+"height" = "cm";
+"weight" = "kg";
+
+"goal_strength" = "Stronger • Leaner";
+
+"gender" = "Gender";
+"male" = "Male";
+"female" = "Female";
+
+"daily_goals" = "Daily Goals";
+"steps_goal" = "Steps Goal";
+"calories_goal" = "Calories Goal";
+
+"app_settings" = "App Settings";
+"app_settings_sub" = "Notifications, units, language";
+
+"contact_support" = "Contact Support";
+"contact_support_sub" = "We’re here to help you";
+
+"about_aiqo" = "About AiQo";
+"about_aiqo_sub" = "Our mission for human wellbeing";

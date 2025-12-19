@@ -1,4 +1,13 @@
 import UIKit
-extension UIImage {
-    static func symbol(_ name: String) -> UIImage? { UIImage(systemName: name) }
+
+extension UIImageView {
+    func setRemoteImage(_ url: URL?, placeholder: UIImage? = nil) {
+        // أول شي حط الـ placeholder إن وجد
+        if let placeholder {
+            self.image = placeholder
+        }
+
+        // استعمل الدالة الحقيقية من ImageLoader
+        ImageLoader.shared.setImage(on: self, from: url)
+    }
 }

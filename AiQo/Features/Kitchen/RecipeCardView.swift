@@ -1,16 +1,58 @@
-import UIKit
+// Features/Kitchen/RecipeCardView.swift
 
-final class RecipeCardView: UIView {
-    private let title = UILabel()
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        let bg = GlassCardView()
-        addSubview(bg); bg.pinToEdges(of: self)
-        title.font = .boldSystemFont(ofSize: 18)
-        title.text = "AI Meal"
-        bg.contentView.addSubview(title)
-        title.pinToEdges(of: bg.contentView, insets: .init(top: 16, leading: 16, bottom: 16, trailing: 16))
-        heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+import SwiftUI
+
+struct RecipeCardView: View {
+    let meal: Meal
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+
+            Image(meal.imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                // اسم الوجبة مترجم
+                Text(meal.localizedName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.trailing)
+
+                // السعرات
+                Text("\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.black.opacity(0.7))
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Spacer()
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.kitchenMint)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 4)
     }
-    required init?(coder: NSCoder) { fatalError() }
 }
+
+#if DEBUG
+struct RecipeCardView_Previews: PreviewProvider {
+    static var previews: some View {
+        RecipeCardView(
+            meal: Meal(
+                id: 1,
+                name_ar: "بياض بيض مع خضار",
+                calories_kcal: 250,
+                meal_type: .breakfast
+            )
+        )
+        .environment(\.layoutDirection, .rightToLeft)
+        .padding()
+    }
+}
+#endif

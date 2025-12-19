@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "name_ar": "بياض بيض مع خضار",
+    "name_en": "Egg Whites with Veggies",
+    "calories_kcal": 250,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 2,
+    "name_ar": "ستيك لحم مشوي",
+    "name_en": "Grilled Beef Steak",
+    "calories_kcal": 520,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 3,
+    "name_ar": "تونة مع سلطة",
+    "name_en": "Tuna Salad",
+    "calories_kcal": 380,
+    "meal_type": "dinner"
+  },
+  {
+    "id": 4,
+    "name_ar": "بياض بيض مع خضار - نسخة ثانية",
+    "name_en": "Egg Whites with Veggies - 2",
+    "calories_kcal": 300,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 5,
+    "name_ar": "ستيك لحم مشوي مع صلصة",
+    "name_en": "Grilled Beef Steak with Sauce",
+    "calories_kcal": 566,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 1009,
+    "name_ar": "دجاج مشوي مع سلطة",
+    "name_en": "Grilled Chicken with Salad",
+    "calories_kcal": 400,
+    "meal_type": "dinner"
+  }
+]
