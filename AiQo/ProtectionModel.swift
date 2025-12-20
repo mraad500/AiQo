@@ -7,6 +7,9 @@ internal import Combine
 @MainActor
 final class ProtectionModel: ObservableObject {
 
+    // 👇 1. هذا هو السطر الجديد (المفتاح السحري)
+    static let shared = ProtectionModel()
+
     @Published var selection = FamilyActivitySelection()
     @Published private(set) var isAuthorized: Bool = false
 
@@ -31,6 +34,7 @@ final class ProtectionModel: ObservableObject {
         return "Apps: \(apps) | Categories: \(cats) | Web: \(web)"
     }
 
+    // خلينا الـ init متاح حتى اذا ردنا نستخدمه بغير مكان، بس الاعتماد الكلي حيصير على shared
     init() {
         refreshAuthorization()
     }

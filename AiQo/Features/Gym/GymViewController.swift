@@ -15,8 +15,6 @@ final class GlassHeader: UIView {
     }()
 
     private let effectView: UIVisualEffectView = {
-        // نستخدم الـ Blur العادي لضمان التوافق مع كل الأنظمة حالياً
-        // يمكنك تجربة .systemUltraThinMaterial ليعطي تأثيراً مشابهاً للزجاج
         return UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
     }()
 
@@ -26,11 +24,8 @@ final class GlassHeader: UIView {
         layer.masksToBounds = false
 
         effectView.translatesAutoresizingMaskIntoConstraints = false
-        // ✅ الحل المضمون: التدوير الكلاسيكي
         effectView.layer.cornerRadius = 22
         effectView.layer.masksToBounds = true
-        
-        // ❌ حذفنا السطر الذي يسبب المشكلة (cornerConfiguration) مؤقتاً
         
         addSubview(effectView)
 
@@ -78,11 +73,9 @@ final class GlassHeader: UIView {
 // MARK: - GymViewController
 final class GymViewController: BaseViewController {
 
-    // ✅ استخدام ألوانك الخاصة
     private let mint = Colors.mint
     private let sand = Colors.sand
 
-    // ✅ استخدام الهيدر الخاص بك
     private let titleHeader = LargeTitleHeaderView(
         title: NSLocalizedString("screen.gym.title", comment: "Gym header title")
     )
@@ -111,7 +104,7 @@ final class GymViewController: BaseViewController {
 
         segmentedChanged(segmentedHeader.segmented)
         
-        // ✅ تفعيل الاتصال عند فتح الشاشة
+        // ✅ تفعيل الاتصال عند فتح الشاشة لضمان جاهزية المزامنة
         PhoneConnectivityManager.shared.activate()
     }
 
@@ -124,7 +117,6 @@ final class GymViewController: BaseViewController {
         titleHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(titleHeader)
 
-        // ✅ استخدام خطك الخاص
         titleHeader.titleLabel.font = .aiqoRounded(size: 32, weight: .heavy)
 
         NSLayoutConstraint.activate([
@@ -338,7 +330,6 @@ final class LiveWorkoutSheet: UIViewController {
     }
 
     private func bindSession() {
-        // Heart Rate
         LiveWorkoutSession.shared.$heartRate
             .receive(on: RunLoop.main)
             .sink { [weak self] bpm in
@@ -347,7 +338,6 @@ final class LiveWorkoutSheet: UIViewController {
             }
             .store(in: &cancellables)
 
-        // Active Energy (kcal)
         LiveWorkoutSession.shared.$activeEnergy
             .receive(on: RunLoop.main)
             .sink { [weak self] kcal in
@@ -355,7 +345,6 @@ final class LiveWorkoutSheet: UIViewController {
             }
             .store(in: &cancellables)
 
-        // Elapsed
         LiveWorkoutSession.shared.$elapsed
             .receive(on: RunLoop.main)
             .sink { [weak self] t in
@@ -364,7 +353,6 @@ final class LiveWorkoutSheet: UIViewController {
             }
             .store(in: &cancellables)
 
-        // ✅ Distance: الآن مربوطة بالبيانات الحية (New Feature)
         LiveWorkoutSession.shared.$distance
             .receive(on: RunLoop.main)
             .sink { [weak self] meters in
@@ -375,19 +363,20 @@ final class LiveWorkoutSheet: UIViewController {
     }
 
     @objc private func startTapped() {
+        print("📱 Start Button Tapped on iPhone") // ✅ Debug Print
+        
         let activityType = self.activityType
+        
+        // ✅ تغيير حالة الزر ليعرف المستخدم أن الاتصال جاري
+        startBtn.isEnabled = false
+        startBtn.setTitle("Connecting...", for: .normal)
+        startBtn.backgroundColor = .gray
 
         // ✅ إرسال الأمر للساعة عبر ConnectivityManager
         PhoneConnectivityManager.shared.startWorkoutOnWatch(
             activityTypeRaw: Int(activityType.rawValue),
             locationTypeRaw: inferredLocationType(for: activityType).rawValue
         )
-        
-        // UI Feedback
-        startBtn.isEnabled = false
-        UIView.animate(withDuration: 0.2) {
-            self.startBtn.alpha = 0.5
-        }
     }
     
     // helper to map activity to location
@@ -401,11 +390,15 @@ final class LiveWorkoutSheet: UIViewController {
     }
 
     @objc private func endTapped() {
+        print("📱 End Button Tapped on iPhone")
+        
         // ✅ إيقاف التمرين عبر الساعة
         PhoneConnectivityManager.shared.stopWorkoutOnWatch()
         
         // Reset UI
         startBtn.isEnabled = true
+        startBtn.setTitle(NSLocalizedString("sheet.workout.button.start", comment: "Start"), for: .normal)
+        startBtn.backgroundColor = .systemGreen
         startBtn.alpha = 1.0
     }
 
@@ -415,7 +408,6 @@ final class LiveWorkoutSheet: UIViewController {
         v.layer.cornerRadius = 24
 
         label.textColor = .black
-        // ✅ استخدام خطك الخاص
         label.font = .aiqoRounded(size: big ? 36 : 28, weight: .black)
         label.translatesAutoresizingMaskIntoConstraints = false
 

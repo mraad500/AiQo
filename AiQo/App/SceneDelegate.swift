@@ -1,6 +1,7 @@
 import UIKit
 import UserNotifications
 import FamilyControls
+import SwiftUI // ضفنا هاي لأن نحتاجها اذا ردنا نغلف فيوات
 
 private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
@@ -9,6 +10,9 @@ private enum OnboardingKeys {
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+
+    // 1. (مهم) نصنع نسخة وحدة من "عقل الحماية" ونخليها هنا
+    let protectionModel = ProtectionModel()
 
     // MARK: - UIScene Lifecycle
     func scene(
@@ -19,16 +23,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
         let window = UIWindow(windowScene: windowScene)
 
-        // فحص: هل المستخدم قديم أم جديد؟
         let isUserOnboarded = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
         
         if isUserOnboarded {
-            // مستخدم قديم -> شاشة رئيسية فوراً
             window.rootViewController = makeMainRoot()
         } else {
-            // مستخدم جديد -> شاشة التقييم (Onboarding)
-            // تأكد أن LegacyCalculationViewController هو اسم ملفك الصحيح
             let legacyVC = LegacyCalculationViewController()
+            
+            // اذا شاشة الاونبوردنج تحتاج المودل هم تكدر تدزه هنا، بس اعتقد ما تحتاجه هسه
+            
             let nav = UINavigationController(rootViewController: legacyVC)
             nav.navigationBar.prefersLargeTitles = true
             window.rootViewController = nav
@@ -42,34 +45,38 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
 
-    // MARK: - الانتقال والطلبات (هذا الجزء المهم)
+    // MARK: - الانتقال والطلبات
 
-    // 1. هذه الدالة تستدعيها لما المستخدم يضغط "إنهاء" في آخر شاشة
     func onboardingFinished() {
         Task {
-            // أ. طلب إذن الدرع والمراقب
-            try? await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            // 2. (تعديل) نطلب الصلاحية عن طريق المودل مو مباشرة
+            // هذا يضمن ان المتغير isAuthorized داخل المودل يصير True
+            await protectionModel.requestAuthorization()
             
-            // ب. بعد ما يوافق (أو يرفض)، ننقله للشاشة الرئيسية
             await MainActor.run {
                 self.switchToMainInterface()
             }
         }
     }
 
-    // 2. دالة بناء الشاشة الرئيسية
+    // 3. (تعديل) دالة بناء الشاشة الرئيسية وحقن المودل
     private func makeMainRoot() -> UIViewController {
-        return MainTabBarController()
+        let tabBar = MainTabBarController()
+        
+        // ⚠️ مهم جداً: هنا لازم توصل المودل للتاب بار
+        // بما ان MainTabBarController هو UIKit، لازم تسويله متغير يستقبل المودل
+        // مثلاً تكون ضايف بداخله: var model: ProtectionModel?
+        
+        // tabBar.model = protectionModel  <-- فعل هذا السطر بعد ما تعدل التاب بار
+        
+        return tabBar
     }
 
-    // 3. تنفيذ الانتقال بصرياً
     private func switchToMainInterface() {
         guard let window = window else { return }
         
-        // حفظ أن المستخدم أكمل التسجيل
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
         
-        // تأثير انتقال ناعم
         let mainRoot = makeMainRoot()
         UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: {
             window.rootViewController = mainRoot

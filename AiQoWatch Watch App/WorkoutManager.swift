@@ -1,270 +1,175 @@
 import Foundation
 import HealthKit
-import Combine
-import os
+internal import Combine
 
-@MainActor
-final class WorkoutManager: NSObject, ObservableObject {
-
-    static let shared = WorkoutManager()
-
-    private let log = Logger(subsystem: "com.aiqo.app.watch", category: "WorkoutManager")
-
-    private let healthStore = HKHealthStore()
-    private var session: HKWorkoutSession?
-    private var builder: HKLiveWorkoutBuilder?
-
-    @Published private(set) var workoutID: String?
-    @Published private(set) var isAuthorized: Bool = false
-    @Published private(set) var isRunning: Bool = false
-    @Published private(set) var sessionState: HKWorkoutSessionState = .notStarted
-
-    @Published private(set) var heartRateBPM: Double = 0
-    @Published private(set) var activeEnergyKcal: Double = 0
-    @Published private(set) var distanceMeters: Double = 0
-    @Published private(set) var elapsed: TimeInterval = 0
-
-    private var startDate: Date?
-    private var tickerCancellable: AnyCancellable?
-
-    private override init() { super.init() }
-
+class WorkoutManager: NSObject, ObservableObject {
+    @Published var selectedWorkout: HKWorkoutActivityType?
+    @Published var sessionLocation: HKWorkoutSessionLocationType = .unknown
+    @Published var showingSummaryView: Bool = false {
+        didSet {
+            if showingSummaryView == false {
+                resetWorkout()
+            }
+        }
+    }
+    
+    // Live Data
+    @Published var averageHeartRate: Double = 0
+    @Published var heartRate: Double = 0
+    @Published var activeEnergy: Double = 0
+    @Published var distance: Double = 0
+    @Published var workout: HKWorkout?
+    
+    // ✅ التعديل هنا: جعلناه @Published ليتم قراءته من الـ View لتشغيل العداد
+    @Published var startDate: Date?
+    
+    // Internal State
+    let healthStore = HKHealthStore()
+    var session: HKWorkoutSession?
+    var builder: HKLiveWorkoutBuilder?
+    
+    // معرّف الجلسة للمزامنة
+    private var currentWorkoutID: String = UUID().uuidString
+    
     func requestAuthorization() {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            isAuthorized = false
-            return
-        }
-
-        let types: Set<HKQuantityType> = [
-            HKObjectType.quantityType(forIdentifier: .heartRate)!,
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
+        let typesToShare: Set = [HKQuantityType.workoutType()]
+        let typesToRead: Set = [
+            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+            HKObjectType.activitySummaryType()
         ]
-
-        Task {
-            do {
-                try await healthStore.requestAuthorization(toShare: [], read: Set(types))
-                self.isAuthorized = true
-            } catch {
-                self.isAuthorized = false
-                WatchConnectivityManager.shared.publishError("HealthKit auth failed: \(error.localizedDescription)")
-            }
-        }
+        healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { (success, error) in }
     }
-
-    func startFromPhone(workoutID: String, activityTypeRaw: Int, locationTypeRaw: Int) {
-        if isRunning, self.workoutID == workoutID { return }
+    
+    // Start Workout
+    func startWorkout(workoutType: HKWorkoutActivityType, location: HKWorkoutSessionLocationType = .unknown) {
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = workoutType
+        configuration.locationType = location
         
-        if isRunning {
-            stop()
-        }
-
-        self.workoutID = workoutID
-
-        let activity = HKWorkoutActivityType(rawValue: UInt(activityTypeRaw)) ?? .running
-        let location = HKWorkoutSessionLocationType(rawValue: locationTypeRaw) ?? .outdoor
-
-        startWorkout(activityType: activity, locationType: location)
-    }
-
-    private func startWorkout(activityType: HKWorkoutActivityType, locationType: HKWorkoutSessionLocationType) {
-        guard isAuthorized else {
-            WatchConnectivityManager.shared.publishError("Not authorized for HealthKit.")
+        do {
+            session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+            builder = session?.associatedWorkoutBuilder()
+        } catch {
             return
         }
         
-        // تصفير العدادات
-        heartRateBPM = 0
-        activeEnergyKcal = 0
-        distanceMeters = 0
-        elapsed = 0
-
-        let config = HKWorkoutConfiguration()
-        config.activityType = activityType
-        config.locationType = locationType
-
-        do {
-            let newSession = try HKWorkoutSession(healthStore: healthStore, configuration: config)
-            let newBuilder = newSession.associatedWorkoutBuilder()
-
-            newSession.delegate = self
-            newBuilder.delegate = self
-            newBuilder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: config)
-
-            session = newSession
-            builder = newBuilder
-
-            let sd = Date()
-            startDate = sd
-            isRunning = true
-            sessionState = .running
-
-            newSession.startActivity(with: sd)
-
-            Task {
-                do {
-                    try await newBuilder.beginCollection(at: sd)
-                } catch {
-                    WatchConnectivityManager.shared.publishError("beginCollection failed: \(error.localizedDescription)")
-                }
-            }
-
-            WatchConnectivityManager.shared.publishWorkoutState(workoutID: self.workoutID ?? UUID().uuidString, state: "running")
-            startTicker()
-
-        } catch {
-            WatchConnectivityManager.shared.publishError("HKWorkoutSession create failed: \(error.localizedDescription)")
-        }
-    }
-
-    func stop() {
-        // ✅ هذا الـ Guard يمنع خطأ Error 3
-        guard sessionState == .running || sessionState == .paused else { return }
-
-        guard let session else { return }
-        session.stopActivity(with: .now)
-        session.end()
-        stopTicker()
-    }
-
-    func pause() { session?.pause() }
-    func resume() { session?.resume() }
-
-    private func startTicker() {
-        stopTicker()
-        tickerCancellable = Timer
-            .publish(every: 1.0, on: .main, in: .common)
-            .autoconnect()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                guard let self, self.isRunning else { return }
-                self.updateElapsedAndBroadcast()
-            }
-    }
-
-    private func stopTicker() {
-        tickerCancellable?.cancel()
-        tickerCancellable = nil
-    }
-
-    private func updateElapsedAndBroadcast() {
-        if let sd = startDate {
-            elapsed = Date().timeIntervalSince(sd)
-        }
-
-        guard let wid = workoutID else { return }
+        session?.delegate = self
+        builder?.delegate = self
+        builder?.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
         
-        let metrics = LiveMetricsPayload(
-            heartRate: heartRateBPM,
-            activeEnergy: activeEnergyKcal,
-            elapsed: elapsed,
-            distance: distanceMeters,
-            timestamp: Date()
-        )
-        WatchConnectivityManager.shared.publishLiveMetrics(workoutID: wid, metrics: metrics)
-    }
-
-    private func updateForStatistics(_ statistics: HKStatistics?) {
-        guard let statistics else { return }
-
-        let quantityType = statistics.quantityType
-
-        switch quantityType {
-        case HKQuantityType.quantityType(forIdentifier: .heartRate):
-            if let q = statistics.mostRecentQuantity() {
-                heartRateBPM = q.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+        let now = Date()
+        session?.startActivity(with: now)
+        builder?.beginCollection(withStart: now) { (success, error) in
+            DispatchQueue.main.async {
+                self.selectedWorkout = workoutType
+                self.sessionLocation = location
+                // إعادة تعيين المعرف عند كل بداية جديدة
+                self.currentWorkoutID = UUID().uuidString
             }
-
-        case HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned):
-            if let q = statistics.sumQuantity() {
-                activeEnergyKcal = q.doubleValue(for: .kilocalorie())
+        }
+    }
+    
+    // End Workout
+    func endWorkout() {
+        session?.end()
+    }
+    
+    // دالة إرسال البيانات للآيفون
+    private func sendLiveMetrics() {
+        guard let start = startDate else { return }
+        let elapsed = Date().timeIntervalSince(start)
+        
+        let payload = LiveMetricsPayload(
+            heartRate: self.heartRate,
+            activeEnergy: self.activeEnergy,
+            distance: self.distance,
+            elapsed: elapsed,
+            timestamp: Date().timeIntervalSince1970
+        )
+        
+        WatchConnectivityManager.shared.publishLiveMetrics(workoutID: currentWorkoutID, metrics: payload)
+    }
+    
+    func updateForStatistics(_ statistics: HKStatistics?) {
+        guard let statistics = statistics else { return }
+        
+        DispatchQueue.main.async {
+            switch statistics.quantityType {
+            case HKQuantityType.quantityType(forIdentifier: .heartRate):
+                let heartRateUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+                self.heartRate = statistics.mostRecentQuantity()?.doubleValue(for: heartRateUnit) ?? 0
+                self.averageHeartRate = statistics.averageQuantity()?.doubleValue(for: heartRateUnit) ?? 0
+                
+            case HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned):
+                let energyUnit = HKUnit.kilocalorie()
+                self.activeEnergy = statistics.sumQuantity()?.doubleValue(for: energyUnit) ?? 0
+                
+            case HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning):
+                let meterUnit = HKUnit.meter()
+                self.distance = statistics.sumQuantity()?.doubleValue(for: meterUnit) ?? 0
+                
+            default:
+                return
             }
             
-        case HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning):
-            if let q = statistics.sumQuantity() {
-                distanceMeters = q.doubleValue(for: .meter())
-            }
-
-        default:
-            break
+            self.sendLiveMetrics()
         }
+    }
+    
+    func resetWorkout() {
+        selectedWorkout = nil
+        sessionLocation = .unknown
+        builder = nil
+        workout = nil
+        session = nil
+        activeEnergy = 0
+        averageHeartRate = 0
+        heartRate = 0
+        distance = 0
+        startDate = nil
     }
 }
 
 // MARK: - HKWorkoutSessionDelegate
 extension WorkoutManager: HKWorkoutSessionDelegate {
-
-    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession,
-                        didChangeTo toState: HKWorkoutSessionState,
-                        from fromState: HKWorkoutSessionState,
-                        date: Date) {
-
-        // ✅ هذا الـ Task يحل المشكلة البنفسجية
-        Task { @MainActor in
-            self.sessionState = toState
-            if toState == .ended || toState == .stopped {
-                await self.finishWorkout(date: date)
+    func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {
+        
+        DispatchQueue.main.async {
+            if toState == .running {
+                self.startDate = date
+                WatchConnectivityManager.shared.publishWorkoutState(workoutID: self.currentWorkoutID, state: "started")
+            }
+            
+            if toState == .ended {
+                self.builder?.endCollection(withEnd: date) { (success, error) in
+                    self.builder?.finishWorkout { (workout, error) in
+                        DispatchQueue.main.async {
+                            self.workout = workout
+                            self.showingSummaryView = true
+                            WatchConnectivityManager.shared.publishWorkoutState(workoutID: self.currentWorkoutID, state: "ended")
+                        }
+                    }
+                }
             }
         }
     }
-
-    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
-        Task { @MainActor in
-            WatchConnectivityManager.shared.publishError("Workout session failed: \(error.localizedDescription)")
-        }
-    }
-
-    private func finishWorkout(date: Date) async {
-        guard let builder else {
-            teardown()
-            return
-        }
-
-        do {
-            try await builder.endCollection(at: date)
-            _ = try await builder.finishWorkout()
-        } catch {
-            WatchConnectivityManager.shared.publishError("finishWorkout failed: \(error.localizedDescription)")
-        }
-
-        WatchConnectivityManager.shared.publishWorkoutState(workoutID: workoutID ?? UUID().uuidString, state: "stopped")
-        teardown()
-    }
-
-    private func teardown() {
-        stopTicker()
-
-        session?.delegate = nil
-        builder?.delegate = nil
-
-        session = nil
-        builder = nil
-
-        isRunning = false
-        sessionState = .notStarted
-
-        startDate = nil
-        workoutID = nil
+    
+    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
     }
 }
 
 // MARK: - HKLiveWorkoutBuilderDelegate
 extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
-
-    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}
-
-    nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder,
-                        didCollectDataOf collectedTypes: Set<HKSampleType>) {
-        
-        // ✅ هذا الـ Task هو الحل الجذري للتحذير البنفسجي
-        Task { @MainActor in
-            for type in collectedTypes {
-                guard let quantityType = type as? HKQuantityType else { continue }
-                let stats = workoutBuilder.statistics(for: quantityType)
-                self.updateForStatistics(stats)
-            }
-            // بث التحديثات فوراً
-            self.updateElapsedAndBroadcast()
+    func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
+    }
+    
+    func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
+        for type in collectedTypes {
+            guard let quantityType = type as? HKQuantityType else { return }
+            let statistics = workoutBuilder.statistics(for: quantityType)
+            updateForStatistics(statistics)
         }
     }
 }

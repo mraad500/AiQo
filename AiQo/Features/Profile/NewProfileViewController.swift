@@ -279,25 +279,22 @@ final class NewProfileViewController: UIViewController, PHPickerViewControllerDe
 
     // ✅ المطلوب: تفتح PermissionView فقط
     @objc func openBioKernelTapped() {
-
-        let rootView = NavigationStack {
-            PermissionView()
-                .environmentObject(ProtectionModel())
-                .navigationTitle("Bio-Digital Kernel")
-        }
-
+        // 1. نستخدم ContentView لأن هي "البوابة" الذكية
+        // 2. نستخدم .shared (المفتاح السحري) حتى نربط ويا نفس العقل مال النظام كله
+        let rootView = ContentView()
+            .environmentObject(ProtectionModel.shared)
+        
         let hostingController = UIHostingController(rootView: rootView)
-
+        
+        // إعدادات الشيت (نص شاشة أو كاملة)
         if let sheet = hostingController.sheetPresentationController {
-            sheet.detents = [
-                UISheetPresentationController.Detent.medium(),
-                UISheetPresentationController.Detent.large()
-            ]
+            sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
         }
-
+        
         present(hostingController, animated: true)
     }
+
 
     @objc func openAppSettings() {
         let vc = AppSettingsViewController()

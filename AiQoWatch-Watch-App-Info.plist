@@ -6,6 +6,7 @@
 	<array/>
 	<key>WKBackgroundModes</key>
 	<array>
+		<string></string>
 		<string>workout-processing</string>
 	</array>
 </dict>

@@ -1,5 +1,3 @@
-// AppDelegate.swift
-
 import UIKit
 import UserNotifications
 import FamilyControls
@@ -14,10 +12,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
 
-        // تفعيل اتصال الساعة من بداية تشغيل التطبيق
+        // ✅ التصحيح: شغلنا المحرك هنا
+        // ضروري جداً يتم التفعيل أول ما يفتح التطبيق
+        PhoneConnectivityManager.shared.activate()
+        print("🚀 PhoneConnectivityManager Activated from AppDelegate")
 
 
-        // إعداد مركز الإشعارات فقط (بدون طلب صلاحية هنا)
+        // إعداد مركز الإشعارات
         let center = UNUserNotificationCenter.current()
         center.delegate = self
 
