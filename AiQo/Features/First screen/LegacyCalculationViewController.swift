@@ -148,7 +148,8 @@ final class LegacyCalculationViewController: BaseViewController {
         iconView.tintColor = Colors.sand
 
         let pillLabel = UILabel()
-        pillLabel.text = "تحليل تاريخك الصحي"
+        // هنا يمكن استخدام ترجمة للعنوان الصغير إذا رغبت، حالياً جعلته يعتمد على العنوان الرئيسي
+        pillLabel.text = NSLocalizedString("legacy_intro_title", comment: "").components(separatedBy: " ").first ?? "Analysis"
         pillLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         pillLabel.textColor = Colors.text
         pillLabel.textAlignment = .center
@@ -252,12 +253,13 @@ final class LegacyCalculationViewController: BaseViewController {
     }
 
     private func configureStaticTexts() {
-        titleLabel.text = "AiQo يحدد مستواك الرياضي"
-        subtitleLabel.text = "نحلّل كل بياناتك الصحية المسجّلة في Apple Health من بداية استخدامك للجهاز، ونحوّلها إلى مستوى رياضي واضح داخل AiQo."
+        titleLabel.text = NSLocalizedString("legacy_intro_title", comment: "")
+        subtitleLabel.text = NSLocalizedString("legacy_intro_subtitle", comment: "")
 
-        loadingLabel.text = "جاري تحليل تاريخ نشاطك وتحديد مستواك الرياضي..."
-        primaryButton.setTitle("موافق", for: .normal)
-        secondaryButton.setTitle("لا شكراً", for: .normal)
+        loadingLabel.text = NSLocalizedString("legacy_loading_text", comment: "")
+        
+        primaryButton.setTitle(NSLocalizedString("btn_agree", comment: ""), for: .normal)
+        secondaryButton.setTitle(NSLocalizedString("btn_no_thanks", comment: ""), for: .normal)
     }
 
     // MARK: - UI State
@@ -270,9 +272,9 @@ final class LegacyCalculationViewController: BaseViewController {
             resultStack.isHidden = true
 
             primaryButton.isHidden = false
-            primaryButton.setTitle("موافق", for: .normal)
+            primaryButton.setTitle(NSLocalizedString("btn_agree", comment: ""), for: .normal)
             secondaryButton.isHidden = false
-            secondaryButton.setTitle("لا شكراً", for: .normal)
+            secondaryButton.setTitle(NSLocalizedString("btn_no_thanks", comment: ""), for: .normal)
 
         case .loading:
             introStack.isHidden = true
@@ -299,58 +301,47 @@ final class LegacyCalculationViewController: BaseViewController {
 
             let headerTitle: String
             if model.hasHealthData {
-                headerTitle = "مستواك الحالي: \(model.levelName) – Level \(model.level) – \(model.totalPoints) نقطة"
+                let format = NSLocalizedString("result_header_format", comment: "")
+                headerTitle = String(format: format, model.levelName, model.level, model.totalPoints)
             } else {
-                headerTitle = "مستواك الحالي: البداية الذكية – Level 1 – 0 نقطة"
+                let format = NSLocalizedString("result_header_format", comment: "")
+                headerTitle = String(format: format, NSLocalizedString("level_name_starter", comment: ""), 1, 0)
             }
             levelTitleLabel.text = headerTitle
 
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
+            formatter.locale = Locale.current
 
             let stepsText = formatter.string(from: model.totalSteps as NSNumber) ?? "\(Int(model.totalSteps))"
             let caloriesText = formatter.string(from: model.totalCalories as NSNumber) ?? "\(Int(model.totalCalories))"
             let distanceText = String(format: "%.1f", model.totalDistanceKm)
             let sleepText = String(format: "%.1f", model.totalSleepHours)
 
-            var explanation = """
-            هذا المستوى مبني على كل بياناتك الصحية المخزّنة في Apple Health منذ بداية استخدامك للجهاز وحتى اليوم.
-            """
+            var explanation = NSLocalizedString("result_explanation_intro", comment: "")
 
-            explanation += """
+            let statsFormat = NSLocalizedString("result_stats_block", comment: "")
+            let statsBlock = String(format: statsFormat,
+                                    stepsText, model.stepsPoints,
+                                    caloriesText, model.caloriesPoints,
+                                    distanceText, model.distancePoints,
+                                    sleepText, model.sleepPoints,
+                                    model.totalPoints)
 
-            
-            مجموع عدد خطواتك الكلي \(stepsText) = \(model.stepsPoints) نقطة
-            مجموع عدد السعرات الحرارية الكلي \(caloriesText) = \(model.caloriesPoints) نقطة
-            مجموع مسافة المشي/الجري الكلية \(distanceText) كم = \(model.distancePoints) نقطة
-            مجموع عدد ساعات النوم الكلي \(sleepText) ساعة = \(model.sleepPoints) نقطة
-
-            المجموع الكلي = \(model.totalPoints) نقطة
-            \(model.message)
-            """
+            explanation += "\n\n" + statsBlock + "\n\n" + model.message
 
             if model.hasHealthData {
-                explanation += """
-
-                
-                بناءً على مجموع نقاطك، تم تعيينك في Level \(model.level).
-                تقدر تشوف مستوىًك وتطوّره دائماً من كارت الـ Level داخل صفحة البروفايل،
-                وتشوف ترتيبك العالمي في القبيلة (Tribe) من تبويب Tribe داخل AiQo.
-                """
+                let footerFormat = NSLocalizedString("result_footer_success", comment: "")
+                let footer = String(format: footerFormat, model.level)
+                explanation += "\n\n" + footer
             } else {
-                explanation += """
-
-                
-                يبدو أن AiQo ما عنده صلاحية كافية يقرأ بياناتك أو ما متوفرة بيانات صحية سابقة في Apple Health.
-                نعينك كبداية في Level 1، وبمجرد ما تبدي تمشي، تتحرك، وتنام بشكل منتظم،
-                رح يبدأ مستوى AiQo يرتفع تلقائياً حسب نشاطك الحقيقي.
-                """
+                explanation += "\n\n" + NSLocalizedString("result_footer_no_data", comment: "")
             }
 
             explanationLabel.text = explanation
 
             primaryButton.isHidden = false
-            primaryButton.setTitle("يلا نروح للواجهة الرئيسية", for: .normal)
+            primaryButton.setTitle(NSLocalizedString("btn_goto_main", comment: ""), for: .normal)
             secondaryButton.isHidden = true
 
             playCelebrationAnimation()
@@ -381,7 +372,6 @@ final class LegacyCalculationViewController: BaseViewController {
     private func primaryButtonTapped() {
         switch currentState {
         case .intro:
-            // أول ما يضغط موافق → نطلب صلاحيات HealthKit وبعدها نبدأ الحساب
             currentState = .loading
             requestHealthAuthorizationIfNeeded { [weak self] authorized in
                 guard let self else { return }
@@ -389,9 +379,8 @@ final class LegacyCalculationViewController: BaseViewController {
                 if authorized {
                     self.startCalculationFlow()
                 } else {
-                    // ماكو صلاحيات → نعرض نتيجة افتراضية Level 1 بنقاط 0
                     let model = ResultModel(
-                        levelName: "البداية الذكية",
+                        levelName: NSLocalizedString("level_name_starter", comment: ""),
                         totalPoints: 0,
                         level: 1,
                         levelProgress: 0,
@@ -403,7 +392,7 @@ final class LegacyCalculationViewController: BaseViewController {
                         distancePoints: 0,
                         totalSleepHours: 0,
                         sleepPoints: 0,
-                        message: "بياناتك تبين إنك بالبداية، وهذا شيء ممتاز لأن AiQo جاي حتى يرفع مستواك خطوة بخطوة.",
+                        message: NSLocalizedString("msg_level_starter", comment: ""),
                         hasHealthData: false
                     )
                     self.currentState = .result(model)
@@ -420,15 +409,12 @@ final class LegacyCalculationViewController: BaseViewController {
 
     @objc
     private func secondaryButtonTapped() {
-        // لا شكراً → نعتبره مكمّل ونفتح الواجهة
         markCompletedAndGoToMain()
     }
 
-    // ---------------------------------------------------------
-    // MARK: - الانتقال النهائي (هنا التعديل المهم)
-    // ---------------------------------------------------------
+    // MARK: - Navigation
+
     private func markCompletedAndGoToMain() {
-        // حفظ الحالة
         UserDefaults.standard.set(true, forKey: "didCompleteLegacyCalculation")
 
         guard
@@ -436,7 +422,6 @@ final class LegacyCalculationViewController: BaseViewController {
             let sceneDelegate = windowScene.delegate as? SceneDelegate
         else { return }
 
-        // التعديل: نستدعي الدالة التي تطلب إذن "الدرع" قبل فتح التطبيق
         sceneDelegate.onboardingFinished()
     }
 
@@ -449,7 +434,7 @@ final class LegacyCalculationViewController: BaseViewController {
             guard let self else { return }
 
             let elapsed = Date().timeIntervalSince(startTime)
-            let delay = max(0.0, 2.0 - elapsed) // ضمان 2 ثانية لودنغ
+            let delay = max(0.0, 2.0 - elapsed)
 
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard let result = result else {
@@ -563,7 +548,7 @@ final class LegacyCalculationViewController: BaseViewController {
             group.enter()
 
             let asleepValues: Set<Int> = [
-                HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue, // بديل asleep القديم
+                HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                 HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                 HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
                 HKCategoryValueSleepAnalysis.asleepREM.rawValue
@@ -600,13 +585,14 @@ final class LegacyCalculationViewController: BaseViewController {
                 distanceKm: totalDistance,
                 sleepHours: totalSleepHours
             )
-            completion(model)
+            DispatchQueue.main.async {
+                completion(model)
+            }
         }
     }
 
     // MARK: - Level System + Scoring
 
-    /// Level 1 يحتاج 500 نقطة، Level 2 يحتاج 700، Level 3 يحتاج 900، وهكذا (كل Level يزيد 200 نقطة عن السابق)
     private func calculateLevel(from totalPoints: Int) -> (level: Int, progress: Double) {
         let baseRequirement = 500
         let increment = 200
@@ -635,10 +621,10 @@ final class LegacyCalculationViewController: BaseViewController {
         sleepHours: Double
     ) -> ResultModel {
 
-        let stepsPoints = Int(steps / 1_000.0)             // 1 نقطة لكل 1000 خطوة
-        let caloriesPoints = Int(calories / 100.0)         // 1 نقطة لكل 100 كيلو كالوري
-        let distancePoints = Int(distanceKm * 5.0)         // 5 نقاط لكل كم
-        let sleepPoints = Int(sleepHours / 8.0) * 20       // كل 8 ساعات نوم = 20 نقطة
+        let stepsPoints = Int(steps / 1_000.0)
+        let caloriesPoints = Int(calories / 100.0)
+        let distancePoints = Int(distanceKm * 5.0)
+        let sleepPoints = Int(sleepHours / 8.0) * 20
 
         let totalPoints = max(0, stepsPoints + caloriesPoints + distancePoints + sleepPoints)
 
@@ -646,7 +632,9 @@ final class LegacyCalculationViewController: BaseViewController {
         let level = levelInfo.level
         let levelProgress = levelInfo.progress
 
-        // نخزن القيمة لاستخدامها في البروفايل
+        // ----------------------------------------------------------------
+        // تصحيح: استخدام المفاتيح الأصلية LevelStorageKeys لضمان قراءة البروفايل للبيانات
+        // ----------------------------------------------------------------
         UserDefaults.standard.set(level, forKey: LevelStorageKeys.currentLevel)
         UserDefaults.standard.set(levelProgress, forKey: LevelStorageKeys.currentLevelProgress)
         UserDefaults.standard.set(totalPoints, forKey: LevelStorageKeys.legacyTotalPoints)
@@ -656,17 +644,17 @@ final class LegacyCalculationViewController: BaseViewController {
 
         switch totalPoints {
         case 0..<150:
-            levelName = "البداية الذكية"
-            message = "بياناتك تبين إنك بالبداية، وهذا شيء ممتاز لأن AiQo جاي حتى يرفع مستواك خطوة بخطوة."
+            levelName = NSLocalizedString("level_name_starter", comment: "")
+            message = NSLocalizedString("msg_level_starter", comment: "")
         case 150..<400:
-            levelName = "المجتهد الصاعد"
-            message = "واضح إن عندك حركة ونشاط محترم. نقدر نحول هذا الاجتهاد إلى استمرارية يومية."
+            levelName = NSLocalizedString("level_name_riser", comment: "")
+            message = NSLocalizedString("msg_level_riser", comment: "")
         case 400..<800:
-            levelName = "المقاتل المنضبط"
-            message = "مستوى قوي! جسمك متعود على الجهد، و AiQo رح يساعدك توصل لنسخة أعلى من نفسك."
+            levelName = NSLocalizedString("level_name_fighter", comment: "")
+            message = NSLocalizedString("msg_level_fighter", comment: "")
         default:
-            levelName = "الأسطورة الرياضية"
-            message = "أرقامك تبين إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي للحفاظ على هذا المستوى الأسطوري."
+            levelName = NSLocalizedString("level_name_legend", comment: "")
+            message = NSLocalizedString("msg_level_legend", comment: "")
         }
 
         let hasHealthData = (steps > 0 || calories > 0 || distanceKm > 0 || sleepHours > 0)
@@ -689,4 +677,3 @@ final class LegacyCalculationViewController: BaseViewController {
         )
     }
 }
-

@@ -1,18 +1,21 @@
+
+// =========================
+// File: Features/Gym/MyPlanViewController.swift
+// NOTE: Localized strings + natural alignment.
+// =========================
+
 import UIKit
 
 final class MyPlanViewController: BaseViewController {
 
-    // MARK: - UI
-
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
 
-    // كارت الإحصائيات
     private let todayTitle: UILabel = {
         let label = UILabel()
-        label.text = "خُطّتي لليوم"
+        label.text = L10n.t("plan.today.title")
         label.font = UIFont.systemFont(ofSize: 26, weight: .bold)
-        label.textAlignment = .right
+        label.textAlignment = .natural
         return label
     }()
 
@@ -22,24 +25,22 @@ final class MyPlanViewController: BaseViewController {
     private let waterLabel = UILabel()
     private let trainingLabel = UILabel()
 
-    // كارت تمارين اليوم
     private let todayWorkoutTitle: UILabel = {
         let label = UILabel()
-        label.text = "تمارين اليوم"
+        label.text = L10n.t("plan.today.workoutsTitle")
         label.font = UIFont.systemFont(ofSize: 22, weight: .semibold)
-        label.textAlignment = .right
+        label.textAlignment = .natural
         return label
     }()
 
     private let todayWorkoutCard = GlassCardView()
     private let todayExercisesStack = UIStackView()
 
-    // كارت خطة التمارين (إضافة / إدارة)
     private let planTitle: UILabel = {
         let label = UILabel()
-        label.text = "خطة تماريني"
+        label.text = L10n.t("plan.templates.title")
         label.font = UIFont.systemFont(ofSize: 22, weight: .semibold)
-        label.textAlignment = .right
+        label.textAlignment = .natural
         return label
     }()
 
@@ -48,8 +49,6 @@ final class MyPlanViewController: BaseViewController {
     private let addButton = UIButton(type: .system)
     private let templatesStack = UIStackView()
 
-    // MARK: - Data
-
     private let health = HealthKitService.shared
     private let goals = GoalsStore.shared.current
     private let workoutStore = WorkoutPlanStore.shared
@@ -57,13 +56,12 @@ final class MyPlanViewController: BaseViewController {
     private var templates: [WorkoutExercise] = []
     private var completedToday: Set<UUID> = []
 
-    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        loadPlan()
+        loadWorkouts()
     }
-
-    // MARK: - Setup UI
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
@@ -92,7 +90,7 @@ final class MyPlanViewController: BaseViewController {
             contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
         ])
 
-        // كارت الإحصائيات
+        // Stats
         contentStack.addArrangedSubview(todayTitle)
         contentStack.addArrangedSubview(statsCard)
 
@@ -109,13 +107,12 @@ final class MyPlanViewController: BaseViewController {
             statsStack.bottomAnchor.constraint(equalTo: statsCard.contentView.bottomAnchor, constant: -16)
         ])
 
-        stepsLabel.textAlignment = .right
-        caloriesLabel.textAlignment = .right
-        waterLabel.textAlignment = .right
-        trainingLabel.textAlignment = .right
-        trainingLabel.numberOfLines = 0
+        [stepsLabel, caloriesLabel, waterLabel, trainingLabel].forEach {
+            $0.textAlignment = .natural
+            $0.numberOfLines = 0
+        }
 
-        // كارت تمارين اليوم
+        // Today workouts
         contentStack.setCustomSpacing(28, after: statsCard)
         contentStack.addArrangedSubview(todayWorkoutTitle)
         contentStack.addArrangedSubview(todayWorkoutCard)
@@ -132,7 +129,7 @@ final class MyPlanViewController: BaseViewController {
             todayExercisesStack.bottomAnchor.constraint(equalTo: todayWorkoutCard.contentView.bottomAnchor, constant: -14)
         ])
 
-        // كارت خطة التمارين
+        // Plan templates
         contentStack.setCustomSpacing(24, after: todayWorkoutCard)
         contentStack.addArrangedSubview(planTitle)
         contentStack.addArrangedSubview(planCard)
@@ -141,15 +138,14 @@ final class MyPlanViewController: BaseViewController {
         planContainer.axis = .vertical
         planContainer.spacing = 12
 
-        // حقل الإضافة
         let inputRow = UIStackView()
         inputRow.axis = .horizontal
         inputRow.spacing = 8
         inputRow.alignment = .center
 
-        planTextField.placeholder = "اكتب تمرين جديد (مثلاً: 3 مجاميع شناو)"
+        planTextField.placeholder = L10n.t("plan.input.placeholder")
         planTextField.borderStyle = .roundedRect
-        planTextField.textAlignment = .right
+        planTextField.textAlignment = .natural
         planTextField.returnKeyType = .done
         planTextField.addTarget(self, action: #selector(addExerciseFromReturn), for: .editingDidEndOnExit)
 
@@ -177,26 +173,35 @@ final class MyPlanViewController: BaseViewController {
         ])
     }
 
-    // MARK: - Load stats from HealthKit
+    // MARK: - Data
 
     private func loadPlan() {
-        stepsLabel.text = "الخطوات: ..."
-        caloriesLabel.text = "السعرات: ..."
-        waterLabel.text = "الماء: ..."
-        trainingLabel.text = "التمرين: ..."
+        stepsLabel.text = L10n.t("plan.stats.steps.loading")
+        caloriesLabel.text = L10n.t("plan.stats.calories.loading")
+        waterLabel.text = L10n.t("plan.stats.water.loading")
+        trainingLabel.text = L10n.t("plan.stats.training.loading")
 
         Task { [weak self] in
             guard let self else { return }
-
             let steps  = await self.health.getTodaySteps()
             let burned = await self.health.getActiveCalories()
             let water  = await self.health.getWaterIntake()
 
             await MainActor.run {
                 UIView.animate(withDuration: 0.25) {
-                    self.stepsLabel.text = "الخطوات: \(steps)/\(self.goals.steps)"
-                    self.caloriesLabel.text = "السعرات المحروقة: \(Int(burned)) kcal"
-                    self.waterLabel.text = "الماء: \(Int(water)) ml"
+                    self.stepsLabel.text = String(
+                        format: L10n.t("plan.stats.steps.value"),
+                        L10n.num(steps),
+                        L10n.num(self.goals.steps)
+                    )
+                    self.caloriesLabel.text = String(
+                        format: L10n.t("plan.stats.calories.value"),
+                        L10n.num(Int(burned))
+                    )
+                    self.waterLabel.text = String(
+                        format: L10n.t("plan.stats.water.value"),
+                        L10n.num(Int(water))
+                    )
                     self.trainingLabel.text = self.dailyTrainingSuggestion(steps: steps, burned: burned)
                 }
             }
@@ -205,15 +210,13 @@ final class MyPlanViewController: BaseViewController {
 
     private func dailyTrainingSuggestion(steps: Int, burned: Double) -> String {
         if steps < goals.steps / 3 {
-            return "اقتراح اليوم: 20 دقيقة مشي خفيف + 3 مجاميع شناو"
+            return L10n.t("plan.suggestion.low")
         } else if steps < (2 * goals.steps) / 3 {
-            return "اقتراح اليوم: 10 دقايق HIIT + 5 دقايق بايسكل"
+            return L10n.t("plan.suggestion.mid")
         } else {
-            return "اقتراح اليوم: يوم ريكوفري، مطاوعة خفيفة + تنفس عميق"
+            return L10n.t("plan.suggestion.high")
         }
     }
-
-    // MARK: - Workouts (templates + today)
 
     private func loadWorkouts() {
         templates = workoutStore.templates
@@ -227,7 +230,7 @@ final class MyPlanViewController: BaseViewController {
 
         guard !templates.isEmpty else {
             let empty = UILabel()
-            empty.text = "ما عندك تمارين لليوم.\nإبدي بوضع خطة من الأسفل."
+            empty.text = L10n.t("plan.today.empty")
             empty.textAlignment = .center
             empty.numberOfLines = 0
             empty.textColor = .secondaryLabel
@@ -253,8 +256,8 @@ final class MyPlanViewController: BaseViewController {
 
         if templates.isEmpty {
             let label = UILabel()
-            label.text = "أضف تمارينك المفضلة حتى تصير خطة ثابتة لكل يوم."
-            label.textAlignment = .right
+            label.text = L10n.t("plan.templates.empty")
+            label.textAlignment = .natural
             label.numberOfLines = 0
             label.textColor = .secondaryLabel
             templatesStack.addArrangedSubview(label)
@@ -277,13 +280,8 @@ final class MyPlanViewController: BaseViewController {
 
     // MARK: - Actions
 
-    @objc private func addExerciseTapped() {
-        addExerciseFromField()
-    }
-
-    @objc private func addExerciseFromReturn() {
-        addExerciseFromField()
-    }
+    @objc private func addExerciseTapped() { addExerciseFromField() }
+    @objc private func addExerciseFromReturn() { addExerciseFromField() }
 
     private func addExerciseFromField() {
         let text = planTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -301,7 +299,7 @@ final class MyPlanViewController: BaseViewController {
     }
 }
 
-// MARK: - Row Views
+// MARK: - Row Views (unchanged visually; only natural alignment)
 
 private final class TodayWorkoutRow: UIView {
 
@@ -310,9 +308,7 @@ private final class TodayWorkoutRow: UIView {
     private let titleLabel = UILabel()
     private let checkbox = UIButton(type: .system)
 
-    private var isChecked: Bool {
-        didSet { updateUI() }
-    }
+    private var isChecked: Bool { didSet { updateUI() } }
 
     init(title: String, isChecked: Bool) {
         self.isChecked = isChecked
@@ -321,9 +317,7 @@ private final class TodayWorkoutRow: UIView {
         updateUI()
     }
 
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     private func setup(title: String) {
         let h = UIStackView()
@@ -332,7 +326,7 @@ private final class TodayWorkoutRow: UIView {
         h.alignment = .center
 
         titleLabel.text = title
-        titleLabel.textAlignment = .right
+        titleLabel.textAlignment = .natural
         titleLabel.numberOfLines = 0
 
         checkbox.addTarget(self, action: #selector(toggle), for: .touchUpInside)
@@ -376,9 +370,7 @@ private final class TemplateWorkoutRow: UIView {
         setup(title: title)
     }
 
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     private func setup(title: String) {
         let h = UIStackView()
@@ -387,7 +379,7 @@ private final class TemplateWorkoutRow: UIView {
         h.alignment = .center
 
         titleLabel.text = title
-        titleLabel.textAlignment = .right
+        titleLabel.textAlignment = .natural
         titleLabel.numberOfLines = 0
 
         deleteButton.setImage(UIImage(systemName: "trash"), for: .normal)
@@ -408,7 +400,5 @@ private final class TemplateWorkoutRow: UIView {
         ])
     }
 
-    @objc private func deleteTapped() {
-        onDelete?()
-    }
+    @objc private func deleteTapped() { onDelete?() }
 }

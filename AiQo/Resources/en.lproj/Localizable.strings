@@ -203,3 +203,71 @@
 
 "about_aiqo" = "About AiQo";
 "about_aiqo_sub" = "Our mission for human wellbeing";
+"heart.title" = "Heart Rate";
+"heart.subtitle.initial" = "Cover the rear camera with your finger until the circle fills with color";
+"heart.subtitle.denied" = "Camera permission denied. Enable it from Settings to measure heart rate.";
+"heart.subtitle.measure" = "Cover the rear camera with your finger and keep still for 15–20 seconds.";
+"heart.subtitle.final" = "Last approximate reading: %@ bpm (not a medical tool).";
+"heart.subtitle.tooShort" = "Measurement was too short or unclear. Try again and keep your finger steady for 15 seconds.";
+"heart.subtitle.noBackCamera" = "Could not access the back camera.";
+"heart.subtitle.cameraError" = "Camera error: %@";
+"heart.bpmUnit" = "BPM";
+"heart.action.start" = "Start";
+"heart.action.stop" = "Stop";
+"heart.disclaimer" = "This tool is not for medical or diagnostic purposes.";
+
+"plan.today.title" = "My Plan for Today";
+"plan.today.workoutsTitle" = "Today's Exercises";
+"plan.templates.title" = "My Workout Plan";
+"plan.input.placeholder" = "Type a new exercise (e.g., 3 sets push-ups)";
+"plan.today.empty" = "You have no exercises for today.\nStart by creating a plan below.";
+"plan.templates.empty" = "Add your favorite exercises to create a daily plan.";
+
+"plan.stats.steps.loading" = "Steps: ...";
+"plan.stats.calories.loading" = "Calories: ...";
+"plan.stats.water.loading" = "Water: ...";
+"plan.stats.training.loading" = "Training: ...";
+"plan.stats.steps.value" = "Steps: %@/%@";
+"plan.stats.calories.value" = "Active calories: %@ kcal";
+"plan.stats.water.value" = "Water: %@ ml";
+
+"plan.suggestion.low" = "Suggestion: 20 min light walk + 3 sets push-ups";
+"plan.suggestion.mid" = "Suggestion: 10 min HIIT + 5 min bike";
+"plan.suggestion.high" = "Suggestion: Recovery day, light mobility + deep breathing";
+/* AiQo Legacy Strings - English */
+
+"legacy_intro_title" = "AiQo Determines Your Athletic Level";
+"legacy_intro_subtitle" = "We analyze all your health data recorded in Apple Health since you started using the device, and convert it into a clear athletic level within AiQo.";
+"legacy_loading_text" = "Analyzing your activity history and determining your athletic level...";
+
+"btn_agree" = "Agree";
+"btn_no_thanks" = "No, thanks";
+"btn_goto_main" = "Let's Go to Main";
+
+"result_header_format" = "Current Level: %@ – Level %d – %d Points";
+"result_explanation_intro" = "This level is based on all your health data stored in Apple Health from the beginning of your device usage until today.";
+
+/* Stats Block Format:
+   %1$@ = Steps Count, %2$d = Steps Points
+   %3$@ = Calories Count, %4$d = Calories Points
+   %5$@ = Distance, %6$d = Distance Points
+   %7$@ = Sleep Hours, %8$d = Sleep Points
+   %9$d = Total Points
+*/
+"result_stats_block" = "Total Step Count: %1$@ = %2$d Points\nTotal Active Calories: %3$@ = %4$d Points\nTotal Walking/Running Distance: %5$@ km = %6$d Points\nTotal Sleep Hours: %7$@ hours = %8$d Points\n\nGrand Total = %9$d Points";
+
+"result_footer_success" = "Based on your total points, you have been assigned to Level %d.\nYou can always check your level and progress from the Level card inside your Profile page,\nand see your global ranking in the Tribe tab within AiQo.";
+
+"result_footer_no_data" = "It seems AiQo doesn't have sufficient permission to read your data, or there is no previous health data in Apple Health.\nWe'll set you at Level 1 for now. Once you start walking, moving, and sleeping regularly,\nyour AiQo level will automatically increase based on your real activity.";
+
+/* Level Names */
+"level_name_starter" = "Smart Start";
+"level_name_riser" = "Rising Achiever";
+"level_name_fighter" = "Disciplined Fighter";
+"level_name_legend" = "Athletic Legend";
+
+/* Level Messages */
+"msg_level_starter" = "Your data shows you are at the beginning, which is great because AiQo is here to raise your level step by step.";
+"msg_level_riser" = "It's clear you have respectable activity. We can turn this effort into daily consistency.";
+"msg_level_fighter" = "Strong level! Your body is used to effort, and AiQo will help you reach a higher version of yourself.";
+"msg_level_legend" = "Your numbers show you take your health very seriously. AiQo is now your official partner to maintain this legendary level.";

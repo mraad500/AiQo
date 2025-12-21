@@ -209,3 +209,71 @@
 
 "about_aiqo" = "عن AiQo";
 "about_aiqo_sub" = "مهمتنا لرفاهية الإنسان";
+"heart.title" = "قياس نبض القلب";
+"heart.subtitle.initial" = "غطّ الكاميرا الخلفية بإصبعك حتى تمتلئ الدائرة باللون";
+"heart.subtitle.denied" = "صلاحية الكاميرا مرفوضة. فعّلها من الإعدادات لاستخدام قياس النبض.";
+"heart.subtitle.measure" = "غطّ الكاميرا الخلفية بإصبعك، وحاول ما تتحرك 15–20 ثانية.";
+"heart.subtitle.final" = "آخر قياس تقريبي: %@ نبضة/دقيقة (ليست أداة طبية).";
+"heart.subtitle.tooShort" = "القياس كان قصير أو غير واضح. حاول مرة أخرى وثبّت إصبعك لـ 15 ثانية.";
+"heart.subtitle.noBackCamera" = "ما قدرنا نستخدم الكاميرا الخلفية.";
+"heart.subtitle.cameraError" = "خطأ في إعداد الكاميرا: %@";
+"heart.bpmUnit" = "BPM";
+"heart.action.start" = "ابدأ القياس";
+"heart.action.stop" = "إيقاف القياس";
+"heart.disclaimer" = "هذه الأداة ليست لأغراض طبية أو تشخيصية";
+
+"plan.today.title" = "خُطّتي لليوم";
+"plan.today.workoutsTitle" = "تمارين اليوم";
+"plan.templates.title" = "خطة تماريني";
+"plan.input.placeholder" = "اكتب تمرين جديد (مثلاً: 3 مجاميع شناو)";
+"plan.today.empty" = "ما عندك تمارين لليوم.\nإبدي بوضع خطة من الأسفل.";
+"plan.templates.empty" = "أضف تمارينك المفضلة حتى تصير خطة ثابتة لكل يوم.";
+
+"plan.stats.steps.loading" = "الخطوات: ...";
+"plan.stats.calories.loading" = "السعرات: ...";
+"plan.stats.water.loading" = "الماء: ...";
+"plan.stats.training.loading" = "التمرين: ...";
+"plan.stats.steps.value" = "الخطوات: %@/%@";
+"plan.stats.calories.value" = "السعرات المحروقة: %@ kcal";
+"plan.stats.water.value" = "الماء: %@ مل";
+
+"plan.suggestion.low" = "اقتراح اليوم: 20 دقيقة مشي خفيف + 3 مجاميع شناو";
+"plan.suggestion.mid" = "اقتراح اليوم: 10 دقايق HIIT + 5 دقايق بايسكل";
+"plan.suggestion.high" = "اقتراح اليوم: يوم ريكوفري، مطاوعة خفيفة + تنفس عميق";
+/* AiQo Legacy Strings - Arabic */
+
+"legacy_intro_title" = "AiQo يحدد مستواك الرياضي";
+"legacy_intro_subtitle" = "نحلّل كل بياناتك الصحية المسجّلة في Apple Health من بداية استخدامك للجهاز، ونحوّلها إلى مستوى رياضي واضح داخل AiQo.";
+"legacy_loading_text" = "جاري تحليل تاريخ نشاطك وتحديد مستواك الرياضي...";
+
+"btn_agree" = "موافق";
+"btn_no_thanks" = "لا شكراً";
+"btn_goto_main" = "يلا نروح للواجهة الرئيسية";
+
+"result_header_format" = "مستواك الحالي: %@ – Level %d – %d نقطة";
+"result_explanation_intro" = "هذا المستوى مبني على كل بياناتك الصحية المخزّنة في Apple Health منذ بداية استخدامك للجهاز وحتى اليوم.";
+
+/* Stats Block Format:
+   %1$@ = Steps Count, %2$d = Steps Points
+   %3$@ = Calories Count, %4$d = Calories Points
+   %5$@ = Distance, %6$d = Distance Points
+   %7$@ = Sleep Hours, %8$d = Sleep Points
+   %9$d = Total Points
+*/
+"result_stats_block" = "مجموع عدد خطواتك الكلي %1$@ = %2$d نقطة\nمجموع عدد السعرات الحرارية الكلي %3$@ = %4$d نقطة\nمجموع مسافة المشي/الجري الكلية %5$@ كم = %6$d نقطة\nمجموع عدد ساعات النوم الكلي %7$@ ساعة = %8$d نقطة\n\nالمجموع الكلي = %9$d نقطة";
+
+"result_footer_success" = "بناءً على مجموع نقاطك، تم تعيينك في Level %d.\nتقدر تشوف مستوىًك وتطوّره دائماً من كارت الـ Level داخل صفحة البروفايل،\nوتشوف ترتيبك العالمي في القبيلة (Tribe) من تبويب Tribe داخل AiQo.";
+
+"result_footer_no_data" = "يبدو أن AiQo ما عنده صلاحية كافية يقرأ بياناتك أو ما متوفرة بيانات صحية سابقة في Apple Health.\nنعينك كبداية في Level 1، وبمجرد ما تبدي تمشي، تتحرك، وتنام بشكل منتظم،\nرح يبدأ مستوى AiQo يرتفع تلقائياً حسب نشاطك الحقيقي.";
+
+/* Level Names */
+"level_name_starter" = "البداية الذكية";
+"level_name_riser" = "المجتهد الصاعد";
+"level_name_fighter" = "المقاتل المنضبط";
+"level_name_legend" = "الأسطورة الرياضية";
+
+/* Level Messages */
+"msg_level_starter" = "بياناتك تبين إنك بالبداية، وهذا شيء ممتاز لأن AiQo جاي حتى يرفع مستواك خطوة بخطوة.";
+"msg_level_riser" = "واضح إن عندك حركة ونشاط محترم. نقدر نحول هذا الاجتهاد إلى استمرارية يومية.";
+"msg_level_fighter" = "مستوى قوي! جسمك متعود على الجهد، و AiQo رح يساعدك توصل لنسخة أعلى من نفسك.";
+"msg_level_legend" = "أرقامك تبين إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي للحفاظ على هذا المستوى الأسطوري.";

@@ -1,15 +1,51 @@
+// =========================
+// File: App/Localization/Localization.swift
+// =========================
+
+import UIKit
+
+/// Minimal localization layer.
+enum L10n {
+    static func t(_ key: String, _ comment: String = "") -> String {
+        NSLocalizedString(key, comment: comment)
+    }
+
+    /// Localize numbers per current locale (Arabic/Western digits).
+    static func num<T: BinaryInteger>(_ n: T) -> String {
+        let fmt = NumberFormatter()
+        fmt.locale = .current
+        fmt.numberStyle = .decimal
+        return fmt.string(from: NSNumber(value: Int(n))) ?? "\(n)"
+    }
+
+    static func num(_ n: Double) -> String {
+        let fmt = NumberFormatter()
+        fmt.locale = .current
+        fmt.maximumFractionDigits = 0
+        return fmt.string(from: NSNumber(value: n)) ?? "\(Int(n))"
+    }
+}
+
+// =========================
+// File: Features/Heart/HeartViewController.swift
+// =========================
+
 import UIKit
 import AVFoundation
 import HealthKit
 
-/// شاشة قياس نبض القلب بالكاميرا (ليست أداة طبية)
-final class HeartViewController: UIViewController { // تم التعديل من BaseViewController لضمان التوافق اذا لم يكن موجوداً
+/// Heart rate with camera (non-medical)
+final class HeartViewController: UIViewController {
 
-    // MARK: - UI
+    // MARK: - Haptic Generators
+    private let beatFeedback = UIImpactFeedbackGenerator(style: .soft)
+    private let successFeedback = UINotificationFeedbackGenerator()
+
+    // MARK: - UI Elements
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "قياس نبض القلب"
+        label.text = L10n.t("heart.title")
         label.font = UIFont.systemFont(ofSize: 28, weight: .heavy)
         label.textAlignment = .center
         return label
@@ -17,7 +53,7 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
     private let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "غطّ الكاميرا الخلفية بإصبعك حتى تمتلئ الدائرة باللون"
+        label.text = L10n.t("heart.subtitle.initial")
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
@@ -33,7 +69,6 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         return label
     }()
 
-    /// دائرة الكاميرا (مصغّرة)
     private let circlePreview: UIView = {
         let v = UIView()
         v.backgroundColor = UIColor.systemRed.withAlphaComponent(0.5)
@@ -54,7 +89,7 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
     private let bpmUnitLabel: UILabel = {
         let label = UILabel()
-        label.text = "BPM"
+        label.text = L10n.t("heart.bpmUnit")
         label.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
         label.textAlignment = .center
         label.textColor = .secondaryLabel
@@ -63,24 +98,49 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
     private let toggleButton: UIButton = {
         let btn = UIButton(type: .system)
-        btn.setTitle("ابدأ القياس", for: .normal)
+        btn.setTitle(L10n.t("heart.action.start"), for: .normal)
         btn.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .heavy)
         btn.backgroundColor = .systemGreen
         btn.tintColor = .white
         btn.layer.cornerRadius = 18
+        btn.layer.shadowColor = UIColor.black.cgColor
+        btn.layer.shadowOpacity = 0.2
+        btn.layer.shadowOffset = CGSize(width: 0, height: 4)
+        btn.layer.shadowRadius = 4
         return btn
+    }()
+    
+    // 🏆 بطاقة المكافأة (Reward Card)
+    private let rewardCardView: UIVisualEffectView = {
+        // تأثير زجاجي غامق (iOS 18 Style)
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let view = UIVisualEffectView(effect: blurEffect)
+        view.layer.cornerRadius = 16
+        view.layer.masksToBounds = true
+        view.layer.borderWidth = 1
+        // إطار شبه شفاف
+        view.layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
+        view.alpha = 0 // مخفية بالبداية
+        return view
+    }()
+    
+    private let rewardLabel: UILabel = {
+        let label = UILabel()
+        label.textAlignment = .center
+        label.numberOfLines = 0 // نسمح بأكثر من سطر
+        return label
     }()
 
     private let hintLabel: UILabel = {
         let label = UILabel()
-        label.text = "هذه الأداة ليست لأغراض طبية أو تشخيصية"
+        label.text = L10n.t("heart.disclaimer")
         label.font = UIFont.systemFont(ofSize: 12, weight: .regular)
         label.textAlignment = .center
         label.textColor = .secondaryLabel
         return label
     }()
 
-    // MARK: - Camera / Signal
+    // MARK: - Camera / Signal Variables
 
     private let captureSession = AVCaptureSession()
     private var previewLayer: AVCaptureVideoPreviewLayer?
@@ -88,35 +148,15 @@ final class HeartViewController: UIViewController { // تم التعديل من 
     private let processingQueue = DispatchQueue(label: "aiqo.heart.camera")
 
     private var isMeasuring = false
-
-    // قيم الإشارة
     private var lastFilteredValue: Double = 0
     private var lastDerivative: Double = 0
-
-    /// أزمنة النبضات (نحتفظ بآخر 12 نبضة فقط)
     private var beatTimestamps: [Double] = []
-
-    /// آخر قيمة BPM معتبرة (منعّمة)
     private var lastValidBPM: Int?
-
-    /// سلسلة القيم المفلترة لحساب المتوسط
     private var recentValues: [Double] = []
-
-    /// لكل جلسة حتى نحفظ قراءة واحدة فقط في HealthKit
     private var didSaveCurrentMeasurement = false
-
-    /// أقل مدة مقبولة للجلسة
-    private let minimumMeasurementDuration: TimeInterval = 10 // ثواني
-
-    /// بداية الجلسة
+    private let minimumMeasurementDuration: TimeInterval = 10
     private var measurementStartDate: Date?
-
-    /// عتبة تذبذب الإضاءة (للتأكد أن الإصبع ثابت)
     private let varianceThreshold: Double = 0.03
-    
-    // استخدام HealthKitService (تأكد من وجود الملف)
-    // private let healthService = HealthKitService.shared
-    // ^ علقتها مؤقتاً لتجنب الأخطاء اذا الملف غير موجود، فعلها اذا عندك الملف
 
     // MARK: - Lifecycle
 
@@ -124,10 +164,8 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         buildLayout()
-
-        toggleButton.addTarget(self,
-                               action: #selector(toggleMeasurement),
-                               for: .touchUpInside)
+        toggleButton.addTarget(self, action: #selector(toggleMeasurement), for: .touchUpInside)
+        beatFeedback.prepare()
     }
 
     override func viewDidLayoutSubviews() {
@@ -138,19 +176,10 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if isMeasuring {
-            stopMeasurement()
-        }
+        if isMeasuring { stopMeasurement() }
     }
 
-    /// تحويل آخر BPM إلى نقاط مستوى
-    private func finishHeartMeasurement(finalBPM: Int) {
-        // ✅ تم الإصلاح: استخدام addXP بدلاً من addPoints
-        LevelStore.shared.addXP(amount: finalBPM)
-        print("Done! Added \(finalBPM) XP to LevelStore")
-    }
-
-    // MARK: - Layout
+    // MARK: - Layout Construction
 
     private func buildLayout() {
         let bpmStack = UIStackView(arrangedSubviews: [bpmLabel, bpmUnitLabel])
@@ -158,17 +187,25 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         bpmStack.alignment = .center
         bpmStack.spacing = 2
 
-        [titleLabel,
-         subtitleLabel,
-         emojiHeartLabel,
-         circlePreview,
-         bpmStack,
-         toggleButton,
-         hintLabel].forEach {
+        // إضافة العناصر للـ View
+        [titleLabel, subtitleLabel, emojiHeartLabel, circlePreview, bpmStack, toggleButton, rewardCardView, hintLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
+        
+        // إعداد محتوى بطاقة المكافأة
+        rewardLabel.translatesAutoresizingMaskIntoConstraints = false
+        rewardCardView.contentView.addSubview(rewardLabel)
+        
+        NSLayoutConstraint.activate([
+            // محتوى البطاقة
+            rewardLabel.centerXAnchor.constraint(equalTo: rewardCardView.contentView.centerXAnchor),
+            rewardLabel.centerYAnchor.constraint(equalTo: rewardCardView.contentView.centerYAnchor),
+            rewardLabel.leadingAnchor.constraint(equalTo: rewardCardView.contentView.leadingAnchor, constant: 16),
+            rewardLabel.trailingAnchor.constraint(equalTo: rewardCardView.contentView.trailingAnchor, constant: -16),
+        ])
 
+        // القيود (Constraints)
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -192,8 +229,15 @@ final class HeartViewController: UIViewController { // تم التعديل من 
             toggleButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
             toggleButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
             toggleButton.heightAnchor.constraint(equalToConstant: 54),
+            
+            // 📍 مكان بطاقة المكافأة (تحت الزر مباشرة)
+            rewardCardView.topAnchor.constraint(equalTo: toggleButton.bottomAnchor, constant: 24),
+            rewardCardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            rewardCardView.widthAnchor.constraint(equalToConstant: 300), // زيدت العرض شوية
+            rewardCardView.heightAnchor.constraint(equalToConstant: 85), // زيدت الارتفاع ليناسب النص الجديد
 
-            hintLabel.topAnchor.constraint(equalTo: toggleButton.bottomAnchor, constant: 10),
+            // Hint Label يكون تحت بطاقة المكافأة
+            hintLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             hintLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
@@ -207,12 +251,77 @@ final class HeartViewController: UIViewController { // تم التعديل من 
             Task { await startMeasurementFlow() }
         }
     }
+    
+    // MARK: - Reward Display Logic 🎁
+    
+    private func showRewardCard(bpm: Int) {
+        // 1. تجهيز النص بالتنسيق المطلوب
+        // السطر الأول: Boom 🎉
+        let fullText = NSMutableAttributedString(string: "Boom 🎉\n", attributes: [
+            .font: UIFont.systemFont(ofSize: 22, weight: .heavy),
+            .foregroundColor: UIColor.label
+        ])
+        
+        // السطر الثاني الجزء الأول: 🫀Heart Rate 77 =
+        let detailsText = NSMutableAttributedString(string: "🫀Heart Rate \(bpm) = ", attributes: [
+            .font: UIFont.systemFont(ofSize: 14, weight: .medium),
+            .foregroundColor: UIColor.secondaryLabel
+        ])
+        
+        // السطر الثاني الجزء الثاني: 77 XP 🎁 (لون أصفر)
+        let xpText = NSAttributedString(string: "\(bpm) XP 🎁", attributes: [
+            .font: UIFont.systemFont(ofSize: 14, weight: .bold),
+            .foregroundColor: UIColor.systemYellow
+        ])
+        
+        // السطر الثاني الجزء الثالث: | Level Up (لون أخضر)
+        let levelUpText = NSAttributedString(string: " | Level Up", attributes: [
+            .font: UIFont.systemFont(ofSize: 14, weight: .bold),
+            .foregroundColor: UIColor.systemGreen
+        ])
 
-    // MARK: - Flow
+        // دمج النصوص
+        detailsText.append(xpText)
+        detailsText.append(levelUpText)
+        fullText.append(detailsText)
+        
+        // تعيين المسافة بين الأسطر (Line Spacing) لجمالية أكثر
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 6
+        paragraphStyle.alignment = .center
+        fullText.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: fullText.length))
+        
+        rewardLabel.attributedText = fullText
+        
+        // 2. هابتيك واهتزاز الزر
+        successFeedback.notificationOccurred(.success)
+        
+        UIView.animate(withDuration: 0.1, animations: {
+            self.toggleButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.3, initialSpringVelocity: 10, options: [], animations: {
+                self.toggleButton.transform = .identity
+            }, completion: nil)
+        }
+        
+        // 3. إظهار البطاقة (Fade In + Slide Up simple)
+        self.rewardCardView.transform = CGAffineTransform(translationX: 0, y: 20)
+        UIView.animate(withDuration: 0.6, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: .curveEaseOut, animations: {
+            self.rewardCardView.alpha = 1
+            self.rewardCardView.transform = .identity
+        }, completion: nil)
+    }
+    
+    private func hideRewardCard() {
+        UIView.animate(withDuration: 0.3) {
+            self.rewardCardView.alpha = 0
+            self.rewardCardView.transform = CGAffineTransform(translationX: 0, y: 10)
+        }
+    }
+
+    // MARK: - Measurement Flow
 
     private func startMeasurementFlow() async {
-        // _ = try? await healthService.requestAuthorization() // فعلها اذا عندك HealthKit
-
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         switch status {
         case .authorized:
@@ -226,11 +335,14 @@ final class HeartViewController: UIViewController { // تم التعديل من 
     }
 
     private func showCameraDenied() {
-        subtitleLabel.text = "صلاحية الكاميرا مرفوضة. فعّلها من الإعدادات لاستخدام قياس النبض."
+        subtitleLabel.text = L10n.t("heart.subtitle.denied")
     }
 
     private func startMeasurement() {
         guard !isMeasuring else { return }
+
+        // 🔴 إخفاء بطاقة المكافأة عند بدء قياس جديد
+        hideRewardCard()
 
         isMeasuring = true
         didSaveCurrentMeasurement = false
@@ -243,8 +355,8 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         lastValidBPM = nil
         bpmLabel.text = "--"
 
-        subtitleLabel.text = "غطّ الكاميرا الخلفية بإصبعك، وحاول ما تتحرك 15–20 ثانية."
-        toggleButton.setTitle("إيقاف القياس", for: .normal)
+        subtitleLabel.text = L10n.t("heart.subtitle.measure")
+        toggleButton.setTitle(L10n.t("heart.action.stop"), for: .normal)
         toggleButton.backgroundColor = .systemRed
 
         startHeartEmojiAnimation(bpm: 70)
@@ -252,27 +364,22 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
         processingQueue.async { [weak self] in
             guard let self else { return }
-            if !self.captureSession.isRunning {
-                self.captureSession.startRunning()
-            }
+            if !self.captureSession.isRunning { self.captureSession.startRunning() }
             DispatchQueue.main.async { self.setTorch(on: true) }
         }
     }
 
     private func stopMeasurement() {
         guard isMeasuring else { return }
-
         isMeasuring = false
 
         processingQueue.async { [weak self] in
             guard let self else { return }
-            if self.captureSession.isRunning {
-                self.captureSession.stopRunning()
-            }
+            if self.captureSession.isRunning { self.captureSession.stopRunning() }
             DispatchQueue.main.async { self.setTorch(on: false) }
         }
 
-        toggleButton.setTitle("ابدأ القياس", for: .normal)
+        toggleButton.setTitle(L10n.t("heart.action.start"), for: .normal)
         toggleButton.backgroundColor = .systemGreen
         stopHeartEmojiAnimation()
 
@@ -280,51 +387,50 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         measurementStartDate = nil
 
         if let bpm = lastValidBPM, duration >= minimumMeasurementDuration {
-            // قياس ناجح
-            bpmLabel.text = "\(bpm)"
+            bpmLabel.text = L10n.num(bpm)
             updateHeartEmojiAnimation(bpm: bpm)
-            // saveHeartRateIfNeeded(bpm: bpm) // فعلها اذا عندك HealthKit
-
-            // ✅ إضافة النقاط
+            
+            // ✅ النجاح: حفظ وعرض المكافأة الثابتة
             finishHeartMeasurement(finalBPM: bpm)
+            showRewardCard(bpm: bpm)
 
-            subtitleLabel.text = "آخر قياس تقريبي: \(bpm) نبضة في الدقيقة (ليست أداة طبية)."
+            subtitleLabel.text = String(
+                format: L10n.t("heart.subtitle.final"),
+                L10n.num(bpm)
+            )
         } else {
             lastValidBPM = nil
-            subtitleLabel.text = "القياس كان قصير أو غير واضح. حاول مرة أخرى وثبّت إصبعك لـ 15 ثانية."
+            subtitleLabel.text = L10n.t("heart.subtitle.tooShort")
         }
+    }
+    
+    private func finishHeartMeasurement(finalBPM: Int) {
+        LevelStore.shared.addXP(amount: finalBPM)
+        print("Done! Added \(finalBPM) XP to LevelStore")
     }
 
     // MARK: - Camera config
 
     private func configureSessionIfNeeded() {
         guard captureSession.inputs.isEmpty else { return }
-
         captureSession.beginConfiguration()
         captureSession.sessionPreset = .medium
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                   for: .video,
-                                                   position: .back) else {
-            subtitleLabel.text = "ما قدرنا نستخدم الكاميرا الخلفية."
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            subtitleLabel.text = L10n.t("heart.subtitle.noBackCamera")
             captureSession.commitConfiguration()
             return
         }
-
         captureDevice = device
 
         do {
             let input = try AVCaptureDeviceInput(device: device)
-            if captureSession.canAddInput(input) {
-                captureSession.addInput(input)
-            }
+            if captureSession.canAddInput(input) { captureSession.addInput(input) }
 
             let output = AVCaptureVideoDataOutput()
             output.alwaysDiscardsLateVideoFrames = true
             output.setSampleBufferDelegate(self, queue: processingQueue)
-            if captureSession.canAddOutput(output) {
-                captureSession.addOutput(output)
-            }
+            if captureSession.canAddOutput(output) { captureSession.addOutput(output) }
 
             let layer = AVCaptureVideoPreviewLayer(session: captureSession)
             layer.videoGravity = .resizeAspectFill
@@ -337,23 +443,18 @@ final class HeartViewController: UIViewController { // تم التعديل من 
             captureSession.commitConfiguration()
         } catch {
             captureSession.commitConfiguration()
-            subtitleLabel.text = "خطأ في إعداد الكاميرا: \(error.localizedDescription)"
+            subtitleLabel.text = String(format: L10n.t("heart.subtitle.cameraError"), error.localizedDescription)
         }
     }
 
     private func setTorch(on: Bool) {
         guard let device = captureDevice, device.hasTorch else { return }
-
         do {
             try device.lockForConfiguration()
-            if on {
-                try device.setTorchModeOn(level: 0.9)
-            } else {
-                device.torchMode = .off
-            }
+            if on { try device.setTorchModeOn(level: 0.9) } else { device.torchMode = .off }
             device.unlockForConfiguration()
         } catch {
-            // نطنش، مو critical
+            // intentionally ignore
         }
     }
 
@@ -361,7 +462,6 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
     private func startHeartEmojiAnimation(bpm: Int) {
         emojiHeartLabel.layer.removeAnimation(forKey: "pulse")
-
         let duration = max(0.4, min(1.2, 60.0 / Double(bpm))) / 2.0
         let anim = CABasicAnimation(keyPath: "transform.scale")
         anim.fromValue = 1.0
@@ -369,7 +469,6 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         anim.duration = duration
         anim.autoreverses = true
         anim.repeatCount = .infinity
-
         emojiHeartLabel.layer.add(anim, forKey: "pulse")
     }
 
@@ -382,13 +481,9 @@ final class HeartViewController: UIViewController { // تم التعديل من 
     }
 
     // MARK: - Signal Processing
-
     private func processSample(value: Double, variance: Double, timestamp: Double) {
-        // 1) التأكد من أن الإصبع ثابت ويغطي الكاميرا
         if variance > varianceThreshold {
-            DispatchQueue.main.async {
-                self.bpmLabel.text = "--"
-            }
+            DispatchQueue.main.async { self.bpmLabel.text = "--" }
             beatTimestamps.removeAll()
             recentValues.removeAll()
             lastFilteredValue = 0
@@ -397,46 +492,37 @@ final class HeartViewController: UIViewController { // تم التعديل من 
             return
         }
 
-        // 2) فلتر إكسبونينشيال
         let alpha = 0.2
         let filtered = alpha * value + (1 - alpha) * lastFilteredValue
 
-        // 3) متوسط متحرك للقيم
         recentValues.append(filtered)
-        if recentValues.count > 300 {
-            recentValues.removeFirst()
-        }
+        if recentValues.count > 300 { recentValues.removeFirst() }
 
         let mean = recentValues.reduce(0, +) / Double(recentValues.count)
         let threshold = mean + 0.0015
 
-        // 4) الاشتقاق
         let derivative = filtered - lastFilteredValue
 
-        // 5) كشف النبضات (قمة بعد صعود)
         if lastDerivative > 0, derivative < 0, filtered > threshold {
             beatTimestamps.append(timestamp)
-
-            if beatTimestamps.count > 12 {
-                beatTimestamps.removeFirst()
+            
+            // ⚡️ Haptic Feedback
+            DispatchQueue.main.async {
+                self.beatFeedback.impactOccurred()
             }
+            
+            if beatTimestamps.count > 12 { beatTimestamps.removeFirst() }
 
-            // حساب RR intervals
             if beatTimestamps.count >= 4 {
-                let intervals = zip(beatTimestamps.dropFirst(), beatTimestamps)
-                    .map { $0.0 - $0.1 }
-
-                // فلترة الفترات الواقعية (تقريباً BPM 40–180)
+                let intervals = zip(beatTimestamps.dropFirst(), beatTimestamps).map { $0.0 - $0.1 }
                 let validIntervals = intervals.filter { $0 > 0.33 && $0 < 1.5 }
 
                 if validIntervals.count >= 3 {
-                    // نستخدم الوسيط لتقليل تأثير القيم الشاذة
                     let sorted = validIntervals.sorted()
                     let medianInterval = sorted[sorted.count / 2]
                     let bpmRaw = Int(60.0 / medianInterval)
 
                     if bpmRaw > 40, bpmRaw < 180 {
-                        // تنعيم بين القراءة الحالية والقديمة
                         let smoothed: Int
                         if let last = lastValidBPM {
                             let mixed = 0.7 * Double(last) + 0.3 * Double(bpmRaw)
@@ -447,7 +533,7 @@ final class HeartViewController: UIViewController { // تم التعديل من 
 
                         DispatchQueue.main.async {
                             self.lastValidBPM = smoothed
-                            self.bpmLabel.text = "\(smoothed)"
+                            self.bpmLabel.text = L10n.num(smoothed)
                             self.updateHeartEmojiAnimation(bpm: smoothed)
                         }
                     }
@@ -458,26 +544,11 @@ final class HeartViewController: UIViewController { // تم التعديل من 
         lastFilteredValue = filtered
         lastDerivative = derivative
     }
-/*
-    private func saveHeartRateIfNeeded(bpm: Int) {
-        guard !didSaveCurrentMeasurement else { return }
-        didSaveCurrentMeasurement = true
-
-        Task {
-            try? await healthService.saveHeartRateSample(bpm: Double(bpm), date: Date())
-        }
-    }
- */
 }
 
-// MARK: - AVCapture Delegate
-
 extension HeartViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
-    func captureOutput(_ output: AVCaptureOutput,
-                       didOutput sampleBuffer: CMSampleBuffer,
-                       from connection: AVCaptureConnection) {
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-
         let ts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
 
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
@@ -489,11 +560,7 @@ extension HeartViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let baseAddress = CVPixelBufferGetBaseAddress(buffer) else { return }
 
         let ptr = baseAddress.assumingMemoryBound(to: UInt8.self)
-
-        var sumR: Double = 0
-        var sumR2: Double = 0
-        var count = 0
-
+        var sumR: Double = 0, sumR2: Double = 0, count = 0
         let stepX = max(1, width / 8)
         let stepY = max(1, height / 8)
 
@@ -501,23 +568,19 @@ extension HeartViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
             let row = ptr + y * bytesPerRow
             for x in stride(from: 0, to: width, by: stepX) {
                 let pixel = row + x * 4
-                // قناة الأحمر
                 let r = Double(pixel[2]) / 255.0
                 sumR += r
                 sumR2 += r * r
                 count += 1
             }
         }
-
         guard count > 0 else { return }
 
         let mean = sumR / Double(count)
         let mean2 = sumR2 / Double(count)
         let variance = max(0, mean2 - mean * mean)
 
-        // معالجة البيانات دون الرجوع للMain Thread إلا للتحديث
         guard self.isMeasuring else { return }
         self.processSample(value: mean, variance: variance, timestamp: ts)
     }
 }
-

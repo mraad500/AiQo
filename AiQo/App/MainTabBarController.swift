@@ -2,14 +2,11 @@ import UIKit
 
 final class MainTabBarController: UITabBarController {
 
-    // نخزن الـ glass view حتى نتحكم بيه لاحقاً
-    private var glassView: UIVisualEffectView?
-
     override func viewDidLoad() {
         super.viewDidLoad()
 
         setupViewControllers()
-        setupGlassStyle()
+        setupTransparentStyle() // قمنا بتغيير الاسم ليعبر عن الوظيفة الجديدة
 
         // 👇 حركة تصغير التاب بار لما تسحب للأسفل (iOS 18)
         if #available(iOS 18.0, *) {
@@ -54,52 +51,40 @@ final class MainTabBarController: UITabBarController {
 
         // نربطهم سوا
         viewControllers = [home, gym, kitchen, captain]
-
-        // إعداد المظهر العام
+        
+        // التأكد من الشفافية
         tabBar.isTranslucent = true
     }
 
-    // MARK: - Glass / Blur Style
+    // MARK: - Style Setup
 
-    private func setupGlassStyle() {
+    private func setupTransparentStyle() {
         let appearance = UITabBarAppearance()
+        
+        // هذا السطر يجعل الخلفية شفافة تماماً ويلغي "الكارت" الافتراضي
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
-        appearance.shadowColor = .clear
+        appearance.shadowColor = .clear // إزالة خط الظل العلوي
 
-        // لون الأيقونة المختارة (أصفر)
+        // إعدادات ألوان الأيقونات والنص
         let selectedColor = UIColor.systemYellow
+        
+        // الأيقونات
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
+        appearance.stackedLayoutAppearance.normal.iconColor = .systemGray // لون الأيقونات غير المختارة
+        
+        // النصوص
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: selectedColor
         ]
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.systemGray
+        ]
 
+        // تطبيق المظهر
         tabBar.standardAppearance = appearance
-        tabBar.scrollEdgeAppearance = appearance
-
-        // نحذف أي glassView سابق
-        glassView?.removeFromSuperview()
-
-        // نضيف glass أو blur حسب النظام
-        let effectView: UIVisualEffectView
-        if #available(iOS 18.0, *) {
-            effectView = UIVisualEffectView(effect: UIGlassEffect())
-        } else {
-            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
+        if #available(iOS 15.0, *) {
+            tabBar.scrollEdgeAppearance = appearance
         }
-
-        effectView.isUserInteractionEnabled = false
-        effectView.frame = tabBar.bounds
-        effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
-        // نخلي الزجاج خلف الأيقونات
-        tabBar.insertSubview(effectView, at: 0)
-        glassView = effectView
-    }
-
-    // نحدث حجم الزجاج إذا تغيّر التاب بار
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        glassView?.frame = tabBar.bounds
     }
 }
