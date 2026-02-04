@@ -1,185 +1,146 @@
 import UIKit
 import HealthKit
-internal import Combine
+import SwiftUI
 
-// MARK: - GlassHeader (Segmented)
-final class GlassHeader: UIView {
-    let segmented: UISegmentedControl = {
-        let items = [
-            NSLocalizedString("screen.gym.segment.exercises", comment: "Exercises"),
-            NSLocalizedString("screen.gym.segment.heart", comment: "Heart"),
-            NSLocalizedString("screen.gym.segment.plan", comment: "Plan"),
-            NSLocalizedString("screen.gym.segment.rewards", comment: "Rewards")
-        ]
-        return UISegmentedControl(items: items)
+// =========================
+// File: Features/Gym/GymViewController.swift
+// iOS 18 Glass Bubble Tabs Header ✅
+// Theme matches Home (Mint + Beige) ✅
+// =========================
+
+final class GymViewController: UIViewController, ExercisesViewControllerDelegate {
+
+    // MARK: - Theme (Matches Home)
+    private let homeMint  = Colors.mint
+    private let homeBeige = Colors.aiqoBeige   // نفس بيجي Home (اللي سوّيناه)
+    private let glassAlpha: CGFloat = 0.16     // تدرّج خفيف حتى ما يصير فاقع
+
+    // MARK: - UI Elements
+    private let titleLabel: UILabel = {
+        let l = UILabel()
+        l.text = "Gym"
+        l.font = .systemFont(ofSize: 40, weight: .black)
+        l.textColor = .label
+        l.translatesAutoresizingMaskIntoConstraints = false
+        return l
     }()
 
-    private let effectView: UIVisualEffectView = {
-        return UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
-    }()
+    // زر البروفايل (تصميم Home)
+    private let profileButton = FloatingProfileButton()
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        translatesAutoresizingMaskIntoConstraints = false
-        layer.masksToBounds = false
-
-        effectView.translatesAutoresizingMaskIntoConstraints = false
-        effectView.layer.cornerRadius = 22
-        effectView.layer.masksToBounds = true
-        
-        addSubview(effectView)
-
-        segmented.selectedSegmentIndex = 0
-        segmented.translatesAutoresizingMaskIntoConstraints = false
-        segmented.backgroundColor = .clear
-        segmented.selectedSegmentTintColor = .white
-
-        segmented.setTitleTextAttributes([
-            .font: UIFont.aiqoRounded(size: 15, weight: .bold),
-            .foregroundColor: UIColor.black.withAlphaComponent(0.6)
-        ], for: .normal)
-
-        segmented.setTitleTextAttributes([
-            .font: UIFont.aiqoRounded(size: 15, weight: .black),
-            .foregroundColor: UIColor.black
-        ], for: .selected)
-
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOpacity = 0.08
-        layer.shadowRadius = 12
-        layer.shadowOffset = CGSize(width: 0, height: 6)
-
-        effectView.contentView.addSubview(segmented)
-
-        NSLayoutConstraint.activate([
-            effectView.topAnchor.constraint(equalTo: topAnchor),
-            effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            effectView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            segmented.topAnchor.constraint(equalTo: effectView.contentView.topAnchor, constant: 6),
-            segmented.bottomAnchor.constraint(equalTo: effectView.contentView.bottomAnchor, constant: -6),
-            segmented.leadingAnchor.constraint(equalTo: effectView.contentView.leadingAnchor, constant: 8),
-            segmented.trailingAnchor.constraint(equalTo: effectView.contentView.trailingAnchor, constant: -8),
-
-            heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
-        ])
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-}
-
-
-// MARK: - GymViewController
-final class GymViewController: BaseViewController {
-
-    private let mint = Colors.mint
-    private let sand = Colors.sand
-
-    private let titleHeader = LargeTitleHeaderView(
-        title: NSLocalizedString("screen.gym.title", comment: "Gym header title")
-    )
-    private let segmentedHeader = GlassHeader()
+    // شريط التبويبات الزجاجي + فقاعة
+    private let header = GlassHeader(items: ["Body", "Vitals", "Plan", "Wins", "Recap"])
 
     private let container = UIView()
-    private var current: UIViewController?
+    private var currentChild: UIViewController?
 
+    // MARK: - Child View Controllers
     private lazy var exercisesVC: ExercisesViewController = {
         let vc = ExercisesViewController()
         vc.delegate = self
         return vc
     }()
-    private lazy var heartVC = HeartViewController()
-    private lazy var planVC = MyPlanViewController()
-    private lazy var rewardsVC = RewardsViewController()
 
+    private lazy var heartVC   = HeartViewController()
+    private lazy var myPlanVC  = MyPlanViewController()
+    private lazy var rewardsVC = RewardsViewController()
+    private lazy var recapVC   = RecapViewController()
+
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
 
-        buildHeader()
-        buildGlassSegmented()
-        buildContainer()
+        // نفس Home
+        view.backgroundColor = Colors.background
 
-        segmentedChanged(segmentedHeader.segmented)
-        
-        // ✅ تفعيل الاتصال عند فتح الشاشة لضمان جاهزية المزامنة
-        PhoneConnectivityManager.shared.activate()
+        buildUI()
+        applyHomeThemeToGym()
+
+        profileButton.addTarget(self, action: #selector(onProfileTap), for: .touchUpInside)
+
+        header.onChange = { [weak self] index in
+            self?.switchTo(index)
+        }
+
+        // Default Screen
+        header.selectedIndex = 0
+        showChild(exercisesVC)
     }
 
-    @MainActor
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    private func buildHeader() {
-        titleHeader.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(titleHeader)
-
-        titleHeader.titleLabel.font = .aiqoRounded(size: 32, weight: .heavy)
-
-        NSLayoutConstraint.activate([
-            titleHeader.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 18),
-            titleHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            titleHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            titleHeader.heightAnchor.constraint(equalToConstant: 60)
-        ])
-
-        titleHeader.profileButton.addTarget(self, action: #selector(openProfile), for: .touchUpInside)
-    }
-
-    private func buildGlassSegmented() {
-        view.addSubview(segmentedHeader)
-        segmentedHeader.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            segmentedHeader.topAnchor.constraint(equalTo: titleHeader.bottomAnchor, constant: 16),
-            segmentedHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            segmentedHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
-        ])
-
-        segmentedHeader.segmented.addTarget(self,
-                                            action: #selector(segmentedChanged(_:)),
-                                            for: .valueChanged)
-    }
-
-    private func buildContainer() {
+    private func buildUI() {
+        header.translatesAutoresizingMaskIntoConstraints = false
         container.translatesAutoresizingMaskIntoConstraints = false
+        profileButton.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(titleLabel)
+        view.addSubview(profileButton)
+        view.addSubview(header)
         view.addSubview(container)
 
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: segmentedHeader.bottomAnchor, constant: 10),
+            // رفع العنوان للأعلى
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: -16),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+
+            // زر البروفايل يتبع العنوان
+            profileButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            profileButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            profileButton.widthAnchor.constraint(equalToConstant: 44),
+            profileButton.heightAnchor.constraint(equalToConstant: 44),
+
+            // شريط التبويبات تحت العنوان
+            header.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            header.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            header.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            header.heightAnchor.constraint(equalToConstant: 54),
+
+            // المحتوى
+            container.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
             container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             container.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
-    @objc private func segmentedChanged(_ sender: UISegmentedControl) {
-        let next: UIViewController = {
-            switch sender.selectedSegmentIndex {
-            case 0: return exercisesVC
-            case 1: return heartVC
-            case 2: return planVC
-            case 3: return rewardsVC
-            default: return exercisesVC
-            }
-        }()
-        showChild(next)
+    // ✅ يلوّن الهيدر/الفقاعة بلمسة Mint/Beige مثل Home
+    private func applyHomeThemeToGym() {
+        header.setTheme(mint: homeMint, beige: homeBeige, alpha: glassAlpha)
+    }
+
+    // MARK: - Actions
+    @objc private func onProfileTap() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        let vc = NewProfileViewController()
+        vc.modalPresentationStyle = .pageSheet
+        present(vc, animated: true)
+    }
+
+    private func switchTo(_ index: Int) {
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        switch index {
+        case 0: showChild(exercisesVC)
+        case 1: showChild(heartVC)
+        case 2: showChild(myPlanVC)
+        case 3: showChild(rewardsVC)
+        case 4: showChild(recapVC)
+        default: break
+        }
     }
 
     private func showChild(_ vc: UIViewController) {
-        if let current {
-            current.willMove(toParent: nil)
-            current.view.removeFromSuperview()
-            current.removeFromParent()
+        if let currentChild {
+            currentChild.willMove(toParent: nil)
+            currentChild.view.removeFromSuperview()
+            currentChild.removeFromParent()
         }
 
         addChild(vc)
         vc.view.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(vc.view)
 
+        // نفس Home
+        vc.view.backgroundColor = vc.view.backgroundColor ?? Colors.background
+
+        container.addSubview(vc.view)
         NSLayoutConstraint.activate([
             vc.view.topAnchor.constraint(equalTo: container.topAnchor),
             vc.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
@@ -188,247 +149,357 @@ final class GymViewController: BaseViewController {
         ])
 
         vc.didMove(toParent: self)
-        current = vc
+        currentChild = vc
     }
 
-    @objc private func openProfile() {
-        let profileVC = NewProfileViewController()
-        presentAsSheet(profileVC, detents: [.large()])
-    }
+    // MARK: - Delegate
+    func didSelectExercise(name: String, activityType: HKWorkoutActivityType, location: HKWorkoutSessionLocationType) {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-    private func openWorkoutSheet(title: String, activity: HKWorkoutActivityType) {
-        let vc = LiveWorkoutSheet(titleText: title,
-                                  activityType: activity,
-                                  mint: mint,
-                                  sand: sand)
-        presentAsSheet(vc, detents: [.medium(), .large()])
-    }
+        let live = LiveWorkoutSession(title: name, activityType: activityType, locationType: location)
+        let screen = WorkoutSessionScreen(session: live)
+        let host = UIHostingController(rootView: screen)
 
-    private func presentAsSheet(_ vc: UIViewController,
-                                detents: [UISheetPresentationController.Detent]) {
-        vc.modalPresentationStyle = .pageSheet
-        if let sheet = vc.sheetPresentationController {
-            sheet.detents = detents
+        host.modalPresentationStyle = .pageSheet
+        if let sheet = host.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
-            sheet.preferredCornerRadius = 28
+            sheet.preferredCornerRadius = 30
         }
-        present(vc, animated: true)
+        present(host, animated: true)
     }
 }
 
-// MARK: - LiveWorkoutSheet
-final class LiveWorkoutSheet: UIViewController {
+// =========================
+// MARK: - GlassHeader (iOS 18 Glass + Bubble Tabs)
+// =========================
 
-    private let titleText: String
-    private let activityType: HKWorkoutActivityType
-    private let mint: UIColor
-    private let sand: UIColor
+final class GlassHeader: UIView {
 
-    private let session = LiveWorkoutSession.shared
-    private var cancellables = Set<AnyCancellable>()
+    private let items: [String]
+    var onChange: ((Int) -> Void)?
 
-    private let distanceLabel = UILabel()
-    private let timeLabel = UILabel()
-    private let hrLabel = UILabel()
-    private let kcalLabel = UILabel()
-    private let startBtn = UIButton(type: .system)
-    private let endBtn = UIButton(type: .system)
-
-    init(titleText: String,
-         activityType: HKWorkoutActivityType,
-         mint: UIColor,
-         sand: UIColor) {
-        self.titleText = titleText
-        self.activityType = activityType
-        self.mint = mint
-        self.sand = sand
-        super.init(nibName: nil, bundle: nil)
+    var selectedIndex: Int {
+        get { tabs.selectedIndex }
+        set { tabs.setSelectedIndex(newValue, animated: false) }
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    private let backgroundGlass = UIVisualEffectView()
+    private let tintOverlay = UIView() // ✅ Tint overlay for Home palette
+    private let tabs: GlassBubbleTabs
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+    init(items: [String]) {
+        self.items = items
+        self.tabs = GlassBubbleTabs(items: items)
+        super.init(frame: .zero)
+        setup()
+    }
 
-        let title = UILabel()
-        title.text = titleText
-        title.font = .aiqoRounded(size: 20, weight: .black)
-        title.textAlignment = .center
+    required init?(coder: NSCoder) {
+        self.items = ["Body", "Vitals", "Plan", "Wins", "Recap"]
+        self.tabs = GlassBubbleTabs(items: self.items)
+        super.init(coder: coder)
+        setup()
+    }
 
-        let big = makeStatCard(label: distanceLabel, color: mint, big: true)
-        distanceLabel.text = "0.00 km"
+    func setTheme(mint: UIColor, beige: UIColor, alpha: CGFloat) {
+        // نستخدم mint كلون عام للهيدر (نفس جو Home)
+        tintOverlay.backgroundColor = mint.withAlphaComponent(alpha)
+        tabs.setTheme(mint: mint, beige: beige, alpha: alpha)
+    }
 
-        let timeCard = makeStatCard(label: timeLabel, color: mint, big: false)
-        timeLabel.text = "00:00"
+    private func setup() {
+        translatesAutoresizingMaskIntoConstraints = false
+        backgroundColor = .clear
 
-        let hrCard = makeStatCard(label: hrLabel, color: sand, big: false)
-        hrLabel.text = "-- bpm"
+        // شكل الحاوية
+        layer.cornerRadius = 27
+        layer.cornerCurve = .continuous
 
-        let grid = UIStackView()
-        grid.axis = .vertical
-        grid.spacing = 12
+        // Glass background
+        backgroundGlass.translatesAutoresizingMaskIntoConstraints = false
+        backgroundGlass.clipsToBounds = true
+        backgroundGlass.layer.cornerRadius = 27
+        backgroundGlass.layer.cornerCurve = .continuous
 
-        let row = UIStackView(arrangedSubviews: [timeCard, hrCard])
-        row.axis = .horizontal
-        row.spacing = 12
-        row.distribution = .fillEqually
+        if #available(iOS 18.0, *) {
+            backgroundGlass.effect = UIGlassEffect()
+        } else {
+            backgroundGlass.effect = UIBlurEffect(style: .systemUltraThinMaterial)
+        }
 
-        grid.addArrangedSubview(big)
-        grid.addArrangedSubview(row)
+        // ✅ Tint overlay
+        tintOverlay.translatesAutoresizingMaskIntoConstraints = false
+        tintOverlay.isUserInteractionEnabled = false
+        tintOverlay.backgroundColor = .clear
+        tintOverlay.layer.cornerRadius = 27
+        tintOverlay.layer.cornerCurve = .continuous
+        tintOverlay.clipsToBounds = true
 
-        kcalLabel.text = "0 kcal"
-        kcalLabel.font = .aiqoRounded(size: 22, weight: .heavy)
-        kcalLabel.textAlignment = .center
+        // ظل خفيف يطي “floating”
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.10
+        layer.shadowRadius = 14
+        layer.shadowOffset = CGSize(width: 0, height: 6)
 
-        startBtn.setTitle(NSLocalizedString("sheet.workout.button.start", comment: "Start"), for: .normal)
-        startBtn.titleLabel?.font = .aiqoRounded(size: 19, weight: .heavy)
-        startBtn.backgroundColor = .systemGreen
-        startBtn.tintColor = .white
-        startBtn.layer.cornerRadius = 14
-        startBtn.heightAnchor.constraint(equalToConstant: 54).isActive = true
-        startBtn.addTarget(self, action: #selector(startTapped), for: .touchUpInside)
+        addSubview(backgroundGlass)
+        backgroundGlass.contentView.addSubview(tintOverlay)
+        backgroundGlass.contentView.addSubview(tabs)
 
-        endBtn.setTitle(NSLocalizedString("sheet.workout.button.end", comment: "End"), for: .normal)
-        endBtn.titleLabel?.font = .aiqoRounded(size: 19, weight: .heavy)
-        endBtn.backgroundColor = .systemRed
-        endBtn.tintColor = .white
-        endBtn.layer.cornerRadius = 14
-        endBtn.heightAnchor.constraint(equalToConstant: 54).isActive = true
-        endBtn.addTarget(self, action: #selector(endTapped), for: .touchUpInside)
-
-        let buttons = UIStackView(arrangedSubviews: [startBtn, endBtn])
-        buttons.axis = .horizontal
-        buttons.spacing = 16
-        buttons.distribution = .fillEqually
-
-        [title, grid, kcalLabel, buttons].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview($0)
+        tabs.translatesAutoresizingMaskIntoConstraints = false
+        tabs.onSelect = { [weak self] index in
+            self?.onChange?(index)
         }
 
         NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
-            title.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            title.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            backgroundGlass.topAnchor.constraint(equalTo: topAnchor),
+            backgroundGlass.bottomAnchor.constraint(equalTo: bottomAnchor),
+            backgroundGlass.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundGlass.trailingAnchor.constraint(equalTo: trailingAnchor),
 
-            grid.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 20),
-            grid.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            grid.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            tintOverlay.topAnchor.constraint(equalTo: backgroundGlass.contentView.topAnchor),
+            tintOverlay.bottomAnchor.constraint(equalTo: backgroundGlass.contentView.bottomAnchor),
+            tintOverlay.leadingAnchor.constraint(equalTo: backgroundGlass.contentView.leadingAnchor),
+            tintOverlay.trailingAnchor.constraint(equalTo: backgroundGlass.contentView.trailingAnchor),
 
-            kcalLabel.topAnchor.constraint(equalTo: grid.bottomAnchor, constant: 16),
-            kcalLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            kcalLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-
-            buttons.topAnchor.constraint(equalTo: kcalLabel.bottomAnchor, constant: 24),
-            buttons.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            buttons.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            buttons.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            tabs.leadingAnchor.constraint(equalTo: backgroundGlass.contentView.leadingAnchor, constant: 6),
+            tabs.trailingAnchor.constraint(equalTo: backgroundGlass.contentView.trailingAnchor, constant: -6),
+            tabs.topAnchor.constraint(equalTo: backgroundGlass.contentView.topAnchor, constant: 6),
+            tabs.bottomAnchor.constraint(equalTo: backgroundGlass.contentView.bottomAnchor, constant: -6)
         ])
-
-        bindSession()
-    }
-
-    private func bindSession() {
-        LiveWorkoutSession.shared.$heartRate
-            .receive(on: RunLoop.main)
-            .sink { [weak self] bpm in
-                let v = Int(bpm.rounded())
-                self?.hrLabel.text = v > 0 ? "\(v) bpm" : "-- bpm"
-            }
-            .store(in: &cancellables)
-
-        LiveWorkoutSession.shared.$activeEnergy
-            .receive(on: RunLoop.main)
-            .sink { [weak self] kcal in
-                self?.kcalLabel.text = "\(Int(kcal.rounded())) kcal"
-            }
-            .store(in: &cancellables)
-
-        LiveWorkoutSession.shared.$elapsed
-            .receive(on: RunLoop.main)
-            .sink { [weak self] t in
-                let s = Int(t)
-                self?.timeLabel.text = String(format: "%02d:%02d", s / 60, s % 60)
-            }
-            .store(in: &cancellables)
-
-        LiveWorkoutSession.shared.$distance
-            .receive(on: RunLoop.main)
-            .sink { [weak self] meters in
-                let km = meters / 1000.0
-                self?.distanceLabel.text = String(format: "%.2f km", km)
-            }
-            .store(in: &cancellables)
-    }
-
-    @objc private func startTapped() {
-        print("📱 Start Button Tapped on iPhone") // ✅ Debug Print
-        
-        let activityType = self.activityType
-        
-        // ✅ تغيير حالة الزر ليعرف المستخدم أن الاتصال جاري
-        startBtn.isEnabled = false
-        startBtn.setTitle("Connecting...", for: .normal)
-        startBtn.backgroundColor = .gray
-
-        // ✅ إرسال الأمر للساعة عبر ConnectivityManager
-        PhoneConnectivityManager.shared.startWorkoutOnWatch(
-            activityTypeRaw: Int(activityType.rawValue),
-            locationTypeRaw: inferredLocationType(for: activityType).rawValue
-        )
-    }
-    
-    // helper to map activity to location
-    private func inferredLocationType(for activity: HKWorkoutActivityType) -> HKWorkoutSessionLocationType {
-        switch activity {
-        case .running, .walking, .cycling:
-            return .outdoor
-        default:
-            return .indoor
-        }
-    }
-
-    @objc private func endTapped() {
-        print("📱 End Button Tapped on iPhone")
-        
-        // ✅ إيقاف التمرين عبر الساعة
-        PhoneConnectivityManager.shared.stopWorkoutOnWatch()
-        
-        // Reset UI
-        startBtn.isEnabled = true
-        startBtn.setTitle(NSLocalizedString("sheet.workout.button.start", comment: "Start"), for: .normal)
-        startBtn.backgroundColor = .systemGreen
-        startBtn.alpha = 1.0
-    }
-
-    private func makeStatCard(label: UILabel, color: UIColor, big: Bool) -> UIView {
-        let v = UIView()
-        v.backgroundColor = color
-        v.layer.cornerRadius = 24
-
-        label.textColor = .black
-        label.font = .aiqoRounded(size: big ? 36 : 28, weight: .black)
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        v.addSubview(label)
-
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 16),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: v.trailingAnchor, constant: -16),
-            label.centerYAnchor.constraint(equalTo: v.centerYAnchor),
-            v.heightAnchor.constraint(equalToConstant: big ? 100 : 80)
-        ])
-
-        return v
     }
 }
 
-// MARK: - Delegate from Exercises
-extension GymViewController: ExercisesViewControllerDelegate {
-    func exercisesViewController(_ vc: ExercisesViewController,
-                                 didSelectWorkoutNamed name: String,
-                                 activityType: HKWorkoutActivityType) {
-        openWorkoutSheet(title: name, activity: activityType)
+// =========================
+// MARK: - GlassBubbleTabs (الفقاعة تتحرك سلاسة)
+// =========================
+
+final class GlassBubbleTabs: UIControl {
+
+    var onSelect: ((Int) -> Void)?
+    private(set) var selectedIndex: Int = 0
+
+    private let items: [String]
+    private let bubble = UIVisualEffectView()
+    private let bubbleTint = UIView() // ✅ tint for bubble (beige like Home)
+    private let stack = UIStackView()
+    private var buttons: [UIButton] = []
+
+    private var bubbleLeading: NSLayoutConstraint!
+    private var bubbleWidth: NSLayoutConstraint!
+
+    init(items: [String]) {
+        self.items = items
+        super.init(frame: .zero)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        self.items = ["Body", "Vitals", "Plan", "Wins", "Recap"]
+        super.init(coder: coder)
+        setup()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateBubble(animated: false)
+    }
+
+    func setSelectedIndex(_ index: Int, animated: Bool) {
+        guard index >= 0, index < items.count else { return }
+        selectedIndex = index
+        updateSelection(animated: animated)
+    }
+
+    func setTheme(mint: UIColor, beige: UIColor, alpha: CGFloat) {
+        // نخلي الفقاعة لونها أقرب لبيجي Home
+        bubbleTint.backgroundColor = beige.withAlphaComponent(alpha)
+    }
+
+    private func setup() {
+        translatesAutoresizingMaskIntoConstraints = false
+        backgroundColor = .clear
+
+        // Bubble effect
+        bubble.translatesAutoresizingMaskIntoConstraints = false
+        bubble.clipsToBounds = true
+        bubble.layer.cornerRadius = 18
+        bubble.layer.cornerCurve = .continuous
+
+        if #available(iOS 18.0, *) {
+            bubble.effect = UIGlassEffect()
+        } else {
+            bubble.effect = UIBlurEffect(style: .systemMaterial)
+        }
+
+        // ✅ tint داخل الفقاعة
+        bubbleTint.translatesAutoresizingMaskIntoConstraints = false
+        bubbleTint.isUserInteractionEnabled = false
+        bubbleTint.backgroundColor = .clear
+        bubble.contentView.addSubview(bubbleTint)
+        NSLayoutConstraint.activate([
+            bubbleTint.topAnchor.constraint(equalTo: bubble.contentView.topAnchor),
+            bubbleTint.bottomAnchor.constraint(equalTo: bubble.contentView.bottomAnchor),
+            bubbleTint.leadingAnchor.constraint(equalTo: bubble.contentView.leadingAnchor),
+            bubbleTint.trailingAnchor.constraint(equalTo: bubble.contentView.trailingAnchor)
+        ])
+
+        // لمعة بسيطة داخل الفقاعة
+        let highlight = UIView()
+        highlight.translatesAutoresizingMaskIntoConstraints = false
+        highlight.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.10)
+        bubble.contentView.addSubview(highlight)
+        NSLayoutConstraint.activate([
+            highlight.topAnchor.constraint(equalTo: bubble.contentView.topAnchor),
+            highlight.bottomAnchor.constraint(equalTo: bubble.contentView.bottomAnchor),
+            highlight.leadingAnchor.constraint(equalTo: bubble.contentView.leadingAnchor),
+            highlight.trailingAnchor.constraint(equalTo: bubble.contentView.trailingAnchor)
+        ])
+
+        // Border خفيف للفقاعة
+        bubble.layer.borderWidth = 0.5
+        bubble.layer.borderColor = UIColor.white.withAlphaComponent(0.20).cgColor
+
+        // Stack
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.axis = .horizontal
+        stack.alignment = .fill
+        stack.distribution = .fillEqually
+        stack.spacing = 4
+
+        addSubview(bubble)
+        addSubview(stack)
+
+        // Buttons
+        buttons = items.enumerated().map { (i, title) in
+            let b = UIButton(type: .system)
+            b.tag = i
+            b.setTitle(title, for: .normal)
+            b.titleLabel?.font = .systemFont(ofSize: 14, weight: .bold)
+            b.setTitleColor(.secondaryLabel, for: .normal)
+            b.addTarget(self, action: #selector(tap(_:)), for: .touchUpInside)
+            b.accessibilityLabel = title
+            return b
+        }
+
+        buttons.forEach { stack.addArrangedSubview($0) }
+
+        // Bubble constraints
+        bubbleLeading = bubble.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 0)
+        bubbleWidth = bubble.widthAnchor.constraint(equalToConstant: 10)
+
+        NSLayoutConstraint.activate([
+            bubbleLeading,
+            bubbleWidth,
+            bubble.topAnchor.constraint(equalTo: topAnchor),
+            bubble.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+
+        selectedIndex = 0
+        updateSelection(animated: false)
+    }
+
+    @objc private func tap(_ sender: UIButton) {
+        let index = sender.tag
+        guard index != selectedIndex else { return }
+        setSelectedIndex(index, animated: true)
+        onSelect?(index)
+    }
+
+    private func updateSelection(animated: Bool) {
+        for (i, b) in buttons.enumerated() {
+            if i == selectedIndex {
+                b.setTitleColor(.label, for: .normal)
+                b.titleLabel?.font = .systemFont(ofSize: 14, weight: .heavy)
+            } else {
+                b.setTitleColor(.secondaryLabel, for: .normal)
+                b.titleLabel?.font = .systemFont(ofSize: 14, weight: .bold)
+            }
+        }
+        updateBubble(animated: animated)
+    }
+
+    private func updateBubble(animated: Bool) {
+        let count = max(items.count, 1)
+        let w = bounds.width
+        guard w > 0 else { return }
+
+        let segmentWidth = w / CGFloat(count)
+        bubbleWidth.constant = segmentWidth
+        bubbleLeading.constant = segmentWidth * CGFloat(selectedIndex)
+
+        let animations = { self.layoutIfNeeded() }
+
+        if animated {
+            UIView.animate(
+                withDuration: 0.36,
+                delay: 0,
+                usingSpringWithDamping: 0.86,
+                initialSpringVelocity: 0.25,
+                options: [.allowUserInteraction, .curveEaseInOut],
+                animations: animations
+            )
+        } else {
+            animations()
+        }
+    }
+}
+
+// =========================
+// MARK: - FloatingProfileButton (نفس تصميمك)
+// =========================
+
+final class FloatingProfileButton: UIControl {
+
+    private let icon = UIImageView(image: UIImage(systemName: "person.fill"))
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+
+    private func setup() {
+        backgroundColor = .systemBackground
+        layer.cornerRadius = 22
+        layer.cornerCurve = .circular
+
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.12
+        layer.shadowRadius = 10
+        layer.shadowOffset = CGSize(width: 0, height: 4)
+
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.tintColor = .label
+        icon.contentMode = .scaleAspectFit
+
+        addSubview(icon)
+
+        NSLayoutConstraint.activate([
+            icon.centerXAnchor.constraint(equalTo: centerXAnchor),
+            icon.centerYAnchor.constraint(equalTo: centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 20),
+            icon.heightAnchor.constraint(equalToConstant: 20)
+        ])
+
+        addTarget(self, action: #selector(animatePress), for: .touchDown)
+        addTarget(self, action: #selector(animateRelease), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+
+    @objc private func animatePress() {
+        UIView.animate(withDuration: 0.1) { self.transform = CGAffineTransform(scaleX: 0.92, y: 0.92) }
+    }
+
+    @objc private func animateRelease() {
+        UIView.animate(withDuration: 0.1) { self.transform = .identity }
     }
 }

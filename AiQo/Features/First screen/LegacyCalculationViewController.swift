@@ -1,7 +1,7 @@
+// File: LegacyCalculationViewController.swift
 import UIKit
 import HealthKit
 
-/// شاشة حساب المستوى الرياضي بالاعتماد على كل بيانات HealthKit التاريخية
 final class LegacyCalculationViewController: BaseViewController {
 
     // MARK: - Types
@@ -16,7 +16,7 @@ final class LegacyCalculationViewController: BaseViewController {
         let levelName: String
         let totalPoints: Int
         let level: Int
-        let levelProgress: Double   // بين 0 و 1 داخل المستوى الحالي
+        let levelProgress: Double
 
         let totalSteps: Double
         let stepsPoints: Int
@@ -35,31 +35,75 @@ final class LegacyCalculationViewController: BaseViewController {
     }
 
     // MARK: - HealthKit
-
     private let healthStore = HKHealthStore()
+
+    // MARK: - Theme
+
+    private let brandMint  = Colors.mint
+    private let brandBeige = Colors.aiqoBeige
+
+    private let darkBG     = UIColor(red: 0.05, green: 0.06, blue: 0.08, alpha: 1.0)
+    private let darkText   = UIColor.white
+    private let darkSub    = UIColor.white.withAlphaComponent(0.70)
+    private let darkSub2   = UIColor.white.withAlphaComponent(0.55)
 
     // MARK: - UI
 
     private let backgroundGradientLayer = CAGradientLayer()
-    private let cardView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    private let glowLayer = CALayer()
+    private let dimOverlay = UIView()
 
+    private let brandRow = UIStackView()
+    private let topTitle = UILabel()
+    private let brandSpark = UIImageView(image: UIImage(systemName: "sparkles"))
+
+    private let cardView = BeigeGlassCardView()
     private let mainStack = UIStackView()
+
     private let introStack = UIStackView()
     private let loadingStack = UIStackView()
     private let resultStack = UIStackView()
 
-    private let iconView = UIImageView(image: UIImage(systemName: "figure.walk.circle.fill"))
+    // Intro
+    private let heroPill = UIView()
+    private let heroIcon = UIImageView(image: UIImage(systemName: "sparkles"))
+    private let brandWordmark = UILabel()
+
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private let privacyNoteLabel = UILabel()
 
-    private let loadingIconView = UIImageView(image: UIImage(systemName: "hourglass"))
+    // Loading (Premium Ripple Loader)
+    private let premiumLoader = PremiumRippleLoader()
     private let loadingLabel = UILabel()
+    private let loadingBar = UIProgressView(progressViewStyle: .bar)
 
+    // Result
+    private let resultHeaderCard = PlainCardView()
     private let levelTitleLabel = UILabel()
-    private let explanationLabel = UILabel()
+    
+    // Level Display
+    private let levelCaptionLabel = UILabel()
+    private let levelNumberLabel = UILabel()
 
+    private let messageLabel = UILabel()
+
+    private let progressPill = PlainPillView()
+    private let progressTrack = UIView()
+    private let progressFill = UIView()
+    private var progressFillWidth: NSLayoutConstraint!
+
+    private let pointsTitleLabel = UILabel()
+    private let pointsCard = PlainCardView()
+    private let pointsTable = UITableView(frame: .zero, style: .plain)
+    private var pointsRows: [PointsRow] = []
+
+    // Buttons
     private let primaryButton = UIButton(type: .system)
     private let secondaryButton = UIButton(type: .system)
+
+    // Confetti
+    private var confettiLayer: CAEmitterLayer?
 
     private var currentState: State = .intro {
         didSet { updateUI(for: currentState) }
@@ -71,63 +115,171 @@ final class LegacyCalculationViewController: BaseViewController {
         super.viewDidLoad()
 
         navigationItem.hidesBackButton = true
-        navigationItem.title = "AiQo Legacy"
+        navigationItem.title = ""
 
         setupBackground()
+        setupBrandRow()
+        setupCard()
         setupLayout()
-        configureStaticTexts()
+        configureTexts()
 
         currentState = .intro
+        animateIntroEntrance()
+        startBrandSparkAnimation()
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         backgroundGradientLayer.frame = view.bounds
+        glowLayer.frame = view.bounds
+
+        if case .result(let model) = currentState {
+            applyProgress(model.levelProgress, animated: false)
+        }
     }
 
-    // MARK: - Setup: Background + Glass Card
+    // MARK: - Background
 
     private func setupBackground() {
-        view.backgroundColor = Colors.background
+        view.backgroundColor = darkBG
 
         backgroundGradientLayer.colors = [
-            Colors.mint.withAlphaComponent(0.32).cgColor,
-            Colors.background.cgColor,
-            Colors.accent.withAlphaComponent(0.28).cgColor
+            brandMint.withAlphaComponent(0.22).cgColor,
+            darkBG.withAlphaComponent(0.98).cgColor,
+            brandBeige.withAlphaComponent(0.18).cgColor
         ]
-        backgroundGradientLayer.locations = [0.0, 0.45, 1.0]
-        backgroundGradientLayer.startPoint = CGPoint(x: 0, y: 0)
-        backgroundGradientLayer.endPoint = CGPoint(x: 1, y: 1)
+        backgroundGradientLayer.locations = [0.0, 0.56, 1.0]
+        backgroundGradientLayer.startPoint = CGPoint(x: 0.08, y: 0.0)
+        backgroundGradientLayer.endPoint = CGPoint(x: 0.92, y: 1.0)
         view.layer.insertSublayer(backgroundGradientLayer, at: 0)
 
-        cardView.translatesAutoresizingMaskIntoConstraints = false
-        cardView.clipsToBounds = true
-        cardView.layer.cornerRadius = 28
-        cardView.layer.cornerCurve = .continuous
-        cardView.layer.borderWidth = 1
-        cardView.layer.borderColor = Colors.sand.withAlphaComponent(0.35).cgColor
-        cardView.layer.shadowColor = UIColor.black.withAlphaComponent(0.18).cgColor
-        cardView.layer.shadowOpacity = 1
-        cardView.layer.shadowRadius = 18
-        cardView.layer.shadowOffset = CGSize(width: 0, height: 16)
+        glowLayer.backgroundColor = UIColor.clear.cgColor
+        view.layer.insertSublayer(glowLayer, above: backgroundGradientLayer)
 
-        view.addSubview(cardView)
+        glowLayer.addSublayer(makeRadialGlow(center: CGPoint(x: 0.18, y: 0.12), radius: 320, color: brandMint.withAlphaComponent(0.10)))
+        glowLayer.addSublayer(makeRadialGlow(center: CGPoint(x: 0.85, y: 0.88), radius: 360, color: brandBeige.withAlphaComponent(0.10)))
 
+        dimOverlay.translatesAutoresizingMaskIntoConstraints = false
+        dimOverlay.isUserInteractionEnabled = false
+        dimOverlay.backgroundColor = UIColor.black.withAlphaComponent(0.22)
+        view.addSubview(dimOverlay)
         NSLayoutConstraint.activate([
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            cardView.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24)
+            dimOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            dimOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            dimOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dimOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
     }
 
+    private func makeRadialGlow(center: CGPoint, radius: CGFloat, color: UIColor) -> CALayer {
+        let layer = CAGradientLayer()
+        layer.type = .radial
+        layer.colors = [color.cgColor, UIColor.clear.cgColor]
+        layer.locations = [0.0, 1.0]
+        layer.startPoint = center
+        layer.endPoint = CGPoint(
+            x: center.x + (radius / max(view.bounds.width, 1)),
+            y: center.y + (radius / max(view.bounds.height, 1))
+        )
+        layer.frame = view.bounds
+        return layer
+    }
+
+    // MARK: - Brand Row + Animation
+
+    private func setupBrandRow() {
+        brandRow.translatesAutoresizingMaskIntoConstraints = false
+        brandRow.axis = .horizontal
+        brandRow.alignment = .center
+        brandRow.spacing = 10
+        // ✅ تعديل هام: تفعيل عدم القص لضمان ظهور الوهج كاملاً حتى لو خرج عن الحدود
+        brandRow.clipsToBounds = false
+        brandRow.layer.masksToBounds = false
+        
+        // رفع الـ ZPosition لضمان ظهوره فوق الخلفية دائماً
+        brandRow.layer.zPosition = 100
+
+        topTitle.translatesAutoresizingMaskIntoConstraints = false
+        topTitle.text = "AiQo"
+        topTitle.textColor = darkText
+        topTitle.font = roundedFont(size: 40, weight: .black)
+
+        brandSpark.translatesAutoresizingMaskIntoConstraints = false
+        brandSpark.tintColor = brandMint.withAlphaComponent(0.98)
+        brandSpark.preferredSymbolConfiguration = .init(pointSize: 18, weight: .bold)
+        brandSpark.alpha = 0.98
+        // ✅ تفعيل عدم القص للأنميشن نفسه
+        brandSpark.clipsToBounds = false
+        brandSpark.layer.masksToBounds = false
+
+        brandRow.addArrangedSubview(topTitle)
+        brandRow.addArrangedSubview(brandSpark)
+
+        view.addSubview(brandRow)
+
+        // ✅ التعديل الجوهري لرفع العنصر:
+        // استخدام -5 مع safeArea يرفعه قليلاً للأعلى في منطقة الهيدر بشكل آمن
+        NSLayoutConstraint.activate([
+            brandRow.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 22),
+            brandRow.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: -5)
+        ])
+    }
+
+    private func startBrandSparkAnimation() {
+        let pulse = CABasicAnimation(keyPath: "transform.scale")
+        pulse.fromValue = 0.92
+        pulse.toValue = 1.06
+        pulse.duration = 1.1
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        let glow = CABasicAnimation(keyPath: "opacity")
+        glow.fromValue = 0.65
+        glow.toValue = 1.0
+        glow.duration = 1.1
+        glow.autoreverses = true
+        glow.repeatCount = .infinity
+        glow.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        let rotate = CABasicAnimation(keyPath: "transform.rotation")
+        rotate.fromValue = -0.06
+        rotate.toValue = 0.06
+        rotate.duration = 0.9
+        rotate.autoreverses = true
+        rotate.repeatCount = .infinity
+        rotate.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        brandSpark.layer.add(pulse, forKey: "pulse")
+        brandSpark.layer.add(glow, forKey: "glow")
+        brandSpark.layer.add(rotate, forKey: "rotate")
+    }
+
+    // MARK: - Card
+
+    private func setupCard() {
+        cardView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.apply(beige: brandBeige, mint: brandMint)
+
+        view.addSubview(cardView)
+
+        // ✅ الكارت يتبع اللوغو تلقائياً لأنه مرتبط بـ brandRow.bottomAnchor
+        NSLayoutConstraint.activate([
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 18),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -18),
+            cardView.topAnchor.constraint(equalTo: brandRow.bottomAnchor, constant: 8),
+            cardView.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -18)
+        ])
+    }
+
+    // MARK: - Layout
+
     private func setupLayout() {
         mainStack.axis = .vertical
-        mainStack.spacing = 24
+        mainStack.spacing = 16
         mainStack.alignment = .fill
         mainStack.translatesAutoresizingMaskIntoConstraints = false
-        mainStack.layoutMargins = UIEdgeInsets(top: 24, left: 20, bottom: 20, right: 20)
+        mainStack.layoutMargins = UIEdgeInsets(top: 20, left: 18, bottom: 18, right: 18)
         mainStack.isLayoutMarginsRelativeArrangement = true
 
         cardView.contentView.addSubview(mainStack)
@@ -139,127 +291,214 @@ final class LegacyCalculationViewController: BaseViewController {
             mainStack.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor)
         ])
 
-        // Intro stack
-        introStack.axis = .vertical
-        introStack.spacing = 16
-        introStack.alignment = .center
-
-        iconView.preferredSymbolConfiguration = .init(pointSize: 60, weight: .bold)
-        iconView.tintColor = Colors.sand
-
-        let pillLabel = UILabel()
-        // هنا يمكن استخدام ترجمة للعنوان الصغير إذا رغبت، حالياً جعلته يعتمد على العنوان الرئيسي
-        pillLabel.text = NSLocalizedString("legacy_intro_title", comment: "").components(separatedBy: " ").first ?? "Analysis"
-        pillLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        pillLabel.textColor = Colors.text
-        pillLabel.textAlignment = .center
-        pillLabel.backgroundColor = Colors.mint.withAlphaComponent(0.3)
-        pillLabel.layer.cornerRadius = 18
-        pillLabel.layer.cornerCurve = .continuous
-        pillLabel.clipsToBounds = true
-        pillLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        let pillContainer = UIView()
-        pillContainer.translatesAutoresizingMaskIntoConstraints = false
-        pillContainer.addSubview(pillLabel)
-
-        NSLayoutConstraint.activate([
-            pillLabel.topAnchor.constraint(equalTo: pillContainer.topAnchor),
-            pillLabel.bottomAnchor.constraint(equalTo: pillContainer.bottomAnchor),
-            pillLabel.centerXAnchor.constraint(equalTo: pillContainer.centerXAnchor),
-            pillLabel.leadingAnchor.constraint(greaterThanOrEqualTo: pillContainer.leadingAnchor),
-            pillLabel.trailingAnchor.constraint(lessThanOrEqualTo: pillContainer.trailingAnchor)
-        ])
-
-        titleLabel.numberOfLines = 0
-        titleLabel.textAlignment = .center
-        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textColor = Colors.text
-
-        subtitleLabel.numberOfLines = 0
-        subtitleLabel.textAlignment = .center
-        subtitleLabel.font = .systemFont(ofSize: 15, weight: .regular)
-        subtitleLabel.textColor = Colors.subtext
-
-        introStack.addArrangedSubview(pillContainer)
-        introStack.addArrangedSubview(iconView)
-        introStack.addArrangedSubview(titleLabel)
-        introStack.addArrangedSubview(subtitleLabel)
-
-        // Loading stack
-        loadingStack.axis = .vertical
-        loadingStack.spacing = 12
-        loadingStack.alignment = .center
-
-        loadingIconView.preferredSymbolConfiguration = .init(pointSize: 40, weight: .medium)
-        loadingIconView.tintColor = Colors.mint
-
-        loadingLabel.numberOfLines = 0
-        loadingLabel.textAlignment = .center
-        loadingLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        loadingLabel.textColor = Colors.text
-
-        loadingStack.addArrangedSubview(loadingIconView)
-        loadingStack.addArrangedSubview(loadingLabel)
-
-        // Result stack
-        resultStack.axis = .vertical
-        resultStack.spacing = 12
-        resultStack.alignment = .fill
-
-        levelTitleLabel.numberOfLines = 0
-        levelTitleLabel.textAlignment = .center
-        levelTitleLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        levelTitleLabel.textColor = Colors.text
-
-        explanationLabel.numberOfLines = 0
-        explanationLabel.textAlignment = .natural
-        explanationLabel.font = .systemFont(ofSize: 15, weight: .regular)
-        explanationLabel.textColor = Colors.subtext
-
-        resultStack.addArrangedSubview(levelTitleLabel)
-        resultStack.addArrangedSubview(explanationLabel)
-
-        // Buttons
-        var primaryConfig = UIButton.Configuration.filled()
-        primaryConfig.cornerStyle = .large
-        primaryConfig.baseBackgroundColor = Colors.sand
-        primaryConfig.baseForegroundColor = Colors.text
-        primaryConfig.titleAlignment = .center
-        primaryConfig.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
-        primaryButton.configuration = primaryConfig
-        primaryButton.layer.shadowColor = UIColor.black.withAlphaComponent(0.15).cgColor
-        primaryButton.layer.shadowOpacity = 1
-        primaryButton.layer.shadowRadius = 10
-        primaryButton.layer.shadowOffset = CGSize(width: 0, height: 6)
-        primaryButton.addTarget(self, action: #selector(primaryButtonTapped), for: .touchUpInside)
-
-        var secondaryConfig = UIButton.Configuration.bordered()
-        secondaryConfig.cornerStyle = .large
-        secondaryConfig.baseForegroundColor = Colors.sand
-        secondaryConfig.titleAlignment = .center
-        secondaryConfig.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
-        secondaryButton.configuration = secondaryConfig
-        secondaryButton.addTarget(self, action: #selector(secondaryButtonTapped), for: .touchUpInside)
-
-        let buttonsStack = UIStackView(arrangedSubviews: [primaryButton, secondaryButton])
-        buttonsStack.axis = .vertical
-        buttonsStack.spacing = 8
+        setupIntroSection()
+        setupLoadingSection()
+        setupResultSection()
+        setupButtons()
 
         mainStack.addArrangedSubview(introStack)
         mainStack.addArrangedSubview(loadingStack)
         mainStack.addArrangedSubview(resultStack)
-        mainStack.addArrangedSubview(buttonsStack)
+        mainStack.addArrangedSubview(makeSpacer(minHeight: 10))
+        mainStack.addArrangedSubview(primaryButton)
+        mainStack.addArrangedSubview(secondaryButton)
+
+        loadingStack.isHidden = true
+        resultStack.isHidden = true
     }
 
-    private func configureStaticTexts() {
-        titleLabel.text = NSLocalizedString("legacy_intro_title", comment: "")
-        subtitleLabel.text = NSLocalizedString("legacy_intro_subtitle", comment: "")
+    private func setupIntroSection() {
+        introStack.axis = .vertical
+        introStack.spacing = 14
+        introStack.alignment = .fill
 
-        loadingLabel.text = NSLocalizedString("legacy_loading_text", comment: "")
+        titleLabel.numberOfLines = 0
+        titleLabel.textAlignment = .center
+        titleLabel.textColor = darkText
+        titleLabel.font = roundedFont(size: 34, weight: .black)
+
+        subtitleLabel.numberOfLines = 0
+        subtitleLabel.textAlignment = .center
+        subtitleLabel.textColor = darkSub
+        subtitleLabel.font = roundedFont(size: 16, weight: .semibold)
+
+        privacyNoteLabel.numberOfLines = 0
+        privacyNoteLabel.textAlignment = .center
+        privacyNoteLabel.textColor = darkSub2
+        privacyNoteLabel.font = roundedFont(size: 13, weight: .medium)
+
+        introStack.addArrangedSubview(titleLabel)
+        introStack.addArrangedSubview(subtitleLabel)
+        introStack.addArrangedSubview(privacyNoteLabel)
+    }
+
+    private func setupLoadingSection() {
+        loadingStack.axis = .vertical
+        loadingStack.spacing = 20
+        loadingStack.alignment = .center
+
+        premiumLoader.setup(tint: brandMint)
+        NSLayoutConstraint.activate([
+            premiumLoader.widthAnchor.constraint(equalToConstant: 80),
+            premiumLoader.heightAnchor.constraint(equalToConstant: 80)
+        ])
+
+        loadingLabel.numberOfLines = 0
+        loadingLabel.textAlignment = .center
+        loadingLabel.font = roundedFont(size: 16, weight: .bold)
+        loadingLabel.textColor = darkText.withAlphaComponent(0.9)
+
+        loadingBar.translatesAutoresizingMaskIntoConstraints = false
+        loadingBar.progress = 0.12
+        loadingBar.layer.cornerRadius = 6
+        loadingBar.clipsToBounds = true
+        loadingBar.trackTintColor = UIColor.white.withAlphaComponent(0.08)
+        loadingBar.progressTintColor = brandMint
+
+        NSLayoutConstraint.activate([
+            loadingBar.heightAnchor.constraint(equalToConstant: 8),
+            loadingBar.widthAnchor.constraint(equalToConstant: 200)
+        ])
+
+        loadingStack.addArrangedSubview(premiumLoader)
+        loadingStack.addArrangedSubview(loadingLabel)
+        loadingStack.addArrangedSubview(loadingBar)
+    }
+
+    private func setupResultSection() {
+        resultStack.axis = .vertical
+        resultStack.spacing = 12
+        resultStack.alignment = .fill
+
+        let headerInner = UIStackView()
+        headerInner.axis = .vertical
+        headerInner.spacing = 10
+        headerInner.alignment = .fill
+        headerInner.translatesAutoresizingMaskIntoConstraints = false
+        headerInner.layoutMargins = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        headerInner.isLayoutMarginsRelativeArrangement = true
+
+        levelTitleLabel.numberOfLines = 0
+        levelTitleLabel.textAlignment = .left
+        levelTitleLabel.font = roundedFont(size: 26, weight: .black)
+        levelTitleLabel.textColor = darkText
         
-        primaryButton.setTitle(NSLocalizedString("btn_agree", comment: ""), for: .normal)
-        secondaryButton.setTitle(NSLocalizedString("btn_no_thanks", comment: ""), for: .normal)
+        // LEVEL Design
+        levelCaptionLabel.text = "LEVEL"
+        levelCaptionLabel.font = roundedFont(size: 17, weight: .black)
+        levelCaptionLabel.textColor = brandMint
+        
+        levelNumberLabel.font = roundedFont(size: 48, weight: .black)
+        levelNumberLabel.textColor = brandMint
+        
+        let levelDisplayStack = UIStackView(arrangedSubviews: [levelCaptionLabel, levelNumberLabel])
+        levelDisplayStack.axis = .vertical
+        levelDisplayStack.alignment = .trailing
+        levelDisplayStack.spacing = -6
+        
+        let titleRow = UIStackView(arrangedSubviews: [levelTitleLabel, UIView(), levelDisplayStack])
+        titleRow.axis = .horizontal
+        titleRow.alignment = .center
+        titleRow.spacing = 10
+
+        messageLabel.numberOfLines = 0
+        messageLabel.textAlignment = .left
+        messageLabel.font = roundedFont(size: 15, weight: .semibold)
+        messageLabel.textColor = UIColor.white.withAlphaComponent(0.72)
+
+        progressTrack.translatesAutoresizingMaskIntoConstraints = false
+        progressTrack.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        progressTrack.layer.cornerRadius = 10
+        progressTrack.layer.cornerCurve = .continuous
+        progressTrack.clipsToBounds = true
+
+        progressFill.translatesAutoresizingMaskIntoConstraints = false
+        progressFill.backgroundColor = brandMint.withAlphaComponent(0.98)
+        progressFill.layer.cornerRadius = 10
+        progressFill.layer.cornerCurve = .continuous
+        progressFill.clipsToBounds = true
+
+        progressPill.contentView.addSubview(progressTrack)
+        progressTrack.addSubview(progressFill)
+
+        NSLayoutConstraint.activate([
+            progressTrack.topAnchor.constraint(equalTo: progressPill.contentView.topAnchor, constant: 8),
+            progressTrack.bottomAnchor.constraint(equalTo: progressPill.contentView.bottomAnchor, constant: -8),
+            progressTrack.leadingAnchor.constraint(equalTo: progressPill.contentView.leadingAnchor, constant: 10),
+            progressTrack.trailingAnchor.constraint(equalTo: progressPill.contentView.trailingAnchor, constant: -10),
+            progressTrack.heightAnchor.constraint(equalToConstant: 20),
+
+            progressFill.topAnchor.constraint(equalTo: progressTrack.topAnchor),
+            progressFill.bottomAnchor.constraint(equalTo: progressTrack.bottomAnchor),
+            progressFill.leadingAnchor.constraint(equalTo: progressTrack.leadingAnchor)
+        ])
+
+        progressFillWidth = progressFill.widthAnchor.constraint(equalToConstant: 24)
+        progressFillWidth.isActive = true
+
+        headerInner.addArrangedSubview(titleRow)
+        headerInner.addArrangedSubview(messageLabel)
+        headerInner.addArrangedSubview(progressPill)
+
+        resultHeaderCard.contentView.addSubview(headerInner)
+
+        NSLayoutConstraint.activate([
+            headerInner.topAnchor.constraint(equalTo: resultHeaderCard.contentView.topAnchor),
+            headerInner.bottomAnchor.constraint(equalTo: resultHeaderCard.contentView.bottomAnchor),
+            headerInner.leadingAnchor.constraint(equalTo: resultHeaderCard.contentView.leadingAnchor),
+            headerInner.trailingAnchor.constraint(equalTo: resultHeaderCard.contentView.trailingAnchor),
+            progressPill.heightAnchor.constraint(equalToConstant: 36)
+        ])
+
+        pointsTitleLabel.numberOfLines = 1
+        pointsTitleLabel.text = "Points breakdown"
+        pointsTitleLabel.textColor = darkText
+        pointsTitleLabel.font = roundedFont(size: 15, weight: .bold)
+
+        pointsTable.translatesAutoresizingMaskIntoConstraints = false
+        pointsTable.backgroundColor = .clear
+        pointsTable.isScrollEnabled = false
+        pointsTable.separatorStyle = .none
+        pointsTable.dataSource = self
+        pointsTable.delegate = self
+        pointsTable.register(PointsCell.self, forCellReuseIdentifier: PointsCell.reuseID)
+        pointsTable.contentInset = UIEdgeInsets(top: 8, left: 0, bottom: 10, right: 0)
+
+        pointsCard.contentView.addSubview(pointsTable)
+
+        NSLayoutConstraint.activate([
+            pointsTable.topAnchor.constraint(equalTo: pointsCard.contentView.topAnchor),
+            pointsTable.bottomAnchor.constraint(equalTo: pointsCard.contentView.bottomAnchor),
+            pointsTable.leadingAnchor.constraint(equalTo: pointsCard.contentView.leadingAnchor),
+            pointsTable.trailingAnchor.constraint(equalTo: pointsCard.contentView.trailingAnchor),
+            pointsCard.heightAnchor.constraint(equalToConstant: 285)
+        ])
+
+        resultStack.addArrangedSubview(resultHeaderCard)
+        resultStack.addArrangedSubview(pointsTitleLabel)
+        resultStack.addArrangedSubview(pointsCard)
+    }
+
+    private func setupButtons() {
+        primaryButton.addTarget(self, action: #selector(primaryButtonTapped), for: .touchUpInside)
+        secondaryButton.addTarget(self, action: #selector(secondaryButtonTapped), for: .touchUpInside)
+
+        GlassButtons.stylePrimary(primaryButton, title: "Continue", systemImage: "arrow.right", mint: brandMint, text: UIColor.black)
+        GlassButtons.styleSecondary(secondaryButton, title: "Not now", beige: brandBeige, text: UIColor.black)
+    }
+
+    private func configureTexts() {
+        titleLabel.text = "Welcome to AiQo"
+        subtitleLabel.text = "Connect Apple Health and we’ll build your fitness level from your real history."
+        privacyNoteLabel.text = "Privacy first: we only read totals (steps, calories, distance, sleep) to calculate your level."
+        loadingLabel.text = "Analyzing your history..."
+    }
+
+    private func makeSpacer(minHeight: CGFloat) -> UIView {
+        let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.heightAnchor.constraint(greaterThanOrEqualToConstant: minHeight).isActive = true
+        return v
     }
 
     // MARK: - UI State
@@ -272,9 +511,10 @@ final class LegacyCalculationViewController: BaseViewController {
             resultStack.isHidden = true
 
             primaryButton.isHidden = false
-            primaryButton.setTitle(NSLocalizedString("btn_agree", comment: ""), for: .normal)
             secondaryButton.isHidden = false
-            secondaryButton.setTitle(NSLocalizedString("btn_no_thanks", comment: ""), for: .normal)
+
+            GlassButtons.stylePrimary(primaryButton, title: "Continue", systemImage: "arrow.right", mint: brandMint, text: UIColor.black)
+            GlassButtons.styleSecondary(secondaryButton, title: "Not now", beige: brandBeige, text: UIColor.black)
 
         case .loading:
             introStack.isHidden = true
@@ -284,114 +524,193 @@ final class LegacyCalculationViewController: BaseViewController {
             primaryButton.isHidden = true
             secondaryButton.isHidden = true
 
-            if #available(iOS 17.0, *) {
-                loadingIconView.addSymbolEffect(.variableColor.iterative.reversing)
-                loadingIconView.addSymbolEffect(.scale.up)
-            }
+            startLoadingAnimations()
 
         case .result(let model):
+            stopLoadingAnimations()
+
             introStack.isHidden = true
             loadingStack.isHidden = true
             resultStack.isHidden = false
 
-            if #available(iOS 17.0, *) {
-                loadingIconView.removeSymbolEffect(ofType: .variableColor)
-                loadingIconView.removeSymbolEffect(ofType: .scale)
-            }
+            levelTitleLabel.text = model.hasHealthData ? model.levelName : NSLocalizedString("level_name_starter", comment: "")
+            
+            // Update Number
+            let finalLevel = model.hasHealthData ? model.level : 1
+            levelNumberLabel.text = "\(finalLevel)"
+            animateLevelNumberEntrance()
 
-            let headerTitle: String
-            if model.hasHealthData {
-                let format = NSLocalizedString("result_header_format", comment: "")
-                headerTitle = String(format: format, model.levelName, model.level, model.totalPoints)
-            } else {
-                let format = NSLocalizedString("result_header_format", comment: "")
-                headerTitle = String(format: format, NSLocalizedString("level_name_starter", comment: ""), 1, 0)
-            }
-            levelTitleLabel.text = headerTitle
+            messageLabel.text = model.hasHealthData
+                ? "\(model.message)\nTotal: \(model.totalPoints) pts"
+                : "No history found yet.\nStart today and your level will grow fast."
 
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.locale = Locale.current
+            applyProgress(model.levelProgress, animated: true)
 
-            let stepsText = formatter.string(from: model.totalSteps as NSNumber) ?? "\(Int(model.totalSteps))"
-            let caloriesText = formatter.string(from: model.totalCalories as NSNumber) ?? "\(Int(model.totalCalories))"
-            let distanceText = String(format: "%.1f", model.totalDistanceKm)
-            let sleepText = String(format: "%.1f", model.totalSleepHours)
-
-            var explanation = NSLocalizedString("result_explanation_intro", comment: "")
-
-            let statsFormat = NSLocalizedString("result_stats_block", comment: "")
-            let statsBlock = String(format: statsFormat,
-                                    stepsText, model.stepsPoints,
-                                    caloriesText, model.caloriesPoints,
-                                    distanceText, model.distancePoints,
-                                    sleepText, model.sleepPoints,
-                                    model.totalPoints)
-
-            explanation += "\n\n" + statsBlock + "\n\n" + model.message
-
-            if model.hasHealthData {
-                let footerFormat = NSLocalizedString("result_footer_success", comment: "")
-                let footer = String(format: footerFormat, model.level)
-                explanation += "\n\n" + footer
-            } else {
-                explanation += "\n\n" + NSLocalizedString("result_footer_no_data", comment: "")
-            }
-
-            explanationLabel.text = explanation
+            pointsRows = makeRows(from: model)
+            pointsTable.reloadData()
 
             primaryButton.isHidden = false
-            primaryButton.setTitle(NSLocalizedString("btn_goto_main", comment: ""), for: .normal)
             secondaryButton.isHidden = true
+            GlassButtons.stylePrimary(primaryButton, title: "Go to Home", systemImage: "house.fill", mint: brandMint, text: UIColor.black)
 
-            playCelebrationAnimation()
+            let h = UIImpactFeedbackGenerator(style: .soft)
+            h.impactOccurred()
+
+            playResultEntrance()
+            playConfettiLight()
+        }
+    }
+    
+    private func animateLevelNumberEntrance() {
+        levelNumberLabel.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        levelNumberLabel.alpha = 0
+        
+        UIView.animate(withDuration: 0.6, delay: 0.2, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: .allowUserInteraction) {
+            self.levelNumberLabel.transform = .identity
+            self.levelNumberLabel.alpha = 1
         }
     }
 
-    private func playCelebrationAnimation() {
+    private func applyProgress(_ progress: Double, animated: Bool) {
+        view.layoutIfNeeded()
+
+        let p = CGFloat(min(max(progress, 0), 1))
+        let available = max(240.0, (progressPill.bounds.width > 10 ? progressPill.bounds.width : 300.0) - 20.0)
+        let target = max(24.0, available * p)
+
+        progressFillWidth.constant = target
+
+        if animated {
+            UIView.animate(withDuration: 0.45, delay: 0, options: [.curveEaseOut, .allowUserInteraction]) {
+                self.progressPill.layoutIfNeeded()
+            }
+        } else {
+            progressPill.layoutIfNeeded()
+        }
+    }
+
+    private func makeRows(from model: ResultModel) -> [PointsRow] {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        nf.locale = .current
+
+        let stepsText = nf.string(from: model.totalSteps as NSNumber) ?? "\(Int(model.totalSteps))"
+        let caloriesText = nf.string(from: model.totalCalories as NSNumber) ?? "\(Int(model.totalCalories))"
+        let distanceText = String(format: "%.1f km", model.totalDistanceKm)
+        let sleepText = String(format: "%.1f h", model.totalSleepHours)
+
+        return [
+            .init(title: "Steps", value: stepsText, points: model.stepsPoints, symbol: "figure.walk"),
+            .init(title: "Calories", value: caloriesText, points: model.caloriesPoints, symbol: "flame.fill"),
+            .init(title: "Distance", value: distanceText, points: model.distancePoints, symbol: "location.fill"),
+            .init(title: "Sleep", value: sleepText, points: model.sleepPoints, symbol: "moon.zzz.fill"),
+            .init(title: "Total", value: "—", points: model.totalPoints, symbol: "sparkles")
+        ]
+    }
+
+    // MARK: - Animations
+
+    private func animateIntroEntrance() {
+        cardView.transform = CGAffineTransform(scaleX: 0.985, y: 0.985).translatedBy(x: 0, y: 10)
+        cardView.alpha = 0
+
+        UIView.animate(withDuration: 0.55, delay: 0.04, usingSpringWithDamping: 0.82, initialSpringVelocity: 0.65, options: [.allowUserInteraction]) {
+            self.cardView.alpha = 1
+            self.cardView.transform = .identity
+        }
+    }
+
+    private func startLoadingAnimations() {
+        premiumLoader.startAnimating()
+
+        loadingBar.layer.removeAllAnimations()
+        loadingBar.setProgress(0.18, animated: false)
+        UIView.animate(withDuration: 1.2, delay: 0, options: [.repeat, .autoreverse, .allowUserInteraction]) {
+            self.loadingBar.setProgress(0.92, animated: true)
+        }
+    }
+
+    private func stopLoadingAnimations() {
+        premiumLoader.stopAnimating()
+        loadingBar.layer.removeAllAnimations()
+    }
+
+    private func playResultEntrance() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
 
-        levelTitleLabel.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
-        UIView.animate(
-            withDuration: 0.6,
-            delay: 0,
-            usingSpringWithDamping: 0.6,
-            initialSpringVelocity: 0.6,
-            options: [.allowUserInteraction],
-            animations: {
-                self.levelTitleLabel.transform = .identity
-            },
-            completion: nil
-        )
+        resultHeaderCard.transform = CGAffineTransform(scaleX: 0.985, y: 0.985).translatedBy(x: 0, y: 8)
+        resultHeaderCard.alpha = 0
+
+        UIView.animate(withDuration: 0.55, delay: 0.02, usingSpringWithDamping: 0.80, initialSpringVelocity: 0.65, options: [.allowUserInteraction]) {
+            self.resultHeaderCard.alpha = 1
+            self.resultHeaderCard.transform = .identity
+        }
+    }
+
+    private func playConfettiLight() {
+        confettiLayer?.removeFromSuperlayer()
+        confettiLayer = nil
+
+        let layer = CAEmitterLayer()
+        layer.emitterPosition = CGPoint(x: view.bounds.midX, y: cardView.frame.minY + 10)
+        layer.emitterShape = .line
+        layer.emitterSize = CGSize(width: min(view.bounds.width * 0.55, 300), height: 1)
+
+        func cell(_ color: UIColor) -> CAEmitterCell {
+            let c = CAEmitterCell()
+            c.birthRate = 2.2
+            c.lifetime = 1.9
+            c.velocity = 95
+            c.velocityRange = 35
+            c.emissionLongitude = .pi
+            c.emissionRange = .pi / 6
+            c.spinRange = 2.2
+            c.scale = 0.022
+            c.scaleRange = 0.014
+            c.color = color.cgColor
+            c.contents = UIImage(systemName: "circle.fill")?
+                .withTintColor(color, renderingMode: .alwaysOriginal)
+                .cgImage
+            return c
+        }
+
+        layer.emitterCells = [
+            cell(brandMint.withAlphaComponent(0.92)),
+            cell(brandBeige.withAlphaComponent(0.92)),
+            cell(UIColor.white.withAlphaComponent(0.85))
+        ]
+
+        view.layer.addSublayer(layer)
+        confettiLayer = layer
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            guard let self, let l = self.confettiLayer else { return }
+            l.birthRate = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                l.removeFromSuperlayer()
+            }
+        }
     }
 
     // MARK: - Actions
 
-    @objc
-    private func primaryButtonTapped() {
+    @objc private func primaryButtonTapped() {
         switch currentState {
         case .intro:
             currentState = .loading
             requestHealthAuthorizationIfNeeded { [weak self] authorized in
                 guard let self else { return }
-
                 if authorized {
                     self.startCalculationFlow()
                 } else {
                     let model = ResultModel(
                         levelName: NSLocalizedString("level_name_starter", comment: ""),
-                        totalPoints: 0,
-                        level: 1,
-                        levelProgress: 0,
-                        totalSteps: 0,
-                        stepsPoints: 0,
-                        totalCalories: 0,
-                        caloriesPoints: 0,
-                        totalDistanceKm: 0,
-                        distancePoints: 0,
-                        totalSleepHours: 0,
-                        sleepPoints: 0,
+                        totalPoints: 0, level: 1, levelProgress: 0,
+                        totalSteps: 0, stepsPoints: 0,
+                        totalCalories: 0, caloriesPoints: 0,
+                        totalDistanceKm: 0, distancePoints: 0,
+                        totalSleepHours: 0, sleepPoints: 0,
                         message: NSLocalizedString("msg_level_starter", comment: ""),
                         hasHealthData: false
                     )
@@ -407,12 +726,9 @@ final class LegacyCalculationViewController: BaseViewController {
         }
     }
 
-    @objc
-    private func secondaryButtonTapped() {
+    @objc private func secondaryButtonTapped() {
         markCompletedAndGoToMain()
     }
-
-    // MARK: - Navigation
 
     private func markCompletedAndGoToMain() {
         UserDefaults.standard.set(true, forKey: "didCompleteLegacyCalculation")
@@ -434,7 +750,7 @@ final class LegacyCalculationViewController: BaseViewController {
             guard let self else { return }
 
             let elapsed = Date().timeIntervalSince(startTime)
-            let delay = max(0.0, 2.0 - elapsed)
+            let delay = max(0.0, 1.15 - elapsed)
 
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard let result = result else {
@@ -446,7 +762,7 @@ final class LegacyCalculationViewController: BaseViewController {
         }
     }
 
-    // MARK: - HealthKit Authorization
+    // MARK: - Health Authorization
 
     private func requestHealthAuthorizationIfNeeded(completion: @escaping (Bool) -> Void) {
         guard HKHealthStore.isHealthDataAvailable() else {
@@ -459,91 +775,55 @@ final class LegacyCalculationViewController: BaseViewController {
         let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
         let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
 
-        let readTypes: Set<HKObjectType> = [
-            stepType,
-            energyType,
-            distanceType,
-            sleepType
-        ]
-
-        healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
+        healthStore.requestAuthorization(toShare: nil, read: [stepType, energyType, distanceType, sleepType]) { success, error in
             if let error = error {
                 print("HealthKit Authorization Error:", error.localizedDescription)
             }
-            DispatchQueue.main.async {
-                completion(success)
-            }
+            DispatchQueue.main.async { completion(success) }
         }
     }
 
-    // MARK: - Health Data Aggregation
+    // MARK: - Health Totals
 
     private func fetchHealthTotals(completion: @escaping (ResultModel?) -> Void) {
         let group = DispatchGroup()
 
         var totalSteps: Double = 0
         var totalCalories: Double = 0
-        var totalDistance: Double = 0
+        var totalDistanceKm: Double = 0
         var totalSleepHours: Double = 0
 
-        let startDate = Date.distantPast
-        let endDate = Date()
+        let predicate = HKQuery.predicateForSamples(withStart: .distantPast, end: Date(), options: .strictStartDate)
 
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startDate,
-            end: endDate,
-            options: .strictStartDate
-        )
-
-        // Steps
         if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
             group.enter()
-            let query = HKStatisticsQuery(
-                quantityType: stepsType,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, statistics, _ in
-                if let sum = statistics?.sumQuantity() {
-                    totalSteps = sum.doubleValue(for: .count())
-                }
+            let q = HKStatisticsQuery(quantityType: stepsType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+                if let sum = stats?.sumQuantity() { totalSteps = sum.doubleValue(for: .count()) }
                 group.leave()
             }
-            healthStore.execute(query)
+            healthStore.execute(q)
         }
 
-        // Active energy (kcal)
         if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
             group.enter()
-            let query = HKStatisticsQuery(
-                quantityType: energyType,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, statistics, _ in
-                if let sum = statistics?.sumQuantity() {
-                    totalCalories = sum.doubleValue(for: .kilocalorie())
-                }
+            let q = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+                if let sum = stats?.sumQuantity() { totalCalories = sum.doubleValue(for: .kilocalorie()) }
                 group.leave()
             }
-            healthStore.execute(query)
+            healthStore.execute(q)
         }
 
-        // Distance (km)
         if let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
             group.enter()
-            let query = HKStatisticsQuery(
-                quantityType: distanceType,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, statistics, _ in
-                if let sum = statistics?.sumQuantity() {
-                    totalDistance = sum.doubleValue(for: .meter()) / 1000.0
+            let q = HKStatisticsQuery(quantityType: distanceType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+                if let sum = stats?.sumQuantity() {
+                    totalDistanceKm = sum.doubleValue(for: .meter()) / 1000.0
                 }
                 group.leave()
             }
-            healthStore.execute(query)
+            healthStore.execute(q)
         }
 
-        // Sleep (hours)
         if let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
             group.enter()
 
@@ -554,40 +834,31 @@ final class LegacyCalculationViewController: BaseViewController {
                 HKCategoryValueSleepAnalysis.asleepREM.rawValue
             ]
 
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, _ in
+            let q = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
                 defer { group.leave() }
 
-                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                guard let s = samples as? [HKCategorySample], !s.isEmpty else {
                     totalSleepHours = 0
                     return
                 }
 
                 var totalSeconds: TimeInterval = 0
-                for sample in categorySamples where asleepValues.contains(sample.value) {
-                    totalSeconds += sample.endDate.timeIntervalSince(sample.startDate)
+                for item in s where asleepValues.contains(item.value) {
+                    totalSeconds += item.endDate.timeIntervalSince(item.startDate)
                 }
-
                 totalSleepHours = totalSeconds / 3600.0
             }
-
-            healthStore.execute(query)
+            healthStore.execute(q)
         }
 
         group.notify(queue: .global(qos: .userInitiated)) {
             let model = self.buildResultModel(
                 steps: totalSteps,
                 calories: totalCalories,
-                distanceKm: totalDistance,
+                distanceKm: totalDistanceKm,
                 sleepHours: totalSleepHours
             )
-            DispatchQueue.main.async {
-                completion(model)
-            }
+            DispatchQueue.main.async { completion(model) }
         }
     }
 
@@ -597,29 +868,21 @@ final class LegacyCalculationViewController: BaseViewController {
         let baseRequirement = 500
         let increment = 200
 
-        var remainingPoints = max(totalPoints, 0)
-        var currentLevel = 1
-        var requirementForThisLevel = baseRequirement
+        var remaining = max(totalPoints, 0)
+        var level = 1
+        var req = baseRequirement
 
-        while remainingPoints >= requirementForThisLevel {
-            remainingPoints -= requirementForThisLevel
-            currentLevel += 1
-            requirementForThisLevel += increment
+        while remaining >= req {
+            remaining -= req
+            level += 1
+            req += increment
         }
 
-        let progress = requirementForThisLevel > 0
-            ? Double(remainingPoints) / Double(requirementForThisLevel)
-            : 0
-
-        return (max(currentLevel, 1), min(max(progress, 0), 1))
+        let progress = req > 0 ? Double(remaining) / Double(req) : 0
+        return (max(level, 1), min(max(progress, 0), 1))
     }
 
-    private func buildResultModel(
-        steps: Double,
-        calories: Double,
-        distanceKm: Double,
-        sleepHours: Double
-    ) -> ResultModel {
+    private func buildResultModel(steps: Double, calories: Double, distanceKm: Double, sleepHours: Double) -> ResultModel {
 
         let stepsPoints = Int(steps / 1_000.0)
         let caloriesPoints = Int(calories / 100.0)
@@ -628,13 +891,10 @@ final class LegacyCalculationViewController: BaseViewController {
 
         let totalPoints = max(0, stepsPoints + caloriesPoints + distancePoints + sleepPoints)
 
-        let levelInfo = calculateLevel(from: totalPoints)
-        let level = levelInfo.level
-        let levelProgress = levelInfo.progress
+        let info = calculateLevel(from: totalPoints)
+        let level = info.level
+        let levelProgress = info.progress
 
-        // ----------------------------------------------------------------
-        // تصحيح: استخدام المفاتيح الأصلية LevelStorageKeys لضمان قراءة البروفايل للبيانات
-        // ----------------------------------------------------------------
         UserDefaults.standard.set(level, forKey: LevelStorageKeys.currentLevel)
         UserDefaults.standard.set(levelProgress, forKey: LevelStorageKeys.currentLevelProgress)
         UserDefaults.standard.set(totalPoints, forKey: LevelStorageKeys.legacyTotalPoints)
@@ -675,5 +935,43 @@ final class LegacyCalculationViewController: BaseViewController {
             message: message,
             hasHealthData: hasHealthData
         )
+    }
+
+    // MARK: - Typography
+
+    private func roundedFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
+        let base = UIFont.systemFont(ofSize: size, weight: weight)
+        if let rounded = base.fontDescriptor.withDesign(.rounded) {
+            return UIFont(descriptor: rounded, size: size)
+        }
+        return base
+    }
+}
+
+// MARK: - Table
+
+extension LegacyCalculationViewController: UITableViewDataSource, UITableViewDelegate {
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        pointsRows.count
+    }
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 56 }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = pointsRows[indexPath.row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: PointsCell.reuseID, for: indexPath) as! PointsCell
+
+        cell.configure(
+            title: row.title,
+            value: row.value,
+            points: row.points,
+            symbol: row.symbol,
+            isTotal: row.title == "Total",
+            tint: Colors.mint,
+            text: UIColor.white,
+            sub: UIColor.white.withAlphaComponent(0.60)
+        )
+        return cell
     }
 }

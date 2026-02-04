@@ -3,16 +3,19 @@ import Foundation
 final class InactivityTracker {
     static let shared = InactivityTracker()
     
-    private var lastActiveDate: Date = Date()
+    private let lastActiveKey = "aiqo.inactivity.lastActiveDate"
     
     private init() {}
     
+    // تسجل أن المستخدم تحرك الآن
     func markActive() {
-        lastActiveDate = Date()
+        UserDefaults.standard.set(Date(), forKey: lastActiveKey)
     }
     
+    // ترجع عدد الدقائق من آخر حركة (حتى لو التطبيق انغلق ورجع انفتح)
     var currentInactivityMinutes: Int {
-        let diff = Date().timeIntervalSince(lastActiveDate)
+        let lastDate = UserDefaults.standard.object(forKey: lastActiveKey) as? Date ?? Date()
+        let diff = Date().timeIntervalSince(lastDate)
         return Int(diff / 60)
     }
 }

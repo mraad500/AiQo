@@ -3,101 +3,200 @@ import FamilyControls
 
 struct ContentView: View {
 
-    // 👇 التغيير المهم: حولناها إلى EnvironmentObject حتى تستلم النسخة المشتركة
     @EnvironmentObject var model: ProtectionModel
     
+    // 👇 ربطنا مدير العملات هنا
+    @ObservedObject var coinManager = CoinManager.shared
+
+    // Picker
     @State private var showPicker = false
+    
+    // Alerts
+    @State private var showNotEnoughCoinsAlert = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
+        VStack(spacing: 25) {
 
-                // الأيقونة والحالة
-                Image(systemName: model.isEnabled ? "lock.shield.fill" : "lock.open")
-                    .font(.system(size: 70))
-                    .foregroundStyle(model.isEnabled ? .red : .green)
-                    .contentTransition(.symbolEffect(.replace)) // حركة حلوة اذا انت iOS 17+
+            // 1) Top indicator
+            Capsule()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 40, height: 5)
+                .padding(.top, 10)
 
-                Text(model.isEnabled ? "الحماية مفعّلة" : "الحماية مطفّية")
-                    .font(.title)
-                    .bold()
+            // 2) Title
+            Text("Bio-Digital Kernel")
+                .font(.headline)
+                .padding(.top, 5)
 
-                // ملخص الاختيار
-                Text(model.selectionSummary)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+            Spacer().frame(height: 10)
 
-                Divider()
-                    .padding(.vertical)
-
-                // زر طلب الصلاحية (يظهر فقط اذا ماكو صلاحية)
-                if !model.isAuthorized {
-                    Button {
-                        Task {
-                            await model.requestAuthorization()
-                        }
-                    } label: {
-                        Text("طلب صلاحية Screen Time")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
+            // 3) Icon & Balance 💰
+            ZStack {
+                // الخلفية المشعة
+                Circle()
+                    .fill(Color.yellow.opacity(0.1))
+                    .frame(width: 140, height: 140)
+                    .blur(radius: 10)
+                
+                VStack(spacing: 5) {
+                    Image(systemName: model.isEnabled ? "lock.shield.fill" : "lock.open.fill")
+                        .font(.system(size: 50))
+                        .foregroundStyle(model.isEnabled ? .green : .orange)
+                    
+                    // عرض الرصيد
+                    HStack(spacing: 5) {
+                        Image(systemName: "bitcoinsign.circle.fill")
+                            .foregroundStyle(.yellow)
+                        Text("\(coinManager.balance)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    Text("AiQo Coins")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            }
+            .padding(.vertical, 10)
 
-                // زر اختيار التطبيقات
+            // 4) Protection status
+            Text(model.isEnabled ? "Protection Active" : "Paused")
+                .font(.title3)
+                .bold()
+                .foregroundStyle(model.isEnabled ? .green : .secondary)
+
+            // 5) Selection details
+            Text(selectionCountText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Divider()
+                .padding(.vertical, 10)
+
+            // 6) Pick apps
+            Button {
+                showPicker = true
+            } label: {
+                HStack {
+                    Image(systemName: "square.stack.3d.up.fill")
+                    Text("Edit Blocked Apps")
+                }
+                .font(.body.weight(.medium))
+                .foregroundStyle(.blue)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+            }
+            .familyActivityPicker(isPresented: $showPicker, selection: $model.selection)
+
+            // 7) Marketplace Logic 🛒
+            if model.isEnabled {
+                // اذا الحماية شغالة، اعرض خيارات الشراء
+                VStack(spacing: 12) {
+                    Text("Unlock Time with Coins")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    
+                    HStack(spacing: 12) {
+                        // خيار 15 دقيقة
+                        buyButton(minutes: 15, cost: 30, color: .orange)
+                        
+                        // خيار 1 ساعة
+                        buyButton(minutes: 60, cost: 100, color: .purple)
+                    }
+                }
+            } else {
+                // اذا الحماية طافية، زر التفعيل المجاني
                 Button {
-                    showPicker = true
+                    model.enable()
                 } label: {
-                    Label("تعديل التطبيقات المحظورة", systemImage: "square.stack.3d.up.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                }
-                .buttonStyle(.bordered)
-                .familyActivityPicker(
-                    isPresented: $showPicker,
-                    selection: $model.selection
-                )
-
-                // زر التشغيل
-                if !model.isEnabled {
-                    Button {
-                        model.enable()
-                    } label: {
-                        Text("تفعيل المراقبة (بعد 1 دقيقة)")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                    HStack {
+                        Image(systemName: "shield.fill")
+                        Text("Activate Protection")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .disabled(!model.canEnable || !model.isAuthorized)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(16)
+                    .shadow(color: .green.opacity(0.4), radius: 5, x: 0, y: 3)
                 }
-                // زر الإيقاف
-                else {
-                    Button(role: .destructive) {
+                .disabled(!model.isAuthorized)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .background(Color(.systemBackground))
+        .onAppear {
+            model.refreshAuthorization()
+        }
+        .alert("Not Enough Coins! 🏃‍♂️", isPresented: $showNotEnoughCoinsAlert) {
+            Button("I'll Walk More", role: .cancel) { }
+        } message: {
+            Text("You need more AiQo Coins. Go for a run or walk to mine more!")
+        }
+
+        // ✅ Emergency Button (Red Dot) - زر الطوارئ السري
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                Button {
+                    if model.isEnabled {
                         model.disable()
-                    } label: {
-                        Text("إيقاف الحماية")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
                     }
-                    .buttonStyle(.bordered)
+                } label: {
+                    Circle()
+                        .fill(Color.red.opacity(0.85))
+                        .frame(width: 8, height: 8)
+                        .padding(20)
                 }
-
+                .buttonStyle(.plain)
                 Spacer()
             }
-            .padding()
-            // 👇 غيرنا الاسم من mohammed1 الى اسم ميزتك
-            .navigationTitle("Bio-Digital Kernel")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                // تحديث الحالة أول ما تفتح الشاشة
-                model.refreshAuthorization()
-            }
+            .background(Color.clear)
         }
+    }
+    
+    // تصميم زر الشراء
+    private func buyButton(minutes: Int, cost: Int, color: Color) -> some View {
+        Button {
+            // محاولة الشراء
+            if coinManager.spendCoins(cost) {
+                model.unlockTemporarily(minutes: minutes)
+            } else {
+                showNotEnoughCoinsAlert = true
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Text("\(minutes) Min")
+                    .font(.headline)
+                    .foregroundStyle(color)
+                
+                HStack(spacing: 2) {
+                    Text("\(cost)")
+                        .bold()
+                    Image(systemName: "bitcoinsign.circle.fill")
+                        .font(.caption)
+                }
+                .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(color.opacity(0.1))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(color.opacity(0.5), lineWidth: 1)
+            )
+        }
+    }
+
+    private var selectionCountText: String {
+        let apps = model.selection.applicationTokens.count
+        let categories = model.selection.categoryTokens.count
+        let web = model.selection.webDomainTokens.count
+        return "Apps: \(apps) | Categories: \(categories) | Web: \(web)"
     }
 }

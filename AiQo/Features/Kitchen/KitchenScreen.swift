@@ -8,6 +8,9 @@ struct KitchenScreen: View {
     @State private var isProfileSheetPresented = false
     @State private var isRegenerating: Bool = false
     
+    // NEW: فتح شاشة KitchenHamoudi
+    @State private var isKitchenHamoudiPresented: Bool = false
+    
     let viewModel: KitchenViewModel
     let onEditDietTapped: () -> Void
 
@@ -19,16 +22,15 @@ struct KitchenScreen: View {
             VStack(spacing: 0) {
                 
                 header
-                    .padding(.top, -28)      // نفس أوفست Gym اللي عدّلناه
+                    .padding(.top, -28)
                     .padding(.bottom, 16)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .trailing, spacing: 24) {
                         
+                        // تم التعديل هنا لاستخدام الكروت المتحركة 👇
                         mealSection(titleKey: "screen.kitchen.breakfast", type: .breakfast)
-                        
                         mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
-                        
                         mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
                         
                         buttonsSection
@@ -42,6 +44,8 @@ struct KitchenScreen: View {
         .task {
             await viewModel.loadMeals()
         }
+        
+        // Meal details sheet
         .sheet(item: $selectedMeal) { meal in
             if #available(iOS 17.0, *) {
                 MealDetailSheet(meal: meal)
@@ -53,6 +57,14 @@ struct KitchenScreen: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+        }
+        
+        // NEW: KitchenHamoudi sheet
+        .sheet(isPresented: $isKitchenHamoudiPresented) {
+            KitchenHamoudi()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.thinMaterial)
         }
     }
 }
@@ -81,7 +93,6 @@ private extension KitchenScreen {
             
             Spacer()
             
-            // أيقونة الملف الشخصي (مطابقة لـ Gym من حيث الحجم والظل)
             Button {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 openProfile()
@@ -112,13 +123,10 @@ private extension KitchenScreen {
                 .foregroundColor(.primary)
             
             if let meal = viewModel.displayedMeal(for: type) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                // 🔥 هنا السحر: استبدلنا الزر العادي بالزر المتحرك الجديد
+                AnimatedMealButton(meal: meal) {
                     selectedMeal = meal
-                } label: {
-                    RecipeCardView(meal: meal)
                 }
-                .buttonStyle(.plain)
             } else {
                 Text("screen.kitchen.noMeals".localized)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -130,16 +138,11 @@ private extension KitchenScreen {
     
     var buttonsSection: some View {
         VStack(spacing: 16) {
+            
+            // Regenerate with AI -> opens KitchenHamoudi
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                isRegenerating = true
-                
-                Task {
-                    // await viewModel.generatePlan()
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
-                    isRegenerating = false
-                }
-                
+                isKitchenHamoudiPresented = true
             } label: {
                 Text("screen.kitchen.regenerate".localized)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -254,5 +257,63 @@ struct MealDetailSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 24)
+    }
+}
+
+// MARK: - 🔥 Animated Meal Button (سحر الحركة)
+struct AnimatedMealButton: View {
+    let meal: Meal
+    let action: () -> Void
+    
+    // حالات الحركة الخاصة بكل كارت
+    @State private var floatOffsetY: CGFloat = 0.0
+    @State private var isPressed: Bool = false
+    @State private var tapRotation: Double = 0.0
+    
+    var body: some View {
+        RecipeCardView(meal: meal)
+            // 1. حركة الطفو (Clouds) ☁️
+            .offset(y: floatOffsetY)
+            
+            // 2. حركة التموج عند الضغط (Water Wave) 💧
+            .scaleEffect(isPressed ? 0.92 : 1.0)
+            .rotation3DEffect(.degrees(tapRotation), axis: (x: 1, y: 0, z: 0))
+            
+            .onAppear {
+                // تأخير عشوائي عشان ما يتحركون سوا مثل الروبوتات
+                let randomDelay = Double.random(in: 0...2.0)
+                withAnimation(
+                    Animation
+                        .easeInOut(duration: 5.0) // بطيء وهادئ
+                        .repeatForever(autoreverses: true)
+                        .delay(randomDelay)
+                ) {
+                    floatOffsetY = -6.0
+                }
+            }
+            .onTapGesture {
+                triggerWaveAnimation()
+                action()
+            }
+    }
+    
+    private func triggerWaveAnimation() {
+        // Haptic Feedback
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+        
+        // المرحلة الأولى: انكماش وإمالة
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0)) {
+            isPressed = true
+            tapRotation = 8.0
+        }
+        
+        // المرحلة الثانية: ارتداد ناعم
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.4, blendDuration: 0)) {
+                isPressed = false
+                tapRotation = 0.0
+            }
+        }
     }
 }

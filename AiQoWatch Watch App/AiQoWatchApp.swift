@@ -2,21 +2,30 @@ import SwiftUI
 
 @main
 struct AiQoWatchApp: App {
-    @StateObject private var workoutManager = WorkoutManager()
+    // نستخدم StateObject حتى نضمن ان الكائن يبقى موجود طول فترة حياة التطبيق
+    @StateObject private var workoutManager = WorkoutManager.shared
     
-    var body: some Scene {
+    @SceneBuilder var body: some Scene {
         WindowGroup {
             NavigationView {
-                ContentView()
+                // ✅ هنا التغيير: نفحص اذا اكو تمرين شغال لو لا
+                if workoutManager.running {
+                    // اذا التمرين شغال، اعرض شاشة العدادات والتحكم
+                    // تأكد ان عندك View اسمه SessionPagingView او ControlsView
+                    SessionPagingView()
+                        .environmentObject(workoutManager)
+                } else {
+                    // اذا ماكو تمرين، اعرض القائمة
+                    StartView()
+                        .environmentObject(workoutManager)
+                }
             }
-            .environmentObject(workoutManager)
+            // هذا السطر مهم حتى الـ Summary يظهر
+            .sheet(isPresented: $workoutManager.showingSummaryView) {
+                SummaryView()
+                    .environmentObject(workoutManager)
+            }
             .onAppear {
-                // 1. تفعيل الاتصال
-                let wcManager = WatchConnectivityManager.shared
-                wcManager.workoutDelegate = workoutManager
-                wcManager.activate()
-                
-                // 2. طلب إذن HealthKit (مهم جداً!) ✅
                 workoutManager.requestAuthorization()
             }
         }

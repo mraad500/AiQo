@@ -7,7 +7,6 @@ internal import Combine
 @MainActor
 final class ProtectionModel: ObservableObject {
 
-    // 👇 1. هذا هو السطر الجديد (المفتاح السحري)
     static let shared = ProtectionModel()
 
     @Published var selection = FamilyActivitySelection()
@@ -15,6 +14,9 @@ final class ProtectionModel: ObservableObject {
 
     private let center = DeviceActivityCenter()
     private let store = ManagedSettingsStore()
+    
+    // لتتبع حالة المؤقت
+    private var unlockTimer: Timer?
 
     var isEnabled: Bool {
         UserDefaults(suiteName: AppGroupKeys.appGroupID)?
@@ -34,7 +36,6 @@ final class ProtectionModel: ObservableObject {
         return "Apps: \(apps) | Categories: \(cats) | Web: \(web)"
     }
 
-    // خلينا الـ init متاح حتى اذا ردنا نستخدمه بغير مكان، بس الاعتماد الكلي حيصير على shared
     init() {
         refreshAuthorization()
     }
@@ -55,19 +56,37 @@ final class ProtectionModel: ObservableObject {
 
     func enable() {
         guard isAuthorized else { return }
+        // الغاء اي مؤقت سابق اذا كان موجود
+        unlockTimer?.invalidate()
+        
         saveSelectionToAppGroup()
         startMonitoringOneMinute()
         setEnabled(true)
     }
 
     func disable() {
-        // فتح الكل فوراً
         store.clearAllSettings()
         center.stopMonitoring()
         setEnabled(false)
-
-        // (اختياري) امسح السلكشن
-        // clearSelectionFromAppGroup()
+        unlockTimer?.invalidate()
+    }
+    
+    // MARK: - 🔓 الميزة الجديدة: الفتح المؤقت
+    func unlockTemporarily(minutes: Int) {
+        // 1. نوقف الحماية (نفتح التطبيقات)
+        disable()
+        
+        print("🔓 AiQo: Unlocking for \(minutes) minutes...")
+        
+        // 2. نشغل مؤقت يرجع يقفلها بعد الوقت المحدد
+        // ملاحظة: هذا المؤقت يشتغل والتطبيق بالخلفية لفترة قصيرة
+        // لتطوير مستقبلي اقوى نستخدم Background Tasks
+        unlockTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(minutes * 60), repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                print("🔒 Time is up! Locking again.")
+                self?.enable()
+            }
+        }
     }
 
     private func saveSelectionToAppGroup() {
@@ -84,7 +103,6 @@ final class ProtectionModel: ObservableObject {
     }
 
     private func startMonitoringOneMinute() {
-        // مهم: لا تقفل فوراً — القفل يتم بعد Threshold بالـ Monitor
         store.clearAllSettings()
 
         let schedule = DeviceActivitySchedule(
@@ -108,7 +126,6 @@ final class ProtectionModel: ObservableObject {
                 events: [.oneMinute: event]
             )
         } catch {
-            // اذا صار خطأ، طفي الميزة
             setEnabled(false)
         }
     }

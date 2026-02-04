@@ -2,23 +2,33 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>AiQo</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleName</key>
-	<string>AiQo</string>
-	<key>FOOTBALL_DATA_API_KEY</key>
-	<string>d415ac62911543a78e17f51bde5c6448</string>
-	<key>NSHealthHeartRateUsageDescription</key>
-	<string>AiQo uses your heart rate data to display live workout intensity and recovery tracking.</string>
-	<key>NSUserNotificationUsageDescription</key>
-	<string>AiQo sends reminders for water, sleep, and workouts to keep you on track.</string>
-	<key>SUPABASE_ANON_KEY</key>
-	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M</string>
-	<key>SUPABASE_URL</key>
-	<string>https://zidbsrepqpbucqzxnwgk.supabase.co</string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
+	<key>CFBundleIconFile</key>
+	<string></string>
+	<key>CFBundleSignature</key>
+	<string></string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.mraad500.aiqo</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>aiqo-spotify</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>spotify</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>

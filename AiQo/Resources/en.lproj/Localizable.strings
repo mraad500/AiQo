@@ -271,3 +271,39 @@
 "msg_level_riser" = "It's clear you have respectable activity. We can turn this effort into daily consistency.";
 "msg_level_fighter" = "Strong level! Your body is used to effort, and AiQo will help you reach a higher version of yourself.";
 "msg_level_legend" = "Your numbers show you take your health very seriously. AiQo is now your official partner to maintain this legendary level.";
+/* General */
+"optimize_bio" = "Let's optimize your body & mind";
+"default_name" = "Captain";
+
+/* Profile Header & Body */
+"body_stats" = "Body Stats";
+"gender" = "Gender";
+"male" = "Male";
+"female" = "Female";
+
+/* Units & Goals */
+"years" = "years";
+"cm" = "cm";
+"kg" = "kg";
+"goal_stronger" = "Stronger & Leaner";
+
+/* App Section */
+"app_section" = "Application";
+"focus_protection" = "Focus Protection";
+"settings" = "Settings";
+"notif_lang" = "Notifications & Language";
+"support" = "Support";
+"contact_us" = "Contact Us";
+
+/* Alerts & Dialogs */
+"current_level" = "Current Level";
+"you_have" = "You have";
+"xp_points" = "XP points";
+"add_xp_test" = "Add 50 XP (Test)";
+"close" = "Close";
+"contact_soon" = "Contact us soon";
+"protection_active" = "Protection Active";
+"protection_inactive" = "Protection Inactive";
+"edit_blocked_apps" = "Edit Blocked Apps";
+"stop_protection" = "Stop Protection";
+"start_protection" = "Start Protection";

@@ -1,130 +1,201 @@
-import Foundation
-internal import Combine
-import HealthKit
-import UIKit
+// ===============================================
+// File: LiveWorkoutSession.swift
+// ===============================================
 
-// ✅ تمت إضافة التعريف المفقود هنا
-enum LiveWorkoutNotification {
-    static let didStart = Notification.Name("LiveWorkoutDidStart")
-    static let didStop  = Notification.Name("LiveWorkoutDidStop")
-}
+import Foundation
+import HealthKit
+import SwiftUI
+import UIKit // ⚠️ ضروري لتشغيل الاهتزاز (Haptic)
+internal import Combine
 
 @MainActor
-final class LiveWorkoutSession: NSObject, ObservableObject {
-    static let shared = LiveWorkoutSession()
+final class LiveWorkoutSession: ObservableObject {
     
-    @Published var workoutID: String?
+    // حالات التمرين
+    enum Phase: Equatable {
+        case idle       // خامل
+        case starting   // جاري الاتصال
+        case running    // قيد التشغيل
+        case paused     // متوقف
+        case ending     // إنهاء
+    }
+
+    let activityType: HKWorkoutActivityType
+    let locationType: HKWorkoutSessionLocationType
+    
+    // مدير الاتصال
+    private let connectivity = PhoneConnectivityManager.shared
+    
+    // MARK: - Public State
+    
+    @Published var title: String = "Gym Workout"
+    @Published var phase: Phase = .idle
+    
+    // البيانات الحية (تُحدث الواجهة فورياً)
     @Published var heartRate: Double = 0
     @Published var activeEnergy: Double = 0
-    @Published var distance: Double = 0
-    @Published var pace: String = "--"
-    @Published var elapsed: TimeInterval = 0
-    @Published var isConnected: Bool = false
+    @Published var distanceMeters: Double = 0
+    @Published var elapsedSeconds: Int = 0
     
-    private var timerTask: Task<Void, Never>?
-    private var lastReceivedDate: Date?
+    @Published var isWatchReachable: Bool = false
     
-    private override init() {
-        super.init()
-        setupObservers()
-    }
+    // ✅ متغيرات الإشعار الجديد (يظهر عند اكتمال كل 1 كم)
+    @Published var showMilestoneAlert: Bool = false
+    @Published var milestoneAlertText: String = ""
     
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(self, selector: #selector(handleMetricsUpdate(_:)), name: NSNotification.Name("LiveMetricsReceived"), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleWorkoutStart), name: NSNotification.Name("WorkoutDidStart"), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleWorkoutEnd), name: NSNotification.Name("WorkoutDidEnd"), object: nil)
-    }
+    // متغير محلي لتتبع آخر كيلومتر تم تسجيله (لمنع تكرار الاهتزاز لنفس الكيلو)
+    private var lastRecordedKm: Int = 0
     
-    @objc private func handleMetricsUpdate(_ notification: Notification) {
-        guard let metrics = notification.userInfo?["metrics"] as? LiveMetricsPayload else { return }
-        
-        Task { @MainActor in
-            self.isConnected = true
-            let currentID = self.workoutID ?? "WatchSession"
-            self.applyLiveMetrics(workoutID: currentID, payload: metrics)
+    private var cancellables = Set<AnyCancellable>()
+    
+    // نص الحالة للعرض
+    var statusText: String {
+        switch phase {
+        case .idle: return "Ready"
+        case .starting: return "Connecting..."
+        case .running: return "Active"
+        case .paused: return "Paused"
+        case .ending: return "Saving..."
         }
     }
     
-    @objc private func handleWorkoutStart() {
-        Task { @MainActor in
-            self.isConnected = true
-            if self.workoutID == nil {
-                self.start(workoutID: "WatchSession")
+    var canStart: Bool { phase == .idle }
+    var canEnd: Bool { phase == .running || phase == .paused }
+    var canPause: Bool { phase == .running }
+    var canResume: Bool { phase == .paused }
+    
+    // MARK: - Init
+    
+    init(
+        title: String = "Gym Workout",
+        activityType: HKWorkoutActivityType = .other,
+        locationType: HKWorkoutSessionLocationType = .unknown
+    ) {
+        self.title = title
+        self.activityType = activityType
+        self.locationType = locationType
+        
+        setupBindings()
+    }
+
+    // MARK: - Bindings (ربط البيانات)
+    
+    private func setupBindings() {
+        
+        connectivity.$isReachable
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .assign(to: &$isWatchReachable)
+        
+        connectivity.$currentHeartRate
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .assign(to: &$heartRate)
+            
+        connectivity.$activeEnergy
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .assign(to: &$activeEnergy)
+            
+        // ✅ هنا التعديل: نراقب المسافة لعمل الاهتزاز والإشعار
+        connectivity.$currentDistance
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] distance in
+                guard let self = self else { return }
+                self.distanceMeters = distance
+                self.checkForMilestone(totalMeters: distance)
             }
-        }
+            .store(in: &cancellables)
+            
+        connectivity.$currentDuration
+            .receive(on: RunLoop.main)
+            .map { Int($0) }
+            .removeDuplicates()
+            .assign(to: &$elapsedSeconds)
     }
-    
-    @objc private func handleWorkoutEnd() {
-        Task { @MainActor in
-            self.stop()
-        }
-    }
-    
-    func applyLiveMetrics(workoutID: String, payload: LiveMetricsPayload) {
-        if self.workoutID == nil {
-            self.workoutID = workoutID
-            NotificationCenter.default.post(name: LiveWorkoutNotification.didStart, object: nil)
-            startLocalSmoothTimer()
-        }
+
+    // ✅ دالة التحقق من الكيلومترات (تعمل بصمت: اهتزاز فقط)
+    private func checkForMilestone(totalMeters: Double) {
+        // حساب الكيلومتر الحالي (مثلاً 1500 متر = 1 كم)
+        let currentKm = Int(totalMeters / 1000)
         
-        self.heartRate = payload.heartRate
-        self.activeEnergy = payload.activeEnergy
-        self.distance = payload.distance
-        self.elapsed = payload.elapsed
-        self.lastReceivedDate = Date()
-        
-        updatePace(distance: payload.distance, duration: payload.elapsed)
-    }
-    
-    func start(workoutID: String) {
-        self.workoutID = workoutID
-        resetMetrics()
-        NotificationCenter.default.post(name: LiveWorkoutNotification.didStart, object: nil)
-        startLocalSmoothTimer()
-    }
-    
-    func stop() {
-        self.workoutID = nil
-        self.isConnected = false
-        timerTask?.cancel()
-        NotificationCenter.default.post(name: LiveWorkoutNotification.didStop, object: nil)
-    }
-    
-    private func updatePace(distance: Double, duration: TimeInterval) {
-        guard distance > 0, duration > 0 else {
-            self.pace = "--"
-            return
-        }
-        let speed = distance / duration
-        if speed > 0 {
-            let minPerKm = (1000.0 / speed) / 60.0
-            self.pace = String(format: "%.1f", minPerKm)
-        }
-    }
-    
-    private func resetMetrics() {
-        heartRate = 0
-        activeEnergy = 0
-        distance = 0
-        pace = "--"
-        elapsed = 0
-    }
-    
-    private func startLocalSmoothTimer() {
-        timerTask?.cancel()
-        timerTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard let self = self, let last = self.lastReceivedDate else { continue }
-                
-                if Date().timeIntervalSince(last) < 5 {
-                    self.elapsed += 1
+        // الشرط: قطعنا كيلو جديد + لم يتم تنبيه المستخدم عنه مسبقاً
+        if currentKm > 0 && currentKm > lastRecordedKm {
+            lastRecordedKm = currentKm
+            
+            // 1. تحديث نص الإشعار وإظهاره
+            withAnimation(.spring()) {
+                self.milestoneAlertText = "\(currentKm) km ✅"
+                self.showMilestoneAlert = true
+            }
+            
+            // 2. تشغيل الاهتزاز (Haptic Feedback) - صامت
+            let generator = UINotificationFeedbackGenerator()
+            generator.prepare() // تجهيز المحرك لتقليل التأخير
+            generator.notificationOccurred(.success)
+            
+            print("📱 Phone Vibrated for: \(currentKm) km")
+            
+            // 3. إخفاء الإشعار تلقائياً بعد 3 ثوانٍ
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                withAnimation {
+                    self.showMilestoneAlert = false
                 }
             }
         }
     }
+
+    // MARK: - Controls
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
+    func startFromPhone() {
+        guard canStart else { return }
+        
+        // تصفير العدادات عند بدء تمرين جديد
+        lastRecordedKm = 0
+        showMilestoneAlert = false
+        
+        withAnimation { phase = .starting }
+        
+        print("🚀 Launching Watch App...")
+        connectivity.launchWatchAppForWorkout(activityType: activityType, locationType: locationType)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.connectivity.startWorkoutOnWatch(
+                activityTypeRaw: Int(self.activityType.rawValue),
+                locationTypeRaw: Int(self.locationType.rawValue)
+            )
+            withAnimation(.snappy) { self.phase = .running }
+        }
+    }
+    
+    func pauseFromPhone() {
+        guard canPause else { return }
+        withAnimation(.snappy) { phase = .paused }
+    }
+    
+    func resumeFromPhone() {
+        guard canResume else { return }
+        withAnimation(.snappy) { phase = .running }
+    }
+    
+    func endFromPhone() {
+        guard canEnd else { return }
+        withAnimation(.snappy) { phase = .ending }
+        
+        connectivity.stopWorkoutOnWatch()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.snappy) {
+                self.phase = .idle
+                self.heartRate = 0
+                self.activeEnergy = 0
+                self.distanceMeters = 0
+                self.elapsedSeconds = 0
+                // تصفير حالة الإشعار
+                self.lastRecordedKm = 0
+                self.showMilestoneAlert = false
+            }
+        }
     }
 }

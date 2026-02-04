@@ -1,163 +1,113 @@
 import Foundation
 import HealthKit
+internal import Combine // ✅ (1) هذا كان ناقص
 
 final class HealthKitManager {
 
     // Singleton
     static let shared = HealthKitManager()
-
+    
+    private let service = HealthKitService.shared
     private let store = HKHealthStore()
 
-    // Today summary
-    private(set) var todaySteps: Int = 0
-    private(set) var todayDistanceKm: Double = 0
-    private(set) var todayCalories: Double = 0
-
-    // Live HR من الآيفون
-    private(set) var liveHeartRateBPM: Double = 0
-
-    // Live metrics جاية من الساعة
-    private(set) var liveMetricsFromWatch: WorkoutLiveMetrics?
-
+    // متغيرات للمراقبة الحية
+    @Published var todaySteps: Int = 0
+    @Published var todayCalories: Double = 0
+    @Published var todayDistanceKm: Double = 0
+    
     private init() {}
 
-    // MARK: - Permissions (AppDelegate يستخدمها)
-
-    func requestPermissions() {
+    // MARK: - 1. البداية (Start)
+    
+    func startBackgroundObserver() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
-
-        let toShare: Set<HKSampleType> = [
-            HKObjectType.workoutType()
-        ]
-
-        let toRead: Set<HKObjectType> = [
-            HKQuantityType.quantityType(forIdentifier: .stepCount)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .oxygenSaturation)!,
-            HKObjectType.workoutType()
-        ]
-
-        store.requestAuthorization(toShare: toShare, read: toRead) { _, error in
-            if let error {
-                print("HealthKit auth error (iOS): \(error)")
+        
+        guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
+        
+        store.enableBackgroundDelivery(for: type, frequency: .immediate) { success, error in
+            if let error = error { print("❌ [AiQo HK] Bg Delivery Error: \(error)") }
+            else { print("✅ [AiQo HK] Background Delivery Enabled") }
+        }
+        
+        let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completionHandler, error in
+            if let error = error {
+                print("❌ [AiQo HK] Observer Error: \(error)")
+                return
+            }
+            
+            print("👣 [AiQo HK] Steps changed detected!")
+            Task {
+                await self?.processNewHealthData()
+                completionHandler()
             }
         }
+        
+        store.execute(query)
     }
-
-    // MARK: - Today summary (AppDelegate يناديها باسم fetchSteps)
-
+    
+    // ✅ (2) رجعنا هاي الدالة عشان تصلح الخطأ بملف ProfileViewController
     func fetchSteps() {
-        let group = DispatchGroup()
-
-        var stepsValue: Double = 0
-        var kcalValue: Double = 0
-        var distanceValue: Double = 0
-
-        group.enter()
-        fetchCumulativeQuantity(
-            identifier: .stepCount,
-            unit: .count()
-        ) { value in
-            stepsValue = value
-            group.leave()
-        }
-
-        group.enter()
-        fetchCumulativeQuantity(
-            identifier: .activeEnergyBurned,
-            unit: .kilocalorie()
-        ) { value in
-            kcalValue = value
-            group.leave()
-        }
-
-        group.enter()
-        fetchCumulativeQuantity(
-            identifier: .distanceWalkingRunning,
-            unit: .meter()
-        ) { value in
-            distanceValue = value
-            group.leave()
-        }
-
-        group.notify(queue: .main) { [weak self] in
-            guard let self else { return }
-            self.todaySteps = Int(stepsValue)
-            self.todayCalories = kcalValue
-            self.todayDistanceKm = distanceValue / 1000.0
+        Task {
+            await processNewHealthData()
         }
     }
 
-    // MARK: - Live Heart Rate من الآيفون
-
-    func liveHeartRate() {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
-
-        let predicate = HKQuery.predicateForSamples(withStart: Date(), end: nil)
-
-        let query = HKAnchoredObjectQuery(
-            type: type,
-            predicate: predicate,
-            anchor: nil,
-            limit: HKObjectQueryNoLimit
-        ) { [weak self] _, samples, _, _, _ in
-            self?.updateHeartRate(from: samples)
+    // MARK: - 2. المعالجة (The Brain Loop) 🔄
+    
+    private func processNewHealthData() async {
+        let summary = await try? service.fetchTodaySummary()
+        guard let data = summary else { return }
+        
+        await MainActor.run {
+            self.todaySteps = Int(data.steps)
+            self.todayCalories = data.activeKcal
+            self.todayDistanceKm = data.distanceMeters / 1000.0
         }
+        
+        print("📊 [AiQo HK] Updated: \(Int(data.steps)) steps")
 
-        query.updateHandler = { [weak self] _, samples, _, _, _ in
-            self?.updateHeartRate(from: samples)
-        }
-
-        store.execute(query)
+        calculateAndAwardCoins(currentSteps: Int(data.steps))
+        
+        ActivityNotificationEngine.shared.evaluateAndSendIfNeeded(
+            steps: Int(data.steps),
+            calories: data.activeKcal,
+            stepsGoal: 10000,
+            caloriesGoal: 500,
+            gender: .male,
+            language: .arabic
+        )
     }
-
-    private func updateHeartRate(from samples: [HKSample]?) {
-        guard
-            let sample = samples?.last as? HKQuantitySample
-        else { return }
-
-        let bpm = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
-
-        DispatchQueue.main.async { [weak self] in
-            self?.liveHeartRateBPM = bpm
+    
+    // MARK: - 3. منطق التعدين (Mining Logic) ⛏️
+    
+    private func calculateAndAwardCoins(currentSteps: Int) {
+        let defaults = UserDefaults.standard
+        let savedStepsKey = "lastProcessedStepsForMining"
+        let lastDateKey = "lastMiningDate"
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        let lastDate = defaults.object(forKey: lastDateKey) as? Date ?? Date.distantPast
+        
+        var previousSteps = defaults.integer(forKey: savedStepsKey)
+        
+        if !Calendar.current.isDate(today, inSameDayAs: lastDate) {
+            previousSteps = 0
+            defaults.set(today, forKey: lastDateKey)
+            defaults.set(0, forKey: savedStepsKey)
         }
-    }
-
-    // MARK: - تحديث من الساعة (PhoneConnectivityManager يستعملها)
-
-    func updateFromWatch(metrics: WorkoutLiveMetrics) {
-        DispatchQueue.main.async {
-            self.liveMetricsFromWatch = metrics
+        
+        let deltaSteps = currentSteps - previousSteps
+        
+        if deltaSteps > 0 {
+             // ضيف منطق اضافة العملات هنا
+            if deltaSteps >= 100 { // مثال
+                 print("💰 Earned coins logic here")
+            }
+            defaults.set(currentSteps, forKey: savedStepsKey)
+        } else {
+             if currentSteps != previousSteps {
+                 defaults.set(currentSteps, forKey: savedStepsKey)
+             }
         }
-    }
-
-    // MARK: - Helpers
-
-    private func fetchCumulativeQuantity(
-        identifier: HKQuantityTypeIdentifier,
-        unit: HKUnit,
-        completion: @escaping (Double) -> Void
-    ) {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
-            completion(0)
-            return
-        }
-
-        let now = Date()
-        let start = Calendar.current.startOfDay(for: now)
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: now)
-
-        let query = HKStatisticsQuery(
-            quantityType: type,
-            quantitySamplePredicate: predicate,
-            options: .cumulativeSum
-        ) { _, stats, _ in
-            let value = stats?.sumQuantity()?.doubleValue(for: unit) ?? 0
-            completion(value)
-        }
-
-        store.execute(query)
     }
 }

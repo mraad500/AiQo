@@ -1,85 +1,143 @@
+// =====================================================
+// File: iOS/SceneDelegate.swift
+// Target: iOS
+// =====================================================
+
 import UIKit
 import UserNotifications
 import FamilyControls
-import SwiftUI // ضفنا هاي لأن نحتاجها اذا ردنا نغلف فيوات
+import SwiftUI
+import Supabase // تأكد من استيراد Supabase
 
 private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
 }
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-
-    // 1. (مهم) نصنع نسخة وحدة من "عقل الحماية" ونخليها هنا
     let protectionModel = ProtectionModel()
 
     // MARK: - UIScene Lifecycle
+
     func scene(
         _ scene: UIScene,
         willConnectTo session: UISceneSession,
         options connectionOptions: UIScene.ConnectionOptions
     ) {
+        _ = PhoneConnectivityManager.shared
+
         guard let windowScene = scene as? UIWindowScene else { return }
         let window = UIWindow(windowScene: windowScene)
+        self.window = window
 
-        let isUserOnboarded = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
+        // 1. الفحص: هل المستخدم مسجل دخول؟
+        let isLoggedIn = SupabaseService.shared.client.auth.currentUser != nil
         
-        if isUserOnboarded {
-            window.rootViewController = makeMainRoot()
+        // 2. الفحص: هل أتم حسابات اللياقة (Onboarding)؟
+        let isOnboardingCompleted = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
+
+        if isLoggedIn {
+            if isOnboardingCompleted {
+                // مسجل دخول + مخلص حسابات -> الشاشة الرئيسية
+                window.rootViewController = makeMainRoot()
+            } else {
+                // مسجل دخول + لم يكمل الحسابات -> شاشة الحسابات
+                window.rootViewController = makeLegacyRoot()
+            }
         } else {
-            let legacyVC = LegacyCalculationViewController()
-            
-            // اذا شاشة الاونبوردنج تحتاج المودل هم تكدر تدزه هنا، بس اعتقد ما تحتاجه هسه
-            
-            let nav = UINavigationController(rootViewController: legacyVC)
-            nav.navigationBar.prefersLargeTitles = true
-            window.rootViewController = nav
+            // غير مسجل دخول -> شاشة تسجيل الدخول الجديدة
+            window.rootViewController = LoginViewController()
         }
 
         window.makeKeyAndVisible()
-        self.window = window
-        
+
+        // معالجة الإشعارات
         if let response = connectionOptions.notificationResponse {
             NotificationService.shared.handleInitial(response: response, window: window)
         }
     }
 
-    // MARK: - الانتقال والطلبات
+    // MARK: - Navigation Logic (Transitions)
 
+    /// تستدعى من LoginViewController عند نجاح الدخول
+    func didLoginSuccessfully() {
+        guard let window = window else { return }
+        
+        // الانتقال إلى شاشة الحسابات (Legacy Calculation)
+        let legacyRoot = makeLegacyRoot()
+        
+        UIView.transition(
+            with: window,
+            duration: 0.6,
+            options: .transitionFlipFromRight, // أو .transitionCrossDissolve
+            animations: { window.rootViewController = legacyRoot },
+            completion: nil
+        )
+    }
+
+    /// تستدعى من LegacyCalculationViewController عند الانتهاء
     func onboardingFinished() {
         Task {
-            // 2. (تعديل) نطلب الصلاحية عن طريق المودل مو مباشرة
-            // هذا يضمن ان المتغير isAuthorized داخل المودل يصير True
-            await protectionModel.requestAuthorization()
+            // طلب إذن Screen Time (اختياري حسب منطق تطبيقك)
+            try? await protectionModel.requestAuthorization()
             
             await MainActor.run {
                 self.switchToMainInterface()
             }
         }
     }
-
-    // 3. (تعديل) دالة بناء الشاشة الرئيسية وحقن المودل
-    private func makeMainRoot() -> UIViewController {
-        let tabBar = MainTabBarController()
-        
-        // ⚠️ مهم جداً: هنا لازم توصل المودل للتاب بار
-        // بما ان MainTabBarController هو UIKit، لازم تسويله متغير يستقبل المودل
-        // مثلاً تكون ضايف بداخله: var model: ProtectionModel?
-        
-        // tabBar.model = protectionModel  <-- فعل هذا السطر بعد ما تعدل التاب بار
-        
-        return tabBar
-    }
-
+    
+    /// الانتقال النهائي للشاشة الرئيسية
     private func switchToMainInterface() {
         guard let window = window else { return }
-        
+
+        // حفظ الحالة
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
-        
+
         let mainRoot = makeMainRoot()
-        UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: {
-            window.rootViewController = mainRoot
-        }, completion: nil)
+
+        UIView.transition(
+            with: window,
+            duration: 0.5,
+            options: .transitionCrossDissolve,
+            animations: { window.rootViewController = mainRoot },
+            completion: nil
+        )
+    }
+    
+    // تسجيل الخروج (للمستقبل)
+    func logout() {
+        Task {
+            try? await SupabaseService.shared.client.auth.signOut()
+            UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteLegacyCalculation) // إعادة تعيين حسب الحاجة
+            
+            await MainActor.run {
+                guard let window = self.window else { return }
+                window.rootViewController = LoginViewController()
+            }
+        }
+    }
+
+    // MARK: - Root Builders
+
+    private func makeLegacyRoot() -> UIViewController {
+        let legacyVC = LegacyCalculationViewController()
+        let nav = UINavigationController(rootViewController: legacyVC)
+        nav.navigationBar.isHidden = true // نخفي البار لأننا صممنا الهيدر يدوياً
+        return nav
+    }
+
+    private func makeMainRoot() -> UIViewController {
+        let tabBar = MainTabBarController()
+        return tabBar
+    }
+    
+    // MARK: - Standard Methods
+    func sceneWillEnterForeground(_ scene: UIScene) { _ = PhoneConnectivityManager.shared }
+    func sceneDidBecomeActive(_ scene: UIScene) { _ = PhoneConnectivityManager.shared }
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+        MusicManager.shared.handleSpotifyURL(url)
     }
 }

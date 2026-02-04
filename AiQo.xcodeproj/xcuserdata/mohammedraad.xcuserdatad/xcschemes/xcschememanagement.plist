@@ -12,15 +12,29 @@
 		<key>AiQo.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>4</integer>
+		</dict>
+		<key>AiQoCore.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
 		</dict>
 		<key>AiQoMonitor.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>isShown</key>
+			<true/>
+			<key>orderHint</key>
+			<integer>0</integer>
+		</dict>
+		<key>AiQoShield.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>3</integer>
 		</dict>
-		<key>AiQoShield.xcscheme_^#shared#^_</key>
+		<key>AiQoW Watch App.xcscheme_^#shared#^_</key>
 		<dict>
+			<key>isShown</key>
+			<true/>
 			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
@@ -28,6 +42,11 @@
 		<dict>
 			<key>orderHint</key>
 			<integer>2</integer>
+		</dict>
+		<key>AiQoWorkoutLiveAttributesExtension.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>5</integer>
 		</dict>
 		<key>Watch App Extension.xcscheme_^#shared#^_</key>
 		<dict>
@@ -37,17 +56,52 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
-		<key>8025C4B02EC25EB7004DECAA</key>
+		<key>80235C242F1A179A00A4983B</key>
 		<dict>
 			<key>primary</key>
 			<true/>
 		</dict>
-		<key>8025C4BD2EC25EB7004DECAA</key>
+		<key>80235C302F1A179B00A4983B</key>
 		<dict>
 			<key>primary</key>
 			<true/>
 		</dict>
-		<key>8025C4C72EC25EB8004DECAA</key>
+		<key>80235C3A2F1A179B00A4983B</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80235CF92F1A37D800A4983B</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80235D052F1A37D900A4983B</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80235D0F2F1A37D900A4983B</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80D81CC72EF4D8FA0020C88D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80D81E1B2EF5E00D0020C88D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80D81E272EF5E00E0020C88D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>80D81E312EF5E00E0020C88D</key>
 		<dict>
 			<key>primary</key>
 			<true/>

@@ -277,3 +277,39 @@
 "msg_level_riser" = "واضح إن عندك حركة ونشاط محترم. نقدر نحول هذا الاجتهاد إلى استمرارية يومية.";
 "msg_level_fighter" = "مستوى قوي! جسمك متعود على الجهد، و AiQo رح يساعدك توصل لنسخة أعلى من نفسك.";
 "msg_level_legend" = "أرقامك تبين إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي للحفاظ على هذا المستوى الأسطوري.";
+/* General */
+"optimize_bio" = "لنقم بتحسين جسدك وعقلك";
+"default_name" = "كابتن حمودي";
+
+/* Profile Header & Body */
+"body_stats" = "بيانات الجسم";
+"gender" = "الجنس";
+"male" = "ذكر";
+"female" = "أنثى";
+
+/* Units & Goals */
+"years" = "سنة";
+"cm" = "سم";
+"kg" = "كجم";
+"goal_stronger" = "أقوى وأنحف";
+
+/* App Section */
+"app_section" = "التطبيق";
+"focus_protection" = "حماية التركيز";
+"settings" = "الإعدادات";
+"notif_lang" = "التنبيهات واللغة";
+"support" = "الدعم الفني";
+"contact_us" = "تواصل معنا";
+
+/* Alerts & Dialogs */
+"current_level" = "مستواك الحالي";
+"you_have" = "لديك";
+"xp_points" = "نقطة خبرة";
+"add_xp_test" = "إضافة 50 نقطة (تجربة)";
+"close" = "إغلاق";
+"contact_soon" = "تواصل معنا قريباً";
+"protection_active" = "الحماية مفعّلة";
+"protection_inactive" = "الحماية متوقفة";
+"edit_blocked_apps" = "تعديل التطبيقات المحظورة";
+"stop_protection" = "إيقاف الحماية";
+"start_protection" = "تفعيل الحماية";
