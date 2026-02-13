@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "types": ["badge", "shield", "belt"],
+  "scoring": {
+    "badge": 10,
+    "shield": 40,
+    "belt": 120
+  },
+  "achievements": [
+    {
+      "id": "badge_first_steps",
+      "type": "badge",
+      "title_ar": "أول خطوات",
+      "desc_ar": "أول يوم تسجل خطواتك بـ AiQo",
+      "rule_key": "FIRST_HEALTH_SYNC",
+      "points": 10,
+      "icon_path": "badges/badge_first_steps.png"
+    },
+    {
+      "id": "badge_steps_10k",
+      "type": "badge",
+      "title_ar": "مشّاية 10K",
+      "desc_ar": "تسوي 10,000 خطوة بيوم واحد",
+      "rule_key": "STEPS_DAY_10000",
+      "points": 15,
+      "icon_path": "badges/badge_steps_10k.png"
+    },
+    {
+      "id": "shield_streak_7_steps",
+      "type": "shield",
+      "title_ar": "درع الانضباط",
+      "desc_ar": "7 أيام متتالية تحقق هدف الخطوات",
+      "rule_key": "STEPS_STREAK_7",
+      "points": 60,
+      "icon_path": "shields/shield_streak_7_steps.png"
+    },
+    {
+      "id": "belt_month_champion",
+      "type": "belt",
+      "title_ar": "حزام بطل القبيلة",
+      "desc_ar": "أعلى نقاط بالشهر داخل القبيلة",
+      "rule_key": "TRIBE_MONTH_CHAMPION",
+      "points": 200,
+      "icon_path": "belts/belt_month_champion.png"
+    }
+  ]
+}
+
