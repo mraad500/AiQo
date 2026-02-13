@@ -28,6 +28,7 @@ struct WaterDetailSheetView: View {
     
     /// Amount to add per button tap
     private let addAmount: Double = 0.25
+    @State private var addWaterFeedbackTrigger = 0
     
     // MARK: - Body
     
@@ -115,6 +116,7 @@ struct WaterDetailSheetView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(BounceButtonStyle())
+        .sensoryFeedback(.selection, trigger: addWaterFeedbackTrigger)
         .accessibilityLabel("Add 0.25 liters of water")
         .accessibilityHint("Double tap to log water intake")
     }
@@ -127,10 +129,8 @@ struct WaterDetailSheetView: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             currentWaterLiters += addAmount
         }
-        
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
+
+        addWaterFeedbackTrigger += 1
         
         // Notify parent to save to HealthKit
         onAddWater?(addAmount)

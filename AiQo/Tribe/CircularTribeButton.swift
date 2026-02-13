@@ -1,87 +1,84 @@
-import UIKit
+import SwiftUI
 
-final class CircularTribeButton: UIControl {
-
-    private let effectView: UIVisualEffectView = {
-        if #available(iOS 18.0, *) {
-            return UIVisualEffectView(effect: UIGlassEffect())
-        } else {
-            return UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
+// MARK: - SwiftUI View
+struct CircularTribeButtonView: View {
+    var onTap: () -> Void
+    
+    @State private var isPressed = false
+    @State private var feedbackTrigger = 0
+    
+    var body: some View {
+        Button(action: {
+            feedbackTrigger += 1
+            onTap()
+        }) {
+            ZStack {
+                // الخلفية الزجاجية
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+                
+                // الأيقونة
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.primary)
+            }
+            .frame(width: 60, height: 60) // الحجم الافتراضي
         }
-    }()
+        .buttonStyle(ScaleButtonStyle())
+        .sensoryFeedback(.selection, trigger: feedbackTrigger)
+    }
+}
 
-    private let iconView: UIImageView = {
-        let iv = UIImageView(image: UIImage(systemName: "person.3.fill"))
-        iv.contentMode = .scaleAspectFit
-        iv.tintColor = .black
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
+// تأثير الضغط (Scaling)
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.snappy(duration: 0.3, extraBounce: 0.08), value: configuration.isPressed)
+    }
+}
 
+// MARK: - UIKit Wrapper (للحفاظ على توافق المشروع الحالي)
+final class CircularTribeButton: UIView {
+    
+    private var hostingController: UIHostingController<CircularTribeButtonView>?
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setup()
+        setupSwiftUI()
     }
-
+    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setup()
+        setupSwiftUI()
     }
-
-    private func setup() {
-        isAccessibilityElement = true
-        accessibilityTraits = .button
-
-        clipsToBounds = false
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOpacity = 0.10
-        layer.shadowRadius = 12
-        layer.shadowOffset = CGSize(width: 0, height: 6)
-
-        effectView.translatesAutoresizingMaskIntoConstraints = false
-        effectView.layer.cornerRadius = 999
-        effectView.layer.masksToBounds = true
-        addSubview(effectView)
-
-        effectView.contentView.addSubview(iconView)
-
-        NSLayoutConstraint.activate([
-            effectView.topAnchor.constraint(equalTo: topAnchor),
-            effectView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
-
-            widthAnchor.constraint(equalTo: heightAnchor),
-
-            iconView.centerXAnchor.constraint(equalTo: effectView.contentView.centerXAnchor),
-            iconView.centerYAnchor.constraint(equalTo: effectView.contentView.centerYAnchor),
-            iconView.widthAnchor.constraint(equalTo: effectView.contentView.widthAnchor, multiplier: 0.45),
-            iconView.heightAnchor.constraint(equalTo: iconView.widthAnchor)
-        ])
-
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-        addGestureRecognizer(tap)
-    }
-
-    @objc private func handleTap() {
-        sendActions(for: .primaryActionTriggered)
-
-        // feedback بسيط
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        // animation صغيرة
-        UIView.animate(withDuration: 0.12,
-                       delay: 0,
-                       options: [.curveEaseInOut],
-                       animations: {
-            self.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
-        }) { _ in
-            UIView.animate(withDuration: 0.16,
-                           delay: 0,
-                           options: [.curveEaseInOut],
-                           animations: {
-                self.transform = .identity
-            }, completion: nil)
+    
+    private func setupSwiftUI() {
+        // إنشاء واجهة SwiftUI
+        let swiftUIView = CircularTribeButtonView { [weak self] in
+            self?.sendActions(for: .primaryActionTriggered)
         }
+        
+        let host = UIHostingController(rootView: swiftUIView)
+        host.view.backgroundColor = .clear // شفافية
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        
+        addSubview(host.view)
+        
+        NSLayoutConstraint.activate([
+            host.view.topAnchor.constraint(equalTo: topAnchor),
+            host.view.bottomAnchor.constraint(equalTo: bottomAnchor),
+            host.view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: trailingAnchor)
+        ])
+        
+        self.hostingController = host
+    }
+    
+    // محاكاة حدث الزر في UIKit
+    func sendActions(for controlEvents: UIControl.Event) {
+        // يمكنك هنا ربط الأكشن الخاص بك
+        print("Tribe Button Tapped!")
     }
 }

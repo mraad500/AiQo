@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct KitchenScreen: View {
     
@@ -7,6 +6,8 @@ struct KitchenScreen: View {
     @State private var selectedMeal: Meal?
     @State private var isProfileSheetPresented = false
     @State private var isRegenerating: Bool = false
+    @State private var regenerateFeedbackTrigger = 0
+    @State private var analyzeFeedbackTrigger = 0
     
     // NEW: فتح شاشة KitchenHamoudi
     @State private var isKitchenHamoudiPresented: Bool = false
@@ -43,6 +44,14 @@ struct KitchenScreen: View {
         }
         .task {
             await viewModel.loadMeals()
+        }
+
+        .sheet(isPresented: $isProfileSheetPresented) {
+            NavigationStack {
+                ProfileScreen()
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         
         // Meal details sheet
@@ -93,24 +102,9 @@ private extension KitchenScreen {
             
             Spacer()
             
-            Button {
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            FloatingProfileButton(size: 48) {
                 openProfile()
-            } label: {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white)
-                    .frame(width: 44, height: 44)
-                    .shadow(color: .black.opacity(0.08),
-                            radius: 8,
-                            x: 0,
-                            y: 4)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 20, weight: .heavy, design: .rounded))
-                            .foregroundColor(.black)
-                    )
             }
-            .buttonStyle(.plain)
         }
         .frame(height: 60)
         .padding(.horizontal, 24)
@@ -141,7 +135,7 @@ private extension KitchenScreen {
             
             // Regenerate with AI -> opens KitchenHamoudi
             Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                regenerateFeedbackTrigger += 1
                 isKitchenHamoudiPresented = true
             } label: {
                 Text("screen.kitchen.regenerate".localized)
@@ -155,9 +149,10 @@ private extension KitchenScreen {
                     )
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: regenerateFeedbackTrigger)
             
             Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                analyzeFeedbackTrigger += 1
                 onEditDietTapped()
             } label: {
                 Text("screen.kitchen.analyze".localized)
@@ -171,6 +166,7 @@ private extension KitchenScreen {
                     )
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: analyzeFeedbackTrigger)
         }
         .padding(.top, 8)
     }
@@ -183,31 +179,7 @@ private extension KitchenScreen {
     }
     
     func openProfile() {
-        let profileVC = NewProfileViewController()
-        
-        guard let root = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .flatMap({ $0.windows })
-            .first(where: { $0.isKeyWindow })?
-            .rootViewController else { return }
-        
-        root.topMostViewController().present(profileVC, animated: true, completion: nil)
-    }
-}
-
-// MARK: - Helper to find Top ViewController
-private extension UIViewController {
-    func topMostViewController() -> UIViewController {
-        if let presented = presentedViewController {
-            return presented.topMostViewController()
-        }
-        if let nav = self as? UINavigationController {
-            return nav.visibleViewController?.topMostViewController() ?? nav
-        }
-        if let tab = self as? UITabBarController {
-            return tab.selectedViewController?.topMostViewController() ?? tab
-        }
-        return self
+        isProfileSheetPresented = true
     }
 }
 

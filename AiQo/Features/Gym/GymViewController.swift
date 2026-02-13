@@ -1,505 +1,320 @@
-import UIKit
-import HealthKit
 import SwiftUI
+import UIKit
 
 // =========================
-// File: Features/Gym/GymViewController.swift
-// iOS 18 Glass Bubble Tabs Header ✅
-// Theme matches Home (Mint + Beige) ✅
+// File: Features/Gym/GymView.swift
 // =========================
 
-final class GymViewController: UIViewController, ExercisesViewControllerDelegate {
+// MARK: - Tab Enum
+enum GymTab: Int, CaseIterable, Identifiable {
+    case body = 0
+    case vitals
+    case plan
+    case wins
+    case recap
 
-    // MARK: - Theme (Matches Home)
-    private let homeMint  = Colors.mint
-    private let homeBeige = Colors.aiqoBeige   // نفس بيجي Home (اللي سوّيناه)
-    private let glassAlpha: CGFloat = 0.16     // تدرّج خفيف حتى ما يصير فاقع
+    var id: Int { rawValue }
 
-    // MARK: - UI Elements
-    private let titleLabel: UILabel = {
-        let l = UILabel()
-        l.text = "Gym"
-        l.font = .systemFont(ofSize: 40, weight: .black)
-        l.textColor = .label
-        l.translatesAutoresizingMaskIntoConstraints = false
-        return l
-    }()
-
-    // زر البروفايل (تصميم Home)
-    private let profileButton = FloatingProfileButton()
-
-    // شريط التبويبات الزجاجي + فقاعة
-    private let header = GlassHeader(items: ["Body", "Vitals", "Plan", "Wins", "Recap"])
-
-    private let container = UIView()
-    private var currentChild: UIViewController?
-
-    // MARK: - Child View Controllers
-    private lazy var exercisesVC: ExercisesViewController = {
-        let vc = ExercisesViewController()
-        vc.delegate = self
-        return vc
-    }()
-
-    private lazy var heartVC   = HeartViewController()
-    private lazy var myPlanVC  = MyPlanViewController()
-    private lazy var rewardsVC = RewardsViewController()
-    private lazy var recapVC   = RecapViewController()
-
-    // MARK: - Lifecycle
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        // نفس Home
-        view.backgroundColor = Colors.background
-
-        buildUI()
-        applyHomeThemeToGym()
-
-        profileButton.addTarget(self, action: #selector(onProfileTap), for: .touchUpInside)
-
-        header.onChange = { [weak self] index in
-            self?.switchTo(index)
+    var title: String {
+        switch self {
+        case .body: return L10n.t("gym.tab.body")
+        case .vitals: return L10n.t("gym.tab.vitals")
+        case .plan: return L10n.t("gym.tab.plan")
+        case .wins: return L10n.t("gym.tab.wins")
+        case .recap: return L10n.t("gym.tab.recap")
         }
-
-        // Default Screen
-        header.selectedIndex = 0
-        showChild(exercisesVC)
-    }
-
-    private func buildUI() {
-        header.translatesAutoresizingMaskIntoConstraints = false
-        container.translatesAutoresizingMaskIntoConstraints = false
-        profileButton.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(titleLabel)
-        view.addSubview(profileButton)
-        view.addSubview(header)
-        view.addSubview(container)
-
-        NSLayoutConstraint.activate([
-            // رفع العنوان للأعلى
-            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: -16),
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-
-            // زر البروفايل يتبع العنوان
-            profileButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            profileButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            profileButton.widthAnchor.constraint(equalToConstant: 44),
-            profileButton.heightAnchor.constraint(equalToConstant: 44),
-
-            // شريط التبويبات تحت العنوان
-            header.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            header.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            header.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            header.heightAnchor.constraint(equalToConstant: 54),
-
-            // المحتوى
-            container.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
-            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            container.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-    }
-
-    // ✅ يلوّن الهيدر/الفقاعة بلمسة Mint/Beige مثل Home
-    private func applyHomeThemeToGym() {
-        header.setTheme(mint: homeMint, beige: homeBeige, alpha: glassAlpha)
-    }
-
-    // MARK: - Actions
-    @objc private func onProfileTap() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        let vc = NewProfileViewController()
-        vc.modalPresentationStyle = .pageSheet
-        present(vc, animated: true)
-    }
-
-    private func switchTo(_ index: Int) {
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-        switch index {
-        case 0: showChild(exercisesVC)
-        case 1: showChild(heartVC)
-        case 2: showChild(myPlanVC)
-        case 3: showChild(rewardsVC)
-        case 4: showChild(recapVC)
-        default: break
-        }
-    }
-
-    private func showChild(_ vc: UIViewController) {
-        if let currentChild {
-            currentChild.willMove(toParent: nil)
-            currentChild.view.removeFromSuperview()
-            currentChild.removeFromParent()
-        }
-
-        addChild(vc)
-        vc.view.translatesAutoresizingMaskIntoConstraints = false
-
-        // نفس Home
-        vc.view.backgroundColor = vc.view.backgroundColor ?? Colors.background
-
-        container.addSubview(vc.view)
-        NSLayoutConstraint.activate([
-            vc.view.topAnchor.constraint(equalTo: container.topAnchor),
-            vc.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            vc.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            vc.view.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-
-        vc.didMove(toParent: self)
-        currentChild = vc
-    }
-
-    // MARK: - Delegate
-    func didSelectExercise(name: String, activityType: HKWorkoutActivityType, location: HKWorkoutSessionLocationType) {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        let live = LiveWorkoutSession(title: name, activityType: activityType, locationType: location)
-        let screen = WorkoutSessionScreen(session: live)
-        let host = UIHostingController(rootView: screen)
-
-        host.modalPresentationStyle = .pageSheet
-        if let sheet = host.sheetPresentationController {
-            sheet.detents = [.medium(), .large()]
-            sheet.prefersGrabberVisible = true
-            sheet.preferredCornerRadius = 30
-        }
-        present(host, animated: true)
     }
 }
 
-// =========================
-// MARK: - GlassHeader (iOS 18 Glass + Bubble Tabs)
-// =========================
+// MARK: - Design Tokens
+struct GymTheme {
+    static let mint = Color(red: 0.77, green: 0.94, blue: 0.86)
+    static let beige = Color(red: 0.97, green: 0.84, blue: 0.64)
+    static let gold = Color(red: 1.00, green: 0.85, blue: 0.35)
+    static let glassAlpha: Double = 0.16
 
-final class GlassHeader: UIView {
-
-    private let items: [String]
-    var onChange: ((Int) -> Void)?
-
-    var selectedIndex: Int {
-        get { tabs.selectedIndex }
-        set { tabs.setSelectedIndex(newValue, animated: false) }
-    }
-
-    private let backgroundGlass = UIVisualEffectView()
-    private let tintOverlay = UIView() // ✅ Tint overlay for Home palette
-    private let tabs: GlassBubbleTabs
-
-    init(items: [String]) {
-        self.items = items
-        self.tabs = GlassBubbleTabs(items: items)
-        super.init(frame: .zero)
-        setup()
-    }
-
-    required init?(coder: NSCoder) {
-        self.items = ["Body", "Vitals", "Plan", "Wins", "Recap"]
-        self.tabs = GlassBubbleTabs(items: self.items)
-        super.init(coder: coder)
-        setup()
-    }
-
-    func setTheme(mint: UIColor, beige: UIColor, alpha: CGFloat) {
-        // نستخدم mint كلون عام للهيدر (نفس جو Home)
-        tintOverlay.backgroundColor = mint.withAlphaComponent(alpha)
-        tabs.setTheme(mint: mint, beige: beige, alpha: alpha)
-    }
-
-    private func setup() {
-        translatesAutoresizingMaskIntoConstraints = false
-        backgroundColor = .clear
-
-        // شكل الحاوية
-        layer.cornerRadius = 27
-        layer.cornerCurve = .continuous
-
-        // Glass background
-        backgroundGlass.translatesAutoresizingMaskIntoConstraints = false
-        backgroundGlass.clipsToBounds = true
-        backgroundGlass.layer.cornerRadius = 27
-        backgroundGlass.layer.cornerCurve = .continuous
-
-        if #available(iOS 18.0, *) {
-            backgroundGlass.effect = UIGlassEffect()
-        } else {
-            backgroundGlass.effect = UIBlurEffect(style: .systemUltraThinMaterial)
-        }
-
-        // ✅ Tint overlay
-        tintOverlay.translatesAutoresizingMaskIntoConstraints = false
-        tintOverlay.isUserInteractionEnabled = false
-        tintOverlay.backgroundColor = .clear
-        tintOverlay.layer.cornerRadius = 27
-        tintOverlay.layer.cornerCurve = .continuous
-        tintOverlay.clipsToBounds = true
-
-        // ظل خفيف يطي “floating”
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOpacity = 0.10
-        layer.shadowRadius = 14
-        layer.shadowOffset = CGSize(width: 0, height: 6)
-
-        addSubview(backgroundGlass)
-        backgroundGlass.contentView.addSubview(tintOverlay)
-        backgroundGlass.contentView.addSubview(tabs)
-
-        tabs.translatesAutoresizingMaskIntoConstraints = false
-        tabs.onSelect = { [weak self] index in
-            self?.onChange?(index)
-        }
-
-        NSLayoutConstraint.activate([
-            backgroundGlass.topAnchor.constraint(equalTo: topAnchor),
-            backgroundGlass.bottomAnchor.constraint(equalTo: bottomAnchor),
-            backgroundGlass.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundGlass.trailingAnchor.constraint(equalTo: trailingAnchor),
-
-            tintOverlay.topAnchor.constraint(equalTo: backgroundGlass.contentView.topAnchor),
-            tintOverlay.bottomAnchor.constraint(equalTo: backgroundGlass.contentView.bottomAnchor),
-            tintOverlay.leadingAnchor.constraint(equalTo: backgroundGlass.contentView.leadingAnchor),
-            tintOverlay.trailingAnchor.constraint(equalTo: backgroundGlass.contentView.trailingAnchor),
-
-            tabs.leadingAnchor.constraint(equalTo: backgroundGlass.contentView.leadingAnchor, constant: 6),
-            tabs.trailingAnchor.constraint(equalTo: backgroundGlass.contentView.trailingAnchor, constant: -6),
-            tabs.topAnchor.constraint(equalTo: backgroundGlass.contentView.topAnchor, constant: 6),
-            tabs.bottomAnchor.constraint(equalTo: backgroundGlass.contentView.bottomAnchor, constant: -6)
-        ])
-    }
+    static let warmOrange = Color(red: 1.00, green: 0.65, blue: 0.20)
+    static let punchyPink = Color(red: 1.00, green: 0.40, blue: 0.55)
+    static let intenseTeal = Color(red: 0.00, green: 0.75, blue: 0.65)
+    static let electricPurple = Color(red: 0.55, green: 0.45, blue: 0.95)
+    static let brandLemon = Color(red: 1.00, green: 0.93, blue: 0.72)
+    static let brandLavender = Color(red: 0.96, green: 0.88, blue: 1.00)
 }
 
-// =========================
-// MARK: - GlassBubbleTabs (الفقاعة تتحرك سلاسة)
-// =========================
+// MARK: - Main Gym View
+struct GymView: View {
+    @State private var selectedTab: GymTab = .body
+    @State private var selectedExercise: GymExercise?
+    @State private var activeExercise: GymExercise?
+    @State private var activeSession: LiveWorkoutSession?
+    @State private var showFootballSheet = false   // ✅ جديد
 
-final class GlassBubbleTabs: UIControl {
+    @Namespace private var animation
+    private let topTabBarHeight: CGFloat = 72
 
-    var onSelect: ((Int) -> Void)?
-    private(set) var selectedIndex: Int = 0
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Background
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
-    private let items: [String]
-    private let bubble = UIVisualEffectView()
-    private let bubbleTint = UIView() // ✅ tint for bubble (beige like Home)
-    private let stack = UIStackView()
-    private var buttons: [UIButton] = []
+            VStack(spacing: 0) {
+                // Header Section
+                headerSection
+                    .padding(.top, 16)
 
-    private var bubbleLeading: NSLayoutConstraint!
-    private var bubbleWidth: NSLayoutConstraint!
+                // Apple Segmented Navigation Bar
+                Picker("", selection: $selectedTab) {
+                    ForEach(GymTab.allCases) { tab in
+                        Text(tab.title).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: .infinity)
+                .frame(height: topTabBarHeight)
+                .padding(.horizontal, 6)
+                .padding(.top, 12)
+                .tint(.yellow)
+                .controlSize(.large)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
 
-    init(items: [String]) {
-        self.items = items
-        super.init(frame: .zero)
-        setup()
-    }
+                // Content Area
+                TabContentView(
+                    selectedTab: selectedTab,
+                    onSelectExercise: handleExerciseSelection
+                )
+                    .padding(.top, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .ignoresSafeArea(.container, edges: .bottom)
 
-    required init?(coder: NSCoder) {
-        self.items = ["Body", "Vitals", "Plan", "Wins", "Recap"]
-        super.init(coder: coder)
-        setup()
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        updateBubble(animated: false)
-    }
-
-    func setSelectedIndex(_ index: Int, animated: Bool) {
-        guard index >= 0, index < items.count else { return }
-        selectedIndex = index
-        updateSelection(animated: animated)
-    }
-
-    func setTheme(mint: UIColor, beige: UIColor, alpha: CGFloat) {
-        // نخلي الفقاعة لونها أقرب لبيجي Home
-        bubbleTint.backgroundColor = beige.withAlphaComponent(alpha)
-    }
-
-    private func setup() {
-        translatesAutoresizingMaskIntoConstraints = false
-        backgroundColor = .clear
-
-        // Bubble effect
-        bubble.translatesAutoresizingMaskIntoConstraints = false
-        bubble.clipsToBounds = true
-        bubble.layer.cornerRadius = 18
-        bubble.layer.cornerCurve = .continuous
-
-        if #available(iOS 18.0, *) {
-            bubble.effect = UIGlassEffect()
-        } else {
-            bubble.effect = UIBlurEffect(style: .systemMaterial)
-        }
-
-        // ✅ tint داخل الفقاعة
-        bubbleTint.translatesAutoresizingMaskIntoConstraints = false
-        bubbleTint.isUserInteractionEnabled = false
-        bubbleTint.backgroundColor = .clear
-        bubble.contentView.addSubview(bubbleTint)
-        NSLayoutConstraint.activate([
-            bubbleTint.topAnchor.constraint(equalTo: bubble.contentView.topAnchor),
-            bubbleTint.bottomAnchor.constraint(equalTo: bubble.contentView.bottomAnchor),
-            bubbleTint.leadingAnchor.constraint(equalTo: bubble.contentView.leadingAnchor),
-            bubbleTint.trailingAnchor.constraint(equalTo: bubble.contentView.trailingAnchor)
-        ])
-
-        // لمعة بسيطة داخل الفقاعة
-        let highlight = UIView()
-        highlight.translatesAutoresizingMaskIntoConstraints = false
-        highlight.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.10)
-        bubble.contentView.addSubview(highlight)
-        NSLayoutConstraint.activate([
-            highlight.topAnchor.constraint(equalTo: bubble.contentView.topAnchor),
-            highlight.bottomAnchor.constraint(equalTo: bubble.contentView.bottomAnchor),
-            highlight.leadingAnchor.constraint(equalTo: bubble.contentView.leadingAnchor),
-            highlight.trailingAnchor.constraint(equalTo: bubble.contentView.trailingAnchor)
-        ])
-
-        // Border خفيف للفقاعة
-        bubble.layer.borderWidth = 0.5
-        bubble.layer.borderColor = UIColor.white.withAlphaComponent(0.20).cgColor
-
-        // Stack
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .horizontal
-        stack.alignment = .fill
-        stack.distribution = .fillEqually
-        stack.spacing = 4
-
-        addSubview(bubble)
-        addSubview(stack)
-
-        // Buttons
-        buttons = items.enumerated().map { (i, title) in
-            let b = UIButton(type: .system)
-            b.tag = i
-            b.setTitle(title, for: .normal)
-            b.titleLabel?.font = .systemFont(ofSize: 14, weight: .bold)
-            b.setTitleColor(.secondaryLabel, for: .normal)
-            b.addTarget(self, action: #selector(tap(_:)), for: .touchUpInside)
-            b.accessibilityLabel = title
-            return b
-        }
-
-        buttons.forEach { stack.addArrangedSubview($0) }
-
-        // Bubble constraints
-        bubbleLeading = bubble.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 0)
-        bubbleWidth = bubble.widthAnchor.constraint(equalToConstant: 10)
-
-        NSLayoutConstraint.activate([
-            bubbleLeading,
-            bubbleWidth,
-            bubble.topAnchor.constraint(equalTo: topAnchor),
-            bubble.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-
-        selectedIndex = 0
-        updateSelection(animated: false)
-    }
-
-    @objc private func tap(_ sender: UIButton) {
-        let index = sender.tag
-        guard index != selectedIndex else { return }
-        setSelectedIndex(index, animated: true)
-        onSelect?(index)
-    }
-
-    private func updateSelection(animated: Bool) {
-        for (i, b) in buttons.enumerated() {
-            if i == selectedIndex {
-                b.setTitleColor(.label, for: .normal)
-                b.titleLabel?.font = .systemFont(ofSize: 14, weight: .heavy)
-            } else {
-                b.setTitleColor(.secondaryLabel, for: .normal)
-                b.titleLabel?.font = .systemFont(ofSize: 14, weight: .bold)
+            // Dimming Layer for exercise sheet
+            if selectedExercise != nil {
+                Color.black
+                    .opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { selectedExercise = nil }
+                    .transition(.opacity)
             }
         }
-        updateBubble(animated: animated)
+
+        // ✅ شيت كرة القدم (ورقة شفافة من الأسفل)
+        .sheet(isPresented: $showFootballSheet) {
+            FootballSheetView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(30)
+                .presentationBackground(.ultraThinMaterial) // شفافة
+        }
+
+        // Sheet للتمرين (مثل ما عندك)
+        .sheet(item: $selectedExercise) { exercise in
+            ZStack(alignment: .topTrailing) {
+                if let session = sessionForExercise(exercise) {
+                    WorkoutSessionScreen(session: session)
+                        .background(Color.clear)
+                }
+
+                Button(action: { selectedExercise = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .background(Circle().fill(.black.opacity(0.2)).padding(2))
+                }
+                .padding(.top, 20)
+                .padding(.trailing, 20)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(30)
+            .animation(.spring(), value: selectedExercise?.id)
+        }
+        .animation(.easeInOut(duration: 0.25), value: selectedExercise?.id)
+        .onAppear { configureSegmentedAppearance() }
     }
 
-    private func updateBubble(animated: Bool) {
-        let count = max(items.count, 1)
-        let w = bounds.width
-        guard w > 0 else { return }
-
-        let segmentWidth = w / CGFloat(count)
-        bubbleWidth.constant = segmentWidth
-        bubbleLeading.constant = segmentWidth * CGFloat(selectedIndex)
-
-        let animations = { self.layoutIfNeeded() }
-
-        if animated {
-            UIView.animate(
-                withDuration: 0.36,
-                delay: 0,
-                usingSpringWithDamping: 0.86,
-                initialSpringVelocity: 0.25,
-                options: [.allowUserInteraction, .curveEaseInOut],
-                animations: animations
-            )
-        } else {
-            animations()
+    private func handleExerciseSelection(_ exercise: GymExercise) {
+        // إذا في تمرين شغّال بالفعل، رجّع نفس الجلسة بدل ما نفتح تمرين جديد.
+        if let session = activeSession, session.phase != .idle, let existingExercise = activeExercise {
+            selectedExercise = existingExercise
+            return
         }
+
+        activeExercise = exercise
+        activeSession = LiveWorkoutSession(
+            title: exercise.title,
+            activityType: exercise.type,
+            locationType: exercise.location
+        )
+        selectedExercise = exercise
+    }
+
+    private func sessionForExercise(_ exercise: GymExercise) -> LiveWorkoutSession? {
+        if let session = activeSession, let existingExercise = activeExercise, existingExercise == exercise {
+            return session
+        }
+
+        // fallback آمن إذا صار تقديم الشيت قبل إنشاء الجلسة.
+        activeExercise = exercise
+        let session = LiveWorkoutSession(
+            title: exercise.title,
+            activityType: exercise.type,
+            locationType: exercise.location
+        )
+        activeSession = session
+        return session
+    }
+
+    // MARK: - Header Section
+    private var headerSection: some View {
+        HStack {
+            Text(L10n.t("screen.gym.title"))
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            // ✅ بدل أيقونة البروفايل: كرة القدم
+            FootballHeaderButton {
+                showFootballSheet = true
+            }
+        }
+        .padding(.horizontal, 20)
     }
 }
 
-// =========================
-// MARK: - FloatingProfileButton (نفس تصميمك)
-// =========================
+// MARK: - Segmented Appearance
+private func configureSegmentedAppearance() {
+    let appearance = UISegmentedControl.appearance()
+    appearance.selectedSegmentTintColor = UIColor.systemBackground
+    appearance.setTitleTextAttributes([.foregroundColor: UIColor.systemYellow], for: .selected)
+    appearance.setTitleTextAttributes([.foregroundColor: UIColor.black], for: .normal)
+}
 
-final class FloatingProfileButton: UIControl {
+// MARK: - Tab Content View
+struct TabContentView: View {
+    let selectedTab: GymTab
+    var onSelectExercise: (GymExercise) -> Void
 
-    private let icon = UIImageView(image: UIImage(systemName: "person.fill"))
+    var body: some View {
+        ZStack {
+            switch selectedTab {
+            case .body:
+                ExercisesView { exercise in
+                    onSelectExercise(exercise)
+                }
+                .transition(.opacity)
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setup()
+            case .vitals:
+                GuinnessEncyclopediaView().transition(.opacity)
+
+            case .plan:
+                MyPlanView().transition(.opacity)
+
+            case .wins:
+                WinsView().transition(.opacity)
+
+            case .recap:
+                RecapView().transition(.opacity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.spring(response: 0.35, dampingFraction: 0.86), value: selectedTab)
     }
+}
 
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setup()
+// MARK: - Glass Bubble Tab Bar
+struct GlassBubbleTabBar: View {
+    @Binding var selectedTab: GymTab
+    var animation: Namespace.ID
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 27, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 27, style: .continuous)
+                        .fill(GymTheme.mint.opacity(GymTheme.glassAlpha))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 27, style: .continuous)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+
+            HStack(spacing: 4) {
+                ForEach(GymTab.allCases) { tab in
+                    GlassTabButton(tab: tab, isSelected: selectedTab == tab, animation: animation) {
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) { selectedTab = tab }
+                    }
+                }
+            }
+            .padding(4)
+        }
+        .frame(height: 54)
+        .sensoryFeedback(.selection, trigger: selectedTab)
     }
+}
 
-    private func setup() {
-        backgroundColor = .systemBackground
-        layer.cornerRadius = 22
-        layer.cornerCurve = .circular
+struct GlassTabButton: View {
+    let tab: GymTab
+    let isSelected: Bool
+    var animation: Namespace.ID
+    let action: () -> Void
 
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOpacity = 0.12
-        layer.shadowRadius = 10
-        layer.shadowOffset = CGSize(width: 0, height: 4)
-
-        icon.translatesAutoresizingMaskIntoConstraints = false
-        icon.tintColor = .label
-        icon.contentMode = .scaleAspectFit
-
-        addSubview(icon)
-
-        NSLayoutConstraint.activate([
-            icon.centerXAnchor.constraint(equalTo: centerXAnchor),
-            icon.centerYAnchor.constraint(equalTo: centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: 20),
-            icon.heightAnchor.constraint(equalToConstant: 20)
-        ])
-
-        addTarget(self, action: #selector(animatePress), for: .touchDown)
-        addTarget(self, action: #selector(animateRelease), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(GymTheme.beige.opacity(0.35)))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white.opacity(0.10)))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.20), lineWidth: 0.5))
+                        .matchedGeometryEffect(id: "bubble", in: animation)
+                }
+                Text(tab.title)
+                    .font(.system(size: 14, weight: isSelected ? .heavy : .bold))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 46)
+        }
+        .buttonStyle(.plain)
     }
+}
 
-    @objc private func animatePress() {
-        UIView.animate(withDuration: 0.1) { self.transform = CGAffineTransform(scaleX: 0.92, y: 0.92) }
-    }
+// MARK: - ✅ Football Header Button
+struct FootballHeaderButton: View {
+    let action: () -> Void
+    @State private var isPressed = false
+    @State private var feedbackTrigger = 0
 
-    @objc private func animateRelease() {
-        UIView.animate(withDuration: 0.1) { self.transform = .identity }
+    var body: some View {
+        Button(action: {
+            feedbackTrigger += 1
+            action()
+        }) {
+            Image("football")               // ✅ اسم الصورة بالـ Assets: football
+                .resizable()
+                .scaledToFit()
+                .frame(width: 44, height: 44)
+                .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.92 : 1.0)
+        .animation(.snappy(duration: 0.12), value: isPressed)
+        .sensoryFeedback(.selection, trigger: feedbackTrigger)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
     }
+}
+
+
+#Preview {
+    GymView()
 }

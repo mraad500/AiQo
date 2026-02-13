@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		80235CEF2F1A2D4800A4983B /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80235CEE2F1A2D4800A4983B /* HealthKit.framework */; };
 		8025C5282EC26585004DECAA /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8025C5272EC26585004DECAA /* Supabase */; };
+		806715D02F37337700D6EAB4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
+		806715D12F37337700D6EAB4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
+		806715E22F37337800D6EAB4 /* AiQoWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		80D81CCA2EF4D8FA0020C88D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */; };
 		80D81CD22EF4D8FA0020C88D /* AiQoMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		80D81CDD2EF4D9230020C88D /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D81CDC2EF4D9230020C88D /* ManagedSettings.framework */; };
@@ -18,7 +21,10 @@
 		80D9BE7C2F1B0A9400CDF8DC /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE7B2F1B0A9400CDF8DC /* WatchConnectivity.framework */; };
 		80D9BE9B2F1B936500CDF8DC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		80D9BE9D2F1B936500CDF8DC /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
-		80D9BEAC2F1B936600CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 80D9BE992F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		80E88B702F3BE7BC00EA7B74 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 80E88B6F2F3BE7BC00EA7B74 /* SDWebImageSwiftUI */; };
+		A1F000010000000000000001 /* AiQoWatchWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1F000010000000000000002 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
+		A1F000010000000000000003 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +41,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8025C4B02EC25EB7004DECAA;
 			remoteInfo = AiQo;
+		};
+		806715E02F37337800D6EAB4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 806715CE2F37337700D6EAB4;
+			remoteInfo = AiQoWidgetExtension;
 		};
 		80D81CD02EF4D8FA0020C88D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -71,12 +84,12 @@
 			remoteGlobalIDString = 80D9BD7D2F1A7E0300CDF8DC;
 			remoteInfo = "AiQoWatch Watch App";
 		};
-		80D9BEAA2F1B936600CDF8DC /* PBXContainerItemProxy */ = {
+		A1F000010000000000000010 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 80D9BE982F1B936500CDF8DC;
-			remoteInfo = AiQoWorkoutLiveAttributesExtension;
+			remoteGlobalIDString = A1F000010000000000000070;
+			remoteInfo = AiQoWatchWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -96,6 +109,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				806715E22F37337800D6EAB4 /* AiQoWidgetExtension.appex in Embed Foundation Extensions */,
 				80D81CD22EF4D8FA0020C88D /* AiQoMonitor.appex in Embed Foundation Extensions */,
 				80D81CE72EF4D9230020C88D /* AiQoShield.appex in Embed Foundation Extensions */,
 			);
@@ -123,13 +137,13 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		80D9BEB12F1B936600CDF8DC /* Embed Foundation Extensions */ = {
+		A1F000010000000000000020 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				80D9BEAC2F1B936600CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex in Embed Foundation Extensions */,
+				A1F000010000000000000001 /* AiQoWatchWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -143,6 +157,8 @@
 		8025C4B12EC25EB7004DECAA /* AiQo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AiQo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8025C4BE2EC25EB8004DECAA /* AiQoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiQoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiQoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		806715F32F37367700D6EAB4 /* AiQoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AiQoWidgetExtension.entitlements; sourceTree = "<group>"; };
 		80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		80D81CDB2EF4D9230020C88D /* AiQoShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -155,6 +171,8 @@
 		80D9BE992F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWorkoutLiveAttributesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = "Watch Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWatchWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -163,9 +181,17 @@
 			membershipExceptions = (
 				AiQoCore/AiQoCore.docc,
 				Core/Utilities/ConnectivityDebugProviding.swift,
+				Frameworks/SpotifyiOS.framework,
 				Info.plist,
 			);
 			target = 8025C4B02EC25EB7004DECAA /* AiQo */;
+		};
+		806715E62F37337800D6EAB4 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */;
 		};
 		80D81CD62EF4D8FA0020C88D /* Exceptions for "AiQoMonitor" folder in "AiQoMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -199,42 +225,14 @@
 			);
 			target = 80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */;
 		};
-		80D9BEB02F1B936600CDF8DC /* Exceptions for "AiQoWorkoutLiveAttributes" folder in "AiQoWorkoutLiveAttributesExtension" target */ = {
+		A1F000010000000000000040 /* Exceptions for "AiQoWatchWidget" folder in "AiQoWatchWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 80D9BE982F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension */;
-		};
-		80DF0A7E2EFDF51900BBABEB /* Exceptions for "AiQo" folder in "AiQoShield" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Assets.xcassets,
-			);
-			target = 80D81CDA2EF4D9230020C88D /* AiQoShield */;
+			target = A1F000010000000000000070 /* AiQoWatchWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		80234FCF2EEF4F9200F21DCF /* Exceptions for "AiQo" folder in "Compile Sources" phase from "AiQo" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 80234F602EEF4F7B00F21DCF /* Sources */;
-			membershipExceptions = (
-				Assets.xcassets,
-				Features/Kitchen/meals_data.json,
-			);
-		};
-		807341362F192F050006BE82 /* Exceptions for "AiQo" folder in "Embed Frameworks" phase from "AiQo" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			attributesByRelativePath = {
-				Frameworks/SpotifyiOS.framework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
-			};
-			buildPhase = 807341352F192F050006BE82 /* Embed Frameworks */;
-			membershipExceptions = (
-				Frameworks/SpotifyiOS.framework,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		80235CB12F1A19BE00A4983B /* Configuration */ = {
@@ -246,10 +244,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				80234F5E2EEF43AF00F21DCF /* Exceptions for "AiQo" folder in "AiQo" target */,
-				80234FCF2EEF4F9200F21DCF /* Exceptions for "AiQo" folder in "Compile Sources" phase from "AiQo" target */,
-				807341362F192F050006BE82 /* Exceptions for "AiQo" folder in "Embed Frameworks" phase from "AiQo" target */,
 				80D81CF32EF4DE0D0020C88D /* Exceptions for "AiQo" folder in "AiQoMonitor" target */,
-				80DF0A7E2EFDF51900BBABEB /* Exceptions for "AiQo" folder in "AiQoShield" target */,
 				80D9BDB52F1A86AA00CDF8DC /* Exceptions for "AiQo" folder in "AiQoWatch Watch App" target */,
 			);
 			path = AiQo;
@@ -263,6 +258,14 @@
 		8025C4CB2EC25EB8004DECAA /* AiQoUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AiQoUITests;
+			sourceTree = "<group>";
+		};
+		806715D22F37337700D6EAB4 /* AiQoWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				806715E62F37337800D6EAB4 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */,
+			);
+			path = AiQoWidget;
 			sourceTree = "<group>";
 		};
 		80D81CCB2EF4D8FA0020C88D /* AiQoMonitor */ = {
@@ -296,12 +299,12 @@
 			path = "AiQoWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
-		80D9BE9E2F1B936500CDF8DC /* AiQoWorkoutLiveAttributes */ = {
+		A1F000010000000000000050 /* AiQoWatchWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				80D9BEB02F1B936600CDF8DC /* Exceptions for "AiQoWorkoutLiveAttributes" folder in "AiQoWorkoutLiveAttributesExtension" target */,
+				A1F000010000000000000040 /* Exceptions for "AiQoWatchWidget" folder in "AiQoWatchWidgetExtension" target */,
 			);
-			path = AiQoWorkoutLiveAttributes;
+			path = AiQoWatchWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -311,6 +314,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				80E88B702F3BE7BC00EA7B74 /* SDWebImageSwiftUI in Frameworks */,
 				8025C5282EC26585004DECAA /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -326,6 +330,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		806715CC2F37337700D6EAB4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				806715D12F37337700D6EAB4 /* SwiftUI.framework in Frameworks */,
+				806715D02F37337700D6EAB4 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,6 +391,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1F000010000000000000060 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1F000010000000000000003 /* SwiftUI.framework in Frameworks */,
+				A1F000010000000000000002 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -393,6 +415,7 @@
 		8025C4A82EC25EB7004DECAA = {
 			isa = PBXGroup;
 			children = (
+				806715F32F37367700D6EAB4 /* AiQoWidgetExtension.entitlements */,
 				8025C4B32EC25EB7004DECAA /* AiQo */,
 				80D81CE02EF4D9230020C88D /* AiQoShield */,
 				80D81CCB2EF4D8FA0020C88D /* AiQoMonitor */,
@@ -403,7 +426,8 @@
 				80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
 				80D9BD8D2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
 				80D9BD972F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests */,
-				80D9BE9E2F1B936500CDF8DC /* AiQoWorkoutLiveAttributes */,
+				806715D22F37337700D6EAB4 /* AiQoWidget */,
+				A1F000010000000000000050 /* AiQoWatchWidget */,
 				80B1F64D2EEFDB41009A810C /* Frameworks */,
 				8025C4B22EC25EB7004DECAA /* Products */,
 				80D459992F1A381A00273328 /* Recovered References */,
@@ -421,6 +445,9 @@
 				80D9BD8A2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests.xctest */,
 				80D9BD942F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests.xctest */,
 				80D9BE992F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex */,
+				806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */,
+				A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */,
+				80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -468,6 +495,7 @@
 				80D81CD12EF4D8FA0020C88D /* PBXTargetDependency */,
 				80D81CE62EF4D9230020C88D /* PBXTargetDependency */,
 				80D9BD9D2F1A7E0400CDF8DC /* PBXTargetDependency */,
+				806715E12F37337800D6EAB4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8025C4B32EC25EB7004DECAA /* AiQo */,
@@ -475,6 +503,7 @@
 			name = AiQo;
 			packageProductDependencies = (
 				8025C5272EC26585004DECAA /* Supabase */,
+				80E88B6F2F3BE7BC00EA7B74 /* SDWebImageSwiftUI */,
 			);
 			productName = AiQo;
 			productReference = 8025C4B12EC25EB7004DECAA /* AiQo.app */;
@@ -525,6 +554,28 @@
 			productName = AiQoUITests;
 			productReference = 8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 806715E32F37337800D6EAB4 /* Build configuration list for PBXNativeTarget "AiQoWidgetExtension" */;
+			buildPhases = (
+				806715CB2F37337700D6EAB4 /* Sources */,
+				806715CC2F37337700D6EAB4 /* Frameworks */,
+				806715CD2F37337700D6EAB4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				806715D22F37337700D6EAB4 /* AiQoWidget */,
+			);
+			name = AiQoWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = AiQoWidgetExtension;
+			productReference = 806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		80D81CC72EF4D8FA0020C88D /* AiQoMonitor */ = {
 			isa = PBXNativeTarget;
@@ -577,12 +628,12 @@
 				80D9BD7A2F1A7E0300CDF8DC /* Sources */,
 				80D9BD7B2F1A7E0300CDF8DC /* Frameworks */,
 				80D9BD7C2F1A7E0300CDF8DC /* Resources */,
-				80D9BEB12F1B936600CDF8DC /* Embed Foundation Extensions */,
+				A1F000010000000000000020 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				80D9BEAB2F1B936600CDF8DC /* PBXTargetDependency */,
+				A1F000010000000000000080 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
@@ -652,14 +703,52 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				80D9BE9E2F1B936500CDF8DC /* AiQoWorkoutLiveAttributes */,
-			);
 			name = AiQoWorkoutLiveAttributesExtension;
 			packageProductDependencies = (
 			);
 			productName = AiQoWorkoutLiveAttributesExtension;
 			productReference = 80D9BE992F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		80E886E72F39140900EA7B74 /* Watch Widget Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 80E886F32F39142500EA7B74 /* Build configuration list for PBXNativeTarget "Watch Widget Extension" */;
+			buildPhases = (
+				80E886E42F39140900EA7B74 /* Sources */,
+				80E886E62F39140900EA7B74 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Watch Widget Extension";
+			packageProductDependencies = (
+				80E88B6D2F3BE76500EA7B74 /* SDWebImageSwiftUI */,
+			);
+			productName = "Watch Widget Extension";
+			productReference = 80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+		A1F000010000000000000070 /* AiQoWatchWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 80E886F32F39142500EA7B74 /* Build configuration list for PBXNativeTarget "Watch Widget Extension" */;
+			buildPhases = (
+				A1F000010000000000000062 /* Sources */,
+				A1F000010000000000000060 /* Frameworks */,
+				A1F000010000000000000061 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A1F000010000000000000050 /* AiQoWatchWidget */,
+			);
+			name = AiQoWatchWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = AiQoWatchWidgetExtension;
+			productReference = A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -669,8 +758,8 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					8025C4B02EC25EB7004DECAA = {
 						CreatedOnToolsVersion = 26.1;
@@ -682,6 +771,9 @@
 					8025C4C72EC25EB8004DECAA = {
 						CreatedOnToolsVersion = 26.1;
 						TestTargetID = 8025C4B02EC25EB7004DECAA;
+					};
+					806715CE2F37337700D6EAB4 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 					80D81CC72EF4D8FA0020C88D = {
 						CreatedOnToolsVersion = 26.2;
@@ -703,6 +795,12 @@
 					80D9BE982F1B936500CDF8DC = {
 						CreatedOnToolsVersion = 26.2;
 					};
+					80E886E72F39140900EA7B74 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					A1F000010000000000000070 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 8025C4AC2EC25EB7004DECAA /* Build configuration list for PBXProject "AiQo" */;
@@ -716,6 +814,7 @@
 			mainGroup = 8025C4A82EC25EB7004DECAA;
 			packageReferences = (
 				8025C5252EC26574004DECAA /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8025C4B22EC25EB7004DECAA /* Products */;
@@ -728,9 +827,12 @@
 				80D81CC72EF4D8FA0020C88D /* AiQoMonitor */,
 				80D81CDA2EF4D9230020C88D /* AiQoShield */,
 				80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
+				A1F000010000000000000070 /* AiQoWatchWidgetExtension */,
 				80D9BD892F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
 				80D9BD932F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests */,
 				80D9BE982F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension */,
+				806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */,
+				80E886E72F39140900EA7B74 /* Watch Widget Extension */,
 			);
 		};
 /* End PBXProject section */
@@ -751,6 +853,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8025C4C62EC25EB8004DECAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		806715CD2F37337700D6EAB4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -799,6 +908,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		80E886E62F39140900EA7B74 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1F000010000000000000061 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -817,6 +940,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8025C4C42EC25EB8004DECAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		806715CB2F37337700D6EAB4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -865,6 +995,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		80E886E42F39140900EA7B74 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1F000010000000000000062 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -877,6 +1021,11 @@
 			isa = PBXTargetDependency;
 			target = 8025C4B02EC25EB7004DECAA /* AiQo */;
 			targetProxy = 8025C4C92EC25EB8004DECAA /* PBXContainerItemProxy */;
+		};
+		806715E12F37337800D6EAB4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */;
+			targetProxy = 806715E02F37337800D6EAB4 /* PBXContainerItemProxy */;
 		};
 		80D81CD12EF4D8FA0020C88D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -903,10 +1052,10 @@
 			target = 80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */;
 			targetProxy = 80D9BD9C2F1A7E0400CDF8DC /* PBXContainerItemProxy */;
 		};
-		80D9BEAB2F1B936600CDF8DC /* PBXTargetDependency */ = {
+		A1F000010000000000000080 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 80D9BE982F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension */;
-			targetProxy = 80D9BEAA2F1B936600CDF8DC /* PBXContainerItemProxy */;
+			target = A1F000010000000000000070 /* AiQoWatchWidgetExtension */;
+			targetProxy = A1F000010000000000000010 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -951,6 +1100,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				EXTRACT_APP_INTENTS_METADATA = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1019,6 +1169,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				EXTRACT_APP_INTENTS_METADATA = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1062,12 +1213,13 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for meal logging, barcode scanning, and progress photos.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads your activity, sleep, water and workout data to personalize your daily plan.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes your workouts and water intake to Health to keep your progress in one place.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "AiQo saves your edited progress photos to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AiQo needs access to your photo library to pick progress photos.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -1112,12 +1264,13 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for meal logging, barcode scanning, and progress photos.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads your activity, sleep, water and workout data to personalize your daily plan.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes your workouts and water intake to Health to keep your progress in one place.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "AiQo saves your edited progress photos to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AiQo needs access to your photo library to pick progress photos.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -1223,6 +1376,70 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = AiQo;
+			};
+			name = Release;
+		};
+		806715E42F37337800D6EAB4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiQoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AiQoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		806715E52F37337800D6EAB4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiQoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AiQoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -1519,9 +1736,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoWorkoutLiveAttributes/Info.plist;
+				INFOPLIST_FILE = "";
 				INFOPLIST_KEY_CFBundleDisplayName = AiQoWorkoutLiveAttributes;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1530,6 +1748,70 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		80D9BEAF2F1B936600CDF8DC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "";
+				INFOPLIST_KEY_CFBundleDisplayName = AiQoWorkoutLiveAttributes;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		80E886EF2F39140900EA7B74 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AiQoRings;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1543,17 +1825,16 @@
 			};
 			name = Debug;
 		};
-		80D9BEAF2F1B936600CDF8DC /* Release */ = {
+		80E886F02F39140900EA7B74 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoWorkoutLiveAttributes/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AiQoWorkoutLiveAttributes;
+				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AiQoRings;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1562,7 +1843,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1611,6 +1892,15 @@
 			buildConfigurations = (
 				8025C4D92EC25EB8004DECAA /* Debug */,
 				8025C4DA2EC25EB8004DECAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		806715E32F37337800D6EAB4 /* Build configuration list for PBXNativeTarget "AiQoWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				806715E42F37337800D6EAB4 /* Debug */,
+				806715E52F37337800D6EAB4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1669,6 +1959,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		80E886F32F39142500EA7B74 /* Build configuration list for PBXNativeTarget "Watch Widget Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				80E886EF2F39140900EA7B74 /* Debug */,
+				80E886F02F39140900EA7B74 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1680,6 +1979,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1687,6 +1994,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8025C5252EC26574004DECAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		80E88B6D2F3BE76500EA7B74 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
+		80E88B6F2F3BE7BC00EA7B74 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

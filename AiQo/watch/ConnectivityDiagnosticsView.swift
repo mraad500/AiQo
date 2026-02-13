@@ -53,7 +53,7 @@ struct ConnectivityDiagnosticsView: View {
 
 struct ConnectivityDiagnosticsView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             ConnectivityDiagnosticsView()
         }
     }

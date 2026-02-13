@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - HomeView
 
@@ -9,6 +10,7 @@ struct HomeView: View {
     // MARK: - ViewModel
     
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var dailyAuraViewModel = DailyAuraViewModel()
     
     // MARK: - Environment
     
@@ -18,6 +20,11 @@ struct HomeView: View {
     
     /// Local state that syncs with ViewModel for two-way binding in WaterDetailSheetView
     @State private var waterSheetLiters: Double = 0.0
+    
+    // MARK: - Sheet Presentation States
+    
+    @State private var isProfileSheetPresented: Bool = false
+    @State private var isTribeSheetPresented: Bool = false
     
     // MARK: - Body
     
@@ -31,21 +38,22 @@ struct HomeView: View {
                 // Header
                 headerView
                 
-                // Scrollable Content
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        // Metrics Grid
-                        metricsGrid
-                        
-                        // Tribe Section
-                        tribeSection
-                        
-                        // Bottom padding for tab bar
-                        Spacer()
-                            .frame(height: 100)
-                    }
-                    .padding(.top, 4)
+                VStack(spacing: 6) {
+                    dailyAuraSection
+
+                    // Metrics Grid
+                    metricsGrid
+                    
+                    // Tribe Section
+                    tribeSection
                 }
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+                .task {
+                    await HealthKitService.shared.refreshWidgetFromToday()
+                }
+
+                Spacer(minLength: 0)
             }
         }
         .task {
@@ -59,7 +67,12 @@ struct HomeView: View {
                 viewModel.onAppBecameActive()
             }
         }
-        // Sheet presentations
+        .onChange(of: viewModel.currentSummary) { _, summary in
+            guard let summary else { return }
+            dailyAuraViewModel.ingest(todaySteps: Int(summary.steps), todayCalories: summary.activeKcal)
+        }
+        
+        // MARK: - Metric Detail Sheet (with transparent paper effect)
         .sheet(item: $viewModel.activeDetailMetric) { kind in
             MetricDetailSheet(
                 kind: kind,
@@ -77,7 +90,29 @@ struct HomeView: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial) // Transparent paper effect
         }
+        
+        // MARK: - Profile Sheet
+        .sheet(isPresented: $isProfileSheetPresented) {
+            NavigationStack {
+                ProfileScreen()
+            }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .ignoresSafeArea(edges: .bottom)
+        }
+        
+        // MARK: - Tribe Sheet
+        .sheet(isPresented: $isTribeSheetPresented) {
+            TribeRankingScreen()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial) // Transparent paper effect
+                .ignoresSafeArea(edges: .bottom)
+        }
+        
+        // MARK: - Other Destination Sheets
         .sheet(item: $viewModel.activeDestination) { destination in
             destinationView(for: destination)
         }
@@ -92,8 +127,8 @@ struct HomeView: View {
             
             Spacer()
             
-            Button(action: viewModel.openProfile) {
-                ProfileButtonView()
+            FloatingProfileButton {
+                isProfileSheetPresented = true
             }
         }
         .padding(.horizontal, 24)
@@ -102,9 +137,17 @@ struct HomeView: View {
     }
     
     // MARK: - Metrics Grid
+
+    private var dailyAuraSection: some View {
+        DailyAuraView(viewModel: dailyAuraViewModel)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.top, -4)
+            .padding(.bottom, 16)
+    }
     
     private var metricsGrid: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 8) {
             ForEach(Array(viewModel.gridRows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: 14) {
                     ForEach(row) { cardData in
@@ -134,7 +177,7 @@ struct HomeView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.expandedMetric)
     }
     
@@ -143,16 +186,16 @@ struct HomeView: View {
     private var tribeSection: some View {
         VStack(spacing: 4) {
             Spacer()
-                .frame(height: 27)
+                .frame(height: 4)
             
             TribeButton {
-                viewModel.openTribe()
+                isTribeSheetPresented = true
             }
             
             Text(NSLocalizedString("screen.home.tribe", comment: "Tribe title under icon"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
         }
-        .frame(height: 145)
+        .frame(height: 100)
     }
     
     // MARK: - Destination Views
@@ -161,21 +204,15 @@ struct HomeView: View {
     private func destinationView(for destination: HomeDestination) -> some View {
         switch destination {
         case .profile:
-            ProfileSheetView {
-                viewModel.dismissDestination()
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            // Handled by separate sheet binding now
+            EmptyView()
             
         case .tribe:
-            TribeRankingSheetView {
-                viewModel.dismissDestination()
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+            // Handled by separate sheet binding now
+            EmptyView()
             
         case .waterDetail:
-            // Use the external WaterDetailSheetView with correct parameters
+            // Water Sheet with medium/large detents (Goal #5)
             WaterDetailSheetView(
                 currentWaterLiters: $waterSheetLiters,
                 onAddWater: { addedLiters in
@@ -188,8 +225,9 @@ struct HomeView: View {
                 // Sync local state with ViewModel when sheet appears
                 waterSheetLiters = viewModel.currentWaterLiters
             }
-            .presentationDetents([.large])
+            .presentationDetents([.medium, .large]) // Changed from [.large] to [.medium, .large]
             .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial) // Transparent paper effect
             
         case .metricDetail:
             // Handled by separate sheet binding
@@ -198,73 +236,54 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Profile Button View
-
-/// Circular profile button for the header
-struct ProfileButtonView: View {
-    var body: some View {
-        Circle()
-            .fill(Color(.secondarySystemBackground))
-            .frame(width: 40, height: 40)
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.primary)
-            }
-    }
-}
+// MARK: - Profile Button View (Unified)
 
 // MARK: - Tribe Button
 
-/// Bouncy tribe button with floating animation
+/// Animated tribe button with bouncing effect - uses custom "Tribeicon" asset
 struct TribeButton: View {
-    let action: () -> Void
+    var onTap: (() -> Void)?
     
-    @State private var isPressed = false
+    @State private var isPressed: Bool = false
     @State private var floatOffset: CGFloat = 0
+    @State private var feedbackTrigger = 0
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            feedbackTrigger += 1
+            withAnimation(.snappy(duration: 0.30, extraBounce: 0.08)) {
+                isPressed = true
+            }
+
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(150))
+                withAnimation(.snappy(duration: 0.30, extraBounce: 0.08)) {
+                    isPressed = false
+                }
+            }
+
+            onTap?()
+        }) {
+            // RESTORED: Use the original custom "Tribeicon" asset image
             Image("Tribeicon")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 120, height: 120)
+                .frame(width: 90, height: 90)
+                .offset(y: floatOffset)
         }
-        .buttonStyle(BouncyButtonStyle(isPressed: $isPressed))
-        .offset(y: floatOffset)
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.9 : 1.0)
+        .sensoryFeedback(.selection, trigger: feedbackTrigger)
         .onAppear {
-            startFloatingAnimation()
-        }
-    }
-    
-    private func startFloatingAnimation() {
-        withAnimation(
-            .easeInOut(duration: 2.0)
-            .repeatForever(autoreverses: true)
-        ) {
-            floatOffset = 4
-        }
-    }
-}
-
-/// Custom button style with bouncy press feedback
-struct BouncyButtonStyle: ButtonStyle {
-    @Binding var isPressed: Bool
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
-            .animation(
-                .spring(response: 0.4, dampingFraction: 0.5, blendDuration: 0),
-                value: configuration.isPressed
-            )
-            .onChange(of: configuration.isPressed) { _, newValue in
-                isPressed = newValue
-                if newValue {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-                }
+            // Subtle floating animation
+            withAnimation(
+                Animation
+                    .easeInOut(duration: 2.0)
+                    .repeatForever(autoreverses: true)
+            ) {
+                floatOffset = -4
             }
+        }
     }
 }
 
@@ -280,17 +299,18 @@ struct MetricDetailSheet: View {
     var onDismiss: (() -> Void)?
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(kind.title)
-                        .font(.system(size: 18, weight: .heavy))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.7))
                     
                     Text(chartData.headerText.isEmpty ? headerValue : chartData.headerText)
-                        .font(.system(size: 28, weight: .heavy))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
                     
-                    Picker("Time Scope", selection: $selectedScope) {
+                    Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {
                         ForEach(TimeScope.allCases) { scope in
                             Text(scope.title).tag(scope)
                         }
@@ -300,12 +320,15 @@ struct MetricDetailSheet: View {
                         onScopeChange?(newScope)
                     }
                     
-                    SimpleBarChart(values: chartData.values)
-                        .frame(height: 120)
+                    SimpleBarChart(
+                        values: chartData.values,
+                        barColor: Color.metricTint(for: kind.tintColorName).opacity(0.7)
+                    )
+                    .frame(height: 140)
                 }
-                .padding(16)
+                .padding(20)
                 .background {
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(.ultraThinMaterial)
                 }
                 .padding(.horizontal, 16)
@@ -313,28 +336,30 @@ struct MetricDetailSheet: View {
                 
                 Spacer()
             }
-            .background(Color(.systemBackground))
+            .background(Color.clear) // Allow transparent background to show through
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { onDismiss?() }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 28))
+                            .foregroundStyle(.secondary)
+                            .symbolRenderingMode(.hierarchical)
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
     }
 }
 
-// MARK: - Profile Sheet View (Placeholder)
+// MARK: - Profile Sheet View (Placeholder - kept for backwards compatibility)
 
 struct ProfileSheetView: View {
     var onDismiss: (() -> Void)?
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 Text("Profile")
                     .font(.largeTitle)
@@ -355,13 +380,13 @@ struct ProfileSheetView: View {
     }
 }
 
-// MARK: - Tribe Ranking Sheet View (Placeholder)
+// MARK: - Tribe Ranking Sheet View (Placeholder - kept for backwards compatibility)
 
 struct TribeRankingSheetView: View {
     var onDismiss: (() -> Void)?
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 Text("Tribe Ranking")
                     .font(.largeTitle)
@@ -388,7 +413,9 @@ struct LoadingOverlay: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.3).ignoresSafeArea()
-            ProgressView().scaleEffect(1.5).tint(.white)
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(.white)
         }
     }
 }
@@ -417,6 +444,20 @@ struct ErrorBanner: View {
     }
 }
 
+// MARK: - MetricKind Extension for tint color
+
+extension MetricKind {
+    /// Returns the tint color name for this metric kind
+    var tintColorName: String {
+        switch self {
+        case .steps, .calories, .sleep, .distance:
+            return "mint"
+        case .stand, .water:
+            return "sand"
+        }
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Home View") {
@@ -435,6 +476,13 @@ struct ErrorBanner: View {
         onScopeChange: { _ in },
         onDismiss: { }
     )
+    .presentationBackground(.ultraThinMaterial)
+}
+
+#Preview("Profile Button") {
+    FloatingProfileButton { }
+        .padding()
+        .background(Color(.systemBackground))
 }
 
 #Preview("Tribe Button") {
