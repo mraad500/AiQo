@@ -169,13 +169,6 @@
 "screen.kitchen.profileSubtitle" = "نافذة مؤقتة";
 "screen.kitchen.caloriesUnit" = "سعرة حرارية";
 "screen.kitchen.mealDetailsPlaceholder" = "تفاصيل الوجبة وتوزيع العناصر الغذائية ستظهر هنا لاحقاً";
-{
-  "id": "1",
-  "name_ar": "بياض بيض مع خضار",
-  "name_en": "Egg Whites with Veggies",
-  "calories_kcal": 250,
-  "meal_type": "breakfast"
-}
 "meal.steak" = "ستيك لحم مشوي";
 "meal.steak.calories" = "560 سعرة";
 
@@ -265,6 +258,201 @@
 "result_footer_success" = "بناءً على مجموع نقاطك، تم تعيينك في Level %d.\nتقدر تشوف مستوىًك وتطوّره دائماً من كارت الـ Level داخل صفحة البروفايل،\nوتشوف ترتيبك العالمي في القبيلة (Tribe) من تبويب Tribe داخل AiQo.";
 
 "result_footer_no_data" = "يبدو أن AiQo ما عنده صلاحية كافية يقرأ بياناتك أو ما متوفرة بيانات صحية سابقة في Apple Health.\nنعينك كبداية في Level 1، وبمجرد ما تبدي تمشي، تتحرك، وتنام بشكل منتظم،\nرح يبدأ مستوى AiQo يرتفع تلقائياً حسب نشاطك الحقيقي.";
+
+/* Profile - Modern UI */
+"screen.profile.app.kernel.title" = "نواة Bio‑Digital";
+"screen.profile.currency.title" = "رصيد AiQo";
+"screen.profile.currency.subtitle" = "عملات Bio‑Digital";
+"screen.profile.wallet.title" = "محفظة AiQo";
+"screen.profile.wallet.message" = "تحرّك أكثر حتى تكسب عملات أكثر.";
+"screen.profile.level.title" = "معلومات المستوى";
+"screen.profile.level.message" = "استمر بالتقدم!";
+"screen.profile.editAge.title" = "تحديث العمر";
+"screen.profile.editAge.message" = "كم عمرك؟";
+"screen.profile.editAge.placeholder" = "سنة";
+"screen.profile.editHeight.title" = "تحديث الطول";
+"screen.profile.editHeight.message" = "أدخل الطول بالسم";
+"screen.profile.editHeight.placeholder" = "سم";
+"screen.profile.editWeight.title" = "تحديث الوزن";
+"screen.profile.editWeight.message" = "أدخل الوزن بالكغم";
+"screen.profile.editWeight.placeholder" = "كغم";
+"screen.profile.editGoal.title" = "الهدف اليومي";
+"screen.profile.editGoal.message" = "اكتب هدفك";
+"screen.profile.editGoal.placeholder" = "مثلاً 500 سعرة";
+"screen.profile.support.subject" = "دعم AiQo";
+
+/* Settings */
+"settings.title" = "إعدادات التطبيق";
+"settings.section.notifications" = "الإشعارات";
+"settings.section.language" = "اللغة";
+"settings.notifications.title" = "الإشعارات";
+"settings.notifications.subtitle" = "تنبيهات النشاط اليومية";
+"settings.language.title" = "لغة التطبيق";
+"settings.language.subtitle" = "العربية / الإنجليزية";
+"settings.language.ar" = "العربية";
+"settings.language.en" = "الإنجليزية";
+
+/* Gym */
+"gym.tab.body" = "الجسم";
+"gym.tab.vitals" = "القياسات";
+"gym.tab.plan" = "الخطة";
+"gym.tab.wins" = "الإنجازات";
+"gym.tab.recap" = "الملخص";
+
+"gym.exercise.running" = "الجري";
+"gym.exercise.walking" = "المشي";
+"gym.exercise.cycling" = "الدراجات";
+"gym.exercise.swimming" = "السباحة";
+"gym.exercise.strength" = "تمارين القوة";
+"gym.exercise.hiit" = "تمارين HIIT";
+"gym.exercise.yoga" = "اليوغا";
+"gym.exercise.equestrian" = "الفروسية";
+"gym.exercise.calisthenics" = "تمارين وزن الجسم";
+"gym.exercise.pilates" = "بيلاتس";
+"gym.exercise.gratitude" = "الامتنان";
+"gym.exercise.indoor_cycle" = "دراجة داخلية";
+"gym.exercise.elliptical" = "إليبتكال";
+"gym.exercise.stair_stepper" = "صعود الدرج";
+"gym.exercise.football" = "كرة القدم";
+"gym.exercise.padel_tennis" = "بادل / تنس";
+"gym.exercise.basketball" = "كرة السلة";
+"gym.exercise.boxing" = "الملاكمة";
+"gym.exercise.martial_arts" = "فنون قتالية";
+"gym.exercise.jump_rope" = "نط الحبل";
+"gym.exercise.other" = "تمرين";
+
+"gym.recap.empty" = "لا توجد تمارين بعد.";
+"gym.recap.device" = "الجهاز";
+"gym.recap.workout_id" = "معرف التمرين";
+"gym.recap.swipe_close" = "اسحب للأسفل للإغلاق";
+"gym.recap.indoor" = "داخلي";
+"gym.recap.outdoor" = "خارجي";
+"gym.recap.intensity.moderate" = "متوسط";
+
+"gym.metric.duration" = "المدة";
+"gym.metric.calories" = "السعرات";
+"gym.metric.distance" = "المسافة";
+"gym.metric.avg_hr" = "متوسط النبض";
+"gym.metric.max_hr" = "أعلى نبض";
+"gym.metric.pace" = "السرعة";
+"gym.metric.steps" = "الخطوات";
+"gym.metric.elevation" = "الارتفاع";
+
+/* Tribe */
+"tribe.title" = "القبيلة";
+"tribe.segment.global" = "العالمي";
+"tribe.segment.region" = "المنطقة";
+"tribe.segment.friends" = "الأصدقاء";
+"tribe.level.format" = "المستوى %d";
+"tribe.region.title" = "تحديات المنطقة";
+"tribe.challenge.add_placeholder" = "أضف تحدي";
+"tribe.challenge.add_action" = "إضافة تحدي";
+"tribe.challenge.10k" = "10 آلاف خطوة";
+"tribe.challenge.no_sugar" = "بدون سكر اليوم";
+"tribe.challenge.calm" = "5 دقائق هدوء";
+
+/* Captain */
+"captain.input.prompt" = "شنو هدفك اليوم؟";
+"captain.customize.title" = "تخصيص الكابتن";
+"captain.customize.subtitle" = "أضف معلوماتك حتى يصير أقرب إلك.";
+"captain.customize.name" = "اسمك";
+"captain.customize.age" = "العمر";
+"captain.customize.height" = "الطول (سم)";
+"captain.customize.weight" = "الوزن (كغم)";
+"captain.customize.calling" = "شلون تحب الكابتن يناديك؟";
+"captain.customize.tone" = "نبرة الكابتن";
+"captain.tone.practical" = "عملي";
+"captain.tone.caring" = "حنون";
+"captain.tone.strict" = "صارم";
+
+/* Time Scope */
+"time.scope" = "الفترة";
+"time.day" = "اليوم";
+"time.week" = "الأسبوع";
+"time.month" = "الشهر";
+"time.year" = "السنة";
+"time.all" = "الكل";
+
+/* Football */
+"football.title" = "أهم المباريات";
+"football.tab.latest" = "أحدث المباريات";
+"football.tab.bigGames" = "مباريات الأسبوع الكبيرة";
+"football.upcoming" = "المباريات القادمة";
+"football.label.scheduled" = "مجدولة";
+"football.label.result" = "النتيجة";
+"football.status.ft" = "نهاية";
+"football.status.today_800" = "اليوم 8:00";
+"football.status.tomorrow_1000" = "غداً 10:00";
+"football.status.sat_730" = "السبت 7:30";
+"football.status.sun_600" = "الأحد 6:00";
+"football.status.sun_930" = "الأحد 9:30 م";
+
+/* Plan */
+"plan.title" = "خطة اليوم";
+"plan.overview" = "نظرة عامة";
+"plan.today_workouts" = "تمارين اليوم";
+"plan.templates" = "قوالب التمارين";
+"plan.no_workouts" = "لا توجد تمارين مجدولة اليوم";
+"plan.add_exercise" = "أضف تمرين...";
+"plan.add_routine" = "أضف تمارين حتى تبني روتينك";
+"plan.suggested.title" = "اقتراح";
+"plan.suggested.value" = "جرّب يوغا 20 دقيقة اليوم";
+
+/* Recap */
+"recap.history.title" = "السجل";
+"recap.history.subtitle" = "متابعة نشاطك عبر Apple Health.";
+"recap.swipe_close" = "اسحب للأسفل للإغلاق";
+"recap.info.device" = "الجهاز";
+"recap.info.workout_id" = "معرّف التمرين";
+"recap.source.health" = "الصحة";
+"recap.source.aiqo" = "AiQo";
+"recap.location.outdoor" = "خارجي";
+"recap.location.indoor" = "داخلي";
+"recap.intensity.moderate" = "متوسط";
+"recap.intensity.light" = "خفيف";
+"recap.metric.duration" = "المدة";
+"recap.metric.calories" = "السعرات";
+"recap.metric.distance" = "المسافة";
+"recap.metric.avg_hr" = "معدل النبض";
+"recap.metric.max_hr" = "أعلى نبض";
+"recap.metric.pace" = "السرعة";
+"recap.metric.steps" = "الخطوات";
+"recap.metric.elevation" = "الارتفاع";
+"recap.note.warmup" = "ركض إحماء قبل تمارين القوة.";
+"recap.note.recovery" = "مشي خفيف للتعافي.";
+"recap.note.autopause" = "جلسة إيقاف تلقائي.";
+"recap.note.quick" = "مشي سريع بين الاجتماعات.";
+"recap.note.morning" = "مشي صباحي بوتيرة ثابتة.";
+"recap.note.evening" = "مشي مسائي بشدة خفيفة.";
+"recap.date.2026_01_15" = "15 يناير 2026";
+"recap.date.2026_01_14" = "14 يناير 2026";
+
+/* Wins */
+"wins.title" = "الإنجازات";
+"wins.subtitle" = "افتح الجوائز بالاستمرارية ✨";
+"wins.item.streak.title" = "سلسلة 7 أيام";
+"wins.item.streak.subtitle" = "تمرّن 7 أيام بالمجمل";
+"wins.item.streak.detail_value" = "12 يوم";
+"wins.item.streak.detail_hint" = "أفضل سلسلة هذا الشهر";
+"wins.item.heart.title" = "بطل القلب";
+"wins.item.heart.subtitle" = "حقق هدف النبض 3 مرات";
+"wins.item.heart.detail_value" = "148 نبضة";
+"wins.item.heart.detail_hint" = "متوسط أعلى الجلسات";
+"wins.item.steps.title" = "سيّد الخطوات";
+"wins.item.steps.subtitle" = "10 آلاف خطوة في يوم واحد";
+"wins.item.steps.detail_value" = "10,432";
+"wins.item.steps.detail_hint" = "خطوات (قمة اليوم)";
+"wins.item.gratitude.title" = "امتنان";
+"wins.item.gratitude.subtitle" = "سجّل الامتنان 5 مرات";
+"wins.item.gratitude.detail_value" = "2 / 5";
+"wins.item.gratitude.detail_hint" = "المدخلات هذا الأسبوع";
+"wins.featured.title" = "صندوق الأسبوع";
+"wins.featured.subtitle" = "أكمل 3 تمارين هذا الأسبوع";
+"wins.sheet.keep_going" = "استمر — قارب تفكها.";
+"wins.sheet.unlocked" = "تم الفتح — شغل مرتب!";
+"wins.sheet.swipe_close" = "اسحب للأسفل للإغلاق";
+"wins.sheet.reward_title" = "جائزة التحدي";
+"wins.sheet.reward_desc" = "أكمل التحدي حتى تنكشف الدرع.";
 
 /* Level Names */
 "level_name_starter" = "البداية الذكية";

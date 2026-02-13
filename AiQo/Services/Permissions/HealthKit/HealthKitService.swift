@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import WidgetKit
 
 // MARK: - Unified HealthKit service (Today + All Time + Write + Workouts)
 
@@ -8,7 +9,7 @@ actor HealthKitService {
     // Singleton
     static let shared = HealthKitService()
 
-    private let store = HKHealthStore()
+    let store = HKHealthStore()
     private var isAuthorized = false
 
     // MARK: - Authorization
@@ -47,6 +48,7 @@ actor HealthKitService {
                 readTypes.insert(type)
             }
         }
+        readTypes.insert(HKObjectType.workoutType())
 
         // ===== Write Types =====
         var writeTypes = Set<HKSampleType>()
@@ -100,6 +102,33 @@ actor HealthKitService {
         }
     }
 
+    // MARK: - Widget (Write + Reload)
+
+    /// يكتب بيانات "اليوم" إلى App Group ويعمل Reload للـ Widget
+    private func updateWidget(steps: Int, calories: Int, standPercent: Int, goal: Int = 10000) {
+        let shared = UserDefaults(suiteName: "group.aiqo")!
+        shared.set(steps, forKey: "aiqo_steps")
+        shared.set(calories, forKey: "aiqo_active_cal")
+        shared.set(goal, forKey: "aiqo_steps_goal")
+        shared.set(standPercent, forKey: "aiqo_stand_percent")
+
+        WidgetCenter.shared.reloadTimelines(ofKind: "AiQoWidget")
+    }
+
+    /// نداء جاهز: يحدث الويدجت من Today Summary (أفضل مكان للبيانات الصحيحة)
+    func refreshWidgetFromToday(goal: Int = 10000) async {
+        do {
+            let summary = try await fetchTodaySummary()
+            let steps = Int(summary.steps)
+            let cal = Int(summary.activeKcal)
+            let stand = Int(summary.standPercent)
+            updateWidget(steps: steps, calories: cal, standPercent: stand, goal: goal)
+        } catch {
+            // إذا فشلنا بالقراءة، لا نكتب أرقام وهمية
+            updateWidget(steps: 0, calories: 0, standPercent: 0, goal: goal)
+        }
+    }
+
     // MARK: - Public API (Today Summary)
 
     func fetchTodaySummary() async throws -> TodaySummary {
@@ -125,6 +154,12 @@ actor HealthKitService {
     func getTodaySteps() async -> Int {
         do {
             let summary = try await fetchTodaySummary()
+            // ✅ هنا نخلي الويدجت يتحدث من بيانات اليوم
+            updateWidget(
+                steps: Int(summary.steps),
+                calories: Int(summary.activeKcal),
+                standPercent: Int(summary.standPercent)
+            )
             return Int(summary.steps)
         } catch {
             return 0
@@ -134,6 +169,12 @@ actor HealthKitService {
     func getActiveCalories() async -> Double {
         do {
             let summary = try await fetchTodaySummary()
+            // ✅ هنا هم يحدث
+            updateWidget(
+                steps: Int(summary.steps),
+                calories: Int(summary.activeKcal),
+                standPercent: Int(summary.standPercent)
+            )
             return summary.activeKcal
         } catch {
             return 0
@@ -172,7 +213,7 @@ actor HealthKitService {
         )
     }
 
-    /// shortcuts للشاشات
+    /// shortcuts للشاشات (All time) — ❌ بدون تحديث ويدجت
     func getAllTimeSteps() async -> Double {
         let summary = try? await fetchAllTimeSummary()
         return summary?.steps ?? 0
@@ -182,6 +223,44 @@ actor HealthKitService {
         let summary = try? await fetchAllTimeSummary()
         let m = summary?.distanceMeters ?? 0
         return m / 1000.0
+    }
+
+    // MARK: - Public API (Workouts)
+
+    func fetchWorkouts(
+        limit: Int = 60,
+        startDate: Date? = nil,
+        endDate: Date? = nil
+    ) async throws -> [HKWorkout] {
+        guard await ensureAuthorization() else { return [] }
+
+        let type = HKObjectType.workoutType()
+        let predicate: NSPredicate?
+
+        if startDate != nil || endDate != nil {
+            predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+        } else {
+            predicate = nil
+        }
+
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[HKWorkout], Error>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: limit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    cont.resume(throwing: error)
+                    return
+                }
+                let workouts = (samples as? [HKWorkout]) ?? []
+                cont.resume(returning: workouts)
+            }
+            store.execute(query)
+        }
     }
 
     // MARK: - Public API (Write Helpers)
@@ -202,6 +281,11 @@ actor HealthKitService {
                 }
             }
         }
+    }
+
+    /// Legacy compatibility: save water in liters
+    func saveWater(liters: Double, date: Date = Date()) async throws {
+        try await logWater(ml: liters * 1000.0, date: date)
     }
 
     /// حفظ قياس نبض القلب

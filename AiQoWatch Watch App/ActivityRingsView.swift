@@ -8,7 +8,11 @@ SwiftUI wrapper for WKInterfaceActivityRing.
 import Foundation
 import HealthKit
 import SwiftUI
+#if canImport(WatchKit)
+import WatchKit
+#endif
 
+#if canImport(WatchKit)
 struct ActivityRingsView: WKInterfaceObjectRepresentable {
     let healthStore: HKHealthStore
 
@@ -35,3 +39,13 @@ struct ActivityRingsView: WKInterfaceObjectRepresentable {
 
     }
 }
+#else
+struct ActivityRingsView: View {
+    let healthStore: HKHealthStore
+
+    var body: some View {
+        Circle()
+            .stroke(Color.green.opacity(0.5), lineWidth: 6)
+    }
+}
+#endif

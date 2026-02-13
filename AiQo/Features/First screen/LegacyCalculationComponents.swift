@@ -180,13 +180,24 @@ enum GlassButtons {
     static func stylePrimary(_ button: UIButton, title: String, systemImage: String, mint: UIColor, text: UIColor) {
         reset(button)
 
-        button.setTitle(title, for: .normal)
-        button.setImage(UIImage(systemName: systemImage), for: .normal)
+        // Use modern UIButton.Configuration API
+        var config = UIButton.Configuration.plain()
+        config.title = title
+        config.image = UIImage(systemName: systemImage)
+        config.imagePadding = 8
+        config.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
+        config.baseForegroundColor = text
+        
+        // Apply rounded font via attributedTitle
+        let attributedTitle = AttributedString(title, attributes: AttributeContainer([
+            .font: roundedFont(size: 17, weight: .heavy)
+        ]))
+        config.attributedTitle = attributedTitle
+        config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 16, weight: .bold)
+        
+        button.configuration = config
         button.tintColor = text
-        button.titleLabel?.font = roundedFont(size: 17, weight: .heavy)
-        button.imageView?.preferredSymbolConfiguration = .init(pointSize: 16, weight: .bold)
-
-        button.contentEdgeInsets = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        
         button.layer.cornerRadius = 18
         button.layer.cornerCurve = .continuous
         button.clipsToBounds = true
@@ -220,11 +231,21 @@ enum GlassButtons {
     static func styleSecondary(_ button: UIButton, title: String, beige: UIColor, text: UIColor) {
         reset(button)
 
-        button.setTitle(title, for: .normal)
+        // Use modern UIButton.Configuration API
+        var config = UIButton.Configuration.plain()
+        config.title = title
+        config.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
+        config.baseForegroundColor = text
+        
+        // Apply rounded font via attributedTitle
+        let attributedTitle = AttributedString(title, attributes: AttributeContainer([
+            .font: roundedFont(size: 16, weight: .bold)
+        ]))
+        config.attributedTitle = attributedTitle
+        
+        button.configuration = config
         button.tintColor = text
-        button.titleLabel?.font = roundedFont(size: 16, weight: .bold)
-
-        button.contentEdgeInsets = UIEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
+        
         button.layer.cornerRadius = 18
         button.layer.cornerCurve = .continuous
         button.clipsToBounds = true
@@ -256,6 +277,7 @@ enum GlassButtons {
         button.layer.shadowOpacity = 0
         button.layer.borderWidth = 0
         button.backgroundColor = .clear
+        button.configuration = nil
     }
 
     private static func roundedFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {

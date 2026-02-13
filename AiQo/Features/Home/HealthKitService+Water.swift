@@ -1,8 +1,13 @@
-//
-//  HealthKitService+Water.swift
-//  AiQo
-//
-//  Created by Mohammed Raad on 01/02/2026.
-//
+import HealthKit
 
-import Foundation
+extension HealthKitService {
+    func saveWater(liters: Double) async throws {
+        guard let waterType = HKQuantityType.quantityType(forIdentifier: .dietaryWater) else { return }
+
+        let quantity = HKQuantity(unit: .liter(), doubleValue: liters)
+        let sample = HKQuantitySample(type: waterType, quantity: quantity, start: Date(), end: Date())
+
+        try await store.save(sample)   // ✅ هنا
+    }
+}
+ 

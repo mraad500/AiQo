@@ -1,6 +1,7 @@
 import UIKit
+import SwiftUI // نحتاجها إذا كنا سنستخدم Color الخاصة بـ SwiftUI للتحويل، أو نستخدم ألوان UIKit مباشرة
 
-/// Ultra Modern Level Card (Level + Line Score + Progress)
+/// Ultra Modern Level Card (Level + Shield + Line Score + Progress)
 final class LevelCardView: UIView {
 
     private let useGroupingSeparator = true
@@ -13,7 +14,9 @@ final class LevelCardView: UIView {
 
     private let glassHost = UIVisualEffectView()
     private let borderLayer = CAShapeLayer()
-
+    
+    // 🛡️ Shield & Level Info
+    private let shieldImageView = UIImageView()
     private let leftTitleLabel = UILabel()
     private let levelNumberLabel = UILabel()
     private let scorePill = ScorePillView()
@@ -27,7 +30,7 @@ final class LevelCardView: UIView {
     private var indicatorLeading: NSLayoutConstraint!
 
     // ✅ نزول الرقم بدون قص
-    private let levelNumberBaselineOffset: CGFloat = -4   // سالب = ينزل
+    private let levelNumberBaselineOffset: CGFloat = -4
 
     // MARK: - State
     var level: Int = 1 { didSet { updateUI(animated: true) } }
@@ -180,30 +183,46 @@ final class LevelCardView: UIView {
         borderLayer.strokeColor = UIColor.white.withAlphaComponent(0.45).cgColor
         borderLayer.lineWidth = 1
         containerView.layer.addSublayer(borderLayer)
+        
+        // 🛡️ Shield Icon
+        shieldImageView.translatesAutoresizingMaskIntoConstraints = false
+        shieldImageView.contentMode = .scaleAspectFit
+        shieldImageView.tintColor = Colors.text
+        
+        NSLayoutConstraint.activate([
+            shieldImageView.widthAnchor.constraint(equalToConstant: 22),
+            shieldImageView.heightAnchor.constraint(equalToConstant: 22)
+        ])
 
-        // Labels (Level + Number)
+        // Labels
         leftTitleLabel.text = NSLocalizedString("level", value: "Level", comment: "")
         leftTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         leftTitleLabel.textColor = Colors.subtext
         leftTitleLabel.alpha = 0.95
-        leftTitleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-        leftTitleLabel.setContentHuggingPriority(.required, for: .horizontal)
 
         levelNumberLabel.font = .systemFont(ofSize: 36, weight: .black)
         levelNumberLabel.textColor = Colors.text
         levelNumberLabel.baselineAdjustment = .alignCenters
-        levelNumberLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-        levelNumberLabel.setContentHuggingPriority(.required, for: .horizontal)
         levelNumberLabel.clipsToBounds = false
 
-        // ✅ Stack row (مستحيل يختفي) + نزول رقم بـ baselineOffset
-        let levelRow = UIStackView(arrangedSubviews: [leftTitleLabel, levelNumberLabel])
+        // ✅ Stack row: [Shield] + [Level Label] + [Number]
+        let levelRow = UIStackView(arrangedSubviews: [shieldImageView, leftTitleLabel, levelNumberLabel])
         levelRow.axis = .horizontal
         levelRow.alignment = .firstBaseline
-        levelRow.spacing = 10
+        levelRow.spacing = 8
         levelRow.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Custom spacing: Shield should be closer to text? or a bit separate.
+        // Let's make shield centered vertically with the text somewhat.
+        // Since alignment is firstBaseline, we need to be careful with the image.
+        // Better: Put Shield in a separate center-aligned h-stack with the text stack.
+        
+        // Re-structure:
+        // V-Stack for (Level title, Number) ? No, side by side is better.
+        // Let's keep the row simple. Center alignment works best for icons + text usually, but baseline is good for text.
+        levelRow.alignment = .center
 
-        // مهم: خلي للـ row ارتفاع مضمون
+        // Level Host
         let levelRowHost = UIView()
         levelRowHost.translatesAutoresizingMaskIntoConstraints = false
         levelRowHost.clipsToBounds = false
@@ -221,7 +240,7 @@ final class LevelCardView: UIView {
         scorePill.setTitle(NSLocalizedString("line_score", value: "Line Score", comment: ""))
         scorePill.setValue(formatScore(lineScore))
 
-        // Top row
+        // Top row (Level Info --- Score Pill)
         let topRow = UIStackView(arrangedSubviews: [levelRowHost, UIView(), scorePill])
         topRow.axis = .horizontal
         topRow.alignment = .center
@@ -315,7 +334,6 @@ final class LevelCardView: UIView {
 
     // MARK: - Update
     private func updateUI(animated: Bool) {
-        // ✅ نزول الرقم عن طريق baselineOffset بدون قص
         let title = leftTitleLabel.text ?? "Level"
         let number = "\(level)"
 
@@ -330,14 +348,40 @@ final class LevelCardView: UIView {
             .baselineOffset: levelNumberBaselineOffset
         ]
 
-        // نكتبها على لابلين منفصلين (ثابتة) — بس نخلي baselineOffset على الرقم
         leftTitleLabel.attributedText = NSAttributedString(string: title, attributes: attrsTitle)
         levelNumberLabel.attributedText = NSAttributedString(string: number, attributes: attrsNumber)
+        
+        // 🛡️ Update Shield Icon & Color
+        let shieldType = LevelSystem.getShield(for: level)
+        shieldImageView.image = UIImage(systemName: LevelSystem.getShieldIconName(for: level))
+        shieldImageView.tintColor = getShieldColor(for: shieldType)
 
         accessibilityLabel = "Level \(level), Line Score \(lineScore)"
 
         if animated {
             UIView.transition(with: levelNumberLabel, duration: 0.16, options: [.transitionCrossDissolve, .allowUserInteraction], animations: nil)
+            
+            // Pulse the shield
+            UIView.animate(withDuration: 0.2, animations: {
+                self.shieldImageView.transform = CGAffineTransform(scaleX: 1.2, y: 1.2)
+            }) { _ in
+                UIView.animate(withDuration: 0.2) {
+                    self.shieldImageView.transform = .identity
+                }
+            }
+        }
+    }
+    
+    // Helper to map ShieldTier to UIColor
+    private func getShieldColor(for tier: LevelSystem.ShieldTier) -> UIColor {
+        switch tier {
+        case .wood:     return UIColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1)
+        case .bronze:   return UIColor(red: 0.8, green: 0.5, blue: 0.2, alpha: 1)
+        case .silver:   return .systemGray2
+        case .gold:     return .systemYellow
+        case .platinum: return UIColor(red: 0.8, green: 0.9, blue: 1.0, alpha: 1)
+        case .diamond:  return .systemCyan
+        case .master:   return .systemPurple
         }
     }
 

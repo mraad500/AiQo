@@ -1,425 +1,600 @@
-import UIKit
+import SwiftUI
 
-// ==========================================
-// MARK: - WinsViewController
-// ==========================================
+// =========================
+// File: Features/Gym/WinsView.swift
+// SwiftUI - Wins Screen with Bottom Glass Sheet (50%)
+// =========================
 
-final class WinsViewController: UIViewController {
+// MARK: - 1) Colors & Styles
+struct RecapStyle {
+    static let orange = Color(red: 1.00, green: 0.78, blue: 0.45)
+    static let turquoise = Color(red: 0.25, green: 0.85, blue: 0.70)
+    static let purple = Color(red: 0.66, green: 0.58, blue: 0.98)
+    static let lime = Color(red: 0.72, green: 0.86, blue: 0.34)
 
-    // MARK: - UI Components
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
+    static let glassIntensity: Double = 0.35
+}
 
-    private let titleLabel: UILabel = {
-        let l = UILabel()
-        l.text = "Wins"
-        l.font = .systemFont(ofSize: 34, weight: .heavy)
-        l.textColor = .label
-        return l
-    }()
-
-    private let subtitleLabel: UILabel = {
-        let l = UILabel()
-        l.text = "Unlock rewards by staying consistent ✨"
-        l.font = .systemFont(ofSize: 15, weight: .medium)
-        l.textColor = .secondaryLabel
-        l.numberOfLines = 2
-        return l
-    }()
-
-    private let grid = UIStackView()
-
-    // MARK: - Data Models
-    struct WinItem {
-        let title: String
-        let subtitle: String
-        let icon: String
-        let themeColor: UIColor // اللون الأساسي للكارت
-        let progress: CGFloat
-        let isLocked: Bool
+struct SoftGlassCardBackground: ViewModifier {
+    let tint: Color
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(tint.opacity(RecapStyle.glassIntensity))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.35), lineWidth: 0.6)
+                    )
+                    .shadow(color: tint.opacity(0.14), radius: 12, x: 0, y: 8)
+            )
     }
-    
-    // تعريف الألوان الاحترافية (نفس ستايل التطبيقات العالمية)
-    // Warm Orange
-    // تعريف الألوان الاحترافية (نسخة ألوان قوية ومشبعة)
-    
-    // Warm Orange (برتقالي دافي وقوي)
-    // ألوان قوية ومشبعة 95% (Vibrant Palette)
-    
-    // Deep Orange (برتقالي غني)
-    private let colorStreak = UIColor(red: 1.00, green: 0.65, blue: 0.20, alpha: 1)
-    private let tintStreak  = UIColor.white // الأيقونة تصير بيضة لأن الخلفية قوية
-    
-    // Punchy Pink (وردي فاقع)
-    private let colorHeart  = UIColor(red: 1.00, green: 0.40, blue: 0.55, alpha: 1)
-    private let tintHeart   = UIColor.white
-    
-    // Intense Teal (تركوازي عميق)
-    private let colorSteps  = UIColor(red: 0.00, green: 0.75, blue: 0.65, alpha: 1)
-    private let tintSteps   = UIColor.white
-    
-    // Electric Purple (بنفسجي كهربائي)
-    private let colorZen    = UIColor(red: 0.55, green: 0.45, blue: 0.95, alpha: 1)
-    private let tintZen     = UIColor.white
+}
 
-    private lazy var items: [WinItem] = [
-        .init(title: "7-Day Streak", subtitle: "Train 7 days total", icon: "flame.fill",
-              themeColor: colorStreak, progress: 0.35, isLocked: true),
+extension View {
+    func softGlassCardStyle(tint: Color) -> some View {
+        modifier(SoftGlassCardBackground(tint: tint))
+    }
+}
 
-        .init(title: "Heart Hero", subtitle: "Hit target BPM 3 times", icon: "heart.fill",
-              themeColor: colorHeart, progress: 0.62, isLocked: true),
+// MARK: - 2) Data Model
+struct WinItem: Identifiable, Equatable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let icon: String
+    let themeColor: Color
+    let progress: Double
+    let isLocked: Bool
 
-        .init(title: "Step Master", subtitle: "10k steps in one day", icon: "figure.walk",
-              themeColor: colorSteps, progress: 1.0, isLocked: false), // Completed
+    // Detail mock
+    let detailValue: String
+    let detailHint: String
+    let graphData: [CGFloat]
+}
 
-        .init(title: "Gratitude", subtitle: "Log gratitude 5 times", icon: "sparkles",
-              themeColor: colorZen, progress: 0.20, isLocked: true)
+// MARK: - 3) Wins View
+struct WinsView: View {
+
+    private let items: [WinItem] = [
+        .init(title: L10n.t("wins.item.streak.title"), subtitle: L10n.t("wins.item.streak.subtitle"), icon: "flame.fill", themeColor: RecapStyle.orange, progress: 0.35, isLocked: true,
+              detailValue: L10n.t("wins.item.streak.detail_value"), detailHint: L10n.t("wins.item.streak.detail_hint"), graphData: [0.25, 0.35, 0.22, 0.55, 0.40, 0.62, 0.80]),
+        .init(title: L10n.t("wins.item.heart.title"), subtitle: L10n.t("wins.item.heart.subtitle"), icon: "heart.fill", themeColor: RecapStyle.purple, progress: 0.62, isLocked: true,
+              detailValue: L10n.t("wins.item.heart.detail_value"), detailHint: L10n.t("wins.item.heart.detail_hint"), graphData: [0.30, 0.45, 0.28, 0.70, 0.52, 0.60, 0.78]),
+        .init(title: L10n.t("wins.item.steps.title"), subtitle: L10n.t("wins.item.steps.subtitle"), icon: "figure.walk", themeColor: RecapStyle.turquoise, progress: 1.0, isLocked: false,
+              detailValue: L10n.t("wins.item.steps.detail_value"), detailHint: L10n.t("wins.item.steps.detail_hint"), graphData: [0.18, 0.35, 0.55, 0.60, 0.90, 0.72, 0.64]),
+        .init(title: L10n.t("wins.item.gratitude.title"), subtitle: L10n.t("wins.item.gratitude.subtitle"), icon: "sparkles", themeColor: RecapStyle.lime, progress: 0.20, isLocked: true,
+              detailValue: L10n.t("wins.item.gratitude.detail_value"), detailHint: L10n.t("wins.item.gratitude.detail_hint"), graphData: [0.10, 0.18, 0.12, 0.22, 0.16, 0.20, 0.26])
     ]
 
-    // MARK: - Lifecycle
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        setupLayout()
-        renderGrid()
-    }
+    private let columns = [
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16)
+    ]
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        scrollView.contentInset.bottom = 40
-    }
+    @State private var selectedItem: WinItem? = nil
+    @State private var showSheet = false
 
-    // MARK: - Setup Layout
-    private func setupLayout() {
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.showsVerticalScrollIndicator = false
-        view.addSubview(scrollView)
-        scrollView.addSubview(contentView)
+    var body: some View {
+        ZStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    headerSection
 
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(items) { item in
+                            WinCardButton(item: item) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                    selectedItem = item
+                                    showSheet = true
+                                }
+                            }
+                        }
+                    }
 
-            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor)
-        ])
+                    divider
 
-        // Header
-        let headerStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])
-        headerStack.axis = .vertical
-        headerStack.spacing = 6
-        headerStack.translatesAutoresizingMaskIntoConstraints = false
-
-        contentView.addSubview(headerStack)
-        
-        // Grid Container
-        grid.axis = .vertical
-        grid.spacing = 16 // Spacing between rows
-        grid.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(grid)
-
-        NSLayoutConstraint.activate([
-            headerStack.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 10),
-            headerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            headerStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-
-            grid.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 24),
-            grid.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            grid.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            grid.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
-        ])
-    }
-
-    // MARK: - Render Grid
-    private func renderGrid() {
-        // Clear old views
-        grid.arrangedSubviews.forEach { $0.removeFromSuperview() }
-
-        var idx = 0
-        while idx < items.count {
-            let rowStack = UIStackView()
-            rowStack.axis = .horizontal
-            rowStack.spacing = 16
-            rowStack.distribution = .fillEqually
-            
-            // First Item
-            let card1 = ModernCardView()
-            configureCard(card1, with: items[idx])
-            rowStack.addArrangedSubview(card1)
-            idx += 1
-            
-            // Second Item (if exists)
-            if idx < items.count {
-                let card2 = ModernCardView()
-                configureCard(card2, with: items[idx])
-                rowStack.addArrangedSubview(card2)
-                idx += 1
-            } else {
-                // Spacer for empty slot to keep alignment left
-                let spacer = UIView()
-                rowStack.addArrangedSubview(spacer)
+                    FeaturedWinCard(
+                        title: L10n.t("wins.featured.title"),
+                        subtitle: L10n.t("wins.featured.subtitle"),
+                        icon: "gift.fill",
+                        themeColor: RecapStyle.turquoise,
+                        progress: 0.55
+                    )
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
             }
-            
-            grid.addArrangedSubview(rowStack)
+            .blur(radius: showSheet ? 6 : 0)
+            .animation(.easeOut(duration: 0.18), value: showSheet)
+
+            // Dim layer
+            if showSheet {
+                Color.black.opacity(0.30)
+                    .ignoresSafeArea()
+                    .onTapGesture { closeSheet() }
+                    .transition(.opacity)
+            }
+
+            // Bottom sheet (50%)
+            if let item = selectedItem, showSheet {
+                BottomGlassSheet(
+                    item: item,
+                    heightRatio: 0.50,          // <- غيرها اذا تريد 0.55 او 0.45
+                    onClose: { closeSheet() }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(5)
+            }
         }
-
-        // Weekly Chest (Featured Item)
-        addFeaturedSection()
-    }
-    
-    private func configureCard(_ card: ModernCardView, with item: WinItem) {
-        // Mapping themes to icons based on item color logic
-        var iconTint: UIColor = .black
-        
-        // Simple logic to pick darken color for elements based on background
-        if item.themeColor == colorStreak { iconTint = tintStreak }
-        else if item.themeColor == colorHeart { iconTint = tintHeart }
-        else if item.themeColor == colorSteps { iconTint = tintSteps }
-        else { iconTint = tintZen }
-
-        card.setup(
-            title: item.title,
-            subtitle: item.subtitle,
-            iconName: item.icon,
-            bgColor: item.themeColor,
-            accentColor: iconTint,
-            progress: item.progress,
-            isLocked: item.isLocked
-        )
-        
-        // Add Tap Action
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleCardTap(_:)))
-        card.addGestureRecognizer(tap)
+        .fontDesign(.rounded) // خط دائري على كل الشاشة
     }
 
-    private func addFeaturedSection() {
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        // Subtle separation
-        let line = UIView()
-        line.backgroundColor = .systemGray5
-        line.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Featured Card
-        let featuredCard = ModernCardView()
-        featuredCard.setup(
-            title: "Weekly Chest",
-            subtitle: "Complete 3 workouts this week to open",
-            iconName: "trophy.fill",
-            bgColor: UIColor(red: 0.96, green: 0.96, blue: 0.96, alpha: 1), // Light Gray/White
-            accentColor: .systemOrange,
-            progress: 0.5,
-            isLocked: true
-        )
-        featuredCard.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Adjust featured card layout manually since it's full width
-        grid.addArrangedSubview(line)
-        grid.addArrangedSubview(featuredCard)
-        
-        line.heightAnchor.constraint(equalToConstant: 1).isActive = true
-        // Add extra spacing before line
-        grid.setCustomSpacing(24, after: grid.arrangedSubviews[grid.arrangedSubviews.count - 3])
-        grid.setCustomSpacing(24, after: line)
-        
-        featuredCard.heightAnchor.constraint(equalToConstant: 100).isActive = true
-    }
-
-    @objc private func handleCardTap(_ gesture: UITapGestureRecognizer) {
-        guard let card = gesture.view else { return }
-        
-        // Bouncy Animation
-        UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseOut], animations: {
-            card.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
-        }) { _ in
-            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 5, options: [], animations: {
-                card.transform = .identity
-            }, completion: nil)
+    private func closeSheet() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+            showSheet = false
         }
-        
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
+        // نخليها تتصفّر بعد الانميشن حتى ما يصير glitch
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            if !showSheet { selectedItem = nil }
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.t("wins.title"))
+                .font(.system(size: 34, weight: .heavy))
+                .foregroundColor(.primary)
+
+            Text(L10n.t("wins.subtitle"))
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .padding(.top, 10)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color(.systemGray5))
+            .frame(height: 1)
+            .padding(.vertical, 8)
     }
 }
 
-// ==========================================
-// MARK: - Modern Card View (Custom Component)
-// ==========================================
+// MARK: - 4) Win Card Button (Press squash)
+struct WinCardButton: View {
+    let item: WinItem
+    let action: () -> Void
 
-class ModernCardView: UIView {
-    
-    private let iconContainer: UIView = {
-        let v = UIView()
-        v.layer.cornerRadius = 14
-        v.translatesAutoresizingMaskIntoConstraints = false
-        return v
-    }()
-    
-    private let iconImageView: UIImageView = {
-        let iv = UIImageView()
-        iv.contentMode = .scaleAspectFit
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
-    
-    private let statusIcon: UIImageView = {
-        let iv = UIImageView()
-        iv.contentMode = .scaleAspectFit
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
-    
-    private let titleLabel: UILabel = {
-        let l = UILabel()
-        l.font = .systemFont(ofSize: 16, weight: .bold)
-        l.textColor = .black.withAlphaComponent(0.85)
-        l.numberOfLines = 2
-        l.translatesAutoresizingMaskIntoConstraints = false
-        return l
-    }()
-    
-    private let subtitleLabel: UILabel = {
-        let l = UILabel()
-        l.font = .systemFont(ofSize: 12, weight: .medium)
-        l.textColor = .black.withAlphaComponent(0.5)
-        l.numberOfLines = 2
-        l.translatesAutoresizingMaskIntoConstraints = false
-        return l
-    }()
-    
-    private let progressBar = ModernProgressBar()
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        commonInit()
+    @State private var isPressed = false
+
+    var body: some View {
+        WinCardView(item: item)
+            .scaleEffect(x: 1.0, y: isPressed ? 0.92 : 1.0, anchor: .bottom)
+            .animation(.spring(response: 0.28, dampingFraction: 0.55), value: isPressed)
+            .onTapGesture {
+                isPressed = true
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) {
+                    isPressed = false
+                    action()
+                }
+            }
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func commonInit() {
-        self.heightAnchor.constraint(greaterThanOrEqualToConstant: 160).isActive = true
-        self.layer.cornerRadius = 24
-        // Shadow Implementation
-        self.layer.shadowColor = UIColor.black.cgColor
-        self.layer.shadowOpacity = 0.06
-        self.layer.shadowOffset = CGSize(width: 0, height: 6)
-        self.layer.shadowRadius = 10
-        self.layer.masksToBounds = false
-        
-        addSubview(iconContainer)
-        iconContainer.addSubview(iconImageView)
-        addSubview(statusIcon)
-        addSubview(titleLabel)
-        addSubview(subtitleLabel)
-        addSubview(progressBar)
-        
-        progressBar.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            // Icon
-            iconContainer.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            iconContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            iconContainer.widthAnchor.constraint(equalToConstant: 44),
-            iconContainer.heightAnchor.constraint(equalToConstant: 44),
-            
-            iconImageView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
-            iconImageView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 22),
-            iconImageView.heightAnchor.constraint(equalToConstant: 22),
-            
-            // Status (Lock/Check)
-            statusIcon.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            statusIcon.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            statusIcon.widthAnchor.constraint(equalToConstant: 20),
-            statusIcon.heightAnchor.constraint(equalToConstant: 20),
-            
-            // Text
-            titleLabel.topAnchor.constraint(equalTo: iconContainer.bottomAnchor, constant: 12),
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            subtitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            subtitleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            
-            // Progress Bar
-            progressBar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            progressBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            progressBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -18),
-            progressBar.heightAnchor.constraint(equalToConstant: 6)
-        ])
-    }
-    
-    func setup(title: String, subtitle: String, iconName: String, bgColor: UIColor, accentColor: UIColor, progress: CGFloat, isLocked: Bool) {
-        self.backgroundColor = bgColor
-        
-        titleLabel.text = title
-        subtitleLabel.text = subtitle
-        
-        iconImageView.image = UIImage(systemName: iconName)
-        iconImageView.tintColor = accentColor
-        
-        iconContainer.backgroundColor = .white.withAlphaComponent(0.6)
-        
-        progressBar.setProgress(progress, color: accentColor)
-        
-        // Status Icon Logic
-        if isLocked {
-            statusIcon.image = UIImage(systemName: "lock.fill")
-            statusIcon.tintColor = .black.withAlphaComponent(0.2)
-        } else {
-            statusIcon.image = UIImage(systemName: "checkmark.seal.fill")
-            statusIcon.tintColor = accentColor
+}
+
+// MARK: - 5) Win Card Design
+struct WinCardView: View {
+    let item: WinItem
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(item.themeColor.opacity(0.20))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: item.icon)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(item.themeColor)
+                }
+                .padding(.top, 16)
+                .padding(.leading, 16)
+
+                Spacer()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    Text(item.subtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 16)
+
+                Spacer()
+
+                ProgressBarView(progress: item.progress, tintColor: item.themeColor)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 18)
+            }
+            .frame(height: 160)
+            .frame(maxWidth: .infinity)
+            .softGlassCardStyle(tint: item.themeColor)
+
+            Image(systemName: item.isLocked ? "lock.fill" : "checkmark.seal.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(item.isLocked ? item.themeColor.opacity(0.5) : item.themeColor)
+                .padding(16)
         }
     }
 }
 
-// ==========================================
-// MARK: - Modern Progress Bar
-// ==========================================
+// MARK: - 6) Bottom Glass Sheet (50% from bottom)
+struct BottomGlassSheet: View {
+    let item: WinItem
+    let heightRatio: CGFloat
+    let onClose: () -> Void
 
-class ModernProgressBar: UIView {
-    private let trackLayer = CALayer()
-    private let progressLayer = CALayer()
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        layer.addSublayer(trackLayer)
-        layer.addSublayer(progressLayer)
-        trackLayer.backgroundColor = UIColor.black.withAlphaComponent(0.05).cgColor
+    @State private var dragOffset: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            let fullH = geo.size.height
+            let sheetH = max(260, fullH * heightRatio)
+            let bottomSafe = geo.safeAreaInsets.bottom
+
+            VStack(spacing: 0) {
+
+                // Handle + Close
+                HStack(spacing: 10) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.45))
+                        .frame(width: 44, height: 5)
+                        .padding(.leading, 12)
+
+                    Spacer()
+
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .padding(10)
+                            .background(Circle().fill(Color.white.opacity(0.35)))
+                    }
+                    .padding(.trailing, 12)
+                }
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+
+                // Content
+                SheetContent(item: item)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 14)
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: sheetH)
+            .background(
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+                    )
+                    .shadow(color: .black.opacity(0.22), radius: 26, x: 0, y: -4)
+            )
+            .overlay(
+                // subtle tint from the item color
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .fill(item.themeColor.opacity(0.12))
+                    .allowsHitTesting(false)
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, max(10, bottomSafe)) // يحترم Safe Area
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .offset(y: max(0, dragOffset))
+            .gesture(
+                DragGesture(minimumDistance: 6, coordinateSpace: .global)
+                    .onChanged { value in
+                        let dy = value.translation.height
+                        if dy > 0 { dragOffset = dy } // بس نزول
+                    }
+                    .onEnded { value in
+                        let dy = value.translation.height
+                        let shouldClose = dy > 120 || value.velocity.height > 900
+                        if shouldClose {
+                            onClose()
+                        } else {
+                            withAnimation(.spring(response: 0.30, dampingFraction: 0.85)) {
+                                dragOffset = 0
+                            }
+                        }
+                    }
+            )
+            .onChange(of: item.id) {
+                dragOffset = 0
+            }
+        }
+        .ignoresSafeArea()
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        trackLayer.frame = bounds
-        trackLayer.cornerRadius = bounds.height / 2
-        
-        progressLayer.cornerRadius = bounds.height / 2
-        var rect = bounds
-        rect.size.width = bounds.width * (progressLayer.frame.width / bounds.width) // Maintain ratio
-        
-        // This is just a simple layout update, in real app set frame based on stored progress
-    }
-    
-    func setProgress(_ value: CGFloat, color: UIColor) {
-        let clamped = max(0, min(1, value))
-        progressLayer.backgroundColor = color.cgColor
-        
-        // Update frame immediately
-        DispatchQueue.main.async {
-            self.progressLayer.frame = CGRect(x: 0, y: 0, width: self.bounds.width * clamped, height: self.bounds.height)
+}
+
+// MARK: - 7) Sheet Content
+struct SheetContent: View {
+    let item: WinItem
+    @State private var selectedTab: SheetTab = .day
+
+    private enum SheetTab: CaseIterable, Identifiable {
+        case day, week, month, year
+        var id: String { title }
+        var title: String {
+            switch self {
+            case .day: return NSLocalizedString("time.day", value: "Day", comment: "")
+            case .week: return NSLocalizedString("time.week", value: "Week", comment: "")
+            case .month: return NSLocalizedString("time.month", value: "Month", comment: "")
+            case .year: return NSLocalizedString("time.year", value: "Year", comment: "")
+            }
         }
     }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            // Title row
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(item.themeColor.opacity(0.18))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: item.icon)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundColor(item.themeColor)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundColor(.primary)
+
+                    Text(item.detailHint)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.top, 6)
+
+            // Big value + progress
+            HStack(alignment: .lastTextBaseline) {
+                Text(item.detailValue)
+                    .font(.system(size: 38, weight: .heavy))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Image(systemName: item.isLocked ? "lock.fill" : "checkmark.seal.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(item.isLocked ? item.themeColor.opacity(0.55) : item.themeColor)
+
+                    Text("\(Int(item.progress * 100))%")
+                        .font(.system(size: 14, weight: .heavy))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            ProgressBarView(progress: item.progress, tintColor: item.themeColor)
+                .frame(height: 7)
+                .padding(.top, 2)
+
+            // Tabs
+            HStack(spacing: 0) {
+                ForEach(SheetTab.allCases) { tab in
+                    Text(tab.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(selectedTab == tab ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(selectedTab == tab ? Color.white.opacity(0.55) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeOut(duration: 0.18)) {
+                                selectedTab = tab
+                            }
+                        }
+                }
+            }
+            .padding(5)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.20))
+            )
+
+            // Graph
+            HStack(alignment: .bottom, spacing: 12) {
+                ForEach(Array(item.graphData.enumerated()), id: \.offset) { idx, v in
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(item.themeColor.opacity(highlightIndex(for: selectedTab) == idx ? 1.0 : 0.28))
+                        .frame(width: 14, height: 120 * max(0.08, v))
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 130, alignment: .bottom)
+            .padding(.top, 8)
+
+            // Reward shield
+            RewardShieldView(tint: item.themeColor, isLocked: item.isLocked)
+                .padding(.top, 6)
+
+            // Small notes
+            HStack {
+                Text(item.isLocked ? L10n.t("wins.sheet.keep_going") : L10n.t("wins.sheet.unlocked"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(L10n.t("wins.sheet.swipe_close"))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.75))
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private func highlightIndex(for tab: SheetTab) -> Int {
+        // بس حتى يتغير “العمود المميز” حسب التبويب
+        switch tab {
+        case .day: return 4
+        case .week: return 5
+        case .month: return 3
+        case .year: return 6
+        }
+    }
+}
+
+// MARK: - Reward Shield
+struct RewardShieldView: View {
+    let tint: Color
+    let isLocked: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(tint.opacity(0.18))
+                    .frame(width: 78, height: 78)
+
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 34, weight: .heavy))
+                    .foregroundColor(tint)
+
+                if isLocked {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .blur(radius: 3)
+                        .frame(width: 78, height: 78)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.t("wins.sheet.reward_title"))
+                    .font(.system(size: 15, weight: .bold))
+                Text(L10n.t("wins.sheet.reward_desc"))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.35))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.30), lineWidth: 0.6)
+        )
+    }
+}
+
+// MARK: - 8) Featured Win Card
+struct FeaturedWinCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let themeColor: Color
+    let progress: Double
+
+    @State private var isPressed = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(themeColor.opacity(0.2))
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(themeColor)
+            }
+            .padding(.top, 16)
+            .padding(.leading, 16)
+
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundColor(.primary)
+
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                .padding(.top, 16)
+
+                ProgressBarView(progress: progress, tintColor: themeColor)
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 16)
+            }
+        }
+        .softGlassCardStyle(tint: themeColor)
+        .frame(height: 110)
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        .onTapGesture {
+            withAnimation(.easeOut(duration: 0.1)) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation { isPressed = false }
+            }
+        }
+    }
+}
+
+// MARK: - 9) Progress Bar View
+struct ProgressBarView: View {
+    let progress: Double
+    let tintColor: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.primary.opacity(0.07))
+
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(tintColor)
+                    .frame(width: geo.size.width * min(max(progress, 0), 1))
+            }
+        }
+        .frame(height: 6)
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    WinsView()
+        .preferredColorScheme(.light)
 }

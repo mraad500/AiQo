@@ -1,8 +1,14 @@
-//
-//  WheelTypes.swift
-//  AiQo
-//
-//  Created by Mohammed Raad on 01/02/2026.
-//
-
 import Foundation
+
+enum WheelState: Equatable {
+    case idle
+    case expanded
+    case spinning
+    case resultShown
+}
+
+enum MediaMode: Equatable {
+    case none
+    case songs
+    case video
+}

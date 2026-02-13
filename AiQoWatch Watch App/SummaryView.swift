@@ -1,7 +1,9 @@
 import Foundation
 import HealthKit
 import SwiftUI
+#if canImport(WatchKit)
 import WatchKit
+#endif
 
 struct SummaryView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
@@ -34,7 +36,7 @@ struct SummaryView: View {
                         .foregroundStyle(.green)
                     
                     SummaryMetricView(title: "Total Energy",
-                                      value: Measurement(value: workoutManager.workout?.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0,
+                                      value: Measurement(value: workoutManager.workout?.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0,
                                                          unit: UnitEnergy.kilocalories)
                                         .formatted(.measurement(width: .abbreviated,
                                                                 usage: .workout,
@@ -61,7 +63,6 @@ struct SummaryView: View {
     }
 }
 
-// ✅ هذا هو الجزء الذي كان ناقصاً ويسبب الأخطاء
 struct SummaryMetricView: View {
     var title: String
     var value: String

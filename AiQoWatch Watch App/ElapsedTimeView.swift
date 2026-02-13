@@ -1,5 +1,5 @@
 /*
-See the LICENSE.txt file for this sample’s licensing information.
+See the LICENSE.txt file for this sample's licensing information.
 
 Abstract:
 The elapsed time.
@@ -16,7 +16,7 @@ struct ElapsedTimeView: View {
         Text(NSNumber(value: elapsedTime), formatter: timeFormatter)
             .fontWeight(.semibold)
             .onChange(of: showSubseconds) {
-                timeFormatter.showSubseconds = $0
+                timeFormatter.showSubseconds = showSubseconds
             }
     }
 }

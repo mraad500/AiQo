@@ -6,8 +6,10 @@ The paging view to switch between controls, metrics, and now playing views.
 */
 
 import SwiftUI
-import WatchKit
 import HealthKit
+#if canImport(WatchKit)
+import WatchKit
+#endif
 
 struct SessionPagingView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
@@ -22,7 +24,11 @@ struct SessionPagingView: View {
         TabView(selection: $selection) {
             ControlsView().tag(Tab.controls)
             MetricsView().tag(Tab.metrics)
+#if os(watchOS)
             NowPlayingView().tag(Tab.nowPlaying)
+#else
+            Color.clear.tag(Tab.nowPlaying)
+#endif
         }
         .navigationTitle(workoutManager.selectedWorkout.map { $0.displayName } ?? "")
         .navigationBarBackButtonHidden(true)

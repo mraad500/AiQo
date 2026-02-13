@@ -85,8 +85,6 @@ struct LiquidShape: Shape {
         
         let topLeft = CGPoint(x: rect.minX, y: rect.minY)
         let topRight = CGPoint(x: rect.maxX, y: rect.minY)
-        let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
-        let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
         
         // Start from top-left (no rounding)
         path.move(to: topLeft)

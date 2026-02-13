@@ -1,3 +1,12 @@
+//
+//  HomeViewModel.swift
+//  AiQo
+//
+//  📍 Location: Features/Home
+//
+//  ✅ Fixed: Removed saveWater dependency - using logWater instead
+//
+
 import Foundation
 internal import Combine
 import HealthKit
@@ -37,7 +46,7 @@ extension TodaySummary: Equatable {
 // MARK: - New Supporting Models (These don't exist in your project yet)
 
 /// Time scope for historical data charts
-enum TimeScope: Int, CaseIterable, Identifiable {
+enum TimeScope: Int, CaseIterable, Identifiable, Sendable {
     case day = 0
     case week
     case month
@@ -48,17 +57,17 @@ enum TimeScope: Int, CaseIterable, Identifiable {
     
     var title: String {
         switch self {
-        case .day:     return "Day"
-        case .week:    return "Week"
-        case .month:   return "Month"
-        case .year:    return "Year"
-        case .allTime: return "ALL"
+        case .day:     return NSLocalizedString("time.day", value: "Day", comment: "")
+        case .week:    return NSLocalizedString("time.week", value: "Week", comment: "")
+        case .month:   return NSLocalizedString("time.month", value: "Month", comment: "")
+        case .year:    return NSLocalizedString("time.year", value: "Year", comment: "")
+        case .allTime: return NSLocalizedString("time.all", value: "ALL", comment: "")
         }
     }
 }
 
 /// Model for a single metric card display
-struct MetricCardData: Identifiable, Equatable {
+struct MetricCardData: Identifiable, Equatable, Sendable {
     let id: MetricKind
     var kind: MetricKind { id }
     var displayValue: String
@@ -70,15 +79,15 @@ struct MetricCardData: Identifiable, Equatable {
 }
 
 /// Model for chart series data
-struct ChartSeriesData: Equatable {
+struct ChartSeriesData: Equatable, Sendable {
     var values: [Double]
     var headerText: String
     
     static let empty = ChartSeriesData(values: [], headerText: "—")
 }
 
-/// Demo mode configuration
-struct DemoConfiguration {
+/// Demo mode configuration - NOT MainActor isolated, just Sendable
+struct DemoConfiguration: Sendable {
     let steps: String
     let calories: String
     let stand: String
@@ -97,7 +106,7 @@ struct DemoConfiguration {
 }
 
 /// Navigation destinations from Home screen
-enum HomeDestination: Identifiable, Equatable {
+enum HomeDestination: Identifiable, Equatable, Sendable {
     case profile
     case tribe
     case waterDetail
@@ -142,7 +151,10 @@ final class HomeViewModel: ObservableObject {
     @Published var selectedScope: TimeScope = .day {
         didSet {
             if let metric = activeDetailMetric {
-                Task { await loadChartSeries(for: metric, scope: selectedScope) }
+                let scope = selectedScope
+                Task { [weak self] in
+                    await self?.loadChartSeries(for: metric, scope: scope)
+                }
             }
         }
     }
@@ -189,11 +201,11 @@ final class HomeViewModel: ObservableObject {
     init(
         healthService: HealthKitService = .shared,
         demoMode: Bool = false,
-        demoConfig: DemoConfiguration = .default
+        demoConfig: DemoConfiguration? = nil
     ) {
         self.healthService = healthService
         self.demoMode = demoMode
-        self.demoConfig = demoConfig
+        self.demoConfig = demoConfig ?? .default
         
         setupInitialCards()
     }
@@ -225,7 +237,9 @@ final class HomeViewModel: ObservableObject {
     /// Called when app becomes active - refreshes data
     func onAppBecameActive() {
         guard !demoMode else { return }
-        Task { await loadTodayFromHealth() }
+        Task { [weak self] in
+            await self?.loadTodayFromHealth()
+        }
     }
     
     // MARK: - Health Data Loading
@@ -272,8 +286,10 @@ final class HomeViewModel: ObservableObject {
     private func startLiveTimer() {
         refreshTimer?.invalidate()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            guard let self, !self.demoMode else { return }
-            Task { await self.loadTodayFromHealth() }
+            Task { @MainActor [weak self] in
+                guard let self, !self.demoMode else { return }
+                await self.loadTodayFromHealth()
+            }
         }
     }
     
@@ -339,7 +355,7 @@ final class HomeViewModel: ObservableObject {
     
     // MARK: - Formatting Helpers
     
-    private func format(_ value: Double, digits: Int = 0) -> String {
+    private nonisolated func format(_ value: Double, digits: Int = 0) -> String {
         let formatter = NumberFormatter()
         formatter.maximumFractionDigits = digits
         formatter.minimumFractionDigits = digits
@@ -381,8 +397,8 @@ final class HomeViewModel: ObservableObject {
         selectedScope = .day
         
         // Load initial chart data
-        Task {
-            await loadChartSeries(for: kind, scope: .day)
+        Task { [weak self] in
+            await self?.loadChartSeries(for: kind, scope: .day)
         }
     }
     
@@ -406,12 +422,14 @@ final class HomeViewModel: ObservableObject {
     
     // MARK: - Water Tracking
     
-    /// Add water intake
+    /// Add water intake (in liters)
     func addWater(liters: Double) async {
         guard !demoMode else { return }
         
         do {
-            try await healthService.saveWater(liters: liters)
+            // Convert liters to milliliters for HealthKit
+            let milliliters = liters * 1000.0
+            try await healthService.logWater(ml: milliliters)
             await loadTodayFromHealth()
         } catch {
             self.error = error
@@ -431,19 +449,27 @@ final class HomeViewModel: ObservableObject {
         // Handle regular time scopes
         switch kind {
         case .steps:
-            await loadQuantitySeries(.stepCount, unit: .count(), scope: scope) { values, total in
-                ChartSeriesData(values: values, headerText: self.format(total))
+            await loadQuantitySeries(.stepCount, unit: .count(), scope: scope) { [weak self] values, total in
+                ChartSeriesData(values: values, headerText: self?.format(total) ?? "—")
             }
             
         case .calories:
-            await loadQuantitySeries(.activeEnergyBurned, unit: .kilocalorie(), scope: scope) { values, total in
-                ChartSeriesData(values: values, headerText: self.format(total))
+            await loadQuantitySeries(.activeEnergyBurned, unit: .kilocalorie(), scope: scope) { [weak self] values, total in
+                ChartSeriesData(values: values, headerText: self?.format(total) ?? "—")
             }
             
         case .distance:
-            await loadQuantitySeries(.distanceWalkingRunning, unit: .meter(), scope: scope) { values, total in
+            await loadQuantitySeries(.distanceWalkingRunning, unit: .meter(), scope: scope) { [weak self] values, total in
+                let km = total / 1000.0
                 let kmValues = values.map { $0 / 1000.0 }
-                return ChartSeriesData(values: kmValues, headerText: String(format: "%.2f km", total / 1000.0))
+                return ChartSeriesData(values: kmValues, headerText: self?.format(km, digits: 2) ?? "—")
+            }
+            
+        case .water:
+            await loadQuantitySeries(.dietaryWater, unit: .literUnit(with: .milli), scope: scope) { values, total in
+                let liters = total / 1000.0
+                let literValues = values.map { $0 / 1000.0 }
+                return ChartSeriesData(values: literValues, headerText: String(format: "%.1f L", liters))
             }
             
         case .sleep:
@@ -451,12 +477,6 @@ final class HomeViewModel: ObservableObject {
             
         case .stand:
             await loadStandSeries(scope: scope)
-            
-        case .water:
-            await loadQuantitySeries(.dietaryWater, unit: .literUnit(with: .milli), scope: scope) { values, total in
-                let literValues = values.map { $0 / 1000.0 }
-                return ChartSeriesData(values: literValues, headerText: String(format: "%.1f L", total / 1000.0))
-            }
         }
     }
     
@@ -464,23 +484,40 @@ final class HomeViewModel: ObservableObject {
     
     private func loadAllTimeSeries(for kind: MetricKind) async {
         do {
-            let summary = try await healthService.fetchAllTimeSummary()
-            
+            let allTime = try await healthService.fetchAllTimeSummary()
             switch kind {
             case .steps:
-                chartData = ChartSeriesData(values: [summary.steps], headerText: format(summary.steps))
+                await loadAllTimeQuantitySeries(
+                    .stepCount,
+                    unit: .count(),
+                    headerText: format(allTime.steps)
+                )
             case .calories:
-                chartData = ChartSeriesData(values: [summary.activeKcal], headerText: format(summary.activeKcal))
+                await loadAllTimeQuantitySeries(
+                    .activeEnergyBurned,
+                    unit: .kilocalorie(),
+                    headerText: format(allTime.activeKcal)
+                )
             case .distance:
-                let km = summary.distanceMeters / 1000.0
-                chartData = ChartSeriesData(values: [km], headerText: String(format: "%.2f km", km))
-            case .sleep:
-                chartData = ChartSeriesData(values: [summary.sleepHours], headerText: String(format: "%.1f h", summary.sleepHours))
-            case .stand:
-                chartData = ChartSeriesData(values: [summary.standHours], headerText: String(format: "%.0f h", summary.standHours))
+                let km = allTime.distanceMeters / 1000.0
+                await loadAllTimeQuantitySeries(
+                    .distanceWalkingRunning,
+                    unit: .meter(),
+                    headerText: format(km, digits: 2),
+                    valueTransform: { $0 / 1000.0 }
+                )
             case .water:
-                let liters = summary.waterML / 1000.0
-                chartData = ChartSeriesData(values: [liters], headerText: String(format: "%.1f L", liters))
+                let liters = allTime.waterML / 1000.0
+                await loadAllTimeQuantitySeries(
+                    .dietaryWater,
+                    unit: .literUnit(with: .milli),
+                    headerText: String(format: "%.1f L", liters),
+                    valueTransform: { $0 / 1000.0 }
+                )
+            case .sleep:
+                await loadAllTimeSleepSeries()
+            case .stand:
+                await loadAllTimeStandSeries()
             }
         } catch {
             chartData = .empty
@@ -491,7 +528,7 @@ final class HomeViewModel: ObservableObject {
         _ identifier: HKQuantityTypeIdentifier,
         unit: HKUnit,
         scope: TimeScope,
-        transform: @escaping ([Double], Double) -> ChartSeriesData
+        transform: @escaping @Sendable ([Double], Double) -> ChartSeriesData
     ) async {
         let store = HKHealthStore()
         guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
@@ -506,12 +543,17 @@ final class HomeViewModel: ObservableObject {
             let query = HKStatisticsCollectionQuery(
                 quantityType: type,
                 quantitySamplePredicate: predicate,
-                options: [.cumulativeSum],
+                options: .cumulativeSum,
                 anchorDate: anchor,
                 intervalComponents: interval
             )
             
             query.initialResultsHandler = { [weak self] _, results, _ in
+                guard self != nil else {
+                    continuation.resume()
+                    return
+                }
+                
                 var values: [Double] = []
                 var total: Double = 0
                 
@@ -521,8 +563,13 @@ final class HomeViewModel: ObservableObject {
                     total += v
                 }
                 
-                Task { @MainActor in
-                    self?.chartData = transform(values, total)
+                // Capture values before Task to avoid concurrency issues
+                let finalValues = values
+                let finalTotal = total
+                let resultData = transform(finalValues, finalTotal)
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.chartData = resultData
                     continuation.resume()
                 }
             }
@@ -575,10 +622,14 @@ final class HomeViewModel: ObservableObject {
                 let totalSeconds = values.reduce(0, +)
                 let hoursValues = values.map { $0 / 3600.0 }
                 
-                Task { @MainActor in
-                    self.chartData = ChartSeriesData(
-                        values: hoursValues,
-                        headerText: String(format: "%.1f h", totalSeconds / 3600.0)
+                // Capture computed values before Task
+                let finalHoursValues = hoursValues
+                let finalHeaderText = String(format: "%.1f h", totalSeconds / 3600.0)
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.chartData = ChartSeriesData(
+                        values: finalHoursValues,
+                        headerText: finalHeaderText
                     )
                     continuation.resume()
                 }
@@ -629,12 +680,18 @@ final class HomeViewModel: ObservableObject {
                 }
                 
                 let totalHours = values.reduce(0, +)
-                let percent = min(100.0, (totalHours / 12.0) * 100.0)
+                let expectedDays = max(1, self.daysBetween(start: start, end: end))
+                let expectedHours = Double(expectedDays) * 12.0
+                let percent = min(100.0, (totalHours / expectedHours) * 100.0)
                 
-                Task { @MainActor in
-                    self.chartData = ChartSeriesData(
-                        values: values,
-                        headerText: String(format: "%.0f%%", percent)
+                // Capture computed values before Task
+                let finalValues = values
+                let finalHeaderText = String(format: "%.0f%%", percent)
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.chartData = ChartSeriesData(
+                        values: finalValues,
+                        headerText: finalHeaderText
                     )
                     continuation.resume()
                 }
@@ -643,10 +700,193 @@ final class HomeViewModel: ObservableObject {
             store.execute(query)
         }
     }
+
+    // MARK: - All Time Series
+
+    private func loadAllTimeQuantitySeries(
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        headerText: String,
+        valueTransform: @escaping @Sendable (Double) -> Double = { $0 }
+    ) async {
+        let store = HKHealthStore()
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
+            chartData = ChartSeriesData(values: [], headerText: headerText)
+            return
+        }
+
+        let start = await earliestSampleDate(for: type) ?? Calendar.current.date(byAdding: .month, value: -11, to: Date())!
+        let end = Date()
+        let interval = DateComponents(month: 1)
+        let anchor = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: start))!
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: anchor,
+                intervalComponents: interval
+            )
+
+            query.initialResultsHandler = { [weak self] _, results, _ in
+                guard self != nil else {
+                    continuation.resume()
+                    return
+                }
+
+                var values: [Double] = []
+                results?.enumerateStatistics(from: start, to: end) { stat, _ in
+                    let v = stat.sumQuantity()?.doubleValue(for: unit) ?? 0
+                    values.append(valueTransform(v))
+                }
+
+                let finalValues = values
+                Task { @MainActor [weak self] in
+                    self?.chartData = ChartSeriesData(values: finalValues, headerText: headerText)
+                    continuation.resume()
+                }
+            }
+
+            store.execute(query)
+        }
+    }
+
+    private func loadAllTimeSleepSeries() async {
+        let store = HKHealthStore()
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            chartData = .empty
+            return
+        }
+
+        let start = await earliestSampleDate(for: type) ?? Calendar.current.date(byAdding: .month, value: -11, to: Date())!
+        let end = Date()
+        let calendar = Calendar.current
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { [weak self] _, raw, _ in
+                guard let self else {
+                    continuation.resume()
+                    return
+                }
+
+                let samples = raw as? [HKCategorySample] ?? []
+                var buckets: [Date: Double] = [:]
+
+                for sample in samples {
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate)
+                    let key = self.monthBucketKey(for: sample.startDate, calendar: calendar)
+                    buckets[key, default: 0] += duration
+                }
+
+                var values: [Double] = []
+                var cursor = self.monthBucketKey(for: start, calendar: calendar)
+                let endBucket = self.monthBucketKey(for: end, calendar: calendar)
+
+                while cursor <= endBucket {
+                    values.append((buckets[cursor] ?? 0) / 3600.0)
+                    cursor = calendar.date(byAdding: .month, value: 1, to: cursor) ?? endBucket.addingTimeInterval(1)
+                }
+
+                let totalHours = values.reduce(0, +)
+                let finalValues = values
+                let finalHeader = String(format: "%.1f h", totalHours)
+
+                Task { @MainActor [weak self] in
+                    self?.chartData = ChartSeriesData(values: finalValues, headerText: finalHeader)
+                    continuation.resume()
+                }
+            }
+
+            store.execute(query)
+        }
+    }
+
+    private func loadAllTimeStandSeries() async {
+        let store = HKHealthStore()
+        guard let type = HKObjectType.categoryType(forIdentifier: .appleStandHour) else {
+            chartData = .empty
+            return
+        }
+
+        let start = await earliestSampleDate(for: type) ?? Calendar.current.date(byAdding: .month, value: -11, to: Date())!
+        let end = Date()
+        let calendar = Calendar.current
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { [weak self] _, raw, _ in
+                guard let self else {
+                    continuation.resume()
+                    return
+                }
+
+                let samples = raw as? [HKCategorySample] ?? []
+                var buckets: [Date: Double] = [:]
+
+                for sample in samples where sample.value == 1 {
+                    let key = self.monthBucketKey(for: sample.startDate, calendar: calendar)
+                    buckets[key, default: 0] += 1
+                }
+
+                var values: [Double] = []
+                var cursor = self.monthBucketKey(for: start, calendar: calendar)
+                let endBucket = self.monthBucketKey(for: end, calendar: calendar)
+
+                while cursor <= endBucket {
+                    values.append(buckets[cursor] ?? 0)
+                    cursor = calendar.date(byAdding: .month, value: 1, to: cursor) ?? endBucket.addingTimeInterval(1)
+                }
+
+                let totalHours = values.reduce(0, +)
+                let expectedDays = max(1, self.daysBetween(start: start, end: end))
+                let expectedHours = Double(expectedDays) * 12.0
+                let percent = min(100.0, (totalHours / expectedHours) * 100.0)
+
+                let finalHeader = String(format: "%.0f%%", percent)
+                let finalValues = values
+
+                Task { @MainActor [weak self] in
+                    self?.chartData = ChartSeriesData(values: finalValues, headerText: finalHeader)
+                    continuation.resume()
+                }
+            }
+
+            store.execute(query)
+        }
+    }
+
+    private func earliestSampleDate(for type: HKSampleType) async -> Date? {
+        let store = HKHealthStore()
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Date?, Never>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [sort]
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.first?.startDate)
+            }
+            store.execute(query)
+        }
+    }
     
     // MARK: - Date Range Helpers
     
-    private func dateRangeAndInterval(for scope: TimeScope) -> (start: Date, end: Date, interval: DateComponents, anchor: Date) {
+    private nonisolated func dateRangeAndInterval(for scope: TimeScope) -> (start: Date, end: Date, interval: DateComponents, anchor: Date) {
         let calendar = Calendar.current
         let now = Date()
         let end = now
@@ -663,23 +903,23 @@ final class HomeViewModel: ObservableObject {
             
         case .week:
             interval = DateComponents(day: 1)
-            start = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: now))!
+            var weekCalendar = calendar
+            // Week starts on Sunday and ends on Saturday
+            weekCalendar.firstWeekday = 1
+            weekCalendar.minimumDaysInFirstWeek = 1
+            start = weekCalendar.dateInterval(of: .weekOfYear, for: now)?.start ?? weekCalendar.startOfDay(for: now)
             anchor = start
             
         case .month:
             interval = DateComponents(day: 1)
-            start = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: now))!
+            start = calendar.dateInterval(of: .month, for: now)?.start ?? calendar.startOfDay(for: now)
             anchor = start
             
         case .year:
             interval = DateComponents(month: 1)
-            let components = calendar.dateComponents([.year, .month], from: now)
-            start = calendar.date(from: DateComponents(
-                year: components.year! - 1,
-                month: components.month,
-                day: 1
-            ))!
-            anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: start))!
+            let components = calendar.dateComponents([.year], from: now)
+            start = calendar.date(from: DateComponents(year: components.year, month: 1, day: 1))!
+            anchor = start
             
         case .allTime:
             interval = DateComponents(day: 1)
@@ -690,7 +930,7 @@ final class HomeViewModel: ObservableObject {
         return (start, end, interval, anchor)
     }
     
-    private func bucketKey(for date: Date, scope: TimeScope, calendar: Calendar) -> Date {
+    private nonisolated func bucketKey(for date: Date, scope: TimeScope, calendar: Calendar) -> Date {
         switch scope {
         case .day:
             let components = calendar.dateComponents([.year, .month, .day, .hour], from: date)
@@ -704,6 +944,19 @@ final class HomeViewModel: ObservableObject {
             return calendar.date(from: components)!
         }
     }
+
+    private nonisolated func monthBucketKey(for date: Date, calendar: Calendar) -> Date {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: components)!
+    }
+
+    private nonisolated func daysBetween(start: Date, end: Date) -> Int {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: start)
+        let endDay = calendar.startOfDay(for: end)
+        let components = calendar.dateComponents([.day], from: startDay, to: endDay)
+        return max(1, (components.day ?? 0) + 1)
+    }
     
     // MARK: - Inline Expand/Collapse (for grid cards)
     
@@ -713,7 +966,9 @@ final class HomeViewModel: ObservableObject {
         } else {
             expandedMetric = kind
             selectedScope = .day
-            Task { await loadChartSeries(for: kind, scope: .day) }
+            Task { [weak self] in
+                await self?.loadChartSeries(for: kind, scope: .day)
+            }
         }
     }
     

@@ -82,7 +82,7 @@ final class ProtectionModel: ObservableObject {
         // ملاحظة: هذا المؤقت يشتغل والتطبيق بالخلفية لفترة قصيرة
         // لتطوير مستقبلي اقوى نستخدم Background Tasks
         unlockTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(minutes * 60), repeats: false) { [weak self] _ in
-            Task { @MainActor in
+            DispatchQueue.main.async { [weak self] in
                 print("🔒 Time is up! Locking again.")
                 self?.enable()
             }

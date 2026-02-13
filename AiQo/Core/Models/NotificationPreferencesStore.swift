@@ -2,38 +2,35 @@ import Foundation
 
 final class NotificationPreferencesStore {
     static let shared = NotificationPreferencesStore()
-    
+
     private init() {}
-    
-    private let defaults = UserDefaults.standard
-    private let genderKey = "aiqo.notification.gender"
+
+    // Keep compatibility with existing AppDelegate usage
+    private let genderKey = "user_gender"
     private let languageKey = "aiqo.notification.language"
-    
+
     var gender: ActivityNotificationGender {
         get {
-            if let raw = defaults.string(forKey: genderKey),
-               let value = ActivityNotificationGender(rawValue: raw) {
-                return value
-            }
-            // الافتراضي: ذكر
-            return .male
+            let raw = UserDefaults.standard.string(forKey: genderKey) ?? "male"
+            return raw == "female" ? .female : .male
         }
         set {
-            defaults.set(newValue.rawValue, forKey: genderKey)
+            let raw = newValue == .female ? "female" : "male"
+            UserDefaults.standard.set(raw, forKey: genderKey)
         }
     }
-    
+
     var language: ActivityNotificationLanguage {
         get {
-            if let raw = defaults.string(forKey: languageKey),
+            if let raw = UserDefaults.standard.string(forKey: languageKey),
                let value = ActivityNotificationLanguage(rawValue: raw) {
                 return value
             }
-            // الافتراضي: عربي
-            return .arabic
+            // Default to app language if no explicit preference
+            return AppSettingsStore.shared.appLanguage == .english ? .english : .arabic
         }
         set {
-            defaults.set(newValue.rawValue, forKey: languageKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: languageKey)
         }
     }
 }

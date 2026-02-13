@@ -13,8 +13,7 @@ struct Meal: Codable, Identifiable, Equatable {
     // اسم الوجبة حسب لغة الجهاز
     var localizedName: String {
         // عربي → دايركت من JSON
-        if let code = Locale.current.language.languageCode?.identifier,
-           code == "ar" {
+        if AppSettingsStore.shared.appLanguage == .arabic {
             return name_ar
         }
 

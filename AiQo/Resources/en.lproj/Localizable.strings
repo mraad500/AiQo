@@ -258,6 +258,201 @@
 
 "result_footer_success" = "Based on your total points, you have been assigned to Level %d.\nYou can always check your level and progress from the Level card inside your Profile page,\nand see your global ranking in the Tribe tab within AiQo.";
 
+/* Profile - Modern UI */
+"screen.profile.app.kernel.title" = "Bio-Digital Kernel";
+"screen.profile.currency.title" = "AiQo Balance";
+"screen.profile.currency.subtitle" = "Bio-Digital Coins";
+"screen.profile.wallet.title" = "AiQo Wallet";
+"screen.profile.wallet.message" = "Keep moving to earn more coins.";
+"screen.profile.level.title" = "Level Info";
+"screen.profile.level.message" = "Keep pushing!";
+"screen.profile.editAge.title" = "Update Age";
+"screen.profile.editAge.message" = "How old are you?";
+"screen.profile.editAge.placeholder" = "Years";
+"screen.profile.editHeight.title" = "Update Height";
+"screen.profile.editHeight.message" = "Enter height in cm";
+"screen.profile.editHeight.placeholder" = "CM";
+"screen.profile.editWeight.title" = "Update Weight";
+"screen.profile.editWeight.message" = "Enter weight in kg";
+"screen.profile.editWeight.placeholder" = "KG";
+"screen.profile.editGoal.title" = "Daily Goal";
+"screen.profile.editGoal.message" = "Enter your goal";
+"screen.profile.editGoal.placeholder" = "e.g. 500 kcal";
+"screen.profile.support.subject" = "AiQo Support";
+
+/* Settings */
+"settings.title" = "App Settings";
+"settings.section.notifications" = "Notifications";
+"settings.section.language" = "Language";
+"settings.notifications.title" = "Notifications";
+"settings.notifications.subtitle" = "Daily activity reminders";
+"settings.language.title" = "App Language";
+"settings.language.subtitle" = "Arabic / English";
+"settings.language.ar" = "Arabic";
+"settings.language.en" = "English";
+
+/* Gym */
+"gym.tab.body" = "Body";
+"gym.tab.vitals" = "Vitals";
+"gym.tab.plan" = "Plan";
+"gym.tab.wins" = "Wins";
+"gym.tab.recap" = "Recap";
+
+"gym.exercise.running" = "Running";
+"gym.exercise.walking" = "Walking";
+"gym.exercise.cycling" = "Cycling";
+"gym.exercise.swimming" = "Swimming";
+"gym.exercise.strength" = "Strength Training";
+"gym.exercise.hiit" = "HIIT";
+"gym.exercise.yoga" = "Yoga";
+"gym.exercise.equestrian" = "Equestrian";
+"gym.exercise.calisthenics" = "Calisthenics";
+"gym.exercise.pilates" = "Pilates";
+"gym.exercise.gratitude" = "Gratitude";
+"gym.exercise.indoor_cycle" = "Indoor Cycle";
+"gym.exercise.elliptical" = "Elliptical";
+"gym.exercise.stair_stepper" = "Stair Stepper";
+"gym.exercise.football" = "Football";
+"gym.exercise.padel_tennis" = "Padel / Tennis";
+"gym.exercise.basketball" = "Basketball";
+"gym.exercise.boxing" = "Boxing";
+"gym.exercise.martial_arts" = "Martial Arts";
+"gym.exercise.jump_rope" = "Jump Rope";
+"gym.exercise.other" = "Workout";
+
+"gym.recap.empty" = "No workouts yet.";
+"gym.recap.device" = "Device";
+"gym.recap.workout_id" = "Workout ID";
+"gym.recap.swipe_close" = "Swipe down to close";
+"gym.recap.indoor" = "Indoor";
+"gym.recap.outdoor" = "Outdoor";
+"gym.recap.intensity.moderate" = "Moderate";
+
+"gym.metric.duration" = "Duration";
+"gym.metric.calories" = "Calories";
+"gym.metric.distance" = "Distance";
+"gym.metric.avg_hr" = "Avg HR";
+"gym.metric.max_hr" = "Max HR";
+"gym.metric.pace" = "Pace";
+"gym.metric.steps" = "Steps";
+"gym.metric.elevation" = "Elevation";
+
+/* Tribe */
+"tribe.title" = "Tribe";
+"tribe.segment.global" = "Global";
+"tribe.segment.region" = "Region";
+"tribe.segment.friends" = "Friends";
+"tribe.level.format" = "Level %d";
+"tribe.region.title" = "Region Challenges";
+"tribe.challenge.add_placeholder" = "Add a challenge";
+"tribe.challenge.add_action" = "Add Challenge";
+"tribe.challenge.10k" = "10K Steps";
+"tribe.challenge.no_sugar" = "No Sugar Today";
+"tribe.challenge.calm" = "5 Min Calm";
+
+/* Captain */
+"captain.input.prompt" = "What's your goal today?";
+"captain.customize.title" = "Customize Captain";
+"captain.customize.subtitle" = "Add your info to personalize the captain.";
+"captain.customize.name" = "Name";
+"captain.customize.age" = "Age";
+"captain.customize.height" = "Height (cm)";
+"captain.customize.weight" = "Weight (kg)";
+"captain.customize.calling" = "How should the captain call you?";
+"captain.customize.tone" = "Captain tone";
+"captain.tone.practical" = "Practical";
+"captain.tone.caring" = "Caring";
+"captain.tone.strict" = "Strict";
+
+/* Time Scope */
+"time.scope" = "Time Scope";
+"time.day" = "Day";
+"time.week" = "Week";
+"time.month" = "Month";
+"time.year" = "Year";
+"time.all" = "All";
+
+/* Football */
+"football.title" = "Top Matches";
+"football.tab.latest" = "Latest matches";
+"football.tab.bigGames" = "Big Games This Week";
+"football.upcoming" = "Upcoming Matches";
+"football.label.scheduled" = "Scheduled";
+"football.label.result" = "Result";
+"football.status.ft" = "FT";
+"football.status.today_800" = "Today 8:00";
+"football.status.tomorrow_1000" = "Tomorrow 10:00";
+"football.status.sat_730" = "Sat 7:30";
+"football.status.sun_600" = "Sun 6:00";
+"football.status.sun_930" = "Sun 9:30 PM";
+
+/* Plan */
+"plan.title" = "Today's Plan";
+"plan.overview" = "Overview";
+"plan.today_workouts" = "Today's Workouts";
+"plan.templates" = "Workout Templates";
+"plan.no_workouts" = "No workouts scheduled for today";
+"plan.add_exercise" = "Add exercise...";
+"plan.add_routine" = "Add exercises to create your routine";
+"plan.suggested.title" = "Suggested";
+"plan.suggested.value" = "Try 20 min yoga today";
+
+/* Recap */
+"recap.history.title" = "History";
+"recap.history.subtitle" = "Your journey tracked via Apple Health.";
+"recap.swipe_close" = "Swipe down to close";
+"recap.info.device" = "Device";
+"recap.info.workout_id" = "Workout ID";
+"recap.source.health" = "Health";
+"recap.source.aiqo" = "AiQo";
+"recap.location.outdoor" = "Outdoor";
+"recap.location.indoor" = "Indoor";
+"recap.intensity.moderate" = "Moderate";
+"recap.intensity.light" = "Light";
+"recap.metric.duration" = "Duration";
+"recap.metric.calories" = "Calories";
+"recap.metric.distance" = "Distance";
+"recap.metric.avg_hr" = "Avg HR";
+"recap.metric.max_hr" = "Max HR";
+"recap.metric.pace" = "Pace";
+"recap.metric.steps" = "Steps";
+"recap.metric.elevation" = "Elevation";
+"recap.note.warmup" = "Warm-up jog before strength session.";
+"recap.note.recovery" = "Short recovery walk.";
+"recap.note.autopause" = "Autopause session.";
+"recap.note.quick" = "Quick walk between meetings.";
+"recap.note.morning" = "Morning walk with steady pace.";
+"recap.note.evening" = "Evening walk, low intensity.";
+"recap.date.2026_01_15" = "15 Jan 2026";
+"recap.date.2026_01_14" = "14 Jan 2026";
+
+/* Wins */
+"wins.title" = "Wins";
+"wins.subtitle" = "Unlock rewards by staying consistent ✨";
+"wins.item.streak.title" = "7-Day Streak";
+"wins.item.streak.subtitle" = "Train 7 days total";
+"wins.item.streak.detail_value" = "12 Days";
+"wins.item.streak.detail_hint" = "Best streak this month";
+"wins.item.heart.title" = "Heart Hero";
+"wins.item.heart.subtitle" = "Hit target BPM 3 times";
+"wins.item.heart.detail_value" = "148 BPM";
+"wins.item.heart.detail_hint" = "Average peak sessions";
+"wins.item.steps.title" = "Step Master";
+"wins.item.steps.subtitle" = "10k steps in one day";
+"wins.item.steps.detail_value" = "10,432";
+"wins.item.steps.detail_hint" = "Steps (today’s peak)";
+"wins.item.gratitude.title" = "Gratitude";
+"wins.item.gratitude.subtitle" = "Log gratitude 5 times";
+"wins.item.gratitude.detail_value" = "2 / 5";
+"wins.item.gratitude.detail_hint" = "Entries this week";
+"wins.featured.title" = "Weekly Chest";
+"wins.featured.subtitle" = "Complete 3 workouts this week";
+"wins.sheet.keep_going" = "Keep going — unlock it soon.";
+"wins.sheet.unlocked" = "Unlocked — nice work!";
+"wins.sheet.swipe_close" = "Swipe down to close";
+"wins.sheet.reward_title" = "Challenge Reward";
+"wins.sheet.reward_desc" = "Complete the challenge to reveal the shield.";
+
 "result_footer_no_data" = "It seems AiQo doesn't have sufficient permission to read your data, or there is no previous health data in Apple Health.\nWe'll set you at Level 1 for now. Once you start walking, moving, and sleeping regularly,\nyour AiQo level will automatically increase based on your real activity.";
 
 /* Level Names */

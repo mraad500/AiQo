@@ -1,6 +1,6 @@
 //
 //  WorkoutSessionScreen.swift
-//  Final Version: With Floating & Wavy Animations
+//  Final Version: Optimized for Sheet & Scroll
 //
 
 import SwiftUI
@@ -8,257 +8,173 @@ import HealthKit
 import MediaPlayer
 internal import Combine
 
-// MARK: - UI State for Wheel & Animation
-class WorkoutUIState: ObservableObject {
-    enum WheelState { case idle, expanded, spinning, resultShown }
-    enum MediaMode { case none, songs, video }
-
-    @Published var wheelState: WheelState = .idle
-    @Published var selectedMedia: MediaMode = .none
-    @Published var rotationAngle: Double = 0
-    
-    // حالة كارت الفيديو
-    @Published var isVideoCardOpen: Bool = true
-    
-    func handleWheelTap() {
-        // حركة تكبير مرنة
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0)) {
-            switch wheelState {
-            case .idle: wheelState = .expanded
-            case .expanded: spinWheel()
-            default: break
-            }
-        }
-    }
-    
-    private func spinWheel() {
-        wheelState = .spinning
-        
-        // 1. تحديد النتيجة عشوائياً
-        let randomChoice = Bool.random() // True = Songs, False = Video
-        
-        // 2. تدوير عشوائي
-        let randomSpins = Double.random(in: 5...10)
-        let randomNoise = Double.random(in: -15...15)
-        
-        // 90 درجة = Songs (أسفل)، 270 درجة = Video (أعلى)
-        let targetBaseAngle = randomChoice ? 90.0 : 270.0
-        let totalAngle = (360.0 * randomSpins) + targetBaseAngle + randomNoise
-        
-        // 3. تشغيل الاهتزاز
-        startIntenseHaptics(duration: 3.0)
-        
-        // 4. التدوير
-        withAnimation(.easeOut(duration: 3.0)) {
-            rotationAngle += totalAngle
-        }
-        
-        // 5. النتيجة
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation(.easeInOut) {
-                self.selectedMedia = randomChoice ? .songs : .video
-                self.isVideoCardOpen = true
-                self.wheelState = .resultShown
-            }
-        }
-    }
-    
-    // محاكاة اهتزاز المحرك
-    private func startIntenseHaptics(duration: Double) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        
-        var intervals: [Double] = []
-        var currentT: Double = 0.05
-        var step: Double = 0.02
-        
-        while currentT < duration {
-            intervals.append(currentT)
-            step *= 1.15
-            currentT += step
-        }
-        
-        var accumulatedTime = 0.0
-        for interval in intervals {
-            accumulatedTime += interval
-            if accumulatedTime < duration {
-                DispatchQueue.main.asyncAfter(deadline: .now() + accumulatedTime) {
-                    let intensity = 1.0 - (accumulatedTime / duration)
-                    generator.impactOccurred(intensity: intensity > 0.5 ? 1.0 : 0.5)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Main Screen
 struct WorkoutSessionScreen: View {
     
     @ObservedObject var session: LiveWorkoutSession
     @StateObject private var music = WorkoutMusicController()
-    @StateObject private var uiState = WorkoutUIState()
     
     @State private var showSummary = false
     @State private var summaryData: (duration: TimeInterval, calories: Double, avgHeartRate: Double)?
 
     var body: some View {
         ZStack {
-            // الخلفية
+            // الخلفية (ثابتة)
             StarryBackground()
             
-            VStack(spacing: 20) {
-                
-                // --- Header ---
-                Text(session.title.uppercased())
-                    .font(.system(.headline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(WorkoutTheme.pastelBeige)
-                    .italic()
-                    .padding(.top, 50)
-                
-                // --- Timer ---
-                Text(formatTime(session.elapsedSeconds))
-                    .font(.system(size: 54, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.black)
-                    .frame(height: 65)
-                    .padding(.horizontal, 40)
-                    .background(
-                        Capsule()
-                            .fill(WorkoutTheme.pastelBeige)
-                            .shadow(color: WorkoutTheme.pastelBeige.opacity(0.4), radius: 20, x: 0, y: 0)
-                    )
-                
-                // --- Stats Grid ---
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    StatCard(
-                        title: "HEART RATE",
-                        value: "\(Int(session.heartRate))",
-                        unit: "BPM",
-                        icon: "heart.fill",
-                        color: WorkoutTheme.pastelBeige,
-                        textColor: .black,
-                        shouldPulse: session.phase == .running
-                    )
-                    StatCard(
-                        title: "CALORIES",
-                        value: "\(Int(session.activeEnergy))",
-                        unit: "KCAL",
-                        icon: "flame.fill",
-                        color: WorkoutTheme.pastelBeige,
-                        textColor: .black,
-                        shouldPulse: false
-                    )
-                    StatCard(
-                        title: "DISTANCE",
-                        value: formatDist(session.distanceMeters).val,
-                        unit: formatDist(session.distanceMeters).unit,
-                        icon: "figure.run",
-                        color: WorkoutTheme.pastelMint,
-                        textColor: .black,
-                        shouldPulse: false
-                    )
-                    StatCard(
-                        title: "STATUS",
-                        value: session.statusText,
-                        unit: "LIVE",
-                        icon: "waveform.path.ecg",
-                        color: WorkoutTheme.pastelMint,
-                        textColor: .black,
-                        shouldPulse: session.phase == .running
-                    )
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-                
-                // --- Wheel / Media Section ---
-                ZStack {
-                    if uiState.wheelState == .resultShown {
-                        if uiState.selectedMedia == .video {
+            // 🔥 استخدمنا GeometryReader لضبط التخطيط
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    
+                    // 1. منطقة المحتوى القابلة للتمرير (ScrollView)
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 20) {
                             
-                            if uiState.isVideoCardOpen {
-                                YouTubeCardView(onClose: {
-                                    withAnimation { uiState.isVideoCardOpen = false }
-                                })
-                                .transition(.scale.combined(with: .opacity))
-                            } else {
-                                // زر إعادة فتح الفيديو
-                                Button(action: { withAnimation { uiState.isVideoCardOpen = true } }) {
-                                    HStack {
-                                        Image(systemName: "play.tv.fill")
-                                        Text("Open Video")
+                            // --- Header ---
+                            Text(session.title.uppercased())
+                                .font(.system(.headline, design: .rounded).weight(.heavy))
+                                .foregroundStyle(WorkoutTheme.pastelBeige)
+                                .italic()
+                                .padding(.top, 40) // مسافة علوية مناسبة للكارت
+                            
+                            // --- Timer ---
+                            Text(formatTime(session.elapsedSeconds))
+                                .font(.system(size: 54, weight: .black, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(.black)
+                                .frame(height: 65)
+                                .padding(.horizontal, 40)
+                                .background(
+                                    Capsule()
+                                        .fill(WorkoutTheme.pastelBeige)
+                                        .shadow(color: WorkoutTheme.pastelBeige.opacity(0.4), radius: 20, x: 0, y: 0)
+                                )
+                            
+                            // --- Stats Grid ---
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                                StatCard(
+                                    title: "HEART RATE", value: "\(Int(session.heartRate))", unit: "BPM", icon: "heart.fill", color: WorkoutTheme.pastelBeige, textColor: .black, shouldPulse: session.phase == .running
+                                )
+                                StatCard(
+                                    title: "CALORIES", value: "\(Int(session.activeEnergy))", unit: "KCAL", icon: "flame.fill", color: WorkoutTheme.pastelBeige, textColor: .black, shouldPulse: false
+                                )
+                                StatCard(
+                                    title: "DISTANCE", value: formatDist(session.distanceMeters).val, unit: formatDist(session.distanceMeters).unit, icon: "figure.run", color: WorkoutTheme.pastelMint, textColor: .black, shouldPulse: false
+                                )
+                                StatCard(
+                                    title: "STATUS", value: session.statusText, unit: "LIVE", icon: "waveform.path.ecg", color: WorkoutTheme.pastelMint, textColor: .black, shouldPulse: session.phase == .running
+                                )
+                            }
+                            .padding(.horizontal, 20)
+                            
+                            let mediaHeight = max(360, geometry.size.height * 0.48)
+                            
+                            // --- Music / Spotify Section ---
+                            VStack(spacing: 12) {
+                                MediaCardView(mode: .songs, musicController: music)
+                                HStack(spacing: 12) {
+                                    Button(action: {
+                                        SpotifyAuthManager.shared.startLogin()
+                                        music.pickProvider(.spotify)
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "link")
+                                            Text("Connect Spotify")
+                                        }
+                                        .font(.headline.bold())
+                                        .foregroundColor(.black)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 52)
+                                        .background(WorkoutTheme.pastelMint)
+                                        .clipShape(Capsule())
                                     }
-                                    .font(.headline.bold())
-                                    .foregroundColor(.black)
-                                    .padding()
-                                    .background(WorkoutTheme.pastelMint)
-                                    .clipShape(Capsule())
-                                    .shadow(radius: 5)
+                                    
+                                    Button(action: {
+                                        music.pickProvider(.spotify)
+                                        music.playPause()
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "play.fill")
+                                            Text("Open Spotify")
+                                        }
+                                        .font(.headline.bold())
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 52)
+                                        .background(Color.black.opacity(0.85))
+                                        .clipShape(Capsule())
+                                    }
                                 }
-                                .transition(.scale)
+                                .padding(.horizontal, 20)
                             }
+                            .frame(height: mediaHeight)
+                            .padding(.top, 10)
                             
-                        } else {
-                            // كارت الموسيقى
-                            MediaCardView(mode: uiState.selectedMedia, musicController: music)
-                                .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                            // 🔥 مسافة فارغة في النهاية حتى لا يغطي الزر المحتوى عند السكرول
+                            Spacer().frame(height: 110)
                         }
-                    } else {
-                        // العجلة
-                        SpinWheelViewLocal(viewModel: uiState)
-                    }
-                }
-                .frame(height: 180)
-                
-                Spacer()
-                
-                // --- Controls ---
-                HStack(spacing: 15) {
-                    Button(action: {
-                        withAnimation {
-                            if session.phase == .running {
-                                session.pauseFromPhone()
-                                music.onWorkoutPause()
-                            } else {
-                                if session.phase == .idle {
-                                    session.startFromPhone()
-                                } else {
-                                    session.resumeFromPhone()
-                                }
-                                music.onWorkoutStart()
-                            }
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
-                            Text(session.phase == .running ? "Pause Workout" : (session.phase == .idle ? "Start Workout" : "Resume"))
-                        }
-                        .font(.system(.title3, design: .rounded).weight(.bold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 65)
-                        .background(WorkoutTheme.pastelMint)
-                        .clipShape(Capsule())
-                        .shadow(color: WorkoutTheme.pastelMint.opacity(0.3), radius: 10)
                     }
                     
-                    if session.phase == .paused {
-                        Button(action: { endWorkout() }) {
-                            Image(systemName: "stop.fill")
-                                .font(.title2)
-                                .foregroundStyle(.white)
-                                .frame(width: 65, height: 65)
-                                .background(Color(red: 1.0, green: 0.35, blue: 0.40))
-                                .clipShape(Circle())
+                    // 2. منطقة التحكم (مثبتة بالأسفل)
+                    VStack {
+                        HStack(spacing: 15) {
+                            Button(action: {
+                                withAnimation {
+                                    if session.phase == .running {
+                                        session.pauseFromPhone()
+                                        music.onWorkoutPause()
+                                    } else {
+                                        if session.phase == .idle {
+                                            session.startFromPhone()
+                                        } else {
+                                            session.resumeFromPhone()
+                                        }
+                                        music.onWorkoutStart()
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
+                                    Text(session.phase == .running ? "Pause Workout" : (session.phase == .idle ? "Start Workout" : "Resume"))
+                                }
+                                .font(.system(.title3, design: .rounded).weight(.bold))
+                                .foregroundStyle(.black)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 65)
+                                .background(WorkoutTheme.pastelMint)
+                                .clipShape(Capsule())
+                                .shadow(color: WorkoutTheme.pastelMint.opacity(0.3), radius: 10)
+                            }
+                            
+                            if session.phase == .paused {
+                                Button(action: { endWorkout() }) {
+                                    Image(systemName: "stop.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                        .frame(width: 65, height: 65)
+                                        .background(Color(red: 1.0, green: 0.35, blue: 0.40))
+                                        .clipShape(Circle())
+                                }
+                                .transition(.scale.combined(with: .opacity))
+                            }
                         }
-                        .transition(.scale.combined(with: .opacity))
+                        .padding(.horizontal, 30)
+                        .padding(.bottom, 30) // مسافة من حافة الشاشة
+                        .padding(.top, 15)
                     }
+                    .background(
+                        // تدرج لوني خلف الأزرار لدمجها مع الخلفية
+                        LinearGradient(
+                            colors: [Color.black.opacity(0), Color.black.opacity(0.6)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
+                    )
                 }
-                .padding(.horizontal, 30)
-                .padding(.bottom, 40)
             }
             
-            // Milestone Alert
+            // Milestone Alert (فوق كل شيء)
             if session.showMilestoneAlert {
                 VStack {
                     Text(session.milestoneAlertText)
@@ -309,14 +225,29 @@ struct WorkoutSessionScreen: View {
         let finalDuration = TimeInterval(session.elapsedSeconds)
         let finalCalories = session.activeEnergy
         let finalAvgHR = session.heartRate
+        let finalDistance = session.distanceMeters
+        let estimatedSteps = max(Int((finalDistance / 1000.0) * 1300.0), 0)
+
         self.summaryData = (finalDuration, finalCalories, finalAvgHR)
         session.endFromPhone()
         music.onWorkoutEnd()
         showSummary = true
+
+        Task {
+            await CaptainSmartNotificationService.shared.handleWorkoutCompleted(
+                summary: WorkoutCoachingSummary(
+                    duration: finalDuration,
+                    calories: finalCalories,
+                    averageHeartRate: finalAvgHR,
+                    distanceMeters: finalDistance,
+                    estimatedSteps: estimatedSteps
+                )
+            )
+        }
     }
 }
 
-// MARK: - Components
+// MARK: - Components (Cards & Wheel)
 
 struct StatCard: View {
     let title: String
@@ -327,13 +258,8 @@ struct StatCard: View {
     let textColor: Color
     let shouldPulse: Bool
     
-    // حالة نبض القلب (الأصلية)
     @State private var pulseScale: CGFloat = 1.0
-    
-    // حالة الطفو (Clouds Floating)
     @State private var floatOffsetY: CGFloat = 0.0
-    
-    // حالة التموج عند الضغط (Tap Wave)
     @State private var tapScale: CGFloat = 1.0
     @State private var tapRotation: Double = 0.0
     
@@ -362,59 +288,37 @@ struct StatCard: View {
         .frame(height: 130)
         .background(color)
         .cornerRadius(24)
-        
-        // 1. حركة الطفو (Clouds) - بطيئة ومستمرة
         .offset(y: floatOffsetY)
-        
-        // 2. حركة التموج والنبض مدمجة
         .scaleEffect(tapScale * (shouldPulse ? pulseScale : 1.0))
-        
-        // 3. حركة إمالة بسيطة عند الضغط (جزء من التموج)
         .rotation3DEffect(.degrees(tapRotation), axis: (x: 1, y: 0, z: 0))
-        
         .onAppear {
-            // نبض القلب (إذا كان مفعلاً)
             if shouldPulse {
                 withAnimation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                     pulseScale = 1.02
                 }
             }
-            
-            // 🔥 تشغيل حركة الطفو العشوائية
             startFloatingAnimation()
         }
         .onTapGesture {
-            // 🔥 تشغيل الحركة التموجية عند الضغط
             triggerWaveAnimation()
         }
     }
     
     private func startFloatingAnimation() {
-        // تأخير عشوائي بسيط لكل كارت حتى لا يتحركوا معاً كروبوتات
         let randomDelay = Double.random(in: 0...2.0)
-        let randomDuration = Double.random(in: 4.0...6.0) // حركة بطيئة جداً (غيوم)
-        
-        withAnimation(
-            Animation
-                .easeInOut(duration: randomDuration)
-                .repeatForever(autoreverses: true)
-                .delay(randomDelay)
-        ) {
-            floatOffsetY = -6.0 // يرتفع وينزل بمقدار 6 نقاط
+        let randomDuration = Double.random(in: 4.0...6.0)
+        withAnimation(Animation.easeInOut(duration: randomDuration).repeatForever(autoreverses: true).delay(randomDelay)) {
+            floatOffsetY = -6.0
         }
     }
     
     private func triggerWaveAnimation() {
         let impact = UIImpactFeedbackGenerator(style: .light)
         impact.impactOccurred()
-        
-        // المرحلة الأولى: انكماش وإمالة
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0)) {
             tapScale = 0.92
             tapRotation = 8.0
         }
-        
-        // المرحلة الثانية: العودة للطبيعة (ارتداد)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.4, blendDuration: 0)) {
                 tapScale = 1.0
@@ -425,7 +329,7 @@ struct StatCard: View {
 }
 
 struct MediaCardView: View {
-    let mode: WorkoutUIState.MediaMode
+    let mode: MediaMode
     @ObservedObject var musicController: WorkoutMusicController
     
     var body: some View {
@@ -476,52 +380,6 @@ struct MediaCardView: View {
                 .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
         )
         .padding(.horizontal, 20)
-    }
-}
-
-struct SpinWheelViewLocal: View {
-    @ObservedObject var viewModel: WorkoutUIState
-    
-    var body: some View {
-        ZStack {
-            // 1. صورة العجلة
-            Image("wheel")
-                .resizable()
-                .scaledToFit()
-                .rotationEffect(.degrees(viewModel.rotationAngle))
-                .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                .zIndex(1)
-            
-            // 2. صورة الدبوس
-            if viewModel.wheelState != .idle {
-                Image("Dambus")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 55)
-                    .offset(y: -125)
-                    .transition(.scale.combined(with: .opacity))
-                    .zIndex(2)
-            }
-            
-            // 3. زر المنتصف
-            if viewModel.wheelState == .expanded {
-                Circle()
-                    .fill(.white)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Text("SPIN")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.black)
-                    )
-                    .shadow(radius: 4)
-                    .zIndex(3)
-            }
-        }
-        .frame(width: viewModel.wheelState == .idle ? 80 : 220,
-               height: viewModel.wheelState == .idle ? 80 : 220)
-        .onTapGesture {
-            viewModel.handleWheelTap()
-        }
     }
 }
 

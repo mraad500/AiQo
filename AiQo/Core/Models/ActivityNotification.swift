@@ -7,7 +7,7 @@ enum ActivityNotificationType: String, Codable {
     case goalCompleted  // الهدف اكتمل
 }
 
-enum ActivityNotificationGender: String, Codable {
+public enum ActivityNotificationGender: String, Codable {
     case male
     case female
 }

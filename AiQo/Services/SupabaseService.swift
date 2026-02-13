@@ -21,13 +21,52 @@ public final class SupabaseService {
         )
     }
 
-    // MARK: - Model
+    // MARK: - 🔍 Phase 3: Search & Privacy Logic
+
+    public func searchUsers(query: String) async throws -> [UserProfile] {
+        
+        struct ProfileDTO: Decodable {
+            let name: String?
+            let age: Int?
+            let height_cm: Int?
+            let weight_kg: Int?
+            let goal_text: String?
+            let is_private: Bool?
+        }
+
+        // ✅ التصحيح هنا: استبدلنا value بـ pattern
+        let response = try await client
+            .from("profiles")
+            .select("name, age, height_cm, weight_kg, goal_text, is_private")
+            .ilike("name", pattern: "%\(query)%")
+            .limit(20)
+            .execute()
+
+        let data = response.data
+        let results = try JSONDecoder().decode([ProfileDTO].self, from: data)
+
+        return results.compactMap { dto in
+            guard let name = dto.name else { return nil }
+            
+            return UserProfile(
+                name: name,
+                age: dto.age ?? 0,
+                heightCm: dto.height_cm ?? 0,
+                weightKg: dto.weight_kg ?? 0,
+                goalText: dto.goal_text ?? "",
+                isPrivate: dto.is_private ?? false
+            )
+        }
+    }
+
+    // MARK: - Legacy Queries
+    
     public struct Profile: Decodable, Identifiable {
         public let id: UUID
         public let name: String?
+        public let is_private: Bool?
     }
 
-    // MARK: - Queries
     public func loadProfiles() async throws -> [Profile] {
         let response = try await client
             .from("profiles")
@@ -48,29 +87,23 @@ public final class SupabaseService {
         return try JSONDecoder().decode(Profile.self, from: data)
     }
 
-    // MARK: - Notification Logic (الحل النهائي)
+    // MARK: - Notification Logic
 
-    /// تستدعى من AppDelegate فور وصول التوكن
     public func updateDeviceToken(_ token: String) {
-        // 1. نحفظ التوكن دائماً في ذاكرة الهاتف
         UserDefaults.standard.set(token, forKey: "push_device_token")
         print("💾 Device token saved locally.")
 
-        // 2. نحاول رفعه فوراً إذا كان هناك مستخدم
         Task {
             try? await syncStoredDeviceToken()
         }
     }
 
-    /// تستدعى عند فتح الصفحة الرئيسية لرفع التوكن المحفوظ
     public func syncStoredDeviceToken() async throws {
-        // هل يوجد مستخدم مسجل دخول؟
         guard let currentUser = client.auth.currentUser else {
             print("⏳ No user logged in yet. Token waiting locally.")
             return
         }
         
-        // هل لدينا توكن محفوظ؟
         guard let token = UserDefaults.standard.string(forKey: "push_device_token") else {
             return
         }
@@ -82,7 +115,7 @@ public final class SupabaseService {
         try await client
             .from("profiles")
             .update(updateData)
-            .eq("user_id", value: currentUser.id) // استخدام user_id حسب إعداداتك السابقة
+            .eq("user_id", value: currentUser.id)
             .execute()
             
         print("✅✅ SUCCESS: Device token synced to Supabase for user \(currentUser.id)")
