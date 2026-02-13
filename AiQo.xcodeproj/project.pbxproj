@@ -218,6 +218,20 @@
 			);
 			target = 80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */;
 		};
+		A1F000020000000000000001 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */;
+		};
+		A1F000020000000000000002 /* Exceptions for "AiQoWatchWidget" folder in "AiQoWatchWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A1F000010000000000000070 /* AiQoWatchWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -248,6 +262,9 @@
 		};
 		806715D22F37337700D6EAB4 /* AiQoWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1F000020000000000000001 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */,
+			);
 			path = AiQoWidget;
 			sourceTree = "<group>";
 		};
@@ -284,6 +301,9 @@
 		};
 		A1F000010000000000000050 /* AiQoWatchWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1F000020000000000000002 /* Exceptions for "AiQoWatchWidget" folder in "AiQoWatchWidgetExtension" target */,
+			);
 			path = AiQoWatchWidget;
 			sourceTree = "<group>";
 		};
