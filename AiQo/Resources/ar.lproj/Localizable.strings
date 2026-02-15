@@ -541,12 +541,16 @@
 "quests.unit.h" = "ساعة";
 "quests.unit.steps" = "خطوة";
 "quests.unit.kcal" = "سعرة";
+"quests.unit.km" = "كم";
+"quests.unit.quests" = "تحديات";
 
 "quests.metric.sleep" = "النوم";
 "quests.metric.steps" = "الخطوات";
 "quests.metric.plank" = "البلانك";
 "quests.metric.pushups" = "الضغط";
 "quests.metric.active" = "السعرات النشطة";
+"quests.metric.distance" = "المسافة";
+"quests.metric.stage2" = "المرحلة 2";
 
 "quests.challenge.steps.title" = "10K خطوة";
 "quests.challenge.steps.subtitle" = "امشِ 10,000 خطوة اليوم";
@@ -577,3 +581,39 @@
 "quests.challenge.active.description" = "ارفع نشاطك وحقق 600 سعرة حرارية نشطة اليوم.";
 "quests.challenge.active.goal" = "600 سعرة نشطة";
 "quests.challenge.active.verify" = "السعرات النشطة من HealthKit (تلقائي)";
+
+"quests.challenge.s2.steps.title" = "11K خطوة";
+"quests.challenge.s2.steps.subtitle" = "امشِ 11,000 خطوة اليوم";
+"quests.challenge.s2.steps.description" = "تحرك بثبات خلال اليوم وحقق مجموع 11 ألف خطوة.";
+"quests.challenge.s2.steps.goal" = "11,000 خطوة خلال اليوم";
+"quests.challenge.s2.steps.verify" = "خطوات HealthKit (تلقائي)";
+
+"quests.challenge.s2.active.title" = "حرق 650 سعرة نشطة";
+"quests.challenge.s2.active.subtitle" = "احرق 650 سعرة نشطة";
+"quests.challenge.s2.active.description" = "ارفع شدة نشاطك وحقق 650 سعرة حرارية نشطة اليوم.";
+"quests.challenge.s2.active.goal" = "650 سعرة نشطة";
+"quests.challenge.s2.active.verify" = "السعرات النشطة المحروقة من HealthKit (تلقائي)";
+
+"quests.challenge.s2.pushups.title" = "بناء الضغط (70)";
+"quests.challenge.s2.pushups.subtitle" = "اجمع 70 عدة ضغط";
+"quests.challenge.s2.pushups.description" = "نفّذ جولات سريعة خلال اليوم حتى تصل إلى 70 عدة.";
+"quests.challenge.s2.pushups.goal" = "مجموع 70 عدة خلال اليوم";
+"quests.challenge.s2.pushups.verify" = "عداد يدوي (يتجمع خلال اليوم)";
+
+"quests.challenge.s2.plank.title" = "سلم البلانك (4:00)";
+"quests.challenge.s2.plank.subtitle" = "اجمع 4:00 دقائق بلانك";
+"quests.challenge.s2.plank.description" = "أكمل عدة جولات واجمع إجمالي 240 ثانية بلانك.";
+"quests.challenge.s2.plank.goal" = "مجموع 240 ثانية خلال اليوم";
+"quests.challenge.s2.plank.verify" = "مؤقت يدوي (الجولات تتجمع خلال اليوم)";
+
+"quests.challenge.s2.move.title" = "تحرك 5KM (مشي + جري)";
+"quests.challenge.s2.move.subtitle" = "حقق 5.0 كم اليوم";
+"quests.challenge.s2.move.description" = "تتبع مسافة المشي والجري حتى تكمل 5.0 كم.";
+"quests.challenge.s2.move.goal" = "إجمالي مسافة 5.0 كم";
+"quests.challenge.s2.move.verify" = "HealthKit DistanceWalkingRunning (تلقائي)";
+
+"quests.challenge.s2.boss.title" = "Boss المرحلة 2";
+"quests.challenge.s2.boss.subtitle" = "أكمل 4 من 5 تحديات المرحلة 2";
+"quests.challenge.s2.boss.description" = "أكمل أي 4 تحديات يومية من المرحلة 2 في نفس اليوم.";
+"quests.challenge.s2.boss.goal" = "أكمل 4 من 5 تحديات المرحلة 2 اليوم";
+"quests.challenge.s2.boss.verify" = "تلقائي (عدد إكمالات المرحلة 2 اليوم)";

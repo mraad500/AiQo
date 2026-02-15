@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChallengeDetailView: View {
     let challenge: Challenge
-    @ObservedObject var questsStore: QuestsStore
+    @ObservedObject var questsStore: QuestDailyStore
 
     @State private var openRunView = false
     @State private var showAutoTrackingNote = false
@@ -48,7 +48,7 @@ struct ChallengeDetailView: View {
                 .disabled(isPrimaryButtonDisabled)
                 .opacity(isPrimaryButtonDisabled ? 0.55 : 1)
 
-                if showAutoTrackingNote && challenge.isAutomatic {
+                if showAutoTrackingNote && challenge.isHealthKitBacked {
                     Text(L10n.t("quests.detail.tracking_note"))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -148,7 +148,7 @@ struct ChallengeDetailView: View {
         questsStore.startChallenge(challenge)
 
         if challenge.isAutomatic {
-            showAutoTrackingNote = true
+            showAutoTrackingNote = challenge.isHealthKitBacked
             questsStore.refreshOnAppear()
         } else {
             openRunView = true
@@ -167,6 +167,10 @@ struct ChallengeDetailView: View {
             return Color(red: 0.74, green: 0.80, blue: 1.0)
         case .activeCalories:
             return Color(red: 0.98, green: 0.64, blue: 0.52)
+        case .distanceKilometers:
+            return Color(red: 0.64, green: 0.86, blue: 0.98)
+        case .questCompletions:
+            return GymTheme.gold
         }
     }
 }

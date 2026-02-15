@@ -104,28 +104,78 @@ actor HealthKitService {
 
     // MARK: - Widget (Write + Reload)
 
+    private struct WidgetGoalsPayload: Decodable {
+        let steps: Int
+        let activeCalories: Double
+    }
+
+    private func currentWidgetGoals(
+        stepsGoalOverride: Int? = nil,
+        caloriesGoalOverride: Int? = nil
+    ) -> (stepsGoal: Int, caloriesGoal: Int) {
+        let defaults = UserDefaults.standard
+        let fallbackSteps = 8000
+        let fallbackCalories = 400
+
+        var storedSteps = fallbackSteps
+        var storedCalories = fallbackCalories
+
+        if let data = defaults.data(forKey: "aiqo.dailyGoals"),
+           let saved = try? JSONDecoder().decode(WidgetGoalsPayload.self, from: data) {
+            storedSteps = saved.steps
+            storedCalories = Int(saved.activeCalories.rounded())
+        }
+
+        let stepsGoal = max(stepsGoalOverride ?? storedSteps, 1)
+        let caloriesGoal = max(caloriesGoalOverride ?? storedCalories, 1)
+        return (stepsGoal, caloriesGoal)
+    }
+
     /// يكتب بيانات "اليوم" إلى App Group ويعمل Reload للـ Widget
-    private func updateWidget(steps: Int, calories: Int, standPercent: Int, goal: Int = 10000) {
+    private func updateWidget(
+        steps: Int,
+        calories: Int,
+        standPercent: Int,
+        stepsGoal: Int,
+        caloriesGoal: Int
+    ) {
         let shared = UserDefaults(suiteName: "group.aiqo")!
         shared.set(steps, forKey: "aiqo_steps")
         shared.set(calories, forKey: "aiqo_active_cal")
-        shared.set(goal, forKey: "aiqo_steps_goal")
+        shared.set(stepsGoal, forKey: "aiqo_steps_goal")
+        shared.set(caloriesGoal, forKey: "aiqo_active_cal_goal")
         shared.set(standPercent, forKey: "aiqo_stand_percent")
 
         WidgetCenter.shared.reloadTimelines(ofKind: "AiQoWidget")
     }
 
     /// نداء جاهز: يحدث الويدجت من Today Summary (أفضل مكان للبيانات الصحيحة)
-    func refreshWidgetFromToday(goal: Int = 10000) async {
+    func refreshWidgetFromToday(goal: Int? = nil, caloriesGoal: Int? = nil) async {
+        let resolvedGoals = currentWidgetGoals(
+            stepsGoalOverride: goal,
+            caloriesGoalOverride: caloriesGoal
+        )
         do {
             let summary = try await fetchTodaySummary()
             let steps = Int(summary.steps)
             let cal = Int(summary.activeKcal)
             let stand = Int(summary.standPercent)
-            updateWidget(steps: steps, calories: cal, standPercent: stand, goal: goal)
+            updateWidget(
+                steps: steps,
+                calories: cal,
+                standPercent: stand,
+                stepsGoal: resolvedGoals.stepsGoal,
+                caloriesGoal: resolvedGoals.caloriesGoal
+            )
         } catch {
             // إذا فشلنا بالقراءة، لا نكتب أرقام وهمية
-            updateWidget(steps: 0, calories: 0, standPercent: 0, goal: goal)
+            updateWidget(
+                steps: 0,
+                calories: 0,
+                standPercent: 0,
+                stepsGoal: resolvedGoals.stepsGoal,
+                caloriesGoal: resolvedGoals.caloriesGoal
+            )
         }
     }
 
@@ -152,13 +202,16 @@ actor HealthKitService {
     }
 
     func getTodaySteps() async -> Int {
+        let resolvedGoals = currentWidgetGoals()
         do {
             let summary = try await fetchTodaySummary()
             // ✅ هنا نخلي الويدجت يتحدث من بيانات اليوم
             updateWidget(
                 steps: Int(summary.steps),
                 calories: Int(summary.activeKcal),
-                standPercent: Int(summary.standPercent)
+                standPercent: Int(summary.standPercent),
+                stepsGoal: resolvedGoals.stepsGoal,
+                caloriesGoal: resolvedGoals.caloriesGoal
             )
             return Int(summary.steps)
         } catch {
@@ -167,13 +220,16 @@ actor HealthKitService {
     }
 
     func getActiveCalories() async -> Double {
+        let resolvedGoals = currentWidgetGoals()
         do {
             let summary = try await fetchTodaySummary()
             // ✅ هنا هم يحدث
             updateWidget(
                 steps: Int(summary.steps),
                 calories: Int(summary.activeKcal),
-                standPercent: Int(summary.standPercent)
+                standPercent: Int(summary.standPercent),
+                stepsGoal: resolvedGoals.stepsGoal,
+                caloriesGoal: resolvedGoals.caloriesGoal
             )
             return summary.activeKcal
         } catch {

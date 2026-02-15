@@ -49,7 +49,7 @@ struct GymView: View {
     @State private var activeSession: LiveWorkoutSession?
     @State private var showFootballSheet = false   // ✅ جديد
     @StateObject private var winsStore: WinsStore
-    @StateObject private var questsStore: QuestsStore
+    @StateObject private var questsStore: QuestDailyStore
 
     @Namespace private var animation
     private let topTabBarHeight: CGFloat = 72
@@ -57,7 +57,7 @@ struct GymView: View {
     init() {
         let winsStore = WinsStore()
         _winsStore = StateObject(wrappedValue: winsStore)
-        _questsStore = StateObject(wrappedValue: QuestsStore(winsStore: winsStore))
+        _questsStore = StateObject(wrappedValue: QuestDailyStore(winsStore: winsStore))
     }
 
     var body: some View {
@@ -205,7 +205,7 @@ private func configureSegmentedAppearance() {
 // MARK: - Tab Content View
 struct TabContentView: View {
     let selectedTab: GymTab
-    @ObservedObject var questsStore: QuestsStore
+    @ObservedObject var questsStore: QuestDailyStore
     @ObservedObject var winsStore: WinsStore
     var onSelectExercise: (GymExercise) -> Void
 
@@ -219,7 +219,7 @@ struct TabContentView: View {
                 .transition(.opacity)
 
             case .vitals:
-                QuestsRootView(questsStore: questsStore)
+                QuestsView(questsStore: questsStore)
                     .transition(.opacity)
 
             case .plan:

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChallengeRunView: View {
     let challenge: Challenge
-    @ObservedObject var questsStore: QuestsStore
+    @ObservedObject var questsStore: QuestDailyStore
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -92,10 +92,10 @@ struct ChallengeRunView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    questsStore.startPlankTimer()
+                    questsStore.startPlankTimer(for: challenge)
                 } label: {
                     Text(
-                        questsStore.isPlankTimerRunning
+                        questsStore.isPlankTimerRunning(for: challenge)
                         ? L10n.t("quests.run.timer_running")
                         : L10n.t("quests.run.start_timer")
                     )
@@ -108,7 +108,7 @@ struct ChallengeRunView: View {
                 .disabled(questsStore.isPlankTimerRunning || questsStore.isCompleted(challenge))
 
                 Button {
-                    questsStore.finishPlankSet()
+                    questsStore.finishPlankSet(for: challenge)
                 } label: {
                     Text(L10n.t("quests.run.finish_set"))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -117,7 +117,7 @@ struct ChallengeRunView: View {
                         .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .foregroundStyle(.primary)
                 }
-                .disabled(!questsStore.isPlankTimerRunning || questsStore.isCompleted(challenge))
+                .disabled(!questsStore.isPlankTimerRunning(for: challenge) || questsStore.isCompleted(challenge))
             }
         }
         .padding(14)
@@ -143,7 +143,7 @@ struct ChallengeRunView: View {
             }
 
             Button {
-                questsStore.undoPushups()
+                questsStore.undoPushups(for: challenge)
             } label: {
                 Text(L10n.t("quests.run.undo"))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -152,7 +152,7 @@ struct ChallengeRunView: View {
                     .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .foregroundStyle(.primary)
             }
-            .disabled(!questsStore.canUndoPushups() || questsStore.isCompleted(challenge))
+            .disabled(!questsStore.canUndoPushups(for: challenge) || questsStore.isCompleted(challenge))
         }
         .padding(14)
         .background(
@@ -167,7 +167,7 @@ struct ChallengeRunView: View {
 
     private func incrementButton(label: String, value: Int) -> some View {
         Button {
-            questsStore.addPushups(value)
+            questsStore.addPushups(value, for: challenge)
         } label: {
             Text(label)
                 .font(.system(size: 15, weight: .bold, design: .rounded))

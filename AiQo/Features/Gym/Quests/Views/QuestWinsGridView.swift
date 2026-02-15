@@ -9,16 +9,18 @@ struct QuestWinsGridView: View {
     ]
 
     var body: some View {
+        let visibleWins = winsStore.wins.filter { !isHiddenWin($0) }
+
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(L10n.t("wins.title"))
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
 
-                if winsStore.wins.isEmpty {
+                if visibleWins.isEmpty {
                     emptyState
                 } else {
                     LazyVGrid(columns: columns, spacing: 14) {
-                        ForEach(winsStore.wins) { win in
+                        ForEach(visibleWins) { win in
                             WinAwardCard(win: win)
                         }
                     }
@@ -51,10 +53,23 @@ struct QuestWinsGridView: View {
                 )
         )
     }
+
+    private func isHiddenWin(_ win: WinRecord) -> Bool {
+        if win.challengeId == "sleep_8h" {
+            return true
+        }
+        if win.challengeId == "active_kcal_600" {
+            return true
+        }
+        guard let challenge = Challenge.all.first(where: { $0.id == win.challengeId }) else {
+            return false
+        }
+        return challenge.metricType == .sleepHours
+    }
 }
 
 private struct WinAwardCard: View {
-    let win: ChallengeWin
+    let win: WinRecord
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -63,7 +78,8 @@ private struct WinAwardCard: View {
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
                 .frame(height: 142)
-                .scaleEffect(1.75)
+                .scaleEffect(1.22)
+                .clipped()
 
             Text(localizedTitle)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -124,6 +140,12 @@ private struct WinAwardCard: View {
             return "\(L10n.t("quests.metric.pushups")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.reps"))"
         case .activeCalories:
             return "\(L10n.t("quests.metric.active")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.kcal"))"
+        case .distanceKilometers:
+            let value = numericValue ?? 0
+            return "\(L10n.t("quests.metric.distance")): \(String(format: "%.1f", locale: Locale.current, value)) \(L10n.t("quests.unit.km"))"
+        case .questCompletions:
+            let ratio = extractedRatio ?? (Int((numericValue ?? 0).rounded()), Challenge.stage2Daily.count)
+            return "\(L10n.t("quests.metric.stage2")): \(ratio.0)/\(ratio.1) \(L10n.t("quests.unit.quests"))"
         }
     }
 
@@ -132,5 +154,24 @@ private struct WinAwardCard: View {
         let pattern = #"[0-9]+(?:\.[0-9]+)?"#
         guard let range = normalized.range(of: pattern, options: .regularExpression) else { return nil }
         return Double(String(normalized[range]))
+    }
+
+    private var extractedRatio: (Int, Int)? {
+        let pattern = #"([0-9]+)\s*/\s*([0-9]+)"#
+        guard
+            let regex = try? NSRegularExpression(pattern: pattern),
+            let match = regex.firstMatch(
+                in: win.proofValue,
+                range: NSRange(win.proofValue.startIndex..., in: win.proofValue)
+            ),
+            match.numberOfRanges == 3,
+            let lhsRange = Range(match.range(at: 1), in: win.proofValue),
+            let rhsRange = Range(match.range(at: 2), in: win.proofValue),
+            let lhs = Int(win.proofValue[lhsRange]),
+            let rhs = Int(win.proofValue[rhsRange])
+        else {
+            return nil
+        }
+        return (lhs, rhs)
     }
 }

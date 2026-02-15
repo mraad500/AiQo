@@ -109,40 +109,21 @@ struct AiQoWidgetView: View {
                         .stroke(Palette.stroke, lineWidth: 1)
                 )
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(Palette.teal)
-                        .frame(width: 7, height: 7)
-                    Text("DAILY")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Palette.textSecondary)
-                    Spacer()
-                    Text("LIVE")
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Palette.textMuted)
-                }
+            Circle()
+                .fill(Palette.glow)
+                .frame(width: 180, height: 180)
+                .blur(radius: 24)
+                .offset(x: 88, y: -22)
 
-                Text(formattedInt(entry.steps))
-                    .font(.system(size: 38, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+            VStack(spacing: 6) {
+                smallAuraGraphic
+                    .frame(width: 108, height: 108)
 
-                progressBar(progress: entry.safeProgress)
-                    .frame(height: 7)
-
-                HStack {
-                    Text("KCAL \(formattedInt(entry.activeCalories))")
-                    Spacer()
-                    Text("STAND \(entry.standPercent)%")
-                }
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(Palette.textSecondary)
-
-                Spacer(minLength: 0)
+                Text(entry.auraPercentText)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(Palette.textSecondary)
             }
-            .padding(14)
+            .padding(12)
         }
     }
 
@@ -177,6 +158,81 @@ struct AiQoWidgetView: View {
                     .frame(width: width)
             }
         }
+    }
+
+    private var smallAuraGraphic: some View {
+        let beige = Color(red: 0.91, green: 0.79, blue: 0.59)
+        let mint = Color(red: 0.64, green: 0.86, blue: 0.81)
+
+        return ZStack {
+            ForEach(WidgetDailyAuraVector.segments) { segment in
+                WidgetAuraArcShape(
+                    radiusRatio: segment.radiusRatio,
+                    startAngle: segment.startAngle,
+                    endAngle: segment.endAngle
+                )
+                .stroke(
+                    segmentBaseColor(segment, beige: beige, mint: mint),
+                    style: StrokeStyle(
+                        lineWidth: segment.lineWidth,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+            }
+
+            ForEach(WidgetDailyAuraVector.segments) { segment in
+                WidgetAuraArcShape(
+                    radiusRatio: segment.radiusRatio,
+                    startAngle: segment.startAngle,
+                    endAngle: segment.endAngle
+                )
+                .trim(from: 0, to: segmentReveal(for: segment, progress: progressForSegment(segment)))
+                .stroke(
+                    segmentActiveColor(segment, beige: beige, mint: mint),
+                    style: StrokeStyle(
+                        lineWidth: segment.lineWidth,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+            }
+
+            Circle()
+                .fill(Color(red: 0.72, green: 0.90, blue: 0.86).opacity(0.26))
+                .frame(width: 8, height: 8)
+
+            Circle()
+                .stroke(Color(red: 0.62, green: 0.87, blue: 0.81).opacity(0.58), lineWidth: 2)
+                .frame(width: 14, height: 14)
+
+            if entry.safeAuraProgress >= 1 {
+                Circle()
+                    .stroke(Color.orange.opacity(0.24), lineWidth: 7)
+                    .frame(width: 114, height: 114)
+                    .blur(radius: 2)
+            }
+        }
+    }
+
+    private func progressForSegment(_ segment: WidgetAuraVectorSegment) -> Double {
+        segment.isGreenGroup ? entry.safeStepsProgress : entry.safeCaloriesProgress
+    }
+
+    private func segmentReveal(for segment: WidgetAuraVectorSegment, progress: Double) -> CGFloat {
+        let stageStart = segment.threshold - 0.25
+        let stageProgress = min(max((progress - stageStart) / 0.25, 0), 1)
+        let smoothedStage = stageProgress * stageProgress * (3 - 2 * stageProgress)
+        let orderedProgress = (smoothedStage * Double(segment.bucketSize)) - Double(segment.bucketOrder)
+        return CGFloat(min(max(orderedProgress, 0), 1))
+    }
+
+    private func segmentBaseColor(_ segment: WidgetAuraVectorSegment, beige: Color, mint: Color) -> Color {
+        segment.isGreenGroup ? mint.opacity(0.30) : beige.opacity(0.35)
+    }
+
+    private func segmentActiveColor(_ segment: WidgetAuraVectorSegment, beige: Color, mint: Color) -> Color {
+        segment.isGreenGroup ? mint.opacity(1.0) : beige.opacity(1.0)
     }
 
     private func formattedInt(_ value: Int) -> String {
@@ -214,6 +270,108 @@ struct AiQoWidgetView: View {
             .foregroundStyle(Palette.textPrimary)
         }
     }
+}
+
+private struct WidgetAuraArcShape: Shape {
+    let radiusRatio: CGFloat
+    let startAngle: Double
+    let endAngle: Double
+
+    func path(in rect: CGRect) -> Path {
+        let size = min(rect.width, rect.height)
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = size * radiusRatio
+        let start = Angle.degrees(startAngle - 90)
+        let end = Angle.degrees(normalizedEndAngle - 90)
+
+        var path = Path()
+        path.addArc(
+            center: center,
+            radius: radius,
+            startAngle: start,
+            endAngle: end,
+            clockwise: false
+        )
+        return path
+    }
+
+    private var normalizedEndAngle: Double {
+        endAngle < startAngle ? endAngle + 360 : endAngle
+    }
+}
+
+private struct WidgetAuraVectorSegment: Identifiable {
+    let id: Int
+    let radiusRatio: CGFloat
+    let startAngle: Double
+    let endAngle: Double
+    let lineWidth: CGFloat
+    let threshold: Double
+    let bucketOrder: Int
+    let bucketSize: Int
+    let isGreenGroup: Bool
+}
+
+private enum WidgetDailyAuraVector {
+    static let segments: [WidgetAuraVectorSegment] = {
+        let defs: [WidgetAuraSegmentDefinition] = [
+            .init(radiusRatio: 0.14, startAngle: 208, endAngle: 244, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+            .init(radiusRatio: 0.14, startAngle: 262, endAngle: 301, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+            .init(radiusRatio: 0.14, startAngle: 334, endAngle: 24, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+            .init(radiusRatio: 0.14, startAngle: 45, endAngle: 86, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+            .init(radiusRatio: 0.14, startAngle: 112, endAngle: 154, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+            .init(radiusRatio: 0.14, startAngle: 174, endAngle: 195, lineWidth: 3.2, stage: 0, isGreenGroup: true),
+
+            .init(radiusRatio: 0.21, startAngle: 196, endAngle: 252, lineWidth: 3.6, stage: 1, isGreenGroup: true),
+            .init(radiusRatio: 0.21, startAngle: 272, endAngle: 324, lineWidth: 3.6, stage: 1, isGreenGroup: true),
+            .init(radiusRatio: 0.21, startAngle: 352, endAngle: 26, lineWidth: 3.6, stage: 1, isGreenGroup: true),
+            .init(radiusRatio: 0.21, startAngle: 66, endAngle: 125, lineWidth: 3.6, stage: 1, isGreenGroup: true),
+            .init(radiusRatio: 0.21, startAngle: 146, endAngle: 170, lineWidth: 3.6, stage: 1, isGreenGroup: true),
+
+            .init(radiusRatio: 0.29, startAngle: 182, endAngle: 350, lineWidth: 4.2, stage: 2, isGreenGroup: true),
+            .init(radiusRatio: 0.29, startAngle: 20, endAngle: 112, lineWidth: 4.2, stage: 2, isGreenGroup: true),
+
+            .init(radiusRatio: 0.36, startAngle: 212, endAngle: 9, lineWidth: 5, stage: 2, isGreenGroup: true),
+            .init(radiusRatio: 0.36, startAngle: 36, endAngle: 164, lineWidth: 5, stage: 2, isGreenGroup: true),
+
+            .init(radiusRatio: 0.43, startAngle: 150, endAngle: 231, lineWidth: 6.5, stage: 3, isGreenGroup: false),
+            .init(radiusRatio: 0.43, startAngle: 283, endAngle: 72, lineWidth: 6.5, stage: 3, isGreenGroup: false),
+            .init(radiusRatio: 0.52, startAngle: 32, endAngle: 126, lineWidth: 6.5, stage: 3, isGreenGroup: false),
+            .init(radiusRatio: 0.52, startAngle: 166, endAngle: 320, lineWidth: 6.5, stage: 3, isGreenGroup: false)
+        ]
+
+        var bucketSizes = [0, 0, 0, 0]
+        for def in defs {
+            bucketSizes[def.stage] += 1
+        }
+        var bucketOffsets = [0, 0, 0, 0]
+
+        return defs.enumerated().map { idx, def in
+            let bucketOrder = bucketOffsets[def.stage]
+            bucketOffsets[def.stage] += 1
+
+            return WidgetAuraVectorSegment(
+                id: idx,
+                radiusRatio: def.radiusRatio,
+                startAngle: def.startAngle,
+                endAngle: def.endAngle,
+                lineWidth: def.lineWidth,
+                threshold: Double(def.stage + 1) * 0.25,
+                bucketOrder: bucketOrder,
+                bucketSize: max(bucketSizes[def.stage], 1),
+                isGreenGroup: def.isGreenGroup
+            )
+        }
+    }()
+}
+
+private struct WidgetAuraSegmentDefinition {
+    let radiusRatio: CGFloat
+    let startAngle: Double
+    let endAngle: Double
+    let lineWidth: CGFloat
+    let stage: Int
+    let isGreenGroup: Bool
 }
 
 private enum Palette {

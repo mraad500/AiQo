@@ -30,7 +30,10 @@ struct AiQoProvider: TimelineProvider {
         let steps = shared?.integer(forKey: "aiqo_steps") ?? 0
         let calories = shared?.integer(forKey: "aiqo_active_cal") ?? 0
         let standPercent = shared?.integer(forKey: "aiqo_stand_percent") ?? 0
-        let goal = shared?.integer(forKey: "aiqo_steps_goal") ?? 10000
+        let rawStepsGoal = shared?.integer(forKey: "aiqo_steps_goal") ?? 0
+        let goal = rawStepsGoal > 0 ? rawStepsGoal : 10000
+        let rawCaloriesGoal = shared?.integer(forKey: "aiqo_active_cal_goal") ?? 0
+        let caloriesGoal = rawCaloriesGoal > 0 ? rawCaloriesGoal : 400
 
         let bpm = shared?.integer(forKey: "aiqo_bpm") ?? 0
         let km = shared?.double(forKey: "aiqo_km") ?? 0
@@ -43,6 +46,7 @@ struct AiQoProvider: TimelineProvider {
             activeCalories: calories,
             standPercent: standPercent,
             stepsGoal: goal,
+            caloriesGoal: caloriesGoal,
             progress: progress,
             heartRate: bpm,
             distanceKm: km

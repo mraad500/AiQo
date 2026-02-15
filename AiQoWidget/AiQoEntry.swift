@@ -7,6 +7,7 @@ struct AiQoEntry: TimelineEntry {
     let activeCalories: Int
     let standPercent: Int
     let stepsGoal: Int
+    let caloriesGoal: Int
     let progress: Double
 
     let heartRate: Int
@@ -20,6 +21,7 @@ extension AiQoEntry {
         activeCalories: 589,
         standPercent: 67,
         stepsGoal: 10000,
+        caloriesGoal: 400,
         progress: 0.3157,
         heartRate: 106,
         distanceKm: 2.61
@@ -34,6 +36,30 @@ extension AiQoEntry {
         let normalized = Double(standPercent) / 100.0
         if normalized.isNaN || normalized.isInfinite { return 0 }
         return min(max(normalized, 0), 1)
+    }
+
+    var safeStepsProgress: Double {
+        let goal = max(stepsGoal, 1)
+        let normalized = Double(max(steps, 0)) / Double(goal)
+        if normalized.isNaN || normalized.isInfinite { return 0 }
+        return min(max(normalized, 0), 1)
+    }
+
+    var safeCaloriesProgress: Double {
+        let goal = max(caloriesGoal, 1)
+        let normalized = Double(max(activeCalories, 0)) / Double(goal)
+        if normalized.isNaN || normalized.isInfinite { return 0 }
+        return min(max(normalized, 0), 1)
+    }
+
+    var safeAuraProgress: Double {
+        let normalized = (safeStepsProgress + safeCaloriesProgress) / 2
+        if normalized.isNaN || normalized.isInfinite { return 0 }
+        return min(max(normalized, 0), 1)
+    }
+
+    var auraPercentText: String {
+        "\(Int((safeAuraProgress * 100).rounded()))%"
     }
 
     var standHoursText: String {

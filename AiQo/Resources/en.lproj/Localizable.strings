@@ -542,12 +542,16 @@
 "quests.unit.h" = "h";
 "quests.unit.steps" = "steps";
 "quests.unit.kcal" = "kcal";
+"quests.unit.km" = "km";
+"quests.unit.quests" = "quests";
 
 "quests.metric.sleep" = "Sleep";
 "quests.metric.steps" = "Steps";
 "quests.metric.plank" = "Plank";
 "quests.metric.pushups" = "Push-ups";
 "quests.metric.active" = "Active kcal";
+"quests.metric.distance" = "Distance";
+"quests.metric.stage2" = "Stage 2";
 
 "quests.challenge.steps.title" = "10K Steps";
 "quests.challenge.steps.subtitle" = "Walk 10,000 steps today";
@@ -578,3 +582,39 @@
 "quests.challenge.active.description" = "Push your activity and reach 600 active kilocalories today.";
 "quests.challenge.active.goal" = "600 Active Energy (kcal)";
 "quests.challenge.active.verify" = "HealthKit Active Energy (Automatic)";
+
+"quests.challenge.s2.steps.title" = "11K Steps";
+"quests.challenge.s2.steps.subtitle" = "Walk 11,000 steps today";
+"quests.challenge.s2.steps.description" = "Move steadily through the day and hit eleven thousand total steps.";
+"quests.challenge.s2.steps.goal" = "11,000 steps during the day";
+"quests.challenge.s2.steps.verify" = "HealthKit Steps (Automatic)";
+
+"quests.challenge.s2.active.title" = "Burn 650 Active kcal";
+"quests.challenge.s2.active.subtitle" = "Burn 650 active energy";
+"quests.challenge.s2.active.description" = "Increase your intensity and hit 650 active kilocalories today.";
+"quests.challenge.s2.active.goal" = "650 Active Energy (kcal)";
+"quests.challenge.s2.active.verify" = "HealthKit Active Energy Burned (Automatic)";
+
+"quests.challenge.s2.pushups.title" = "Push-ups Builder (70)";
+"quests.challenge.s2.pushups.subtitle" = "Accumulate 70 push-ups";
+"quests.challenge.s2.pushups.description" = "Use quick sets across the day until your total reaches 70 reps.";
+"quests.challenge.s2.pushups.goal" = "Total 70 reps during the day";
+"quests.challenge.s2.pushups.verify" = "Manual Counter (Accumulated During Day)";
+
+"quests.challenge.s2.plank.title" = "Plank Ladder (4:00)";
+"quests.challenge.s2.plank.subtitle" = "Accumulate 4:00 plank time";
+"quests.challenge.s2.plank.description" = "Finish multiple sets and accumulate a total of 240 seconds.";
+"quests.challenge.s2.plank.goal" = "Total 240 seconds during the day";
+"quests.challenge.s2.plank.verify" = "Manual Timer (Sets Accumulate During Day)";
+
+"quests.challenge.s2.move.title" = "Move 5KM (Walk + Run)";
+"quests.challenge.s2.move.subtitle" = "Reach 5.0 km today";
+"quests.challenge.s2.move.description" = "Track your walking and running distance and complete 5.0 km.";
+"quests.challenge.s2.move.goal" = "5.0 km total distance";
+"quests.challenge.s2.move.verify" = "HealthKit DistanceWalkingRunning (Automatic)";
+
+"quests.challenge.s2.boss.title" = "Stage 2 Boss";
+"quests.challenge.s2.boss.subtitle" = "Complete 4 of 5 Stage 2 quests";
+"quests.challenge.s2.boss.description" = "Complete any 4 daily Stage 2 quests in the same day.";
+"quests.challenge.s2.boss.goal" = "Complete 4 of 5 Stage 2 quests today";
+"quests.challenge.s2.boss.verify" = "Automatic (Today Stage 2 completions)";
