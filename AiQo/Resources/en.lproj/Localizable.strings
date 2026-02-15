@@ -293,7 +293,7 @@
 
 /* Gym */
 "gym.tab.body" = "Body";
-"gym.tab.vitals" = "Vitals";
+"gym.tab.vitals" = "Quests";
 "gym.tab.plan" = "Plan";
 "gym.tab.wins" = "Wins";
 "gym.tab.recap" = "Recap";
@@ -340,7 +340,7 @@
 /* Tribe */
 "tribe.title" = "Tribe";
 "tribe.segment.global" = "Global";
-"tribe.segment.region" = "Region";
+"tribe.segment.region" = "Arena";
 "tribe.segment.friends" = "Friends";
 "tribe.level.format" = "Level %d";
 "tribe.region.title" = "Region Challenges";
@@ -502,3 +502,79 @@
 "edit_blocked_apps" = "Edit Blocked Apps";
 "stop_protection" = "Stop Protection";
 "start_protection" = "Start Protection";
+
+/* Quests */
+"quests.status.completed" = "Completed";
+"quests.status.tracking" = "Tracking";
+"quests.status.ready" = "Ready";
+
+"quests.detail.goal" = "Goal";
+"quests.detail.verify" = "Verify";
+"quests.detail.reward" = "Reward";
+"quests.detail.reward.hint" = "Award badge unlocked after completion.";
+"quests.detail.tracking_note" = "Tracking mode is active. Progress updates automatically from HealthKit.";
+"quests.detail.completed_today" = "Completed Today";
+"quests.detail.tracking_active" = "Tracking Active";
+"quests.detail.start" = "Start Challenge";
+
+"quests.run.title" = "Challenge Run";
+"quests.run.progress" = "Progress";
+"quests.run.automatic" = "This challenge runs automatically.";
+"quests.run.completed_today" = "Challenge completed for today.";
+"quests.run.plank_session" = "Plank Session";
+"quests.run.preset" = "Preset";
+"quests.run.preset_target" = "Preset Target";
+"quests.run.current_set" = "Current Set";
+"quests.run.timer_running" = "Timer Running...";
+"quests.run.start_timer" = "Start Timer";
+"quests.run.finish_set" = "Finish Set";
+"quests.run.pushups_counter" = "Push-ups Counter";
+"quests.run.undo" = "Undo";
+
+"quests.reward.completed" = "Challenge Completed!";
+"quests.reward.add_to_wins" = "Add to Wins";
+
+"quests.wins.empty_title" = "No wins yet";
+"quests.wins.empty_subtitle" = "Complete a quest and tap Add to Wins to collect your awards.";
+
+"quests.unit.sec" = "sec";
+"quests.unit.reps" = "reps";
+"quests.unit.h" = "h";
+"quests.unit.steps" = "steps";
+"quests.unit.kcal" = "kcal";
+
+"quests.metric.sleep" = "Sleep";
+"quests.metric.steps" = "Steps";
+"quests.metric.plank" = "Plank";
+"quests.metric.pushups" = "Push-ups";
+"quests.metric.active" = "Active kcal";
+
+"quests.challenge.steps.title" = "10K Steps";
+"quests.challenge.steps.subtitle" = "Walk 10,000 steps today";
+"quests.challenge.steps.description" = "Move steadily through your day and hit ten thousand total steps.";
+"quests.challenge.steps.goal" = "10,000 steps during the day";
+"quests.challenge.steps.verify" = "HealthKit Steps (Automatic)";
+
+"quests.challenge.plank.title" = "Plank Ladder";
+"quests.challenge.plank.subtitle" = "Accumulate 3:00 plank time";
+"quests.challenge.plank.description" = "Stack multiple sets until your total plank time reaches 180 seconds.";
+"quests.challenge.plank.goal" = "Total 3:00 plank minutes during the day";
+"quests.challenge.plank.verify" = "In-App Tracking (Manual + Timer)";
+
+"quests.challenge.pushups.title" = "Push-ups Builder";
+"quests.challenge.pushups.subtitle" = "Accumulate 60 push-ups";
+"quests.challenge.pushups.description" = "Build your reps through the day with quick sets and keep adding up.";
+"quests.challenge.pushups.goal" = "Total 60 push-ups during the day";
+"quests.challenge.pushups.verify" = "In-App Tracking (Manual Counter)";
+
+"quests.challenge.sleep.title" = "Sleep 8h";
+"quests.challenge.sleep.subtitle" = "Reach 8 hours time asleep";
+"quests.challenge.sleep.description" = "Complete eight hours of recorded sleep for the day.";
+"quests.challenge.sleep.goal" = "8 hours of Time Asleep";
+"quests.challenge.sleep.verify" = "HealthKit Sleep Analysis (Automatic)";
+
+"quests.challenge.active.title" = "Burn 600 Active kcal";
+"quests.challenge.active.subtitle" = "Burn 600 active energy";
+"quests.challenge.active.description" = "Push your activity and reach 600 active kilocalories today.";
+"quests.challenge.active.goal" = "600 Active Energy (kcal)";
+"quests.challenge.active.verify" = "HealthKit Active Energy (Automatic)";

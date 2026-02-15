@@ -294,7 +294,7 @@
 
 /* Gym */
 "gym.tab.body" = "الجسم";
-"gym.tab.vitals" = "القياسات";
+"gym.tab.vitals" = "التحديات";
 "gym.tab.plan" = "الخطة";
 "gym.tab.wins" = "الإنجازات";
 "gym.tab.recap" = "الملخص";
@@ -341,7 +341,7 @@
 /* Tribe */
 "tribe.title" = "القبيلة";
 "tribe.segment.global" = "العالمي";
-"tribe.segment.region" = "المنطقة";
+"tribe.segment.region" = "Arena";
 "tribe.segment.friends" = "الأصدقاء";
 "tribe.level.format" = "المستوى %d";
 "tribe.region.title" = "تحديات المنطقة";
@@ -501,3 +501,79 @@
 "edit_blocked_apps" = "تعديل التطبيقات المحظورة";
 "stop_protection" = "إيقاف الحماية";
 "start_protection" = "تفعيل الحماية";
+
+/* Quests */
+"quests.status.completed" = "مكتمل";
+"quests.status.tracking" = "متابعة";
+"quests.status.ready" = "جاهز";
+
+"quests.detail.goal" = "الهدف";
+"quests.detail.verify" = "التحقق";
+"quests.detail.reward" = "الجائزة";
+"quests.detail.reward.hint" = "تُفتح شارة الجائزة بعد إكمال التحدي.";
+"quests.detail.tracking_note" = "وضع المتابعة مفعّل. يتم تحديث التقدم تلقائياً من HealthKit.";
+"quests.detail.completed_today" = "مكتمل اليوم";
+"quests.detail.tracking_active" = "المتابعة مفعلة";
+"quests.detail.start" = "ابدأ التحدي";
+
+"quests.run.title" = "تشغيل التحدي";
+"quests.run.progress" = "التقدم";
+"quests.run.automatic" = "هذا التحدي يعمل تلقائياً.";
+"quests.run.completed_today" = "اكتمل التحدي لليوم.";
+"quests.run.plank_session" = "جلسة البلانك";
+"quests.run.preset" = "المدة";
+"quests.run.preset_target" = "الهدف المحدد";
+"quests.run.current_set" = "الجولة الحالية";
+"quests.run.timer_running" = "المؤقت يعمل...";
+"quests.run.start_timer" = "ابدأ المؤقت";
+"quests.run.finish_set" = "إنهاء الجولة";
+"quests.run.pushups_counter" = "عداد الضغط";
+"quests.run.undo" = "تراجع";
+
+"quests.reward.completed" = "تم إكمال التحدي!";
+"quests.reward.add_to_wins" = "أضف إلى الإنجازات";
+
+"quests.wins.empty_title" = "لا توجد إنجازات بعد";
+"quests.wins.empty_subtitle" = "أكمل تحديًا واضغط \"أضف إلى الإنجازات\" لجمع الجوائز.";
+
+"quests.unit.sec" = "ث";
+"quests.unit.reps" = "تكرار";
+"quests.unit.h" = "ساعة";
+"quests.unit.steps" = "خطوة";
+"quests.unit.kcal" = "سعرة";
+
+"quests.metric.sleep" = "النوم";
+"quests.metric.steps" = "الخطوات";
+"quests.metric.plank" = "البلانك";
+"quests.metric.pushups" = "الضغط";
+"quests.metric.active" = "السعرات النشطة";
+
+"quests.challenge.steps.title" = "10K خطوة";
+"quests.challenge.steps.subtitle" = "امشِ 10,000 خطوة اليوم";
+"quests.challenge.steps.description" = "تحرك بثبات خلال يومك وحقق مجموع عشرة آلاف خطوة.";
+"quests.challenge.steps.goal" = "10,000 خطوة خلال اليوم";
+"quests.challenge.steps.verify" = "خطوات HealthKit (تلقائي)";
+
+"quests.challenge.plank.title" = "سلم البلانك";
+"quests.challenge.plank.subtitle" = "اجمع 3:00 دقائق بلانك";
+"quests.challenge.plank.description" = "قسّمها على جولات متعددة حتى يصل المجموع إلى 180 ثانية.";
+"quests.challenge.plank.goal" = "مجموع 3:00 دقائق بلانك خلال اليوم";
+"quests.challenge.plank.verify" = "داخل التطبيق (يدوي + مؤقت)";
+
+"quests.challenge.pushups.title" = "بناء الضغط";
+"quests.challenge.pushups.subtitle" = "اجمع 60 عدة ضغط";
+"quests.challenge.pushups.description" = "ابنِ العدات على مدار اليوم بجولات سريعة وواصل التجميع.";
+"quests.challenge.pushups.goal" = "مجموع 60 عدة ضغط خلال اليوم";
+"quests.challenge.pushups.verify" = "داخل التطبيق (عداد يدوي)";
+
+"quests.challenge.sleep.title" = "نوم 8 ساعات";
+"quests.challenge.sleep.subtitle" = "حقق 8 ساعات نوم فعلي";
+"quests.challenge.sleep.description" = "أكمل ثماني ساعات نوم مسجلة خلال اليوم.";
+"quests.challenge.sleep.goal" = "8 ساعات نوم فعلي";
+"quests.challenge.sleep.verify" = "تحليل النوم من HealthKit (تلقائي)";
+
+"quests.challenge.active.title" = "حرق 600 سعرة نشطة";
+"quests.challenge.active.subtitle" = "احرق 600 سعرة نشطة";
+"quests.challenge.active.description" = "ارفع نشاطك وحقق 600 سعرة حرارية نشطة اليوم.";
+"quests.challenge.active.goal" = "600 سعرة نشطة";
+"quests.challenge.active.verify" = "السعرات النشطة من HealthKit (تلقائي)";

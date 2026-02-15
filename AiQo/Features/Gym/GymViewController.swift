@@ -48,9 +48,17 @@ struct GymView: View {
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var showFootballSheet = false   // ✅ جديد
+    @StateObject private var winsStore: WinsStore
+    @StateObject private var questsStore: QuestsStore
 
     @Namespace private var animation
     private let topTabBarHeight: CGFloat = 72
+
+    init() {
+        let winsStore = WinsStore()
+        _winsStore = StateObject(wrappedValue: winsStore)
+        _questsStore = StateObject(wrappedValue: QuestsStore(winsStore: winsStore))
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -81,6 +89,8 @@ struct GymView: View {
                 // Content Area
                 TabContentView(
                     selectedTab: selectedTab,
+                    questsStore: questsStore,
+                    winsStore: winsStore,
                     onSelectExercise: handleExerciseSelection
                 )
                     .padding(.top, 24)
@@ -195,6 +205,8 @@ private func configureSegmentedAppearance() {
 // MARK: - Tab Content View
 struct TabContentView: View {
     let selectedTab: GymTab
+    @ObservedObject var questsStore: QuestsStore
+    @ObservedObject var winsStore: WinsStore
     var onSelectExercise: (GymExercise) -> Void
 
     var body: some View {
@@ -207,13 +219,15 @@ struct TabContentView: View {
                 .transition(.opacity)
 
             case .vitals:
-                GuinnessEncyclopediaView().transition(.opacity)
+                QuestsRootView(questsStore: questsStore)
+                    .transition(.opacity)
 
             case .plan:
                 MyPlanView().transition(.opacity)
 
             case .wins:
-                WinsView().transition(.opacity)
+                QuestWinsGridView(winsStore: winsStore)
+                    .transition(.opacity)
 
             case .recap:
                 RecapView().transition(.opacity)

@@ -29,7 +29,7 @@ enum TribeSegment: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .global: return NSLocalizedString("tribe.segment.global", value: "Global", comment: "")
-        case .region: return NSLocalizedString("tribe.segment.region", value: "Region", comment: "")
+        case .region: return NSLocalizedString("tribe.segment.region", value: "Arena", comment: "")
         case .friends: return NSLocalizedString("tribe.segment.friends", value: "Friends", comment: "")
         }
     }
