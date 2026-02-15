@@ -37,7 +37,7 @@ struct StageSelectorBar: View {
             .onAppear {
                 proxy.scrollTo(selectedStageNumber, anchor: .center)
             }
-            .onChange(of: selectedStageNumber) { newValue in
+            .onChange(of: selectedStageNumber) { _, newValue in
                 withAnimation(.easeInOut(duration: 0.2)) {
                     proxy.scrollTo(newValue, anchor: .center)
                 }
