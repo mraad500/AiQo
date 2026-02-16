@@ -155,7 +155,8 @@ struct GymView: View {
         activeSession = LiveWorkoutSession(
             title: exercise.title,
             activityType: exercise.type,
-            locationType: exercise.location
+            locationType: exercise.location,
+            coachingProfile: exercise.coachingProfile
         )
         selectedExercise = exercise
     }
@@ -170,7 +171,8 @@ struct GymView: View {
         let session = LiveWorkoutSession(
             title: exercise.title,
             activityType: exercise.type,
-            locationType: exercise.location
+            locationType: exercise.location,
+            coachingProfile: exercise.coachingProfile
         )
         activeSession = session
         return session

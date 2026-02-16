@@ -212,7 +212,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Shared/SharedModels.swift,
-				watch/WCCommands.swift,
 				watch/WCKeys.swift,
 				XPCalculator.swift,
 			);

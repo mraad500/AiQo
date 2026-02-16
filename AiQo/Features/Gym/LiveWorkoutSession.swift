@@ -4,6 +4,7 @@
 // ===============================================
 
 import Foundation
+import AVFoundation
 import HealthKit
 import SwiftUI
 import UIKit
@@ -21,9 +22,18 @@ final class LiveWorkoutSession: ObservableObject {
         case ending     // Saving workout
     }
 
+    enum Zone2AuraState: Equatable {
+        case inactive
+        case warmingUp
+        case inZone2
+        case tooFast
+        case tooSlow
+    }
+
     // MARK: - Configuration
     let activityType: HKWorkoutActivityType
     let locationType: HKWorkoutSessionLocationType
+    let coachingProfile: WorkoutCoachingProfile
     
     // MARK: - Managers
     private let connectivity = PhoneConnectivityManager.shared
@@ -40,6 +50,11 @@ final class LiveWorkoutSession: ObservableObject {
     @Published var activeEnergy: Double = 0
     @Published var distanceMeters: Double = 0
     @Published var elapsedSeconds: Int = 0
+
+    @Published private(set) var zone2AuraState: Zone2AuraState = .inactive
+    @Published private(set) var zone2LowerBoundBPM: Double = 0
+    @Published private(set) var zone2UpperBoundBPM: Double = 0
+    @Published private(set) var resolvedUserAge: Int = 0
     
     @Published var isWatchReachable: Bool = false
     
@@ -53,6 +68,10 @@ final class LiveWorkoutSession: ObservableObject {
     // Private tracking
     private var lastRecordedKm: Int = 0
     private var cancellables = Set<AnyCancellable>()
+    private let zone2WarmupDuration: Int = 300
+    private let zone2AudioCooldown: TimeInterval = 120
+    private let zone2AudioCoach = Zone2AudioCoach()
+    private var lastZone2CueAt: Date?
     
     // MARK: - Computed Properties
     
@@ -70,18 +89,41 @@ final class LiveWorkoutSession: ObservableObject {
     var canEnd: Bool { phase == .running || phase == .paused }
     var canPause: Bool { phase == .running }
     var canResume: Bool { phase == .paused }
+
+    var isZone2GuidedWorkout: Bool {
+        coachingProfile == .captainHamoudiZone2
+    }
+
+    var isZone2WarmupActive: Bool {
+        isZone2GuidedWorkout && elapsedSeconds < zone2WarmupDuration
+    }
+
+    var zone2WarmupRemainingSeconds: Int {
+        max(zone2WarmupDuration - elapsedSeconds, 0)
+    }
+
+    var zone2RangeLabel: String {
+        guard isZone2GuidedWorkout else { return "--" }
+        let lower = Int(zone2LowerBoundBPM.rounded())
+        let upper = Int(zone2UpperBoundBPM.rounded())
+        return "\(lower)-\(upper) BPM"
+    }
     
     // MARK: - Initialization
     
     init(
         title: String = "Gym Workout",
         activityType: HKWorkoutActivityType = .other,
-        locationType: HKWorkoutSessionLocationType = .unknown
+        locationType: HKWorkoutSessionLocationType = .unknown,
+        coachingProfile: WorkoutCoachingProfile = .standard
     ) {
         self.title = title
         self.activityType = activityType
         self.locationType = locationType
+        self.coachingProfile = coachingProfile
         
+        refreshZone2Configuration()
+        zone2AuraState = isZone2GuidedWorkout ? .warmingUp : .inactive
         setupBindings()
     }
 
@@ -101,6 +143,7 @@ final class LiveWorkoutSession: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] value in
                 self?.heartRate = value
+                self?.evaluateZone2Coaching()
                 self?.pushLiveActivityUpdateIfNeeded()
             }
             .store(in: &cancellables)
@@ -134,6 +177,7 @@ final class LiveWorkoutSession: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] value in
                 self?.elapsedSeconds = value
+                self?.evaluateZone2Coaching()
                 self?.pushLiveActivityUpdateIfNeeded()
             }
             .store(in: &cancellables)
@@ -187,6 +231,7 @@ final class LiveWorkoutSession: ObservableObject {
     func startFromPhone() {
         guard canStart else { return }
         
+        refreshZone2Configuration()
         // Reset state for new workout
         resetWorkoutState()
         
@@ -215,6 +260,7 @@ final class LiveWorkoutSession: ObservableObject {
                     withAnimation(.snappy) {
                         self.phase = .running
                     }
+                    self.evaluateZone2Coaching()
                     self.liveActivity.start(title: self.title)
                     self.pushLiveActivityUpdateIfNeeded(force: true)
                 }
@@ -251,6 +297,7 @@ final class LiveWorkoutSession: ObservableObject {
             withAnimation(.snappy) {
                 self.phase = .running
             }
+            self.evaluateZone2Coaching()
             self.liveActivity.start(title: self.title)
             self.pushLiveActivityUpdateIfNeeded(force: true)
         }
@@ -262,6 +309,7 @@ final class LiveWorkoutSession: ObservableObject {
     func startFromPhone(with configuration: HKWorkoutConfiguration) {
         guard canStart else { return }
         
+        refreshZone2Configuration()
         resetWorkoutState()
         
         withAnimation { phase = .starting }
@@ -277,6 +325,7 @@ final class LiveWorkoutSession: ObservableObject {
                     withAnimation(.snappy) {
                         self.phase = .running
                     }
+                    self.evaluateZone2Coaching()
                     self.liveActivity.start(title: self.title)
                     self.pushLiveActivityUpdateIfNeeded(force: true)
                 }
@@ -292,6 +341,8 @@ final class LiveWorkoutSession: ObservableObject {
     func pauseFromPhone() {
         guard canPause else { return }
         withAnimation(.snappy) { phase = .paused }
+        zone2AudioCoach.stop()
+        evaluateZone2Coaching()
         pushLiveActivityUpdateIfNeeded(force: true)
         // Note: You may want to send a pause command to Watch via WCSession
         // connectivity.sendCommand(["command": "pauseWorkout"])
@@ -300,6 +351,7 @@ final class LiveWorkoutSession: ObservableObject {
     func resumeFromPhone() {
         guard canResume else { return }
         withAnimation(.snappy) { phase = .running }
+        evaluateZone2Coaching()
         pushLiveActivityUpdateIfNeeded(force: true)
         // Note: You may want to send a resume command to Watch via WCSession
         // connectivity.sendCommand(["command": "resumeWorkout"])
@@ -310,6 +362,8 @@ final class LiveWorkoutSession: ObservableObject {
     func endFromPhone() {
         guard canEnd else { return }
         withAnimation(.snappy) { phase = .ending }
+        zone2AudioCoach.stop()
+        evaluateZone2Coaching()
         pushLiveActivityUpdateIfNeeded(force: true)
         
         // Send stop command to Watch
@@ -341,6 +395,89 @@ final class LiveWorkoutSession: ObservableObject {
         lastRecordedKm = 0
         showMilestoneAlert = false
         milestoneAlertText = ""
+        lastZone2CueAt = nil
+        zone2AudioCoach.stop()
+        zone2AuraState = isZone2GuidedWorkout ? .warmingUp : .inactive
+    }
+
+    private func refreshZone2Configuration() {
+        guard isZone2GuidedWorkout else {
+            resolvedUserAge = 0
+            zone2LowerBoundBPM = 0
+            zone2UpperBoundBPM = 0
+            return
+        }
+
+        let age = resolveUserAge()
+        resolvedUserAge = age
+        let maxHeartRate = max(100, 220 - age)
+        zone2LowerBoundBPM = Double(maxHeartRate) * 0.60
+        zone2UpperBoundBPM = Double(maxHeartRate) * 0.70
+    }
+
+    private func resolveUserAge() -> Int {
+        let profile = UserProfileStore.shared.current
+        if (13...100).contains(profile.age) {
+            return profile.age
+        }
+
+        if let birthDate = profile.birthDate {
+            let age = Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 30
+            if (13...100).contains(age) {
+                return age
+            }
+        }
+
+        return 30
+    }
+
+    private func evaluateZone2Coaching() {
+        guard isZone2GuidedWorkout else {
+            zone2AuraState = .inactive
+            return
+        }
+
+        if phase == .idle || phase == .starting {
+            zone2AuraState = .warmingUp
+            return
+        }
+
+        let upper = zone2UpperBoundBPM
+        let lower = zone2LowerBoundBPM
+        let nextState: Zone2AuraState
+
+        if heartRate > upper {
+            nextState = .tooFast
+        } else if elapsedSeconds < zone2WarmupDuration {
+            nextState = .warmingUp
+        } else if heartRate < lower {
+            nextState = .tooSlow
+        } else {
+            nextState = .inZone2
+        }
+
+        guard nextState != zone2AuraState else { return }
+        zone2AuraState = nextState
+
+        guard phase == .running else { return }
+        switch nextState {
+        case .tooFast:
+            playZone2CueIfNeeded(.slowDown)
+        case .tooSlow:
+            playZone2CueIfNeeded(.speedUp)
+        case .inactive, .warmingUp, .inZone2:
+            break
+        }
+    }
+
+    private func playZone2CueIfNeeded(_ cue: Zone2AudioCoach.Cue) {
+        let now = Date()
+        if let lastZone2CueAt, now.timeIntervalSince(lastZone2CueAt) < zone2AudioCooldown {
+            return
+        }
+
+        zone2AudioCoach.play(cue: cue)
+        lastZone2CueAt = now
     }
 
     private func pushLiveActivityUpdateIfNeeded(force: Bool = false) {
@@ -364,6 +501,69 @@ final class LiveWorkoutSession: ObservableObject {
             phase: activityPhase,
             force: force
         )
+    }
+}
+
+@MainActor
+private final class Zone2AudioCoach {
+    enum Cue {
+        case slowDown
+        case speedUp
+
+        var assetBaseName: String {
+            switch self {
+            case .slowDown: return "slow_down_zone2"
+            case .speedUp: return "speed_up_zone2"
+            }
+        }
+    }
+
+    private var player: AVAudioPlayer?
+
+    func play(cue: Cue) {
+        guard let data = loadAudioData(named: cue.assetBaseName) else { return }
+        configureAudioSessionIfNeeded()
+
+        do {
+            let nextPlayer = try AVAudioPlayer(data: data)
+            nextPlayer.prepareToPlay()
+            nextPlayer.play()
+            player = nextPlayer
+        } catch {
+            // Coaching should continue silently if audio playback fails.
+        }
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+    }
+
+    private func loadAudioData(named baseName: String) -> Data? {
+        if let dataset = NSDataAsset(name: baseName) {
+            return dataset.data
+        }
+
+        for ext in ["mp3", "m4a", "wav"] {
+            guard let url = Bundle.main.url(forResource: baseName, withExtension: ext) else {
+                continue
+            }
+            if let data = try? Data(contentsOf: url) {
+                return data
+            }
+        }
+
+        return nil
+    }
+
+    private func configureAudioSessionIfNeeded() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true, options: [])
+        } catch {
+            // Fallback to silent coaching when the audio session cannot be configured.
+        }
     }
 }
 

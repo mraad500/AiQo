@@ -299,6 +299,8 @@
 "gym.tab.wins" = "الإنجازات";
 "gym.tab.recap" = "الملخص";
 
+"gym.exercise.cardio_captain_hamoudi" = "كارديو ويا الكابتن حمّودي";
+"gym.exercise.cardio_captain_hamoudi.subtitle" = "نبض Zone 2 لحرق دهون مثالي";
 "gym.exercise.running" = "الجري";
 "gym.exercise.walking" = "المشي";
 "gym.exercise.cycling" = "الدراجات";
@@ -320,6 +322,15 @@
 "gym.exercise.martial_arts" = "فنون قتالية";
 "gym.exercise.jump_rope" = "نط الحبل";
 "gym.exercise.other" = "تمرين";
+
+"gym.zone2.card.title" = "Aura الكابتن حمّودي";
+"gym.zone2.target" = "هدف Zone 2: %@";
+"gym.zone2.warmup_remaining" = "الإحماء: باقي %@";
+"gym.zone2.state.inactive" = "جاهز لـ Zone 2";
+"gym.zone2.state.warming_up" = "مرحلة الإحماء";
+"gym.zone2.state.in_zone" = "داخل Zone 2";
+"gym.zone2.state.too_fast" = "أسرع من المطلوب";
+"gym.zone2.state.too_slow" = "أبطأ من المطلوب";
 
 "gym.recap.empty" = "لا توجد تمارين بعد.";
 "gym.recap.device" = "الجهاز";

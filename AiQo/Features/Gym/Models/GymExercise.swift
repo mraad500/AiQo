@@ -2,33 +2,49 @@ import Foundation
 import HealthKit
 import SwiftUI
 
+enum WorkoutCoachingProfile: Hashable {
+    case standard
+    case captainHamoudiZone2
+}
+
 // MARK: - Gym Exercise Model
 struct GymExercise: Identifiable, Hashable {
     let id: UUID
     let titleKey: String
+    let subtitleKey: String?
     let type: HKWorkoutActivityType
     let location: HKWorkoutSessionLocationType
     let icon: String
     let tint: Color
+    let coachingProfile: WorkoutCoachingProfile
 
     init(
         id: UUID = UUID(),
         titleKey: String,
+        subtitleKey: String? = nil,
         type: HKWorkoutActivityType,
         location: HKWorkoutSessionLocationType = .indoor,
         icon: String = "figure.mixed.cardio",
-        tint: Color = .aiqoBeige
+        tint: Color = .aiqoBeige,
+        coachingProfile: WorkoutCoachingProfile = .standard
     ) {
         self.id = id
         self.titleKey = titleKey
+        self.subtitleKey = subtitleKey
         self.type = type
         self.location = location
         self.icon = icon
         self.tint = tint
+        self.coachingProfile = coachingProfile
     }
 
     var title: String {
         L10n.t(titleKey)
+    }
+
+    var subtitle: String? {
+        guard let subtitleKey else { return nil }
+        return L10n.t(subtitleKey)
     }
 
     // MARK: - Hashable
@@ -46,6 +62,15 @@ extension GymExercise {
 
     /// Workout list used by the Body tab cards.
     static let samples: [GymExercise] = [
+        GymExercise(
+            titleKey: "gym.exercise.cardio_captain_hamoudi",
+            subtitleKey: "gym.exercise.cardio_captain_hamoudi.subtitle",
+            type: .mixedCardio,
+            location: .outdoor,
+            icon: "figure.run.circle.fill",
+            tint: .aiqoMint,
+            coachingProfile: .captainHamoudiZone2
+        ),
         GymExercise(
             titleKey: "gym.exercise.running",
             type: .running,

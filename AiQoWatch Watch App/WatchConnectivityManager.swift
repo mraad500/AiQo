@@ -7,6 +7,9 @@ import Foundation
 import WatchConnectivity
 import HealthKit
 import Combine
+#if canImport(WatchKit)
+import WatchKit
+#endif
 
 #if os(watchOS)
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
@@ -153,6 +156,11 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.lastMessage = data.description
         }
+
+        if let event = data["event"] as? String {
+            handleVisionCoachEvent(event)
+            return
+        }
         
         // Handle stop command
         if let command = data["command"] as? String {
@@ -204,6 +212,38 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                     locationType: locationType
                 )
             }
+        }
+    }
+
+    private func handleVisionCoachEvent(_ event: String) {
+        DispatchQueue.main.async {
+            switch event {
+            case "rep_detected":
+                self.playRepDetectedHaptic()
+            case "challenge_completed":
+                self.playChallengeCompletedHaptic()
+            default:
+                break
+            }
+        }
+    }
+
+    private func playRepDetectedHaptic() {
+        let device = WKInterfaceDevice.current()
+        device.play(.directionUp)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.07) {
+            WKInterfaceDevice.current().play(.click)
+        }
+    }
+
+    private func playChallengeCompletedHaptic() {
+        let device = WKInterfaceDevice.current()
+        device.play(.success)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+            WKInterfaceDevice.current().play(.success)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+            WKInterfaceDevice.current().play(.directionUp)
         }
     }
 }

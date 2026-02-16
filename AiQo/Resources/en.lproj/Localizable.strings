@@ -298,6 +298,8 @@
 "gym.tab.wins" = "Wins";
 "gym.tab.recap" = "Recap";
 
+"gym.exercise.cardio_captain_hamoudi" = "Cardio with Captain Hamoudi";
+"gym.exercise.cardio_captain_hamoudi.subtitle" = "Zone 2 heart rate for optimal fat burning";
 "gym.exercise.running" = "Running";
 "gym.exercise.walking" = "Walking";
 "gym.exercise.cycling" = "Cycling";
@@ -319,6 +321,15 @@
 "gym.exercise.martial_arts" = "Martial Arts";
 "gym.exercise.jump_rope" = "Jump Rope";
 "gym.exercise.other" = "Workout";
+
+"gym.zone2.card.title" = "Captain Hamoudi Aura";
+"gym.zone2.target" = "Zone 2 target: %@";
+"gym.zone2.warmup_remaining" = "Warm-up: %@ remaining";
+"gym.zone2.state.inactive" = "Ready for Zone 2";
+"gym.zone2.state.warming_up" = "Warming Up";
+"gym.zone2.state.in_zone" = "In Zone 2";
+"gym.zone2.state.too_fast" = "Too Fast";
+"gym.zone2.state.too_slow" = "Too Slow";
 
 "gym.recap.empty" = "No workouts yet.";
 "gym.recap.device" = "Device";

@@ -93,6 +93,9 @@ struct Challenge: Identifiable, Codable, Hashable {
             return false
         }
     }
+    var opensVisionCoach: Bool {
+        id == "pushups_60" || id == "s2_pushups_70"
+    }
 
     static let stage1: [Challenge] = [
         Challenge(

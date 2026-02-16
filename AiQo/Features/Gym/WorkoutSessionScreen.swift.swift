@@ -49,6 +49,16 @@ struct WorkoutSessionScreen: View {
                                         .fill(WorkoutTheme.pastelBeige)
                                         .shadow(color: WorkoutTheme.pastelBeige.opacity(0.4), radius: 20, x: 0, y: 0)
                                 )
+
+                            if session.isZone2GuidedWorkout {
+                                Zone2AuraCard(
+                                    auraState: session.zone2AuraState,
+                                    rangeLabel: session.zone2RangeLabel,
+                                    warmupRemainingSeconds: session.zone2WarmupRemainingSeconds,
+                                    heartRate: session.heartRate
+                                )
+                                .padding(.horizontal, 20)
+                            }
                             
                             // --- Stats Grid ---
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
@@ -325,6 +335,154 @@ struct StatCard: View {
                 tapRotation = 0.0
             }
         }
+    }
+}
+
+struct Zone2AuraCard: View {
+    let auraState: LiveWorkoutSession.Zone2AuraState
+    let rangeLabel: String
+    let warmupRemainingSeconds: Int
+    let heartRate: Double
+
+    @State private var pulse = false
+
+    private var titleText: String {
+        switch auraState {
+        case .inactive:
+            return L10n.t("gym.zone2.state.inactive")
+        case .warmingUp:
+            return L10n.t("gym.zone2.state.warming_up")
+        case .inZone2:
+            return L10n.t("gym.zone2.state.in_zone")
+        case .tooFast:
+            return L10n.t("gym.zone2.state.too_fast")
+        case .tooSlow:
+            return L10n.t("gym.zone2.state.too_slow")
+        }
+    }
+
+    private var iconName: String {
+        switch auraState {
+        case .inactive: return "waveform.path.ecg"
+        case .warmingUp: return "figure.walk"
+        case .inZone2: return "checkmark.seal.fill"
+        case .tooFast: return "hare.fill"
+        case .tooSlow: return "tortoise.fill"
+        }
+    }
+
+    private var auraColors: [Color] {
+        switch auraState {
+        case .inactive:
+            return [Color.gray.opacity(0.35), Color.gray.opacity(0.15)]
+        case .warmingUp:
+            return [Color.orange.opacity(0.85), Color.yellow.opacity(0.45)]
+        case .inZone2:
+            return [Color.green.opacity(0.85), Color.mint.opacity(0.45)]
+        case .tooFast:
+            return [Color.red.opacity(0.85), Color.orange.opacity(0.45)]
+        case .tooSlow:
+            return [Color.blue.opacity(0.85), Color.cyan.opacity(0.45)]
+        }
+    }
+
+    private var pulseDuration: Double {
+        switch auraState {
+        case .inactive: return 2.2
+        case .warmingUp: return 1.9
+        case .inZone2: return 1.5
+        case .tooFast: return 0.8
+        case .tooSlow: return 1.1
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Text(L10n.t("gym.zone2.card.title"))
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(Int(heartRate.rounded())) BPM")
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .foregroundStyle(.white.opacity(0.88))
+            }
+
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(auraColors[1])
+                        .frame(width: 70, height: 70)
+                        .scaleEffect(pulse ? 1.20 : 0.80)
+
+                    Circle()
+                        .stroke(auraColors[0], lineWidth: 2.0)
+                        .frame(width: 54, height: 54)
+                        .scaleEffect(pulse ? 1.10 : 0.86)
+
+                    Circle()
+                        .fill(auraColors[0])
+                        .frame(width: 22, height: 22)
+                        .shadow(color: auraColors[0], radius: 14, x: 0, y: 0)
+                }
+                .frame(width: 70, height: 70)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(titleText)
+                        .font(.system(.title3, design: .rounded).weight(.heavy))
+                        .foregroundStyle(.white)
+
+                    Text(String(format: L10n.t("gym.zone2.target"), rangeLabel))
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.86))
+
+                    if auraState == .warmingUp {
+                        Text(String(format: L10n.t("gym.zone2.warmup_remaining"), formatTime(warmupRemainingSeconds)))
+                            .font(.system(.footnote, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.78))
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.62), auraColors[0].opacity(0.35)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+        )
+        .onAppear {
+            restartPulseAnimation()
+        }
+        .onChange(of: auraState) { _, _ in
+            restartPulseAnimation()
+        }
+    }
+
+    private func restartPulseAnimation() {
+        pulse = false
+        withAnimation(.easeInOut(duration: pulseDuration).repeatForever(autoreverses: true)) {
+            pulse = true
+        }
+    }
+
+    private func formatTime(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remaining = seconds % 60
+        return String(format: "%02d:%02d", minutes, remaining)
     }
 }
 

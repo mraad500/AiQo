@@ -3,6 +3,7 @@ import SwiftUI
 struct QuestsView: View {
     @ObservedObject var questsStore: QuestDailyStore
     @State private var selectedStageNumber = 1
+    @State private var visionCoachChallenge: Challenge?
 
     private let stages = ChallengeStage.all
 
@@ -16,12 +17,21 @@ struct QuestsView: View {
 
                     if !stageChallenges.isEmpty {
                         ForEach(stageChallenges) { challenge in
-                            NavigationLink {
-                                ChallengeDetailView(challenge: challenge, questsStore: questsStore)
-                            } label: {
-                                ChallengeCard(challenge: challenge, questsStore: questsStore)
+                            if challenge.opensVisionCoach {
+                                Button {
+                                    visionCoachChallenge = challenge
+                                } label: {
+                                    ChallengeCard(challenge: challenge, questsStore: questsStore)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                NavigationLink {
+                                    ChallengeDetailView(challenge: challenge, questsStore: questsStore)
+                                } label: {
+                                    ChallengeCard(challenge: challenge, questsStore: questsStore)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     } else {
                         ForEach(0..<Challenge.stage1.count, id: \.self) { index in
@@ -44,6 +54,9 @@ struct QuestsView: View {
             .presentationDetents([.fraction(0.46)])
             .presentationDragIndicator(.hidden)
             .interactiveDismissDisabled(true)
+        }
+        .fullScreenCover(item: $visionCoachChallenge) { challenge in
+            VisionCoachView(challenge: challenge, questsStore: questsStore)
         }
     }
 

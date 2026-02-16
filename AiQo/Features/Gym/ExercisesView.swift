@@ -41,11 +41,19 @@ struct ExerciseRowCard: View {
 
     var body: some View {
         HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.title)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.black)
+                    .lineLimit(1)
 
-            Text(exercise.title)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.black)
-                .lineLimit(1)
+                if let subtitle = exercise.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.black.opacity(0.72))
+                        .lineLimit(2)
+                }
+            }
 
             Spacer()
 

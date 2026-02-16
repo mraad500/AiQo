@@ -9,6 +9,10 @@ import HealthKit
 internal import Combine
 
 class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
+    enum VisionCoachEvent: String {
+        case repDetected = "rep_detected"
+        case challengeCompleted = "challenge_completed"
+    }
     
     // MARK: - Singleton
     static let shared = PhoneConnectivityManager()
@@ -113,6 +117,22 @@ class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     
     func resumeWorkoutOnWatch() {
         sendCommand(["command": "resumeWorkout"])
+    }
+
+    func sendVisionCoachEvent(_ event: VisionCoachEvent) {
+        guard WCSession.default.activationState == .activated else { return }
+
+        let payload: [String: Any] = [
+            "event": event.rawValue
+        ]
+
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil) { error in
+                print("📱 [PhoneConnectivity] Vision event send error: \(error.localizedDescription)")
+            }
+        } else {
+            WCSession.default.transferUserInfo(payload)
+        }
     }
 
     // MARK: - Send Command Helper
