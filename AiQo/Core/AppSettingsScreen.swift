@@ -4,6 +4,7 @@ import UserNotifications
 struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
+    @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
 
     var body: some View {
         Form {
@@ -37,6 +38,20 @@ struct AppSettingsScreen: View {
                         }
                     }
                 )
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Coach Language / لغة الكابتن")
+                        .font(.subheadline.weight(.semibold))
+
+                    Picker("Coach Language / لغة الكابتن", selection: $notificationLanguage) {
+                        Text("Arabic")
+                            .tag(CoachNotificationLanguage.arabic.rawValue)
+                        Text("English")
+                            .tag(CoachNotificationLanguage.english.rawValue)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .padding(.vertical, 4)
             }
 
             Section(
@@ -104,6 +119,14 @@ struct AppSettingsScreen: View {
             )
         )
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if UserDefaults.standard.string(forKey: "notificationLanguage") == nil {
+                let inferred = NotificationPreferencesStore.shared.language == .english
+                    ? CoachNotificationLanguage.english
+                    : CoachNotificationLanguage.arabic
+                notificationLanguage = inferred.rawValue
+            }
+        }
         .onChange(of: notificationsEnabled) { _, enabled in
             AppSettingsStore.shared.notificationsEnabled = enabled
 
@@ -117,11 +140,20 @@ struct AppSettingsScreen: View {
         }
         .onChange(of: appLanguage) { _, language in
             LocalizationManager.shared.setLanguage(language)
-            NotificationPreferencesStore.shared.language = language == .english ? .english : .arabic
 
             if notificationsEnabled {
                 rescheduleNotifications(language: language)
             }
+
+            if UserDefaults.standard.string(forKey: "notificationLanguage") == nil {
+                notificationLanguage = language == .english
+                    ? CoachNotificationLanguage.english.rawValue
+                    : CoachNotificationLanguage.arabic.rawValue
+            }
+        }
+        .onChange(of: notificationLanguage) { _, language in
+            let normalized = CoachNotificationLanguage(rawValue: language) ?? .arabic
+            NotificationPreferencesStore.shared.language = normalized == .english ? .english : .arabic
         }
     }
 

@@ -15,7 +15,16 @@ struct WorkoutSessionScreen: View {
     @StateObject private var music = WorkoutMusicController()
     
     @State private var showSummary = false
-    @State private var summaryData: (duration: TimeInterval, calories: Double, avgHeartRate: Double)?
+    @State private var showActiveRecovery = false
+    @State private var summaryData: (
+        duration: TimeInterval,
+        calories: Double,
+        avgHeartRate: Double,
+        recovery1: Int?,
+        recovery2: Int?
+    )?
+    @State private var activeRecoveryContext: ActiveRecoveryContext?
+    @State private var pendingRecoveryResult: PendingRecoveryResult?
 
     var body: some View {
         ZStack {
@@ -211,7 +220,40 @@ struct WorkoutSessionScreen: View {
                     calories: data.calories,
                     avgHeartRate: data.avgHeartRate,
                     heartRateSamples: [],
+                    recovery1: data.recovery1,
+                    recovery2: data.recovery2,
                     onDismiss: { showSummary = false }
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showActiveRecovery) {
+            Group {
+                if let context = activeRecoveryContext {
+                    ActiveRecoveryView(
+                        session: session,
+                        peakHeartRate: context.peakHeartRate
+                    ) { recovery1, recovery2 in
+                        pendingRecoveryResult = PendingRecoveryResult(
+                            snapshot: context.snapshot,
+                            recovery1: recovery1,
+                            recovery2: recovery2
+                        )
+                        showActiveRecovery = false
+                        activeRecoveryContext = nil
+                    }
+                } else {
+                    Color.clear
+                }
+            }
+        }
+        .onChange(of: showActiveRecovery) { _, isPresented in
+            guard !isPresented, let pendingRecoveryResult else { return }
+            self.pendingRecoveryResult = nil
+            DispatchQueue.main.async {
+                completeWorkout(
+                    snapshot: pendingRecoveryResult.snapshot,
+                    recovery1: pendingRecoveryResult.recovery1,
+                    recovery2: pendingRecoveryResult.recovery2
                 )
             }
         }
@@ -237,24 +279,83 @@ struct WorkoutSessionScreen: View {
         let finalAvgHR = session.heartRate
         let finalDistance = session.distanceMeters
         let estimatedSteps = max(Int((finalDistance / 1000.0) * 1300.0), 0)
+        let snapshot = WorkoutCompletionSnapshot(
+            duration: finalDuration,
+            calories: finalCalories,
+            avgHeartRate: finalAvgHR,
+            distanceMeters: finalDistance,
+            estimatedSteps: estimatedSteps,
+            workoutTitle: session.title
+        )
 
-        self.summaryData = (finalDuration, finalCalories, finalAvgHR)
-        session.endFromPhone()
         music.onWorkoutEnd()
+
+        if isCaptainHamoudiCardioWorkout {
+            activeRecoveryContext = ActiveRecoveryContext(
+                snapshot: snapshot,
+                peakHeartRate: finalAvgHR
+            )
+            showActiveRecovery = true
+            return
+        }
+
+        completeWorkout(snapshot: snapshot, recovery1: nil, recovery2: nil)
+    }
+
+    private func completeWorkout(
+        snapshot: WorkoutCompletionSnapshot,
+        recovery1: Int?,
+        recovery2: Int?
+    ) {
+        summaryData = (
+            duration: snapshot.duration,
+            calories: snapshot.calories,
+            avgHeartRate: snapshot.avgHeartRate,
+            recovery1: recovery1,
+            recovery2: recovery2
+        )
+
+        session.endFromPhone()
         showSummary = true
 
         Task {
             await CaptainSmartNotificationService.shared.handleWorkoutCompleted(
                 summary: WorkoutCoachingSummary(
-                    duration: finalDuration,
-                    calories: finalCalories,
-                    averageHeartRate: finalAvgHR,
-                    distanceMeters: finalDistance,
-                    estimatedSteps: estimatedSteps
+                    duration: snapshot.duration,
+                    calories: snapshot.calories,
+                    averageHeartRate: snapshot.avgHeartRate,
+                    distanceMeters: snapshot.distanceMeters,
+                    estimatedSteps: snapshot.estimatedSteps,
+                    workoutType: snapshot.workoutTitle
                 )
             )
         }
     }
+
+    private var isCaptainHamoudiCardioWorkout: Bool {
+        session.coachingProfile == .captainHamoudiZone2 &&
+        session.title == L10n.t("gym.exercise.cardio_captain_hamoudi")
+    }
+}
+
+private struct WorkoutCompletionSnapshot {
+    let duration: TimeInterval
+    let calories: Double
+    let avgHeartRate: Double
+    let distanceMeters: Double
+    let estimatedSteps: Int
+    let workoutTitle: String
+}
+
+private struct ActiveRecoveryContext {
+    let snapshot: WorkoutCompletionSnapshot
+    let peakHeartRate: Double
+}
+
+private struct PendingRecoveryResult {
+    let snapshot: WorkoutCompletionSnapshot
+    let recovery1: Int
+    let recovery2: Int
 }
 
 // MARK: - Components (Cards & Wheel)

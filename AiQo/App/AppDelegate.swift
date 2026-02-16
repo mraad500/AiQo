@@ -25,6 +25,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         ActivityNotificationEngine.shared.registerNotificationCategories()
         CaptainSmartNotificationService.shared.registerNotificationCategories()
 
+        Task {
+            await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+        }
+
         if AppSettingsStore.shared.notificationsEnabled {
             scheduleAngelNotifications()
         }
@@ -57,6 +61,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         clearAppBadge()
 
         Task {
+            await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
             await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
         }
 

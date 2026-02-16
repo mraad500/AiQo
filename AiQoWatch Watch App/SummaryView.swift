@@ -9,6 +9,11 @@ struct SummaryView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @Environment(\.dismiss) var dismiss
     
+    @State private var autoDismissWorkItem: DispatchWorkItem?
+    @State private var countdownTimer: Timer?
+    @State private var autoDismissRemainingSeconds: Int = 10
+    @State private var isClosing = false
+    
     @State private var durationFormatter: DateComponentsFormatter = {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute, .second]
@@ -51,15 +56,62 @@ struct SummaryView: View {
                     ActivityRingsView(healthStore: workoutManager.healthStore)
                         .frame(width: 50, height: 50)
                     
+                    Text("Closing in \(max(autoDismissRemainingSeconds, 0))s...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 4)
+                    
                     Button("Done") {
-                        dismiss()
+                        closeSummary()
                     }
                 }
                 .scenePadding()
             }
             .navigationTitle("Summary")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                startAutoDismissCountdown()
+            }
+            .onDisappear {
+                stopAutoDismissCountdown()
+            }
         }
+    }
+
+    private func closeSummary() {
+        guard !isClosing else { return }
+        isClosing = true
+        stopAutoDismissCountdown()
+        workoutManager.showingSummaryView = false
+        dismiss()
+    }
+
+    private func startAutoDismissCountdown() {
+        stopAutoDismissCountdown()
+        isClosing = false
+        autoDismissRemainingSeconds = 10
+
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if autoDismissRemainingSeconds > 0 {
+                autoDismissRemainingSeconds -= 1
+            }
+        }
+        countdownTimer = timer
+
+        let workItem = DispatchWorkItem {
+            closeSummary()
+        }
+        autoDismissWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: workItem)
+    }
+
+    private func stopAutoDismissCountdown() {
+        autoDismissWorkItem?.cancel()
+        autoDismissWorkItem = nil
+        countdownTimer?.invalidate()
+        countdownTimer = nil
     }
 }
 
