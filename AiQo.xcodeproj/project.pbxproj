@@ -1201,7 +1201,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for meal logging, barcode scanning, and progress photos.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera to detect your body pose and count push-up reps in Vision Coach.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1252,7 +1252,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for meal logging, barcode scanning, and progress photos.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera to detect your body pose and count push-up reps in Vision Coach.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

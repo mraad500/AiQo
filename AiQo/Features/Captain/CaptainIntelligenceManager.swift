@@ -41,7 +41,7 @@ enum CaptainIntelligenceError: LocalizedError {
     }
 }
 
-/// Privacy-first, fully local manager for Captain Hamoudi:
+/// Privacy-first manager for Captain Hamoudi:
 /// - Reads HealthKit data on-device
 /// - Generates coaching text with Apple on-device language models
 /// - Never performs network requests
@@ -50,6 +50,8 @@ final class CaptainIntelligenceManager {
 
     private let healthStore: HKHealthStore
     private let calendar: Calendar
+    private let stateQueue = DispatchQueue(label: "AiQo.CaptainIntelligenceManager.state")
+    private var hasLoggedModelUnavailable = false
 
     private let captainInstructions = """
     You are Captain Hamoudi, an Iraqi VIP fitness coach.
@@ -115,9 +117,19 @@ final class CaptainIntelligenceManager {
         let cleanedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return "" }
 
-        let metrics = try await fetchTodayEssentialMetrics()
-        let contextualPrompt = buildContextPrompt(userInput: cleanedInput, metrics: metrics)
-        return try await generateOnDeviceReply(prompt: contextualPrompt)
+        guard isOnDeviceGenerationSupportedNow() else {
+            logOnDeviceUnavailableOnce()
+            return localFallbackResponse(for: cleanedInput, error: CaptainIntelligenceError.onDeviceModelUnavailable)
+        }
+
+        do {
+            let metrics = try await fetchTodayEssentialMetrics()
+            let contextualPrompt = buildContextPrompt(userInput: cleanedInput, metrics: metrics)
+            return try await generateOnDeviceReply(prompt: contextualPrompt)
+        } catch {
+            printGenerationFailure(error)
+            return localFallbackResponse(for: cleanedInput, error: error)
+        }
     }
 
     // MARK: - Context Builder
@@ -144,6 +156,89 @@ final class CaptainIntelligenceManager {
         3) A simple measurable checkpoint to follow up on today.
         Keep it concise and specific.
         """
+    }
+
+    private func printGenerationFailure(_ error: Error) {
+        if let captainError = error as? CaptainIntelligenceError {
+            switch captainError {
+            case .onDeviceModelUnavailable, .foundationModelsUnavailable, .unsupportedDeviceLanguage:
+                guard consumeModelUnavailableLogPermit() else { return }
+            default:
+                break
+            }
+        }
+
+        print("🤖 [CaptainIntelligenceManager] Local generation failed: \(error.localizedDescription)")
+
+        var currentUnderlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error
+        while let nestedError = currentUnderlying {
+            print("🤖 [CaptainIntelligenceManager] Underlying error: \(nestedError.localizedDescription)")
+            currentUnderlying = (nestedError as NSError).userInfo[NSUnderlyingErrorKey] as? Error
+        }
+    }
+
+    private func localFallbackResponse(for userInput: String, error: Error?) -> String {
+        let prefersArabic = textContainsArabic(userInput)
+
+        if let captainError = error as? CaptainIntelligenceError {
+            switch captainError {
+            case .healthAuthorizationDenied:
+                return prefersArabic
+                    ? "فعّل صلاحية Health حتى أبني خطة أدق. هسه ابدأ 10 دقايق مشي سريع واشرب مي."
+                    : "Enable Health permission so I can build a more accurate plan. For now, do a 10-minute brisk walk and hydrate."
+            case .unsupportedDeviceLanguage:
+                return prefersArabic
+                    ? "لغة الجهاز الحالية غير مدعومة لـ Apple Intelligence حالياً. جرّب لغة مدعومة أو اكتب بالعربي/الإنجليزي."
+                    : "Your current device language is not supported by Apple Intelligence yet. Try a supported language or write in Arabic/English."
+            case .onDeviceModelUnavailable, .foundationModelsUnavailable:
+                return prefersArabic
+                    ? "Apple Intelligence غير متاح حالياً على هذا الجهاز. خلّينا نبدأ بخطة بسيطة: 12 دقيقة مشي + 2 دقيقة تنفّس."
+                    : "Apple Intelligence is currently unavailable on this device. Start with a simple plan: 12-minute walk + 2 minutes breathing."
+            default:
+                break
+            }
+        }
+
+        return prefersArabic
+            ? "صار خلل محلي بسيط. هسه سوّي 3 جولات: 20 سكوات + 10 ضغط + 40 ثانية بلانك."
+            : "A local error happened. Do 3 rounds: 20 squats + 10 push-ups + 40-second plank."
+    }
+
+    private func textContainsArabic(_ text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    private func isOnDeviceGenerationSupportedNow() -> Bool {
+#if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            let model = SystemLanguageModel.default
+            return model.availability == .available &&
+                model.supportedLanguages.contains(Locale.current.language)
+        }
+#endif
+        return false
+    }
+
+    private func consumeModelUnavailableLogPermit() -> Bool {
+        stateQueue.sync {
+            if hasLoggedModelUnavailable {
+                return false
+            }
+            hasLoggedModelUnavailable = true
+            return true
+        }
+    }
+
+    private func logOnDeviceUnavailableOnce() {
+        guard consumeModelUnavailableLogPermit() else { return }
+        print("🤖 [CaptainIntelligenceManager] On-device model unavailable; using local fallback copy.")
     }
 
     // MARK: - On-Device AI

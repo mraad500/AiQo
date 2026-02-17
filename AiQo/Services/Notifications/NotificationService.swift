@@ -256,6 +256,7 @@ final class AIWorkoutSummaryService {
     private let processedWorkoutLimit = 220
     private let fingerprintWindowSeconds: TimeInterval = 180
     private let fingerprintLimit = 40
+    private let initialSyncLookbackSeconds: TimeInterval = 2 * 60 * 60
 
     private var workoutObserverQuery: HKObserverQuery?
     private var workoutAnchor: HKQueryAnchor?
@@ -368,6 +369,7 @@ final class AIWorkoutSummaryService {
         repeat {
             pendingSync = false
 
+            let isBootstrapSync = workoutAnchor == nil
             let (workouts, newAnchor) = await fetchAnchoredWorkouts(anchor: workoutAnchor)
             if let newAnchor {
                 workoutAnchor = newAnchor
@@ -375,7 +377,19 @@ final class AIWorkoutSummaryService {
             }
 
             let sorted = workouts.sorted { $0.endDate < $1.endDate }
-            for workout in sorted {
+            let workoutsToProcess: [HKWorkout]
+            if isBootstrapSync {
+                let cutoff = Date().addingTimeInterval(-initialSyncLookbackSeconds)
+                workoutsToProcess = sorted.filter { $0.endDate >= cutoff }
+                let skippedCount = max(0, sorted.count - workoutsToProcess.count)
+                if skippedCount > 0 {
+                    print("🤖 [AIWorkoutSummaryService] Bootstrap sync skipped \(skippedCount) historical workouts.")
+                }
+            } else {
+                workoutsToProcess = sorted
+            }
+
+            for workout in workoutsToProcess {
                 let keyMetrics = await buildKeyMetrics(for: workout)
                 await handleWorkoutEnded(
                     workoutType: Self.workoutTitle(for: workout.workoutActivityType),
