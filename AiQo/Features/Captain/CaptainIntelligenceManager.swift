@@ -117,9 +117,9 @@ final class CaptainIntelligenceManager {
         let cleanedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return "" }
 
-        guard isOnDeviceGenerationSupportedNow() else {
-            logOnDeviceUnavailableOnce()
-            return localFallbackResponse(for: cleanedInput, error: CaptainIntelligenceError.onDeviceModelUnavailable)
+        if let preflightError = preflightOnDeviceModelError() {
+            printGenerationFailure(preflightError)
+            return localFallbackResponse(for: cleanedInput, error: preflightError)
         }
 
         do {
@@ -215,15 +215,25 @@ final class CaptainIntelligenceManager {
         }
     }
 
-    private func isOnDeviceGenerationSupportedNow() -> Bool {
+    private func preflightOnDeviceModelError() -> CaptainIntelligenceError? {
 #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             let model = SystemLanguageModel.default
-            return model.availability == .available &&
-                model.supportedLanguages.contains(Locale.current.language)
+            if model.availability != .available {
+                if consumeModelUnavailableLogPermit() {
+                    print(
+                        "🤖 [CaptainIntelligenceManager] Model availability: \(String(describing: model.availability)); locale: \(Locale.current.identifier)"
+                    )
+                }
+                return .onDeviceModelUnavailable
+            }
+            if !model.supportedLanguages.contains(Locale.current.language) {
+                return .unsupportedDeviceLanguage
+            }
+            return nil
         }
 #endif
-        return false
+        return .foundationModelsUnavailable
     }
 
     private func consumeModelUnavailableLogPermit() -> Bool {
@@ -234,11 +244,6 @@ final class CaptainIntelligenceManager {
             hasLoggedModelUnavailable = true
             return true
         }
-    }
-
-    private func logOnDeviceUnavailableOnce() {
-        guard consumeModelUnavailableLogPermit() else { return }
-        print("🤖 [CaptainIntelligenceManager] On-device model unavailable; using local fallback copy.")
     }
 
     // MARK: - On-Device AI
