@@ -2,8 +2,9 @@ import UIKit
 import UserNotifications
 import FamilyControls
 import SwiftUI
-import Supabase
 import WidgetKit
+import Supabase
+import Auth
 
 private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"

@@ -157,13 +157,13 @@ struct ChallengeDetailView: View {
 
     private var detailCardTint: Color {
         switch challenge.metricType {
-        case .steps:
+        case .steps, .kindnessActs:
             return GymTheme.mint
         case .plankSeconds:
             return GymTheme.beige
         case .pushups:
             return Color(red: 1.0, green: 0.72, blue: 0.54)
-        case .sleepHours:
+        case .sleepHours, .sleepStreakDays:
             return Color(red: 0.74, green: 0.80, blue: 1.0)
         case .activeCalories:
             return Color(red: 0.98, green: 0.64, blue: 0.52)
@@ -171,6 +171,10 @@ struct ChallengeDetailView: View {
             return Color(red: 0.64, green: 0.86, blue: 0.98)
         case .questCompletions:
             return GymTheme.gold
+        case .zone2Minutes:
+            return Color(red: 0.45, green: 0.80, blue: 0.62)
+        case .mindfulnessSessions:
+            return Color(red: 0.64, green: 0.78, blue: 0.94)
         }
     }
 }

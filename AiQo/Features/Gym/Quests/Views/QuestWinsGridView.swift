@@ -144,8 +144,17 @@ private struct WinAwardCard: View {
             let value = numericValue ?? 0
             return "\(L10n.t("quests.metric.distance")): \(String(format: "%.1f", locale: Locale.current, value)) \(L10n.t("quests.unit.km"))"
         case .questCompletions:
-            let ratio = extractedRatio ?? (Int((numericValue ?? 0).rounded()), Challenge.stage2Daily.count)
+            let fallbackTarget = max(Challenge.nonBossChallenges(forStage: challenge.stageNumber).count, Int(challenge.goalValue.rounded()))
+            let ratio = extractedRatio ?? (Int((numericValue ?? 0).rounded()), fallbackTarget)
             return "\(L10n.t("quests.metric.stage2")): \(ratio.0)/\(ratio.1) \(L10n.t("quests.unit.quests"))"
+        case .kindnessActs:
+            return "\(L10n.t("quests.metric.kindness")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.helps"))"
+        case .zone2Minutes:
+            return "\(L10n.t("quests.metric.zone2")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.min"))"
+        case .mindfulnessSessions:
+            return "\(L10n.t("quests.metric.mindfulness")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.sessions"))"
+        case .sleepStreakDays:
+            return "\(L10n.t("quests.metric.sleep_streak")): \(Int((numericValue ?? 0).rounded()))/\(Int(challenge.goalValue.rounded())) \(L10n.t("quests.unit.days"))"
         }
     }
 

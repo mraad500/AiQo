@@ -1,6 +1,14 @@
-import WatchKit
 import SwiftUI
 import UserNotifications
+
+#if canImport(WatchKit)
+import WatchKit
+#else
+class WKUserNotificationHostingController<Content: View>: NSObject {
+    var body: Content { fatalError("WatchKit is unavailable on this build target.") }
+    func didReceive(_ notification: UNNotification) {}
+}
+#endif
 
 final class WorkoutNotificationController: WKUserNotificationHostingController<WorkoutNotificationView> {
     private var payload: WorkoutNotificationPayload = .placeholder

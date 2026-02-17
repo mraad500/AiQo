@@ -15,12 +15,14 @@ struct ChallengeRunView: View {
                 switch challenge.metricType {
                 case .plankSeconds:
                     plankControls
-                case .pushups:
-                    pushupsControls
                 default:
-                    Text(L10n.t("quests.run.automatic"))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    if challenge.metricType.supportsManualCounter {
+                        manualCounterControls
+                    } else {
+                        Text(L10n.t("quests.run.automatic"))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if questsStore.isCompleted(challenge) {
@@ -131,19 +133,19 @@ struct ChallengeRunView: View {
         )
     }
 
-    private var pushupsControls: some View {
+    private var manualCounterControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(L10n.t("quests.run.pushups_counter"))
+            Text(counterTitle)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
 
             HStack(spacing: 10) {
-                incrementButton(label: "+5", value: 5)
-                incrementButton(label: "+10", value: 10)
-                incrementButton(label: "+20", value: 20)
+                ForEach(challenge.metricType.manualIncrementOptions, id: \.self) { increment in
+                    incrementButton(label: "+\(increment)", value: increment)
+                }
             }
 
             Button {
-                questsStore.undoPushups(for: challenge)
+                questsStore.undoLastManualProgress(for: challenge)
             } label: {
                 Text(L10n.t("quests.run.undo"))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -152,7 +154,7 @@ struct ChallengeRunView: View {
                     .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .foregroundStyle(.primary)
             }
-            .disabled(!questsStore.canUndoPushups(for: challenge) || questsStore.isCompleted(challenge))
+            .disabled(!questsStore.canUndoManualProgress(for: challenge) || questsStore.isCompleted(challenge))
         }
         .padding(14)
         .background(
@@ -160,14 +162,14 @@ struct ChallengeRunView: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(Color(red: 1.0, green: 0.72, blue: 0.54).opacity(0.20))
+                        .fill(manualCounterTint.opacity(0.20))
                 )
         )
     }
 
     private func incrementButton(label: String, value: Int) -> some View {
         Button {
-            questsStore.addPushups(value, for: challenge)
+            questsStore.addManualProgress(value, for: challenge)
         } label: {
             Text(label)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -177,5 +179,29 @@ struct ChallengeRunView: View {
                 .foregroundStyle(.black)
         }
         .disabled(questsStore.isCompleted(challenge))
+    }
+
+    private var counterTitle: String {
+        if challenge.metricType == .pushups {
+            return L10n.t("quests.run.pushups_counter")
+        }
+        return L10n.t("quests.run.manual_counter")
+    }
+
+    private var manualCounterTint: Color {
+        switch challenge.metricType {
+        case .pushups:
+            return Color(red: 1.0, green: 0.72, blue: 0.54)
+        case .zone2Minutes:
+            return Color(red: 0.45, green: 0.80, blue: 0.62)
+        case .kindnessActs:
+            return GymTheme.mint
+        case .mindfulnessSessions:
+            return Color(red: 0.64, green: 0.78, blue: 0.94)
+        case .sleepStreakDays:
+            return Color(red: 0.74, green: 0.80, blue: 1.0)
+        case .steps, .plankSeconds, .sleepHours, .activeCalories, .distanceKilometers, .questCompletions:
+            return GymTheme.beige
+        }
     }
 }

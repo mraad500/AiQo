@@ -17,7 +17,7 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
 
     @Published private(set) var cameraState: CameraState = .idle
     @Published private(set) var repCount: Int = 0
-    @Published private(set) var coachingHint: String = "Place your shoulders, elbows, and wrists in frame."
+    @Published private(set) var coachingHint: String = L10n.t("quests.vision.hint.initial")
 
     let captureSession = AVCaptureSession()
 
@@ -131,7 +131,7 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
 
         repCounter.reset()
         publishRepCount(0)
-        publishHint("Lower your body, then push back up to count each rep.")
+        publishHint(key: "quests.vision.hint.lower_then_push")
         return true
     }
 
@@ -155,9 +155,9 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
         }
     }
 
-    private func publishHint(_ hint: String) {
+    private func publishHint(key: String) {
         DispatchQueue.main.async { [weak self] in
-            self?.coachingHint = hint
+            self?.coachingHint = L10n.t(key)
         }
     }
 }
@@ -181,17 +181,17 @@ extension VisionCoachViewModel: AVCaptureVideoDataOutputSampleBufferDelegate {
         do {
             try handler.perform([poseRequest])
         } catch {
-            publishHint("Vision processing failed. Keep trying.")
+            publishHint(key: "quests.vision.hint.vision_failed")
             return
         }
 
         guard let observation = poseRequest.results?.first else {
-            publishHint("No body detected. Move farther from the camera.")
+            publishHint(key: "quests.vision.hint.no_body")
             return
         }
 
         guard let joints = bestArmJoints(from: observation) else {
-            publishHint("Show shoulder, elbow, and wrist clearly.")
+            publishHint(key: "quests.vision.hint.show_joints")
             return
         }
 
@@ -203,7 +203,7 @@ extension VisionCoachViewModel: AVCaptureVideoDataOutputSampleBufferDelegate {
             publishRepCount(repCounter.totalReps)
         }
 
-        publishHint(update.hint)
+        publishHint(key: update.hintKey)
     }
 
     private var visionOrientation: CGImagePropertyOrientation {
@@ -285,7 +285,7 @@ private struct ArmJoints {
 
 private struct PushupStateUpdate {
     let repDelta: Int
-    let hint: String
+    let hintKey: String
 }
 
 private final class PushupRepCounter {
@@ -321,37 +321,37 @@ private final class PushupRepCounter {
 
         if phase == nil {
             phase = averagedAngle < downThreshold ? .down : .up
-            return PushupStateUpdate(repDelta: 0, hint: "Use full range: down, then fully press up.")
+            return PushupStateUpdate(repDelta: 0, hintKey: "quests.vision.hint.full_range")
         }
 
         switch phase {
         case .up:
             if averagedAngle <= downThreshold {
                 phase = .down
-                return PushupStateUpdate(repDelta: 0, hint: "Great depth. Push upward to finish this rep.")
+                return PushupStateUpdate(repDelta: 0, hintKey: "quests.vision.hint.great_depth")
             }
         case .down:
             if averagedAngle >= upThreshold, (timestamp - lastRepTimestamp) >= cooldown {
                 phase = .up
                 lastRepTimestamp = timestamp
                 totalReps += 1
-                return PushupStateUpdate(repDelta: 1, hint: "Rep counted. Keep your core tight.")
+                return PushupStateUpdate(repDelta: 1, hintKey: "quests.vision.hint.rep_counted")
             }
         case nil:
             break
         }
 
-        let hint: String = {
+        let hintKey: String = {
             switch phase {
             case .up:
-                return "Lower with control until elbows bend."
+                return "quests.vision.hint.lower_control"
             case .down:
-                return "Press up until elbows are nearly straight."
+                return "quests.vision.hint.press_up"
             case nil:
-                return "Keep your full upper body visible."
+                return "quests.vision.hint.keep_visible"
             }
         }()
 
-        return PushupStateUpdate(repDelta: 0, hint: hint)
+        return PushupStateUpdate(repDelta: 0, hintKey: hintKey)
     }
 }

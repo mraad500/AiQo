@@ -98,7 +98,7 @@ struct VisionCoachView: View {
                             .stroke(Color.white.opacity(0.75), lineWidth: 1)
                     )
 
-                Text("Captain Hamoudi")
+                Text(L10n.t("quests.vision.coach_name"))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             }
@@ -129,7 +129,7 @@ struct VisionCoachView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
 
-            Text("Detected Push-up Reps")
+            Text(L10n.t("quests.vision.detected_reps"))
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
 
@@ -162,7 +162,7 @@ struct VisionCoachView: View {
                 Spacer(minLength: 10)
 
                 if questsStore.isCompleted(challenge) {
-                    Text("Completed")
+                    Text(L10n.t("quests.status.completed"))
                         .font(.system(size: 12, weight: .heavy, design: .rounded))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 10)
@@ -199,54 +199,54 @@ struct VisionCoachView: View {
             EmptyView()
         case .requestingPermission:
             stateCard(
-                title: "Requesting Camera Access",
-                message: "Allow camera access to start AI Vision Coach.",
-                actionTitle: nil,
+                titleKey: "quests.vision.camera.request.title",
+                messageKey: "quests.vision.camera.request.message",
+                actionTitleKey: nil,
                 action: nil
             )
         case .denied:
             stateCard(
-                title: "Camera Access Needed",
-                message: "Enable camera permission in Settings to use push-up tracking.",
-                actionTitle: "Open Settings",
+                titleKey: "quests.vision.camera.denied.title",
+                messageKey: "quests.vision.camera.denied.message",
+                actionTitleKey: "quests.vision.camera.open_settings",
                 action: openSettings
             )
         case .unavailable:
             stateCard(
-                title: "Camera Not Available",
-                message: "This device does not have a supported camera for Vision Coach.",
-                actionTitle: nil,
+                titleKey: "quests.vision.camera.unavailable.title",
+                messageKey: "quests.vision.camera.unavailable.message",
+                actionTitleKey: nil,
                 action: nil
             )
         case .failed:
             stateCard(
-                title: "Camera Setup Failed",
-                message: "Please close this screen and try again.",
-                actionTitle: nil,
+                titleKey: "quests.vision.camera.failed.title",
+                messageKey: "quests.vision.camera.failed.message",
+                actionTitleKey: nil,
                 action: nil
             )
         }
     }
 
     private func stateCard(
-        title: String,
-        message: String,
-        actionTitle: String?,
+        titleKey: String,
+        messageKey: String,
+        actionTitleKey: String?,
         action: (() -> Void)?
     ) -> some View {
         VStack(spacing: 12) {
-            Text(title)
+            Text(L10n.t(titleKey))
                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text(message)
+            Text(L10n.t(messageKey))
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.84))
                 .multilineTextAlignment(.center)
 
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
+            if let actionTitleKey, let action {
+                Button(L10n.t(actionTitleKey), action: action)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 16)

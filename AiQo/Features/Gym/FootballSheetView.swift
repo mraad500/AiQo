@@ -1,8 +1,7 @@
 import SwiftUI
-import Supabase
 import SDWebImageSwiftUI
 internal import Combine
-
+import Supabase
 private let supabase = SupabaseService.shared.client
 
 struct Match: Codable, Identifiable {

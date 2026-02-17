@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 import Supabase
+import Auth
 internal import Combine
 
 struct LoginScreenView: View {

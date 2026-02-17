@@ -116,7 +116,7 @@ final class CaptainSmartNotificationService {
     static let shared = CaptainSmartNotificationService()
 
     static let categoryIdentifier = "aiqo.captain.smart"
-    private let coach = AiQoCoachService.shared
+    private let intelligenceManager = CaptainIntelligenceManager.shared
     private let defaults = UserDefaults.standard
     private let lastInactivitySentAtKey = "aiqo.captain.lastInactivitySentAt"
     private let inactivityCooldownSeconds: TimeInterval = 45 * 60
@@ -146,7 +146,7 @@ final class CaptainSmartNotificationService {
         guard canSendInactivityNow() else { return }
 
         let currentSteps = HealthKitManager.shared.todaySteps
-        let message = await coach.generateSmartNotification(currentSteps: currentSteps)
+        let message = await generateInactivityMessage(currentSteps: currentSteps)
 
         sendCaptainNotification(
             title: "Captain Hamoudi",
@@ -196,6 +196,33 @@ final class CaptainSmartNotificationService {
         )
         UNUserNotificationCenter.current().add(request)
     }
+
+    private func generateInactivityMessage(currentSteps: Int) async -> String {
+        let prompt = """
+        User inactivity alert context:
+        - Current steps today: \(max(0, currentSteps))
+        - The user has been inactive for at least 45 minutes.
+        Provide one short Iraqi Arabic motivational line (max 14 words) with one concrete next action.
+        """
+
+        do {
+            let message = try await intelligenceManager.generateCaptainResponse(for: prompt)
+            let compact = message.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !compact.isEmpty {
+                return compact
+            }
+        } catch {
+            // Fall back to deterministic local text.
+        }
+
+        if currentSteps < 2000 {
+            return "يلا بطل، قوم هسه وخلي أول ألف خطوة باسمك اليوم."
+        } else if currentSteps < 6000 {
+            return "ممتاز، كمل نفس الهمة وخل نرفعها شوي شوي."
+        } else {
+            return "عفية عليك، تقدمك واضح اليوم، استمر وخليها عادة."
+        }
+    }
 }
 
 enum CoachNotificationLanguage: String, CaseIterable {
@@ -222,6 +249,7 @@ final class AIWorkoutSummaryService {
     private let healthStore = HKHealthStore()
     private let notificationCenter = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
+    private let intelligenceManager = CaptainIntelligenceManager.shared
 
     private let workoutAnchorKey = "aiqo.ai.workout.anchor"
     private let processedWorkoutIDsKey = "aiqo.ai.workout.processed.ids"
@@ -286,7 +314,7 @@ final class AIWorkoutSummaryService {
 
         let rawMessage: String
         do {
-            rawMessage = try await CaptainService.shared.sendCoachPrompt(prompt)
+            rawMessage = try await intelligenceManager.generateCaptainResponse(for: prompt)
         } catch {
             rawMessage = fallbackMessage(
                 language: language,

@@ -5,5 +5,7 @@ struct ChallengeStage: Identifiable, Hashable {
 
     var id: Int { number }
 
-    static let all: [ChallengeStage] = (1...6).map { ChallengeStage(number: $0) }
+    static var all: [ChallengeStage] {
+        Challenge.availableStageNumbers.map { ChallengeStage(number: $0) }
+    }
 }

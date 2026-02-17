@@ -161,7 +161,7 @@ struct ProfileScreen: View {
             )
         }
         .sheet(isPresented: $showKernelSheet) {
-            ContentView()
+            ChallengeView()
                 .environmentObject(ProtectionModel.shared)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)

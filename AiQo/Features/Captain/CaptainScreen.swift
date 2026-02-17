@@ -2,7 +2,7 @@
 //  CaptainScreen.swift
 //  AiQo - Captain Hamoudi Screen
 //
-//  SwiftUI Implementation + Server-backed Captain (n8n + Cloudflare Worker)
+//  SwiftUI Implementation + On-Device Captain Intelligence
 //
 
 import SwiftUI
@@ -192,7 +192,7 @@ struct CaptainScreen: View {
     }
 }
 
-// MARK: - Captain ViewModel (SERVER BACKED)
+// MARK: - Captain ViewModel (ON-DEVICE)
 
 @MainActor
 final class CaptainViewModel: ObservableObject {
@@ -206,6 +206,7 @@ final class CaptainViewModel: ObservableObject {
     @Published var feedbackTrigger: Int = 0
 
     private let userDefaults = UserDefaults.standard
+    private let intelligenceManager = CaptainIntelligenceManager.shared
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -345,7 +346,7 @@ final class CaptainViewModel: ObservableObject {
     private func processMessage(_ text: String) async {
         do {
             let preferredLanguage = detectReplyLanguage(from: text)
-            let reply = try await CaptainService.shared.sendUserText(text)
+            let reply = try await intelligenceManager.generateCaptainResponse(for: text)
 
             isTyping = false
             let normalized = normalizeReplyForDisplay(reply)
@@ -357,7 +358,7 @@ final class CaptainViewModel: ObservableObject {
             isSending = false
         } catch {
             isTyping = false
-            await addAnimatedMessage("صار لخبطه بالربط. تأكد من CAPTAIN_ENDPOINT و APP_TOKEN وخليّني أعيدها.")
+            await addAnimatedMessage("صار خلل محلي بسيط. خلينا نعيد المحاولة بعد ثواني.")
             isSending = false
         }
     }

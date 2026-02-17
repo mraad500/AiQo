@@ -208,15 +208,6 @@
 			);
 			target = 80D81CC72EF4D8FA0020C88D /* AiQoMonitor */;
 		};
-		80D9BDB52F1A86AA00CDF8DC /* Exceptions for "AiQo" folder in "AiQoWatch Watch App" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Shared/SharedModels.swift,
-				watch/WCKeys.swift,
-				XPCalculator.swift,
-			);
-			target = 80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */;
-		};
 		A1F000020000000000000001 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -244,7 +235,6 @@
 			exceptions = (
 				80234F5E2EEF43AF00F21DCF /* Exceptions for "AiQo" folder in "AiQo" target */,
 				80D81CF32EF4DE0D0020C88D /* Exceptions for "AiQo" folder in "AiQoMonitor" target */,
-				80D9BDB52F1A86AA00CDF8DC /* Exceptions for "AiQo" folder in "AiQoWatch Watch App" target */,
 			);
 			path = AiQo;
 			sourceTree = "<group>";

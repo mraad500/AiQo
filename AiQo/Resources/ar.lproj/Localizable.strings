@@ -517,6 +517,7 @@
 "quests.status.completed" = "مكتمل";
 "quests.status.tracking" = "متابعة";
 "quests.status.ready" = "جاهز";
+"quests.status.locked" = "مغلق";
 
 "quests.detail.goal" = "الهدف";
 "quests.detail.verify" = "التحقق";
@@ -539,6 +540,7 @@
 "quests.run.start_timer" = "ابدأ المؤقت";
 "quests.run.finish_set" = "إنهاء الجولة";
 "quests.run.pushups_counter" = "عداد الضغط";
+"quests.run.manual_counter" = "عداد يدوي";
 "quests.run.undo" = "تراجع";
 
 "quests.reward.completed" = "تم إكمال التحدي!";
@@ -546,6 +548,31 @@
 
 "quests.wins.empty_title" = "لا توجد إنجازات بعد";
 "quests.wins.empty_subtitle" = "أكمل تحديًا واضغط \"أضف إلى الإنجازات\" لجمع الجوائز.";
+"quests.placeholder.stage_title" = "المرحلة %d";
+"quests.placeholder.empty" = "لا توجد تحديات مضافة لهذه المرحلة حالياً.";
+
+"quests.vision.coach_name" = "الكابتن حمودي";
+"quests.vision.detected_reps" = "عدد الضغط المكتشف";
+"quests.vision.camera.request.title" = "جاري طلب صلاحية الكاميرا";
+"quests.vision.camera.request.message" = "اسمح بالوصول للكاميرا لبدء المدرب البصري الذكي.";
+"quests.vision.camera.denied.title" = "تحتاج صلاحية الكاميرا";
+"quests.vision.camera.denied.message" = "فعّل إذن الكاميرا من الإعدادات لاستخدام تتبع تمارين الضغط.";
+"quests.vision.camera.unavailable.title" = "الكاميرا غير متاحة";
+"quests.vision.camera.unavailable.message" = "هذا الجهاز لا يحتوي على كاميرا مدعومة للمدرب البصري.";
+"quests.vision.camera.failed.title" = "فشل إعداد الكاميرا";
+"quests.vision.camera.failed.message" = "يرجى إغلاق هذه الشاشة والمحاولة مرة أخرى.";
+"quests.vision.camera.open_settings" = "فتح الإعدادات";
+"quests.vision.hint.initial" = "ضع الكتفين والمرفقين والمعصمين داخل الإطار.";
+"quests.vision.hint.lower_then_push" = "انزل بجسمك ثم ادفع للأعلى لاحتساب كل عدة.";
+"quests.vision.hint.vision_failed" = "فشلت معالجة الرؤية. حاول مرة أخرى.";
+"quests.vision.hint.no_body" = "لم يتم اكتشاف الجسم. ابتعد قليلاً عن الكاميرا.";
+"quests.vision.hint.show_joints" = "أظهر الكتف والمرفق والمعصم بوضوح.";
+"quests.vision.hint.full_range" = "استخدم المدى الكامل: نزول ثم صعود كامل.";
+"quests.vision.hint.great_depth" = "عمق ممتاز. ادفع للأعلى لإكمال هذه العدة.";
+"quests.vision.hint.rep_counted" = "تم احتساب عدة. حافظ على شدّ عضلاتك.";
+"quests.vision.hint.lower_control" = "انزل بتحكم حتى ينثني المرفق.";
+"quests.vision.hint.press_up" = "ادفع للأعلى حتى تصبح الذراع شبه مستقيمة.";
+"quests.vision.hint.keep_visible" = "أبقِ الجزء العلوي من جسمك ظاهرًا بالكامل.";
 
 "quests.unit.sec" = "ث";
 "quests.unit.reps" = "تكرار";
@@ -554,6 +581,10 @@
 "quests.unit.kcal" = "سعرة";
 "quests.unit.km" = "كم";
 "quests.unit.quests" = "تحديات";
+"quests.unit.helps" = "مساعدة";
+"quests.unit.min" = "دقيقة";
+"quests.unit.sessions" = "جلسات";
+"quests.unit.days" = "أيام";
 
 "quests.metric.sleep" = "النوم";
 "quests.metric.steps" = "الخطوات";
@@ -562,6 +593,66 @@
 "quests.metric.active" = "السعرات النشطة";
 "quests.metric.distance" = "المسافة";
 "quests.metric.stage2" = "المرحلة 2";
+"quests.metric.kindness" = "المساعدة";
+"quests.metric.zone2" = "زون 2";
+"quests.metric.mindfulness" = "اليقظة";
+"quests.metric.sleep_streak" = "سلسلة النوم";
+
+"quests.challenge.s1.help.title" = "ساعد 3 غرباء";
+"quests.challenge.s1.help.subtitle" = "قدّم المساعدة لـ 3 أشخاص اليوم";
+"quests.challenge.s1.help.description" = "اخرج وساعد 3 أشخاص لا تعرفهم.";
+"quests.challenge.s1.help.goal" = "مساعدة 3 أشخاص لا تعرفهم";
+"quests.challenge.s1.help.verify" = "تسجيل يدوي داخل التطبيق";
+"quests.help_sheet.title" = "ساعد 3 غرباء";
+"quests.help_sheet.subtitle" = "خذ نفسًا عميقًا وسجّل ثلاث مواقف قدّمت فيها المساعدة اليوم.";
+"quests.help_sheet.microcopy" = "اختر أي نوع مساعدة. لا حاجة لأي مال.";
+"quests.help_sheet.entry_label" = "المساعدة %d";
+"quests.help_sheet.prefix" = "ساعدت";
+"quests.help_sheet.placeholder" = "شخصًا بـ...";
+"quests.help_sheet.type.label" = "النوع";
+"quests.help_sheet.type.time" = "وقت";
+"quests.help_sheet.type.kind_word" = "كلمة طيبة";
+"quests.help_sheet.type.service" = "خدمة";
+"quests.help_sheet.type.donation" = "تبرّع";
+"quests.help_sheet.impact.label" = "الأثر";
+"quests.help_sheet.impact.smile" = "ابتسامة";
+"quests.help_sheet.impact.relief" = "ارتياح";
+"quests.help_sheet.impact.solved_problem" = "حلّ مشكلة";
+"quests.help_sheet.impact.guidance" = "إرشاد";
+"quests.help_sheet.button.complete" = "إنجاز المهمة";
+"quests.help_sheet.noor.title" = "لحظة نور";
+"quests.help_sheet.noor.subtitle" = "اليوم رفعت 3 قلوب.";
+"quests.help_sheet.noor.share_toggle" = "مشاركة مجهولة مع Tribe";
+"quests.help_sheet.noor.done" = "تم";
+"quests.help_sheet.accessibility.note_input" = "حقل إدخال المساعدة %d";
+"quests.help_sheet.accessibility.type_picker" = "منتقي النوع للمساعدة %d";
+"quests.help_sheet.accessibility.impact_picker" = "منتقي الأثر للمساعدة %d";
+"quests.help_sheet.accessibility.complete_button" = "إنجاز المهمة";
+"quests.help_sheet.accessibility.noor_done" = "تم";
+
+"quests.challenge.s1.zone2.title" = "حارس زون 2";
+"quests.challenge.s1.zone2.subtitle" = "اجمع 30 دقيقة في زون 2";
+"quests.challenge.s1.zone2.description" = "ابقَ ضمن نبض زون 2 لمدة 30 دقيقة تراكمية.";
+"quests.challenge.s1.zone2.goal" = "30 دقيقة تراكمية في زون 2";
+"quests.challenge.s1.zone2.verify" = "عداد يدوي داخل التطبيق";
+
+"quests.challenge.s1.walk.title" = "امشِ 5K";
+"quests.challenge.s1.walk.subtitle" = "امشِ 5.0 كم في يوم واحد";
+"quests.challenge.s1.walk.description" = "امشِ 5.0 كم في يوم واحد.";
+"quests.challenge.s1.walk.goal" = "5.0 كم في يوم واحد";
+"quests.challenge.s1.walk.verify" = "HealthKit DistanceWalkingRunning (تلقائي)";
+
+"quests.challenge.s1.gratitude.title" = "جلسة امتنان";
+"quests.challenge.s1.gratitude.subtitle" = "سجّل جلسة واحدة لمدة دقيقتين";
+"quests.challenge.s1.gratitude.description" = "سجّل جلسة يقظة وامتنان لمدة دقيقتين.";
+"quests.challenge.s1.gratitude.goal" = "جلسة امتنان واحدة لمدة دقيقتين";
+"quests.challenge.s1.gratitude.verify" = "تسجيل يدوي داخل التطبيق";
+
+"quests.challenge.s1.recovery.title" = "زعيم التعافي";
+"quests.challenge.s1.recovery.subtitle" = "سلسلة 3 أيام نوم 8 ساعات";
+"quests.challenge.s1.recovery.description" = "سجّل 8 ساعات نوم لمدة 3 أيام متتالية.";
+"quests.challenge.s1.recovery.goal" = "3 أيام متتالية بنوم 8 ساعات";
+"quests.challenge.s1.recovery.verify" = "تسجيل يومي يدوي داخل التطبيق";
 
 "quests.challenge.steps.title" = "10K خطوة";
 "quests.challenge.steps.subtitle" = "امشِ 10,000 خطوة اليوم";

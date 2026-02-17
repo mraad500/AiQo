@@ -13,6 +13,10 @@ enum ChallengeMetricType: String, Codable {
     case activeCalories
     case distanceKilometers
     case questCompletions
+    case kindnessActs
+    case zone2Minutes
+    case mindfulnessSessions
+    case sleepStreakDays
 
     var progressUnit: String {
         switch self {
@@ -30,6 +34,14 @@ enum ChallengeMetricType: String, Codable {
             return "km"
         case .questCompletions:
             return "quests"
+        case .kindnessActs:
+            return "helps"
+        case .zone2Minutes:
+            return "min"
+        case .mindfulnessSessions:
+            return "sessions"
+        case .sleepStreakDays:
+            return "days"
         }
     }
 
@@ -49,6 +61,14 @@ enum ChallengeMetricType: String, Codable {
             return "distanceKm"
         case .questCompletions:
             return "questsCompleted"
+        case .kindnessActs:
+            return "kindnessActs"
+        case .zone2Minutes:
+            return "zone2Minutes"
+        case .mindfulnessSessions:
+            return "mindfulnessSessions"
+        case .sleepStreakDays:
+            return "sleepStreakDays"
         }
     }
 
@@ -61,6 +81,23 @@ enum ChallengeMetricType: String, Codable {
         default:
             return String(Int(value.rounded()))
         }
+    }
+
+    var manualIncrementOptions: [Int] {
+        switch self {
+        case .pushups:
+            return [5, 10, 20]
+        case .kindnessActs, .mindfulnessSessions, .sleepStreakDays:
+            return [1]
+        case .zone2Minutes:
+            return [5, 10, 15]
+        case .steps, .plankSeconds, .sleepHours, .activeCalories, .distanceKilometers, .questCompletions:
+            return []
+        }
+    }
+
+    var supportsManualCounter: Bool {
+        !manualIncrementOptions.isEmpty
     }
 }
 
@@ -89,7 +126,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         switch metricType {
         case .steps, .sleepHours, .activeCalories, .distanceKilometers:
             return true
-        case .plankSeconds, .pushups, .questCompletions:
+        case .plankSeconds, .pushups, .questCompletions, .kindnessActs, .zone2Minutes, .mindfulnessSessions, .sleepStreakDays:
             return false
         }
     }
@@ -97,10 +134,92 @@ struct Challenge: Identifiable, Codable, Hashable {
         id == "pushups_60" || id == "s2_pushups_70"
     }
 
+    var showsProgressOnCard: Bool {
+        switch id {
+        case "s1_help_3_strangers", "s1_gratitude_session":
+            return false
+        default:
+            return true
+        }
+    }
+
     static let stage1: [Challenge] = [
         Challenge(
-            id: "steps_10k",
+            id: "s1_help_3_strangers",
             stageNumber: 1,
+            titleKey: "quests.challenge.s1.help.title",
+            subtitleKey: "quests.challenge.s1.help.subtitle",
+            descriptionKey: "quests.challenge.s1.help.description",
+            type: .manual,
+            metricType: .kindnessActs,
+            goalValue: 3,
+            awardImageName: "1.1.Quests",
+            goalTextKey: "quests.challenge.s1.help.goal",
+            verifyTextKey: "quests.challenge.s1.help.verify",
+            isBoss: false
+        ),
+        Challenge(
+            id: "s1_zone2_guardian",
+            stageNumber: 1,
+            titleKey: "quests.challenge.s1.zone2.title",
+            subtitleKey: "quests.challenge.s1.zone2.subtitle",
+            descriptionKey: "quests.challenge.s1.zone2.description",
+            type: .manual,
+            metricType: .zone2Minutes,
+            goalValue: 30,
+            awardImageName: "2.1.Quests",
+            goalTextKey: "quests.challenge.s1.zone2.goal",
+            verifyTextKey: "quests.challenge.s1.zone2.verify",
+            isBoss: false
+        ),
+        Challenge(
+            id: "s1_walk_5k",
+            stageNumber: 1,
+            titleKey: "quests.challenge.s1.walk.title",
+            subtitleKey: "quests.challenge.s1.walk.subtitle",
+            descriptionKey: "quests.challenge.s1.walk.description",
+            type: .automatic,
+            metricType: .distanceKilometers,
+            goalValue: 5.0,
+            awardImageName: "3.1.Quests",
+            goalTextKey: "quests.challenge.s1.walk.goal",
+            verifyTextKey: "quests.challenge.s1.walk.verify",
+            isBoss: false
+        ),
+        Challenge(
+            id: "s1_gratitude_session",
+            stageNumber: 1,
+            titleKey: "quests.challenge.s1.gratitude.title",
+            subtitleKey: "quests.challenge.s1.gratitude.subtitle",
+            descriptionKey: "quests.challenge.s1.gratitude.description",
+            type: .manual,
+            metricType: .mindfulnessSessions,
+            goalValue: 1,
+            awardImageName: "4.1.Quests",
+            goalTextKey: "quests.challenge.s1.gratitude.goal",
+            verifyTextKey: "quests.challenge.s1.gratitude.verify",
+            isBoss: false
+        ),
+        Challenge(
+            id: "s1_recovery_boss",
+            stageNumber: 1,
+            titleKey: "quests.challenge.s1.recovery.title",
+            subtitleKey: "quests.challenge.s1.recovery.subtitle",
+            descriptionKey: "quests.challenge.s1.recovery.description",
+            type: .manual,
+            metricType: .sleepStreakDays,
+            goalValue: 3,
+            awardImageName: "5.1.Quests",
+            goalTextKey: "quests.challenge.s1.recovery.goal",
+            verifyTextKey: "quests.challenge.s1.recovery.verify",
+            isBoss: false
+        )
+    ]
+
+    static let stage2: [Challenge] = [
+        Challenge(
+            id: "steps_10k",
+            stageNumber: 2,
             titleKey: "quests.challenge.steps.title",
             subtitleKey: "quests.challenge.steps.subtitle",
             descriptionKey: "quests.challenge.steps.description",
@@ -114,7 +233,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "plank_ladder",
-            stageNumber: 1,
+            stageNumber: 2,
             titleKey: "quests.challenge.plank.title",
             subtitleKey: "quests.challenge.plank.subtitle",
             descriptionKey: "quests.challenge.plank.description",
@@ -128,7 +247,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "pushups_60",
-            stageNumber: 1,
+            stageNumber: 2,
             titleKey: "quests.challenge.pushups.title",
             subtitleKey: "quests.challenge.pushups.subtitle",
             descriptionKey: "quests.challenge.pushups.description",
@@ -142,7 +261,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "sleep_8h",
-            stageNumber: 1,
+            stageNumber: 2,
             titleKey: "quests.challenge.sleep.title",
             subtitleKey: "quests.challenge.sleep.subtitle",
             descriptionKey: "quests.challenge.sleep.description",
@@ -156,7 +275,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "active_kcal_600",
-            stageNumber: 1,
+            stageNumber: 2,
             titleKey: "quests.challenge.active.title",
             subtitleKey: "quests.challenge.active.subtitle",
             descriptionKey: "quests.challenge.active.description",
@@ -170,10 +289,10 @@ struct Challenge: Identifiable, Codable, Hashable {
         )
     ]
 
-    static let stage2Daily: [Challenge] = [
+    static let stage3Daily: [Challenge] = [
         Challenge(
             id: "s2_steps_11k",
-            stageNumber: 2,
+            stageNumber: 3,
             titleKey: "quests.challenge.s2.steps.title",
             subtitleKey: "quests.challenge.s2.steps.subtitle",
             descriptionKey: "quests.challenge.s2.steps.description",
@@ -187,7 +306,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "s2_active_kcal_650",
-            stageNumber: 2,
+            stageNumber: 3,
             titleKey: "quests.challenge.s2.active.title",
             subtitleKey: "quests.challenge.s2.active.subtitle",
             descriptionKey: "quests.challenge.s2.active.description",
@@ -201,7 +320,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "s2_pushups_70",
-            stageNumber: 2,
+            stageNumber: 3,
             titleKey: "quests.challenge.s2.pushups.title",
             subtitleKey: "quests.challenge.s2.pushups.subtitle",
             descriptionKey: "quests.challenge.s2.pushups.description",
@@ -215,7 +334,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "s2_plank_240",
-            stageNumber: 2,
+            stageNumber: 3,
             titleKey: "quests.challenge.s2.plank.title",
             subtitleKey: "quests.challenge.s2.plank.subtitle",
             descriptionKey: "quests.challenge.s2.plank.description",
@@ -229,7 +348,7 @@ struct Challenge: Identifiable, Codable, Hashable {
         ),
         Challenge(
             id: "s2_move_5km",
-            stageNumber: 2,
+            stageNumber: 3,
             titleKey: "quests.challenge.s2.move.title",
             subtitleKey: "quests.challenge.s2.move.subtitle",
             descriptionKey: "quests.challenge.s2.move.description",
@@ -243,9 +362,9 @@ struct Challenge: Identifiable, Codable, Hashable {
         )
     ]
 
-    static let stage2Boss = Challenge(
+    static let stage3Boss = Challenge(
         id: "s2_boss_4_of_5",
-        stageNumber: 2,
+        stageNumber: 3,
         titleKey: "quests.challenge.s2.boss.title",
         subtitleKey: "quests.challenge.s2.boss.subtitle",
         descriptionKey: "quests.challenge.s2.boss.description",
@@ -258,17 +377,30 @@ struct Challenge: Identifiable, Codable, Hashable {
         isBoss: true
     )
 
-    static let stage2: [Challenge] = stage2Daily + [stage2Boss]
-    static let all: [Challenge] = stage1 + stage2
+    static let stage3: [Challenge] = stage3Daily + [stage3Boss]
+    static let all: [Challenge] = stage1 + stage2 + stage3
+
+    static var availableStageNumbers: [Int] {
+        Array(Set(all.map(\.stageNumber))).sorted()
+    }
 
     static func forStage(_ stageNumber: Int) -> [Challenge] {
-        switch stageNumber {
-        case 1:
-            return stage1
-        case 2:
-            return stage2
-        default:
-            return []
+        all.filter { $0.stageNumber == stageNumber }
+    }
+
+    static func nonBossChallenges(forStage stageNumber: Int) -> [Challenge] {
+        forStage(stageNumber).filter { !$0.isBoss }
+    }
+
+    static func bossChallenge(forStage stageNumber: Int) -> Challenge? {
+        forStage(stageNumber).first { $0.isBoss }
+    }
+
+    static func previousStage(before stageNumber: Int) -> Int? {
+        let stages = availableStageNumbers
+        guard let index = stages.firstIndex(of: stageNumber), index > 0 else {
+            return nil
         }
+        return stages[index - 1]
     }
 }

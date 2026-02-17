@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>APP_TOKEN</key>
-	<string>078155</string>
-	<key>CAPTAIN_ENDPOINT</key>
-	<string>https://aiqo-proxy.appaiqo5.workers.dev/</string>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
 	<key>CFBundleIconFile</key>

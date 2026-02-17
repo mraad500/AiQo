@@ -1332,30 +1332,7 @@ private struct HeartRateZoneDeepDiveView: View {
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.62))
             } else {
-                ForEach(Array(analytics.peakMoments.enumerated()), id: \.element.id) { index, peak in
-                    HStack {
-                        Text("#\(index + 1)")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.75))
-                            .frame(width: 30, alignment: .leading)
-
-                        Text("\(Int(peak.bpm.rounded())) bpm")
-                            .font(.system(size: 14, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-
-                        Spacer()
-
-                        Text(peak.timestampText)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.72))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.white.opacity(0.07))
-                    )
-                }
+                peaksList
             }
         }
         .padding(14)
@@ -1366,6 +1343,40 @@ private struct HeartRateZoneDeepDiveView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private var peaksList: some View {
+        VStack(spacing: 8) {
+            ForEach(Array(analytics.peakMoments.enumerated()), id: \.offset) { index, peak in
+                peakRow(index: index, peak: peak)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func peakRow(index: Int, peak: HeartRatePeakMoment) -> some View {
+        HStack {
+            Text("#\(index + 1)")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.75))
+                .frame(width: 30, alignment: .leading)
+
+            Text("\(Int(peak.bpm.rounded())) bpm")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Text(peak.timestampText)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.72))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.07))
         )
     }
 }

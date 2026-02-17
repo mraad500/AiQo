@@ -518,6 +518,7 @@
 "quests.status.completed" = "Completed";
 "quests.status.tracking" = "Tracking";
 "quests.status.ready" = "Ready";
+"quests.status.locked" = "Locked";
 
 "quests.detail.goal" = "Goal";
 "quests.detail.verify" = "Verify";
@@ -540,6 +541,7 @@
 "quests.run.start_timer" = "Start Timer";
 "quests.run.finish_set" = "Finish Set";
 "quests.run.pushups_counter" = "Push-ups Counter";
+"quests.run.manual_counter" = "Manual Counter";
 "quests.run.undo" = "Undo";
 
 "quests.reward.completed" = "Challenge Completed!";
@@ -547,6 +549,31 @@
 
 "quests.wins.empty_title" = "No wins yet";
 "quests.wins.empty_subtitle" = "Complete a quest and tap Add to Wins to collect your awards.";
+"quests.placeholder.stage_title" = "Stage %d";
+"quests.placeholder.empty" = "No quests configured for this stage yet.";
+
+"quests.vision.coach_name" = "Captain Hamoudi";
+"quests.vision.detected_reps" = "Detected Push-up Reps";
+"quests.vision.camera.request.title" = "Requesting Camera Access";
+"quests.vision.camera.request.message" = "Allow camera access to start AI Vision Coach.";
+"quests.vision.camera.denied.title" = "Camera Access Needed";
+"quests.vision.camera.denied.message" = "Enable camera permission in Settings to use push-up tracking.";
+"quests.vision.camera.unavailable.title" = "Camera Not Available";
+"quests.vision.camera.unavailable.message" = "This device does not have a supported camera for Vision Coach.";
+"quests.vision.camera.failed.title" = "Camera Setup Failed";
+"quests.vision.camera.failed.message" = "Please close this screen and try again.";
+"quests.vision.camera.open_settings" = "Open Settings";
+"quests.vision.hint.initial" = "Place your shoulders, elbows, and wrists in frame.";
+"quests.vision.hint.lower_then_push" = "Lower your body, then push back up to count each rep.";
+"quests.vision.hint.vision_failed" = "Vision processing failed. Keep trying.";
+"quests.vision.hint.no_body" = "No body detected. Move farther from the camera.";
+"quests.vision.hint.show_joints" = "Show shoulder, elbow, and wrist clearly.";
+"quests.vision.hint.full_range" = "Use full range: down, then fully press up.";
+"quests.vision.hint.great_depth" = "Great depth. Push upward to finish this rep.";
+"quests.vision.hint.rep_counted" = "Rep counted. Keep your core tight.";
+"quests.vision.hint.lower_control" = "Lower with control until elbows bend.";
+"quests.vision.hint.press_up" = "Press up until elbows are nearly straight.";
+"quests.vision.hint.keep_visible" = "Keep your full upper body visible.";
 
 "quests.unit.sec" = "sec";
 "quests.unit.reps" = "reps";
@@ -555,6 +582,10 @@
 "quests.unit.kcal" = "kcal";
 "quests.unit.km" = "km";
 "quests.unit.quests" = "quests";
+"quests.unit.helps" = "helps";
+"quests.unit.min" = "min";
+"quests.unit.sessions" = "sessions";
+"quests.unit.days" = "days";
 
 "quests.metric.sleep" = "Sleep";
 "quests.metric.steps" = "Steps";
@@ -563,6 +594,66 @@
 "quests.metric.active" = "Active kcal";
 "quests.metric.distance" = "Distance";
 "quests.metric.stage2" = "Stage 2";
+"quests.metric.kindness" = "Kindness";
+"quests.metric.zone2" = "Zone 2";
+"quests.metric.mindfulness" = "Mindfulness";
+"quests.metric.sleep_streak" = "Sleep Streak";
+
+"quests.challenge.s1.help.title" = "Help 3 Strangers";
+"quests.challenge.s1.help.subtitle" = "Support 3 people today";
+"quests.challenge.s1.help.description" = "Step outside and help 3 people you don't know.";
+"quests.challenge.s1.help.goal" = "Help 3 people you do not know";
+"quests.challenge.s1.help.verify" = "Manual check-in (In-App)";
+"quests.help_sheet.title" = "Help 3 Strangers";
+"quests.help_sheet.subtitle" = "Take a breath and log three moments where you offered help today.";
+"quests.help_sheet.microcopy" = "Choose any kind of help. No money required.";
+"quests.help_sheet.entry_label" = "Help Note %d";
+"quests.help_sheet.prefix" = "I helped";
+"quests.help_sheet.placeholder" = "someone with...";
+"quests.help_sheet.type.label" = "Type";
+"quests.help_sheet.type.time" = "Time";
+"quests.help_sheet.type.kind_word" = "Kind Word";
+"quests.help_sheet.type.service" = "Service";
+"quests.help_sheet.type.donation" = "Donation";
+"quests.help_sheet.impact.label" = "Impact";
+"quests.help_sheet.impact.smile" = "Smile";
+"quests.help_sheet.impact.relief" = "Relief";
+"quests.help_sheet.impact.solved_problem" = "Solved a problem";
+"quests.help_sheet.impact.guidance" = "Guidance";
+"quests.help_sheet.button.complete" = "Complete Quest";
+"quests.help_sheet.noor.title" = "Noor Moment";
+"quests.help_sheet.noor.subtitle" = "Today you lifted 3 hearts.";
+"quests.help_sheet.noor.share_toggle" = "Share anonymously to Tribe";
+"quests.help_sheet.noor.done" = "Done";
+"quests.help_sheet.accessibility.note_input" = "Help note %d input";
+"quests.help_sheet.accessibility.type_picker" = "Type picker for note %d";
+"quests.help_sheet.accessibility.impact_picker" = "Impact picker for note %d";
+"quests.help_sheet.accessibility.complete_button" = "Complete quest";
+"quests.help_sheet.accessibility.noor_done" = "Done";
+
+"quests.challenge.s1.zone2.title" = "Zone 2 Guardian";
+"quests.challenge.s1.zone2.subtitle" = "Accumulate 30 minutes in Zone 2";
+"quests.challenge.s1.zone2.description" = "Stay in Zone 2 heart rate for 30 accumulated minutes.";
+"quests.challenge.s1.zone2.goal" = "30 total Zone 2 minutes";
+"quests.challenge.s1.zone2.verify" = "Manual counter (In-App)";
+
+"quests.challenge.s1.walk.title" = "Walk 5K";
+"quests.challenge.s1.walk.subtitle" = "Walk 5.0 km in one day";
+"quests.challenge.s1.walk.description" = "Walk 5.0 km in a single day.";
+"quests.challenge.s1.walk.goal" = "5.0 km in a single day";
+"quests.challenge.s1.walk.verify" = "HealthKit DistanceWalkingRunning (Automatic)";
+
+"quests.challenge.s1.gratitude.title" = "Gratitude Session";
+"quests.challenge.s1.gratitude.subtitle" = "Log one 2-minute session";
+"quests.challenge.s1.gratitude.description" = "Log a 2-minute gratitude mindfulness session.";
+"quests.challenge.s1.gratitude.goal" = "One 2-minute gratitude session";
+"quests.challenge.s1.gratitude.verify" = "Manual check-in (In-App)";
+
+"quests.challenge.s1.recovery.title" = "The Recovery Boss";
+"quests.challenge.s1.recovery.subtitle" = "3-day 8h sleep streak";
+"quests.challenge.s1.recovery.description" = "Log 8 hours of sleep for 3 consecutive days.";
+"quests.challenge.s1.recovery.goal" = "3 consecutive days at 8h sleep";
+"quests.challenge.s1.recovery.verify" = "Manual daily streak check-in (In-App)";
 
 "quests.challenge.steps.title" = "10K Steps";
 "quests.challenge.steps.subtitle" = "Walk 10,000 steps today";

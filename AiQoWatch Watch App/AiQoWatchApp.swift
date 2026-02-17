@@ -29,6 +29,16 @@ final class WKInterfaceDevice {
     static func current() -> WKInterfaceDevice { WKInterfaceDevice() }
     func play(_ type: WKHapticType) {}
 }
+
+struct WKNotificationScene<ControllerType: NSObject>: Scene {
+    init(controller: ControllerType.Type, category: String) {}
+
+    var body: some Scene {
+        WindowGroup {
+            EmptyView()
+        }
+    }
+}
 #endif
 
 // MARK: - Main App Entry Point

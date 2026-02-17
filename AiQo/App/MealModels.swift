@@ -1,7 +1,6 @@
 import Foundation
-import UIKit
 
-public struct MealItem: Codable {
+public struct MealItem: Codable, Equatable, Sendable {
     public let title: String
     public let calories: Int
 
@@ -11,16 +10,18 @@ public struct MealItem: Codable {
     }
 }
 
-public struct MealCardData: Codable {
+public struct MealCardData: Codable, Equatable, Sendable {
     public let sectionTitle: String
     public let items: [MealItem]
     public let totalCaloriesText: String
     public let imageName: String
 
-    public init(sectionTitle: String,
-                items: [MealItem],
-                totalCaloriesText: String,
-                imageName: String) {
+    public init(
+        sectionTitle: String,
+        items: [MealItem],
+        totalCaloriesText: String,
+        imageName: String
+    ) {
         self.sectionTitle = sectionTitle
         self.items = items
         self.totalCaloriesText = totalCaloriesText
