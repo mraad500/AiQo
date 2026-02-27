@@ -333,8 +333,7 @@ struct WorkoutSessionScreen: View {
     }
 
     private var isCaptainHamoudiCardioWorkout: Bool {
-        session.coachingProfile == .captainHamoudiZone2 &&
-        session.title == L10n.t("gym.exercise.cardio_captain_hamoudi")
+        session.currentWorkout == .cardioWithCaptainHamoudi
     }
 }
 

@@ -210,7 +210,7 @@ enum SiriWorkoutLocation: String, AppEnum {
 @available(iOS 16.0, *)
 struct StartWorkoutIntent: AppIntent {
     static let title: LocalizedStringResource = "Start Workout"
-    static let description = IntentDescription("Start an Apple Watch workout from Siri.")
+    static let description = IntentDescription("Start a workout session.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Workout", default: .running)
@@ -248,9 +248,9 @@ struct StartWorkoutIntent: AppIntent {
         )
 
         if success {
-            return .result(dialog: "تمام، بدينا تمرين \(workout.rawValue) على Apple Watch.")
+            return .result(dialog: "تمام، بدأنا تمرين \(workout.rawValue).")
         } else {
-            return .result(dialog: "ما كدرت أبدي التمرين. تأكد Apple Watch قريبة ومفتوحة.")
+            return .result(dialog: "ما كدرت أبدي التمرين. تأكد أن الجهاز القابل للارتداء قريب ومتاح.")
         }
     }
 
