@@ -169,6 +169,64 @@
 "screen.kitchen.profileSubtitle" = "نافذة مؤقتة";
 "screen.kitchen.caloriesUnit" = "سعرة حرارية";
 "screen.kitchen.mealDetailsPlaceholder" = "تفاصيل الوجبة وتوزيع العناصر الغذائية ستظهر هنا لاحقاً";
+"kitchen.scene.title" = "مشهد المطبخ";
+"kitchen.scene.missingAsset" = "صورة المطبخ غير متوفرة حالياً. أضف imageKitchenHamoudi داخل Assets.xcassets.";
+"kitchen.hotspot.fridge" = "منطقة الثلاجة";
+"kitchen.hotspot.fridge.hint" = "افتح شاشة الثلاجة";
+"kitchen.hotspot.captain" = "منطقة الكابتن";
+"kitchen.hotspot.captain.hint" = "افتح شات الكابتن بالمطبخ";
+"kitchen.hotspot.plan" = "منطقة الخطة";
+"kitchen.hotspot.plan.hint" = "افتح النظام الغذائي";
+
+"kitchen.fridge.title" = "الثلاجة";
+"kitchen.fridge.add" = "إضافة عنصر";
+"kitchen.fridge.itemNamePlaceholder" = "اسم العنصر";
+"kitchen.fridge.quantityPlaceholder" = "الكمية";
+"kitchen.fridge.unitPlaceholder" = "الوحدة (اختياري)";
+"kitchen.fridge.addButton" = "إضافة للثلاجة";
+"kitchen.fridge.camera" = "تصوير الثلاجة";
+"kitchen.fridge.inventory" = "محتويات الثلاجة";
+"kitchen.fridge.empty" = "ماكو عناصر حالياً بالثلاجة.";
+
+"kitchen.mealplan.title" = "النظام الغذائي";
+"kitchen.mealplan.duration" = "مدة الخطة";
+"kitchen.mealplan.days" = "أيام";
+"kitchen.mealplan.generateButton" = "Generate plan with Captain Hamoudi";
+"kitchen.mealplan.pinned" = "Pinned Plan";
+"kitchen.mealplan.empty" = "ماكو خطة مثبتة حالياً.";
+"kitchen.mealplan.day" = "اليوم";
+"kitchen.mealplan.noMealsDay" = "ماكو وجبات مسجلة لهذا اليوم.";
+"kitchen.mealplan.protein" = "بروتين";
+"kitchen.mealtype.snack" = "سناك";
+
+"kitchen.availability.available" = "متوفر";
+"kitchen.availability.low" = "قليل";
+"kitchen.availability.missing" = "ناقص";
+
+"kitchen.impact.title" = "هذا العنصر ناقص. شتريد تسوي؟";
+"kitchen.impact.missingItem" = "العنصر الناقص";
+"kitchen.impact.replace" = "Replace ingredient";
+"kitchen.impact.addShopping" = "Add to Shopping List";
+"kitchen.impact.keepNeedsPurchase" = "Keep meal but mark as needs purchase";
+"kitchen.impact.needsPurchase" = "يحتاج شراء";
+
+"kitchen.shopping.title" = "Shopping List";
+"kitchen.shopping.addMissing" = "Add all missing to Shopping List";
+"kitchen.shopping.empty" = "قائمة الشراء فارغة.";
+
+"kitchen.captain.title" = "الكابتن";
+"kitchen.captain.welcome" = "هلا! آني كابتن حمودي بالمطبخ. اكتبلي شنو تحتاج من الموجود بالثلاجة.";
+"kitchen.captain.planReady" = "تم توليد وتثبيت خطة %d أيام.";
+"kitchen.captain.draftDetected" = "تم التقاط خطة من النص (فطور/غداء/عشاء).";
+"kitchen.captain.draftHint" = "قريت الفطور والغداء والعشاء. إذا مناسبك اضغط تثبيت الخطة.";
+"kitchen.captain.pinDraft" = "تثبيت الخطة في المطبخ";
+"kitchen.captain.pinSuccess" = "تم تثبيت الخطة وحفظها في كروت المطبخ.";
+"kitchen.quick.3days" = "سويلي خطة 3 أيام";
+"kitchen.quick.week" = "سويلي خطة أسبوع";
+"kitchen.quick.10min" = "وجبة سريعة 10 دقايق";
+"kitchen.quick.highProtein" = "بروتين عالي";
+"kitchen.quick.swap" = "بدائل من الموجود";
+"kitchen.delete" = "حذف";
 "meal.steak" = "ستيك لحم مشوي";
 "meal.steak.calories" = "560 سعرة";
 

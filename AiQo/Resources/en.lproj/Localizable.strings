@@ -167,6 +167,64 @@
 "screen.kitchen.profileTitle" = "Profile";
 "screen.kitchen.profileSubtitle" = "Temporary sheet";
 "screen.kitchen.mealDetailsPlaceholder" = "Meal details and nutrition breakdown will appear here soon.";
+"kitchen.scene.title" = "Kitchen Scene";
+"kitchen.scene.missingAsset" = "Kitchen image is unavailable. Add imageKitchenHamoudi to Assets.xcassets.";
+"kitchen.hotspot.fridge" = "Fridge hotspot";
+"kitchen.hotspot.fridge.hint" = "Open fridge inventory";
+"kitchen.hotspot.captain" = "Captain hotspot";
+"kitchen.hotspot.captain.hint" = "Open Captain kitchen chat";
+"kitchen.hotspot.plan" = "Meal plan hotspot";
+"kitchen.hotspot.plan.hint" = "Open meal plan";
+
+"kitchen.fridge.title" = "Fridge";
+"kitchen.fridge.add" = "Add item";
+"kitchen.fridge.itemNamePlaceholder" = "Item name";
+"kitchen.fridge.quantityPlaceholder" = "Quantity";
+"kitchen.fridge.unitPlaceholder" = "Unit (optional)";
+"kitchen.fridge.addButton" = "Add to fridge";
+"kitchen.fridge.camera" = "Scan fridge";
+"kitchen.fridge.inventory" = "Fridge inventory";
+"kitchen.fridge.empty" = "No fridge items yet.";
+
+"kitchen.mealplan.title" = "Meal Plan";
+"kitchen.mealplan.duration" = "Plan duration";
+"kitchen.mealplan.days" = "days";
+"kitchen.mealplan.generateButton" = "Generate plan with Captain Hamoudi";
+"kitchen.mealplan.pinned" = "Pinned Plan";
+"kitchen.mealplan.empty" = "No pinned plan yet.";
+"kitchen.mealplan.day" = "Day";
+"kitchen.mealplan.noMealsDay" = "No meals for this day.";
+"kitchen.mealplan.protein" = "Protein";
+"kitchen.mealtype.snack" = "Snack";
+
+"kitchen.availability.available" = "Available";
+"kitchen.availability.low" = "Low";
+"kitchen.availability.missing" = "Missing";
+
+"kitchen.impact.title" = "This item is missing. What do you want to do?";
+"kitchen.impact.missingItem" = "Missing item";
+"kitchen.impact.replace" = "Replace ingredient";
+"kitchen.impact.addShopping" = "Add to Shopping List";
+"kitchen.impact.keepNeedsPurchase" = "Keep meal but mark as needs purchase";
+"kitchen.impact.needsPurchase" = "Needs purchase";
+
+"kitchen.shopping.title" = "Shopping List";
+"kitchen.shopping.addMissing" = "Add all missing to Shopping List";
+"kitchen.shopping.empty" = "Shopping list is empty.";
+
+"kitchen.captain.title" = "Captain";
+"kitchen.captain.welcome" = "Hi! I am Captain Hamoudi in Kitchen mode. Tell me what you want to cook from your fridge.";
+"kitchen.captain.planReady" = "Your %d-day plan is generated and pinned.";
+"kitchen.captain.draftDetected" = "Draft plan detected from your text (breakfast/lunch/dinner).";
+"kitchen.captain.draftHint" = "I parsed breakfast, lunch, and dinner. Tap pin if this is correct.";
+"kitchen.captain.pinDraft" = "Pin plan to Kitchen";
+"kitchen.captain.pinSuccess" = "Plan is pinned and saved to Kitchen cards.";
+"kitchen.quick.3days" = "Make me a 3-day plan";
+"kitchen.quick.week" = "Make me a weekly plan";
+"kitchen.quick.10min" = "Quick 10-minute meal";
+"kitchen.quick.highProtein" = "High protein";
+"kitchen.quick.swap" = "Swaps from what I have";
+"kitchen.delete" = "Delete";
 "meal.eggVeggies" = "Egg Whites with Veggies";
 "meal.eggVeggies.calories" = "250 kcal";
 

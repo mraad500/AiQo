@@ -59,6 +59,12 @@ enum CaptainIntelligenceError: LocalizedError {
     }
 }
 
+enum CaptainResponseRoute {
+    case automatic
+    case arabicAPI
+    case onDevice
+}
+
 /// Privacy-first manager for Captain Hamoudi:
 /// - Reads HealthKit data on-device
 /// - Uses external API only for Arabic responses and sends user message text only
@@ -71,6 +77,7 @@ final class CaptainIntelligenceManager {
     private let session: URLSession
     private let stateQueue = DispatchQueue(label: "AiQo.CaptainIntelligenceManager.state")
     private var hasLoggedModelUnavailable = false
+    private var lastNetworkFailureLogAt: Date?
 
     private let captainInstructions = """
     You are Captain Hamoudi, an Iraqi VIP fitness coach.
@@ -136,14 +143,62 @@ final class CaptainIntelligenceManager {
         )
     }
 
-    /// Builds private context from local health data + user text, then runs on-device generation.
+    /// Builds private context from local health data + user text, then runs route-aware generation.
     func generateCaptainResponse(for userInput: String) async throws -> String {
+        try await generateCaptainResponse(
+            for: userInput,
+            forcedRoute: .automatic,
+            contextOverride: nil
+        )
+    }
+
+    /// Route-aware generation path used by Kitchen module.
+    func generateCaptainResponse(
+        for userInput: String,
+        forcedRoute: CaptainResponseRoute,
+        contextOverride: String? = nil
+    ) async throws -> String {
         let cleanedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return "" }
 
-        if textContainsArabic(cleanedInput) {
+        switch forcedRoute {
+        case .automatic:
+            if textContainsArabic(cleanedInput) {
+                return try await generateArabicResponseWithFallback(for: cleanedInput)
+            }
+            return try await generateOnDeviceResponseWithFallback(
+                for: cleanedInput,
+                contextOverride: contextOverride
+            )
+
+        case .arabicAPI:
+            return try await generateArabicResponseWithFallback(for: cleanedInput)
+
+        case .onDevice:
+            return try await generateOnDeviceResponseWithFallback(
+                for: cleanedInput,
+                contextOverride: contextOverride
+            )
+        }
+    }
+
+    private func generateArabicResponseWithFallback(for cleanedInput: String) async throws -> String {
+        do {
+            return try await generateArabicAPIReply(for: cleanedInput)
+        } catch {
+            printGenerationFailure(error)
+            return localFallbackResponse(for: cleanedInput, error: error)
+        }
+    }
+
+    private func generateOnDeviceResponseWithFallback(
+        for cleanedInput: String,
+        contextOverride: String?
+    ) async throws -> String {
+        if let override = contextOverride?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty {
             do {
-                return try await generateArabicAPIReply(for: cleanedInput)
+                return try await generateOnDeviceReply(prompt: override)
             } catch {
                 printGenerationFailure(error)
                 return localFallbackResponse(for: cleanedInput, error: error)
@@ -324,9 +379,17 @@ final class CaptainIntelligenceManager {
 
     private func isNetworkUnavailable(_ error: Error) -> Bool {
         let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain,
-           nsError.code == NSURLErrorNotConnectedToInternet {
-            return true
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorTimedOut,
+                 NSURLErrorNetworkConnectionLost:
+                return true
+            default:
+                break
+            }
         }
 
         if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
@@ -399,6 +462,12 @@ final class CaptainIntelligenceManager {
     }
 
     private func printGenerationFailure(_ error: Error) {
+        if isNetworkUnavailable(error) {
+            guard consumeNetworkFailureLogPermit() else { return }
+            print("🤖 [CaptainIntelligenceManager] Arabic API unreachable. Using fallback reply.")
+            return
+        }
+
         if let captainError = error as? CaptainIntelligenceError {
             switch captainError {
             case .onDeviceModelUnavailable, .foundationModelsUnavailable, .unsupportedDeviceLanguage:
@@ -408,12 +477,23 @@ final class CaptainIntelligenceManager {
             }
         }
 
-        print("🤖 [CaptainIntelligenceManager] Local generation failed: \(error.localizedDescription)")
+        print("🤖 [CaptainIntelligenceManager] Response generation failed: \(error.localizedDescription)")
 
         var currentUnderlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error
         while let nestedError = currentUnderlying {
             print("🤖 [CaptainIntelligenceManager] Underlying error: \(nestedError.localizedDescription)")
             currentUnderlying = (nestedError as NSError).userInfo[NSUnderlyingErrorKey] as? Error
+        }
+    }
+
+    private func consumeNetworkFailureLogPermit() -> Bool {
+        stateQueue.sync {
+            let now = Date()
+            if let last = lastNetworkFailureLogAt, now.timeIntervalSince(last) < 20 {
+                return false
+            }
+            lastNetworkFailureLogAt = now
+            return true
         }
     }
 

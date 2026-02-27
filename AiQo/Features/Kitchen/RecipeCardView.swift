@@ -5,24 +5,22 @@ import SwiftUI
 struct RecipeCardView: View {
     let meal: Meal
 
+    private var illustrationSpec: MealImageSpec {
+        MealImageSpecFactory.make(for: meal)
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-
-            Image(meal.imageName)
-                .resizable()
-                .scaledToFit()
+            MealIllustrationView(spec: illustrationSpec)
                 .frame(width: 96, height: 96)
-                .clipShape(Circle())
                 .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
 
             VStack(alignment: .trailing, spacing: 8) {
-                // اسم الوجبة مترجم
                 Text(meal.localizedName)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.black)
                     .multilineTextAlignment(.trailing)
 
-                // السعرات
                 Text("\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.black.opacity(0.7))

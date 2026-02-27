@@ -1,52 +1,38 @@
 import SwiftUI
 
 struct KitchenScreen: View {
-    
-    // MARK: - Properties
     @State private var selectedMeal: Meal?
     @State private var isProfileSheetPresented = false
-    @State private var isRegenerating: Bool = false
     @State private var regenerateFeedbackTrigger = 0
-    @State private var analyzeFeedbackTrigger = 0
-    @State private var saveFeedbackTrigger = 0
-    
-    // NEW: فتح شاشة KitchenHamoudi
-    @State private var isKitchenHamoudiPresented: Bool = false
-    
-    let viewModel: KitchenViewModel
-    let onEditDietTapped: () -> Void
 
-    // MARK: - Body
+    let viewModel: KitchenViewModel
+    @ObservedObject var kitchenStore: KitchenPersistenceStore
+
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                
                 header
-                    .padding(.top, -28)
+                    .padding(.top, 8)
                     .padding(.bottom, 16)
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .trailing, spacing: 24) {
-                        
-                        // تم التعديل هنا لاستخدام الكروت المتحركة 👇
                         mealSection(titleKey: "screen.kitchen.breakfast", type: .breakfast)
                         mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
                         mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
-                        
+
                         buttonsSection
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
                 }
             }
-            .padding(.top, 0)
         }
         .task {
             await viewModel.loadMeals()
         }
-
         .sheet(isPresented: $isProfileSheetPresented) {
             NavigationStack {
                 ProfileScreen()
@@ -54,71 +40,63 @@ struct KitchenScreen: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        
-        // Meal details sheet
         .sheet(item: $selectedMeal) { meal in
             if #available(iOS 17.0, *) {
-                MealDetailSheet(meal: meal)
+                MealDetailSheet(
+                    meal: meal,
+                    pinnedMeal: activePinnedPlanMeal(for: meal.meal_type)
+                )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(.ultraThinMaterial)
             } else {
-                MealDetailSheet(meal: meal)
+                MealDetailSheet(
+                    meal: meal,
+                    pinnedMeal: activePinnedPlanMeal(for: meal.meal_type)
+                )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
         }
-        
-        // NEW: KitchenHamoudi sheet
-        .sheet(isPresented: $isKitchenHamoudiPresented) {
-            KitchenHamoudi()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(.thinMaterial)
-        }
     }
 }
 
-// MARK: - Header & Components
 private extension KitchenScreen {
-    
     var header: some View {
         HStack(alignment: .center) {
-            
             VStack(alignment: .leading, spacing: 6) {
                 Text("screen.kitchen.title".localized)
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .foregroundColor(.primary)
-                
+
                 HStack(spacing: 6) {
                     Text(formattedDate())
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
-                    
+
                     Image(systemName: "calendar")
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             FloatingProfileButton(size: 48) {
                 openProfile()
             }
         }
-        .frame(height: 60)
+        .frame(height: 74)
         .padding(.horizontal, 24)
     }
-    
+
     func mealSection(titleKey: String, type: MealType) -> some View {
         VStack(alignment: .trailing, spacing: 12) {
             Text(titleKey.localized)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
-            
-            if let meal = viewModel.displayedMeal(for: type) {
-                // 🔥 هنا السحر: استبدلنا الزر العادي بالزر المتحرك الجديد
+
+            if let meal = displayedMeal(type: type) {
                 AnimatedMealButton(meal: meal) {
                     selectedMeal = meal
                 }
@@ -130,180 +108,297 @@ private extension KitchenScreen {
             }
         }
     }
-    
+
+    func displayedMeal(type: MealType) -> Meal? {
+        if let pinnedMeal = pinnedPlanMeal(for: type) {
+            return pinnedMeal
+        }
+        return viewModel.displayedMeal(for: type)
+    }
+
+    func pinnedPlanMeal(for type: MealType) -> Meal? {
+        guard let plan = kitchenStore.pinnedPlan else { return nil }
+
+        let calendar = Calendar.current
+        let startOfPlan = calendar.startOfDay(for: plan.startDate)
+        let today = calendar.startOfDay(for: Date())
+        let dayOffset = calendar.dateComponents([.day], from: startOfPlan, to: today).day ?? 0
+        let activeDay = min(max(dayOffset + 1, 1), max(plan.days, 1))
+
+        let targetType = KitchenMealType.from(mealType: type)
+        let candidate = plan.meals.first(where: { $0.dayIndex == activeDay && $0.type == targetType })
+            ?? plan.meals.first(where: { $0.dayIndex == 1 && $0.type == targetType })
+            ?? plan.meals.first(where: { $0.type == targetType })
+
+        guard let candidate else { return nil }
+
+        return Meal(
+            id: generatedMealID(from: candidate),
+            name_ar: candidate.title,
+            calories_kcal: candidate.calories ?? candidate.type.defaultCalories,
+            meal_type: type
+        )
+    }
+
+    func generatedMealID(from meal: KitchenPlannedMeal) -> Int {
+        let titleSeed = meal.title.unicodeScalars.reduce(0) { partialResult, scalar in
+            partialResult + Int(scalar.value)
+        }
+        return 90_000 + titleSeed + (meal.dayIndex * 10) + mealTypeSeed(meal.type)
+    }
+
+    func mealTypeSeed(_ type: KitchenMealType) -> Int {
+        switch type {
+        case .breakfast:
+            return 1
+        case .lunch:
+            return 2
+        case .dinner:
+            return 3
+        case .snack:
+            return 4
+        }
+    }
+
     var buttonsSection: some View {
-        VStack(spacing: 16) {
-            
-            // Regenerate with AI -> opens KitchenHamoudi
-            Button {
-                regenerateFeedbackTrigger += 1
-                isKitchenHamoudiPresented = true
+        VStack(spacing: 14) {
+            HStack(spacing: 10) {
+                smallEntryLink(
+                    title: "kitchen.fridge.title".localized,
+                    icon: "refrigerator.fill"
+                ) {
+                    FridgeInventoryView()
+                        .environmentObject(kitchenStore)
+                }
+
+                smallEntryLink(
+                    title: "kitchen.mealplan.title".localized,
+                    icon: "fork.knife.circle.fill"
+                ) {
+                    MealPlanView()
+                        .environmentObject(kitchenStore)
+                }
+            }
+
+            NavigationLink {
+                KitchenSceneView()
+                    .environmentObject(kitchenStore)
             } label: {
                 Text("screen.kitchen.regenerate".localized)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color(.systemGray6))
+                            .fill(Color.kitchenMint)
                     )
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: 320)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    regenerateFeedbackTrigger += 1
+                }
+            )
             .sensoryFeedback(.selection, trigger: regenerateFeedbackTrigger)
-
-            Button {
-                saveFeedbackTrigger += 1
-                _ = viewModel.saveCurrentPlan()
-            } label: {
-                Text("حفظ الخطة")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color(red: 0.86, green: 0.95, blue: 0.86))
-                    )
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.selection, trigger: saveFeedbackTrigger)
-            .disabled(viewModel.currentPlan == nil)
-            
-            Button {
-                analyzeFeedbackTrigger += 1
-                onEditDietTapped()
-            } label: {
-                Text("screen.kitchen.analyze".localized)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color(red: 0.99, green: 0.90, blue: 0.60))
-                    )
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.selection, trigger: analyzeFeedbackTrigger)
         }
         .padding(.top, 8)
     }
-    
+
+    func smallEntryLink<Destination: View>(
+        title: String,
+        icon: String,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.aiqoSand)
+            )
+        }
+    }
+
     func formattedDate() -> String {
         let formatter = DateFormatter()
         formatter.locale = .current
         formatter.dateFormat = "d/M"
         return formatter.string(from: Date())
     }
-    
+
     func openProfile() {
         isProfileSheetPresented = true
     }
+
+    func activePinnedPlanMeal(for type: MealType) -> KitchenPlannedMeal? {
+        guard let plan = kitchenStore.pinnedPlan else { return nil }
+
+        let calendar = Calendar.current
+        let startOfPlan = calendar.startOfDay(for: plan.startDate)
+        let today = calendar.startOfDay(for: Date())
+        let dayOffset = calendar.dateComponents([.day], from: startOfPlan, to: today).day ?? 0
+        let activeDay = min(max(dayOffset + 1, 1), max(plan.days, 1))
+        let targetType = KitchenMealType.from(mealType: type)
+
+        return plan.meals.first(where: { $0.dayIndex == activeDay && $0.type == targetType })
+            ?? plan.meals.first(where: { $0.dayIndex == 1 && $0.type == targetType })
+            ?? plan.meals.first(where: { $0.type == targetType })
+    }
 }
 
-// MARK: - Meal Detail Sheet
+private extension KitchenMealType {
+    static func from(mealType: MealType) -> KitchenMealType {
+        switch mealType {
+        case .breakfast:
+            return .breakfast
+        case .lunch:
+            return .lunch
+        case .dinner:
+            return .dinner
+        }
+    }
+}
+
 struct MealDetailSheet: View {
     let meal: Meal
-    
-    private var mealImageName: String {
-        switch meal.meal_type {
-        case .breakfast: return "breakfast"
-        case .lunch:     return "lunch"
-        case .dinner:    return "dinner"
+    let pinnedMeal: KitchenPlannedMeal?
+
+    private var presentation: MealDetailPresentation {
+        MealImageSpecFactory.details(for: meal, pinnedMeal: pinnedMeal)
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 18) {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 40, height: 4)
+                    .padding(.top, 8)
+
+                MealIllustrationView(spec: presentation.imageSpec)
+                    .frame(width: 188, height: 188)
+                    .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 6)
+
+                Text(meal.name_ar)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 10) {
+                    detailStatCard(
+                        title: "\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized,
+                        subtitle: AppSettingsStore.shared.appLanguage == .english ? "Calories" : "السعرات"
+                    )
+
+                    detailStatCard(
+                        title: "\(presentation.proteinGrams)g",
+                        subtitle: AppSettingsStore.shared.appLanguage == .english ? "Protein" : "البروتين"
+                    )
+                }
+
+                VStack(alignment: .trailing, spacing: 12) {
+                    Text(AppSettingsStore.shared.appLanguage == .english ? "Meal Contents" : "محتويات الأكلة")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    VStack(spacing: 10) {
+                        ForEach(Array(presentation.ingredientNames.enumerated()), id: \.offset) { _, ingredientName in
+                            HStack(spacing: 10) {
+                                Image(systemName: "fork.knife.circle.fill")
+                                    .foregroundStyle(Color.yellow)
+                                Text(ingredientName)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(.secondarySystemBackground))
+                            )
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
     }
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Capsule()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 40, height: 4)
-                .padding(.top, 8)
-            
-            Image(mealImageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 140, height: 140)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 6)
-            
-            Text(meal.name_ar)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .multilineTextAlignment(.center)
-            
-            Text("\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.gray)
-            
-            Spacer(minLength: 12)
-            
-            Text("screen.kitchen.mealDetailsPlaceholder".localized)
-                .font(.system(size: 14, weight: .regular, design: .rounded))
+
+    func detailStatCard(title: String, subtitle: String) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+            Text(subtitle)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
     }
 }
 
-// MARK: - 🔥 Animated Meal Button (سحر الحركة)
 struct AnimatedMealButton: View {
     let meal: Meal
     let action: () -> Void
-    
-    // حالات الحركة الخاصة بكل كارت
-    @State private var floatOffsetY: CGFloat = 0.0
+
     @State private var isPressed: Bool = false
-    @State private var tapRotation: Double = 0.0
-    
+    @State private var floatOffsetY: CGFloat = -1.2
+    @State private var idleRotation: Double = -0.45
+    @State private var tapRotation: Double = 0
+
     var body: some View {
         RecipeCardView(meal: meal)
-            // 1. حركة الطفو (Clouds) ☁️
             .offset(y: floatOffsetY)
-            
-            // 2. حركة التموج عند الضغط (Water Wave) 💧
-            .scaleEffect(isPressed ? 0.92 : 1.0)
-            .rotation3DEffect(.degrees(tapRotation), axis: (x: 1, y: 0, z: 0))
-            
+            .scaleEffect(x: 1.0, y: isPressed ? 0.94 : 1.0, anchor: .center)
+            .rotationEffect(.degrees(idleRotation + tapRotation))
+            .rotation3DEffect(
+                .degrees((idleRotation + tapRotation) * 0.35),
+                axis: (x: 0, y: 0, z: 1),
+                anchor: .center
+            )
             .onAppear {
-                // تأخير عشوائي عشان ما يتحركون سوا مثل الروبوتات
-                let randomDelay = Double.random(in: 0...2.0)
-                withAnimation(
-                    Animation
-                        .easeInOut(duration: 5.0) // بطيء وهادئ
-                        .repeatForever(autoreverses: true)
-                        .delay(randomDelay)
-                ) {
-                    floatOffsetY = -6.0
+                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                    floatOffsetY = 1.2
+                    idleRotation = 0.45
                 }
             }
             .onTapGesture {
                 triggerWaveAnimation()
-                action()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                    action()
+                }
             }
     }
-    
+
     private func triggerWaveAnimation() {
-        // Haptic Feedback
         let impact = UIImpactFeedbackGenerator(style: .light)
         impact.impactOccurred()
-        
-        // المرحلة الأولى: انكماش وإمالة
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0)) {
+
+        withAnimation(.easeInOut(duration: 0.12)) {
             isPressed = true
-            tapRotation = 8.0
+            tapRotation = 0.65
         }
-        
-        // المرحلة الثانية: ارتداد ناعم
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.4, blendDuration: 0)) {
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            withAnimation(.easeOut(duration: 0.18)) {
                 isPressed = false
-                tapRotation = 0.0
+                tapRotation = 0
             }
         }
     }

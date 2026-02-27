@@ -105,6 +105,7 @@ struct MainTabScreen: View {
 
 private struct KitchenTabRootView: View {
     @State private var viewModel: KitchenViewModel
+    @StateObject private var kitchenStore = KitchenPersistenceStore()
 
     init() {
         _viewModel = State(
@@ -115,7 +116,7 @@ private struct KitchenTabRootView: View {
     var body: some View {
         KitchenScreen(
             viewModel: viewModel,
-            onEditDietTapped: {}
+            kitchenStore: kitchenStore
         )
     }
 }
