@@ -5,6 +5,7 @@ struct IngredientDisplayItem: Identifiable, Equatable {
     let name: String
     let count: Int
     let quantityText: String?
+    let ingredientKey: IngredientKey?
 }
 
 enum IngredientDisplayBuilder {
@@ -25,12 +26,16 @@ enum IngredientDisplayBuilder {
                     unit: cleanedUnit(ingredient.unit),
                     canSumAmounts: ingredient.amount != nil,
                     firstQuantityText: quantityText(amount: ingredient.amount, unit: ingredient.unit),
-                    hasQuantity: ingredient.amount != nil
+                    hasQuantity: ingredient.amount != nil,
+                    ingredientKey: IngredientCatalog.match(from: ingredient.name)
                 )
             }
 
             guard var bucket = buckets[normalizedName] else { continue }
             bucket.count += 1
+            if bucket.ingredientKey == nil {
+                bucket.ingredientKey = IngredientCatalog.match(from: ingredient.name)
+            }
 
             if let amount = ingredient.amount {
                 let unit = cleanedUnit(ingredient.unit)
@@ -56,7 +61,8 @@ enum IngredientDisplayBuilder {
                 id: key,
                 name: bucket.displayName,
                 count: bucket.count,
-                quantityText: bucket.quantityDisplayText
+                quantityText: bucket.quantityDisplayText,
+                ingredientKey: bucket.ingredientKey
             )
         }
     }
@@ -83,7 +89,8 @@ enum IngredientDisplayBuilder {
                 id: key,
                 name: bucket.displayName,
                 count: bucket.count,
-                quantityText: nil
+                quantityText: nil,
+                ingredientKey: IngredientCatalog.match(from: bucket.displayName)
             )
         }
     }
@@ -123,6 +130,7 @@ private struct Bucket {
     var canSumAmounts: Bool
     var firstQuantityText: String?
     var hasQuantity: Bool
+    var ingredientKey: IngredientKey?
 
     var quantityDisplayText: String? {
         guard hasQuantity else { return nil }

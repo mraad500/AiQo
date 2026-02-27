@@ -126,6 +126,14 @@ final class LevelStore: ObservableObject {
         UserDefaults.standard.set(level, forKey: "aiqo.user.level")
         UserDefaults.standard.set(currentXP, forKey: "aiqo.user.currentXP")
         UserDefaults.standard.set(totalXP, forKey: "aiqo.user.totalXP")
+
+        Task { @MainActor in
+            QuestPersistenceController.shared.syncPlayerStats(
+                level: self.level,
+                currentLevelXP: self.currentXP,
+                totalXP: self.totalXP
+            )
+        }
         
         NotificationCenter.default.post(name: .levelStoreDidChange, object: nil)
     }

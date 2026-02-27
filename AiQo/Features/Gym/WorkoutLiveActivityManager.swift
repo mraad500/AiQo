@@ -11,7 +11,11 @@ final class WorkoutLiveActivityManager {
 
     private init() {}
 
-    func start(title: String) {
+    func start(
+        title: String,
+        zone2State: WorkoutActivityAttributes.HeartRateState = .neutral,
+        activeBuffs: [WorkoutActivityAttributes.Buff] = []
+    ) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         if activity != nil {
@@ -29,7 +33,9 @@ final class WorkoutLiveActivityManager {
             heartRate: 0,
             activeCalories: 0,
             distanceMeters: 0,
-            phase: .running
+            phase: .running,
+            heartRateState: zone2State,
+            activeBuffs: normalizedBuffs(activeBuffs)
         )
 
         Task {
@@ -54,6 +60,8 @@ final class WorkoutLiveActivityManager {
         activeCalories: Double,
         distanceMeters: Double,
         phase: WorkoutActivityAttributes.WorkoutPhase,
+        zone2State: WorkoutActivityAttributes.HeartRateState = .neutral,
+        activeBuffs: [WorkoutActivityAttributes.Buff] = [],
         force: Bool = false
     ) {
         guard let activity else { return }
@@ -70,7 +78,9 @@ final class WorkoutLiveActivityManager {
             heartRate: max(0, Int(heartRate.rounded())),
             activeCalories: max(0, Int(activeCalories.rounded())),
             distanceMeters: max(0, distanceMeters),
-            phase: phase
+            phase: phase,
+            heartRateState: zone2State,
+            activeBuffs: normalizedBuffs(activeBuffs)
         )
 
         Task {
@@ -83,7 +93,9 @@ final class WorkoutLiveActivityManager {
         elapsedSeconds: Int,
         heartRate: Double,
         activeCalories: Double,
-        distanceMeters: Double
+        distanceMeters: Double,
+        zone2State: WorkoutActivityAttributes.HeartRateState = .neutral,
+        activeBuffs: [WorkoutActivityAttributes.Buff] = []
     ) {
         guard let activity else { return }
 
@@ -93,7 +105,9 @@ final class WorkoutLiveActivityManager {
             heartRate: max(0, Int(heartRate.rounded())),
             activeCalories: max(0, Int(activeCalories.rounded())),
             distanceMeters: max(0, distanceMeters),
-            phase: .ending
+            phase: .ending,
+            heartRateState: zone2State,
+            activeBuffs: normalizedBuffs(activeBuffs)
         )
 
         Task {
@@ -107,6 +121,20 @@ final class WorkoutLiveActivityManager {
         self.startedAt = nil
         self.lastPushTime = .distantPast
     }
+
+    private func normalizedBuffs(_ buffs: [WorkoutActivityAttributes.Buff]) -> [WorkoutActivityAttributes.Buff] {
+        var seen = Set<String>()
+        var normalized: [WorkoutActivityAttributes.Buff] = []
+
+        for buff in buffs where seen.insert(buff.id).inserted {
+            normalized.append(buff)
+            if normalized.count == 3 {
+                break
+            }
+        }
+
+        return normalized
+    }
 }
 
 #if canImport(ActivityKit)
@@ -118,12 +146,48 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var activeCalories: Int
         var distanceMeters: Double
         var phase: WorkoutPhase
+        var heartRateState: HeartRateState
+        var activeBuffs: [Buff]
+
+        var isZone2Active: Bool {
+            heartRateState == .zone2
+        }
     }
 
     enum WorkoutPhase: String, Codable, Hashable {
         case running
         case paused
         case ending
+    }
+
+    enum HeartRateState: String, Codable, Hashable {
+        case neutral
+        case warmingUp
+        case zone2
+        case belowZone2
+        case aboveZone2
+    }
+
+    struct Buff: Codable, Hashable, Identifiable {
+        var id: String
+        var label: String
+        var systemImage: String
+        var tone: BuffTone
+
+        init(id: String, label: String, systemImage: String, tone: BuffTone) {
+            self.id = id
+            self.label = label
+            self.systemImage = systemImage
+            self.tone = tone
+        }
+    }
+
+    enum BuffTone: String, Codable, Hashable {
+        case mint
+        case amber
+        case sky
+        case rose
+        case lavender
     }
 
     var workoutID: String

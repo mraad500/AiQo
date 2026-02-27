@@ -35,7 +35,7 @@ final class QuestEngine: ObservableObject {
     #endif
 
     private let evaluator: QuestEvaluator
-    private let progressStore: QuestProgressStore
+    private var progressStore: QuestProgressStore
     private let healthDataSource: HealthKitDataSource
     private let waterDataSource: WaterDataSource
     private let cameraDataSource: CameraVisionDataSource
@@ -109,21 +109,8 @@ final class QuestEngine: ObservableObject {
         let definitions = stages.flatMap(\.quests)
         self.definitionById = Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) })
 
-        let loaded = resolvedProgressStore.load()
-        var hydrated = loaded
-
-        for definition in definitions where hydrated[definition.id] == nil {
-            hydrated[definition.id] = resolvedEvaluator.initialRecord(for: definition.id, now: Date())
-        }
-
-        QuestEngine.migrateStageOneBooleanQuests(
-            in: &hydrated,
-            definitions: definitions,
-            now: Date(),
-            evaluator: resolvedEvaluator
-        )
-
-        self.progressByQuestId = hydrated
+        self.progressByQuestId = [:]
+        hydrateProgress(from: resolvedProgressStore.load(), now: Date())
 
         observeEvents()
 
@@ -142,6 +129,13 @@ final class QuestEngine: ObservableObject {
 
     func definition(for questId: String) -> QuestDefinition? {
         definitionById[questId]
+    }
+
+    func configure(progressStore: QuestProgressStore) {
+        self.progressStore = progressStore
+        hydrateProgress(from: progressStore.load(), now: Date())
+        persist()
+        refreshAllProgress(reason: .appLaunch)
     }
 
     func getProgress(for quest: QuestDefinition) -> QuestProgressRecord {
@@ -583,6 +577,24 @@ final class QuestEngine: ObservableObject {
         }
 
         observers = [foreground, kitchen]
+    }
+
+    private func hydrateProgress(from loaded: [String: QuestProgressRecord], now: Date) {
+        var hydrated = loaded
+        let definitions = Array(definitionById.values)
+
+        for definition in definitions where hydrated[definition.id] == nil {
+            hydrated[definition.id] = evaluator.initialRecord(for: definition.id, now: now)
+        }
+
+        QuestEngine.migrateStageOneBooleanQuests(
+            in: &hydrated,
+            definitions: definitions,
+            now: now,
+            evaluator: evaluator
+        )
+
+        progressByQuestId = hydrated
     }
 
     private func persist() {

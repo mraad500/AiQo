@@ -55,6 +55,7 @@ final class LiveWorkoutSession: ObservableObject {
     @Published private(set) var zone2LowerBoundBPM: Double = 0
     @Published private(set) var zone2UpperBoundBPM: Double = 0
     @Published private(set) var resolvedUserAge: Int = 0
+    @Published private(set) var activeLiveBuffs: [WorkoutActivityAttributes.Buff] = []
     
     @Published var isWatchReachable: Bool = false
     
@@ -261,7 +262,11 @@ final class LiveWorkoutSession: ObservableObject {
                         self.phase = .running
                     }
                     self.syncCoachingState()
-                    self.liveActivity.start(title: self.title)
+                    self.liveActivity.start(
+                        title: self.title,
+                        zone2State: self.liveActivityHeartRateState,
+                        activeBuffs: self.activeLiveBuffs
+                    )
                     self.pushLiveActivityUpdateIfNeeded(force: true)
                 }
             } else {
@@ -298,7 +303,11 @@ final class LiveWorkoutSession: ObservableObject {
                 self.phase = .running
             }
             self.syncCoachingState()
-            self.liveActivity.start(title: self.title)
+            self.liveActivity.start(
+                title: self.title,
+                zone2State: self.liveActivityHeartRateState,
+                activeBuffs: self.activeLiveBuffs
+            )
             self.pushLiveActivityUpdateIfNeeded(force: true)
         }
     }
@@ -326,7 +335,11 @@ final class LiveWorkoutSession: ObservableObject {
                         self.phase = .running
                     }
                     self.syncCoachingState()
-                    self.liveActivity.start(title: self.title)
+                    self.liveActivity.start(
+                        title: self.title,
+                        zone2State: self.liveActivityHeartRateState,
+                        activeBuffs: self.activeLiveBuffs
+                    )
                     self.pushLiveActivityUpdateIfNeeded(force: true)
                 }
             } else {
@@ -376,7 +389,9 @@ final class LiveWorkoutSession: ObservableObject {
                 elapsedSeconds: self.elapsedSeconds,
                 heartRate: self.heartRate,
                 activeCalories: self.activeEnergy,
-                distanceMeters: self.distanceMeters
+                distanceMeters: self.distanceMeters,
+                zone2State: self.liveActivityHeartRateState,
+                activeBuffs: self.activeLiveBuffs
             )
             withAnimation(.snappy) {
                 self.resetWorkoutState()
@@ -397,6 +412,7 @@ final class LiveWorkoutSession: ObservableObject {
         milestoneAlertText = ""
         audioCoachManager.reset(for: currentWorkout, zone2Target: resolvedZone2Target)
         zone2AuraState = isZone2GuidedWorkout ? .warmingUp : .inactive
+        activeLiveBuffs = []
     }
 
     private var resolvedZone2Target: AudioCoachManager.Zone2Target {
@@ -479,6 +495,33 @@ final class LiveWorkoutSession: ObservableObject {
         )
     }
 
+    func setActiveBuffs(_ buffs: [WorkoutActivityAttributes.Buff]) {
+        var seen = Set<String>()
+        let next = buffs.reduce(into: [WorkoutActivityAttributes.Buff]()) { partial, buff in
+            guard seen.insert(buff.id).inserted, partial.count < 3 else { return }
+            partial.append(buff)
+        }
+
+        guard next != activeLiveBuffs else { return }
+        activeLiveBuffs = next
+        pushLiveActivityUpdateIfNeeded(force: true)
+    }
+
+    private var liveActivityHeartRateState: WorkoutActivityAttributes.HeartRateState {
+        switch zone2AuraState {
+        case .inactive:
+            return .neutral
+        case .warmingUp:
+            return .warmingUp
+        case .inZone2:
+            return .zone2
+        case .tooFast:
+            return .aboveZone2
+        case .tooSlow:
+            return .belowZone2
+        }
+    }
+
     private func pushLiveActivityUpdateIfNeeded(force: Bool = false) {
         guard phase == .running || phase == .paused || phase == .ending else { return }
 
@@ -498,6 +541,8 @@ final class LiveWorkoutSession: ObservableObject {
             activeCalories: activeEnergy,
             distanceMeters: distanceMeters,
             phase: activityPhase,
+            zone2State: liveActivityHeartRateState,
+            activeBuffs: activeLiveBuffs,
             force: force
         )
     }

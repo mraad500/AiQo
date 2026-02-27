@@ -251,6 +251,7 @@ private extension MealPlanView {
 
     func ingredientRow(_ ingredient: KitchenIngredient, meal: KitchenPlannedMeal) -> some View {
         let state = kitchenStore.availability(for: ingredient)
+        let ingredientKey = IngredientCatalog.match(from: ingredient.name)
         let markedNeedsPurchase = kitchenStore.isMarkedAsNeedsPurchase(
             mealID: meal.id,
             ingredientName: ingredient.name
@@ -263,6 +264,14 @@ private extension MealPlanView {
 
         return HStack(alignment: .center, spacing: 10) {
             Text(state.icon)
+
+            IngredientIconView(
+                ingredientKey: ingredientKey,
+                size: 28,
+                cornerRadius: 9,
+                fallbackSystemName: "leaf.circle.fill",
+                fallbackTint: .green
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {

@@ -2,6 +2,7 @@ import UIKit
 import UserNotifications
 import FamilyControls
 import SwiftUI
+import SwiftData
 import WidgetKit
 import Supabase
 import Auth
@@ -22,6 +23,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         willConnectTo session: UISceneSession,
         options connectionOptions: UIScene.ConnectionOptions
     ) {
+        QuestPersistenceController.shared.installQuestPersistence()
         _ = PhoneConnectivityManager.shared
         NotificationCenter.default.addObserver(
             self,
@@ -153,7 +155,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func host<V: View>(_ view: V) -> UIViewController {
-        UIHostingController(rootView: view)
+        UIHostingController(
+            rootView: view.modelContainer(QuestPersistenceController.shared.container)
+        )
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) { _ = PhoneConnectivityManager.shared }
