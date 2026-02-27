@@ -7,7 +7,7 @@ struct MealImageSpec {
 
 struct MealDetailPresentation {
     let imageSpec: MealImageSpec
-    let ingredientNames: [String]
+    let ingredientItems: [IngredientDisplayItem]
     let proteinGrams: Int
 }
 
@@ -51,7 +51,7 @@ enum MealImageSpecFactory {
 
         return MealDetailPresentation(
             imageSpec: imageSpec,
-            ingredientNames: contentKeys.map(\.localizedTitle),
+            ingredientItems: IngredientDisplayBuilder.mergedItems(from: contentKeys.map(\.localizedTitle)),
             proteinGrams: estimateProteinGrams(from: contentKeys, fallback: fallbackProtein(for: meal.mealType))
         )
     }
@@ -62,7 +62,9 @@ enum MealImageSpecFactory {
 
         return MealDetailPresentation(
             imageSpec: imageSpec,
-            ingredientNames: meal.ingredients.isEmpty ? imageSpec.ingredients.prefix(4).map(\.localizedTitle) : meal.ingredients.map(\.name),
+            ingredientItems: meal.ingredients.isEmpty
+                ? IngredientDisplayBuilder.mergedItems(from: imageSpec.ingredients.prefix(4).map(\.localizedTitle))
+                : IngredientDisplayBuilder.mergedItems(from: meal.ingredients),
             proteinGrams: Int(meal.protein?.rounded() ?? Double(estimateProteinGrams(from: contentKeys, fallback: fallbackProtein(for: meal.type))))
         )
     }

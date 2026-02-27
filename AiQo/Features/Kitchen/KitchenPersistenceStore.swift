@@ -80,6 +80,12 @@ final class KitchenPersistenceStore: ObservableObject {
         }
     }
 
+    func addFridgeItems(_ items: [FridgeItem]) {
+        for item in items {
+            addOrMergeFridgeItem(item)
+        }
+    }
+
     func removeFridgeItems(at offsets: IndexSet) {
         fridgeItems.remove(atOffsets: offsets)
     }
@@ -147,6 +153,11 @@ final class KitchenPersistenceStore: ObservableObject {
 
     func addIngredientToShoppingList(_ ingredient: KitchenIngredient) {
         addShoppingItem(name: ingredient.name, amount: ingredient.amount, unit: ingredient.unit)
+    }
+
+    func containsShoppingItem(named name: String) -> Bool {
+        let normalized = normalizedName(name)
+        return shoppingList.contains { normalizedName($0.name) == normalized }
     }
 
     func addMissingIngredientsToShoppingList() {
@@ -290,5 +301,32 @@ final class KitchenPersistenceStore: ObservableObject {
 
     private func needsPurchaseKey(mealID: UUID, ingredientName: String) -> String {
         "\(mealID.uuidString.lowercased())|\(normalizedName(ingredientName))"
+    }
+
+    private func addOrMergeFridgeItem(_ item: FridgeItem) {
+        let trimmedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        let normalized = normalizedName(trimmedName)
+        if let index = fridgeItems.firstIndex(where: { normalizedName($0.name) == normalized }) {
+            fridgeItems[index].quantity += max(0, item.quantity)
+            if let unit = cleanedUnit(item.unit) {
+                fridgeItems[index].unit = unit
+            }
+            if let alchemyNoteKey = item.alchemyNoteKey {
+                fridgeItems[index].alchemyNoteKey = alchemyNoteKey
+            }
+            fridgeItems[index].updatedAt = Date()
+        } else {
+            fridgeItems.append(
+                FridgeItem(
+                    name: trimmedName,
+                    quantity: max(0, item.quantity),
+                    unit: cleanedUnit(item.unit),
+                    alchemyNoteKey: item.alchemyNoteKey,
+                    updatedAt: Date()
+                )
+            )
+        }
     }
 }

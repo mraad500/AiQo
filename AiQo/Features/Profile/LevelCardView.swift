@@ -118,7 +118,7 @@ final class LevelCardView: UIView {
 
         // Container
         containerView.translatesAutoresizingMaskIntoConstraints = false
-        containerView.backgroundColor = Colors.card
+        containerView.backgroundColor = Colors.sand
         containerView.layer.cornerRadius = 26
         containerView.layer.cornerCurve = .continuous
         containerView.layer.masksToBounds = false
@@ -154,11 +154,11 @@ final class LevelCardView: UIView {
         gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
         gradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
         gradientLayer.colors = [
-            UIColor.white.withAlphaComponent(0.55).cgColor,
-            Colors.sand.withAlphaComponent(0.18).cgColor,
-            Colors.card.withAlphaComponent(1.0).cgColor
+            Colors.sand.withAlphaComponent(1.0).cgColor,
+            UIColor.white.withAlphaComponent(0.22).cgColor,
+            Colors.sand.withAlphaComponent(0.94).cgColor
         ]
-        gradientLayer.locations = [0.0, 0.45, 1.0]
+        gradientLayer.locations = [0.0, 0.52, 1.0]
         gradientView.layer.insertSublayer(gradientLayer, at: 0)
 
         // Glass
@@ -180,14 +180,14 @@ final class LevelCardView: UIView {
 
         // Border
         borderLayer.fillColor = UIColor.clear.cgColor
-        borderLayer.strokeColor = UIColor.white.withAlphaComponent(0.45).cgColor
+        borderLayer.strokeColor = UIColor.white.withAlphaComponent(0.40).cgColor
         borderLayer.lineWidth = 1
         containerView.layer.addSublayer(borderLayer)
         
         // 🛡️ Shield Icon
         shieldImageView.translatesAutoresizingMaskIntoConstraints = false
         shieldImageView.contentMode = .scaleAspectFit
-        shieldImageView.tintColor = Colors.text
+        shieldImageView.tintColor = UIColor.black.withAlphaComponent(0.88)
         
         NSLayoutConstraint.activate([
             shieldImageView.widthAnchor.constraint(equalToConstant: 22),
@@ -197,11 +197,11 @@ final class LevelCardView: UIView {
         // Labels
         leftTitleLabel.text = NSLocalizedString("level", value: "Level", comment: "")
         leftTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        leftTitleLabel.textColor = Colors.subtext
+        leftTitleLabel.textColor = UIColor.black.withAlphaComponent(0.58)
         leftTitleLabel.alpha = 0.95
 
         levelNumberLabel.font = .systemFont(ofSize: 36, weight: .black)
-        levelNumberLabel.textColor = Colors.text
+        levelNumberLabel.textColor = UIColor.black.withAlphaComponent(0.88)
         levelNumberLabel.baselineAdjustment = .alignCenters
         levelNumberLabel.clipsToBounds = false
 
@@ -256,33 +256,33 @@ final class LevelCardView: UIView {
 
         // Progress background
         progressBackground.translatesAutoresizingMaskIntoConstraints = false
-        progressBackground.backgroundColor = UIColor.black.withAlphaComponent(0.06)
+        progressBackground.backgroundColor = UIColor.black.withAlphaComponent(0.12)
         progressBackground.layer.cornerRadius = 9
         progressBackground.layer.cornerCurve = .continuous
         progressBackground.layer.masksToBounds = true
 
         progressFill.translatesAutoresizingMaskIntoConstraints = false
-        progressFill.backgroundColor = Colors.sand
+        progressFill.backgroundColor = UIColor.black.withAlphaComponent(0.92)
         progressFill.layer.cornerRadius = 9
         progressFill.layer.cornerCurve = .continuous
         progressFill.layer.masksToBounds = true
 
         progressGlow.translatesAutoresizingMaskIntoConstraints = false
-        progressGlow.backgroundColor = Colors.sand.withAlphaComponent(0.35)
+        progressGlow.backgroundColor = UIColor.black.withAlphaComponent(0.18)
         progressGlow.layer.cornerRadius = 10
         progressGlow.layer.cornerCurve = .continuous
         progressGlow.layer.masksToBounds = false
-        progressGlow.layer.shadowColor = Colors.sand.withAlphaComponent(0.6).cgColor
+        progressGlow.layer.shadowColor = UIColor.black.withAlphaComponent(0.24).cgColor
         progressGlow.layer.shadowOpacity = 1
         progressGlow.layer.shadowRadius = 10
         progressGlow.layer.shadowOffset = .zero
 
         progressIndicator.translatesAutoresizingMaskIntoConstraints = false
-        progressIndicator.backgroundColor = .white.withAlphaComponent(0.92)
+        progressIndicator.backgroundColor = UIColor.black.withAlphaComponent(0.92)
         progressIndicator.layer.cornerRadius = 7
         progressIndicator.layer.cornerCurve = .continuous
         progressIndicator.layer.borderWidth = 1
-        progressIndicator.layer.borderColor = UIColor.black.withAlphaComponent(0.06).cgColor
+        progressIndicator.layer.borderColor = UIColor.white.withAlphaComponent(0.30).cgColor
         progressIndicator.layer.shadowColor = UIColor.black.withAlphaComponent(0.12).cgColor
         progressIndicator.layer.shadowOpacity = 1
         progressIndicator.layer.shadowRadius = 8
@@ -374,15 +374,7 @@ final class LevelCardView: UIView {
     
     // Helper to map ShieldTier to UIColor
     private func getShieldColor(for tier: LevelSystem.ShieldTier) -> UIColor {
-        switch tier {
-        case .wood:     return UIColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1)
-        case .bronze:   return UIColor(red: 0.8, green: 0.5, blue: 0.2, alpha: 1)
-        case .silver:   return .systemGray2
-        case .gold:     return .systemYellow
-        case .platinum: return UIColor(red: 0.8, green: 0.9, blue: 1.0, alpha: 1)
-        case .diamond:  return .systemCyan
-        case .master:   return .systemPurple
-        }
+        UIColor.black.withAlphaComponent(0.88)
     }
 
     private func updateProgress(animated: Bool) {
@@ -479,17 +471,17 @@ private final class ScorePillView: UIView {
         } else {
             blurHost.effect = UIBlurEffect(style: .systemThinMaterial)
         }
-        blurHost.alpha = 0.92
+        blurHost.alpha = 0.72
 
         layer.borderWidth = 1
-        layer.borderColor = UIColor.white.withAlphaComponent(0.35).cgColor
+        layer.borderColor = UIColor.black.withAlphaComponent(0.06).cgColor
         layer.shadowColor = UIColor.black.withAlphaComponent(0.10).cgColor
         layer.shadowOpacity = 1
         layer.shadowRadius = 14
         layer.shadowOffset = CGSize(width: 0, height: 8)
 
         iconView.image = UIImage(systemName: "chart.line.uptrend.xyaxis")
-        iconView.tintColor = Colors.text.withAlphaComponent(0.9)
+        iconView.tintColor = UIColor.black.withAlphaComponent(0.82)
         iconView.contentMode = .scaleAspectFit
 
         NSLayoutConstraint.activate([
@@ -498,10 +490,10 @@ private final class ScorePillView: UIView {
         ])
 
         titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        titleLabel.textColor = Colors.subtext
+        titleLabel.textColor = UIColor.black.withAlphaComponent(0.58)
 
         valueLabel.font = .monospacedDigitSystemFont(ofSize: 16, weight: .bold)
-        valueLabel.textColor = Colors.text
+        valueLabel.textColor = UIColor.black.withAlphaComponent(0.86)
 
         stack.axis = .horizontal
         stack.alignment = .center

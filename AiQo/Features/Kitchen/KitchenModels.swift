@@ -94,6 +94,7 @@ struct FridgeItem: Identifiable, Codable, Equatable {
     var name: String
     var quantity: Double
     var unit: String?
+    var alchemyNoteKey: String?
     var updatedAt: Date
 
     init(
@@ -101,13 +102,20 @@ struct FridgeItem: Identifiable, Codable, Equatable {
         name: String,
         quantity: Double,
         unit: String? = nil,
+        alchemyNoteKey: String? = nil,
         updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
         self.quantity = quantity
         self.unit = unit
+        self.alchemyNoteKey = alchemyNoteKey
         self.updatedAt = updatedAt
+    }
+
+    var localizedAlchemyNote: String? {
+        guard let alchemyNoteKey else { return nil }
+        return alchemyNoteKey.localized
     }
 }
 

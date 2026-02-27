@@ -1,10 +1,12 @@
 import SwiftUI
+import SwiftData
 
 struct FridgeInventoryView: View {
     @EnvironmentObject private var kitchenStore: KitchenPersistenceStore
     @State private var itemName: String = ""
     @State private var itemQuantity: String = "1"
     @State private var itemUnit: String = ""
+    @State private var isScannerPresented = false
 
     var body: some View {
         List {
@@ -15,6 +17,11 @@ struct FridgeInventoryView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("kitchen.fridge.title".localized)
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $isScannerPresented) {
+            SmartFridgeScannerView()
+                .environmentObject(kitchenStore)
+        }
+        .modelContainer(for: SmartFridgeScannedItemRecord.self)
     }
 }
 
@@ -35,6 +42,8 @@ private extension FridgeInventoryView {
             Button(action: addItem) {
                 Label("kitchen.fridge.addButton".localized, systemImage: "plus.circle.fill")
             }
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
             .disabled(itemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }
@@ -42,11 +51,12 @@ private extension FridgeInventoryView {
     var cameraSection: some View {
         Section {
             Button {
-                // TODO: Wire VisionKit / camera scan when camera permissions + scanner flow are ready.
-                print("TODO: fridge camera scan action")
+                isScannerPresented = true
             } label: {
                 Label("kitchen.fridge.camera".localized, systemImage: "camera.viewfinder")
             }
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
     }
 
@@ -64,6 +74,11 @@ private extension FridgeInventoryView {
                             Text(formattedQuantity(item.quantity, unit: item.unit))
                                 .font(.system(size: 14, weight: .regular, design: .rounded))
                                 .foregroundColor(.secondary)
+                            if let alchemyNote = item.localizedAlchemyNote {
+                                Text(alchemyNote)
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.19, green: 0.49, blue: 0.90))
+                            }
                         }
 
                         Spacer()
@@ -74,8 +89,10 @@ private extension FridgeInventoryView {
                             } label: {
                                 Image(systemName: "minus.circle")
                                     .font(.title3)
+                                    .frame(width: 44, height: 44)
                             }
                             .buttonStyle(.plain)
+                            .contentShape(Rectangle())
 
                             Text(formattedQuantity(item.quantity, unit: nil))
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -86,8 +103,10 @@ private extension FridgeInventoryView {
                             } label: {
                                 Image(systemName: "plus.circle")
                                     .font(.title3)
+                                    .frame(width: 44, height: 44)
                             }
                             .buttonStyle(.plain)
+                            .contentShape(Rectangle())
                         }
                     }
                     .swipeActions {

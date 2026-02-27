@@ -188,13 +188,14 @@ private extension KitchenScreen {
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(minHeight: 48)
                     .background(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .fill(Color.kitchenMint)
                     )
             }
             .frame(maxWidth: 320)
+            .contentShape(Rectangle())
             .simultaneousGesture(
                 TapGesture().onEnded {
                     regenerateFeedbackTrigger += 1
@@ -203,6 +204,7 @@ private extension KitchenScreen {
             .sensoryFeedback(.selection, trigger: regenerateFeedbackTrigger)
         }
         .padding(.top, 8)
+        .padding(.bottom, 16)
     }
 
     func smallEntryLink<Destination: View>(
@@ -220,12 +222,13 @@ private extension KitchenScreen {
             }
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .frame(minHeight: 48)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.aiqoSand)
             )
         }
+        .contentShape(Rectangle())
     }
 
     func formattedDate() -> String {
@@ -295,28 +298,54 @@ struct MealDetailSheet: View {
                 HStack(spacing: 10) {
                     detailStatCard(
                         title: "\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized,
-                        subtitle: AppSettingsStore.shared.appLanguage == .english ? "Calories" : "السعرات"
+                        subtitle: "kitchen.mealdetail.calories".localized
                     )
 
                     detailStatCard(
                         title: "\(presentation.proteinGrams)g",
-                        subtitle: AppSettingsStore.shared.appLanguage == .english ? "Protein" : "البروتين"
+                        subtitle: "kitchen.mealdetail.protein".localized
                     )
                 }
 
-                VStack(alignment: .trailing, spacing: 12) {
-                    Text(AppSettingsStore.shared.appLanguage == .english ? "Meal Contents" : "محتويات الأكلة")
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("kitchen.mealdetail.contents".localized)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(spacing: 10) {
-                        ForEach(Array(presentation.ingredientNames.enumerated()), id: \.offset) { _, ingredientName in
-                            HStack(spacing: 10) {
+                        ForEach(presentation.ingredientItems) { ingredient in
+                            HStack(spacing: 12) {
                                 Image(systemName: "fork.knife.circle.fill")
                                     .foregroundStyle(Color.yellow)
-                                Text(ingredientName)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.primary)
+                                    .font(.system(size: 18, weight: .semibold))
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 8) {
+                                        Text(ingredient.name)
+                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                            .foregroundColor(.primary)
+                                            .multilineTextAlignment(.leading)
+
+                                        if ingredient.count > 1 {
+                                            Text("×\(ingredient.count)")
+                                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                                .foregroundColor(.secondary)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(
+                                                    Capsule(style: .continuous)
+                                                        .fill(Color(.tertiarySystemFill))
+                                                )
+                                        }
+                                    }
+
+                                    if let quantityText = ingredient.quantityText {
+                                        Text(quantityText)
+                                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
                                 Spacer()
                             }
                             .padding(.horizontal, 14)
@@ -333,6 +362,7 @@ struct MealDetailSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+        .safeAreaPadding(.bottom, 12)
     }
 
     func detailStatCard(title: String, subtitle: String) -> some View {

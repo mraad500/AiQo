@@ -19,6 +19,7 @@ struct MealPlanView: View {
             .padding(16)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .safeAreaPadding(.bottom, 16)
         .navigationTitle("kitchen.mealplan.title".localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -58,12 +59,13 @@ private extension MealPlanView {
             }
             .foregroundColor(.black)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .frame(minHeight: 48)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.kitchenMint)
             )
         }
+        .contentShape(Rectangle())
         .disabled(isGenerating)
     }
 
@@ -94,6 +96,8 @@ private extension MealPlanView {
                     Text("kitchen.shopping.addMissing".localized)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                 }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
                 .buttonStyle(.bordered)
             }
 
@@ -110,8 +114,10 @@ private extension MealPlanView {
                             } label: {
                                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                                     .foregroundColor(item.isChecked ? .green : .secondary)
+                                    .frame(width: 44, height: 44)
                             }
                             .buttonStyle(.plain)
+                            .contentShape(Rectangle())
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name)
@@ -131,8 +137,10 @@ private extension MealPlanView {
                                 }
                             } label: {
                                 Image(systemName: "trash")
+                                    .frame(width: 44, height: 44)
                             }
                             .buttonStyle(.plain)
+                            .contentShape(Rectangle())
                         }
                         .padding(12)
                         .background(
@@ -247,39 +255,54 @@ private extension MealPlanView {
             mealID: meal.id,
             ingredientName: ingredient.name
         )
+        let needsShoppingShortcut = markedNeedsPurchase || state == .missing
+        let isAlreadyInShoppingList = kitchenStore.containsShoppingItem(named: ingredient.name)
+        let statusText = markedNeedsPurchase
+            ? "kitchen.impact.needsPurchase".localized
+            : state.localizedTitle
 
-        return HStack {
+        return HStack(alignment: .center, spacing: 10) {
             Text(state.icon)
-            Text(ingredient.name)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-            Spacer()
-            Text(state.localizedTitle)
-                .font(.system(size: 12, weight: .regular, design: .rounded))
-                .foregroundColor(.secondary)
 
-            if markedNeedsPurchase {
-                Text("kitchen.impact.needsPurchase".localized)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(ingredient.name)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+
+                    if let amount = ingredient.amount {
+                        Text(amountText(amount: amount, unit: ingredient.unit))
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Text(statusText)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(markedNeedsPurchase ? .orange : .secondary)
+
+                    if needsShoppingShortcut {
+                        quickShoppingButton(
+                            ingredient: ingredient,
+                            isAlreadyAdded: isAlreadyInShoppingList
+                        )
+                    }
+                }
             }
 
-            if let amount = ingredient.amount {
-                Text(amountText(amount: amount, unit: ingredient.unit))
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
-                    .foregroundColor(.secondary)
-            }
+            Spacer(minLength: 0)
         }
     }
 
     func impactCard(meal: KitchenPlannedMeal, missingIngredient: KitchenIngredient) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("kitchen.impact.title".localized)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
             Text("\("kitchen.impact.missingItem".localized): \(missingIngredient.name)")
                 .font(.system(size: 13, weight: .regular, design: .rounded))
                 .foregroundColor(.secondary)
 
-            HStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Button {
                     _ = kitchenStore.replaceIngredient(mealID: meal.id, ingredientName: missingIngredient.name)
                 } label: {
@@ -287,6 +310,8 @@ private extension MealPlanView {
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
                 .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
 
                 Button {
                     kitchenStore.addIngredientToShoppingList(missingIngredient)
@@ -295,6 +320,8 @@ private extension MealPlanView {
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
                 .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
 
                 Button {
                     kitchenStore.markAsNeedsPurchase(mealID: meal.id, ingredientName: missingIngredient.name)
@@ -303,6 +330,8 @@ private extension MealPlanView {
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
                 .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
             }
         }
         .padding(10)
@@ -310,6 +339,34 @@ private extension MealPlanView {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.orange.opacity(0.12))
         )
+    }
+
+    @ViewBuilder
+    func quickShoppingButton(ingredient: KitchenIngredient, isAlreadyAdded: Bool) -> some View {
+        Button {
+            guard !isAlreadyAdded else { return }
+            kitchenStore.addIngredientToShoppingList(ingredient)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isAlreadyAdded ? "checkmark.circle.fill" : "plus.circle.fill")
+                Text(
+                    isAlreadyAdded
+                        ? "kitchen.shopping.added".localized
+                        : "kitchen.shopping.addSingle".localized
+                )
+            }
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundColor(isAlreadyAdded ? .green : .accentColor)
+            .padding(.horizontal, 10)
+            .frame(minWidth: 44, minHeight: 44)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(.tertiarySystemBackground))
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .disabled(isAlreadyAdded)
     }
 
     func mealsForDay(day: Int, plan: KitchenMealPlan) -> [KitchenPlannedMeal] {

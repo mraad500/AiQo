@@ -9,6 +9,18 @@ internal import Combine
 
 final class HealthKitManager {
 
+    struct BioMetrics {
+        let weight: String?
+        let bodyFatPercentage: String?
+        let leanBodyMass: String?
+
+        static let empty = BioMetrics(
+            weight: nil,
+            bodyFatPercentage: nil,
+            leanBodyMass: nil
+        )
+    }
+
     // MARK: - Singleton
     static let shared = HealthKitManager()
     
@@ -45,6 +57,9 @@ final class HealthKitManager {
             HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
             HKQuantityType.quantityType(forIdentifier: .distanceCycling)!,
             HKQuantityType.quantityType(forIdentifier: .stepCount)!,
+            HKQuantityType.quantityType(forIdentifier: .bodyMass)!,
+            HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!,
+            HKQuantityType.quantityType(forIdentifier: .leanBodyMass)!,
             HKObjectType.activitySummaryType()
         ]
         
@@ -164,6 +179,56 @@ final class HealthKitManager {
         }
     }
 
+    func fetchMostRecentQuantitySample(
+        for identifier: HKQuantityTypeIdentifier
+    ) async throws -> HKQuantitySample? {
+        guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return nil
+        }
+
+        let sortDescriptors = [
+            NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        ]
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: quantityType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: sortDescriptors
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                continuation.resume(returning: samples?.first as? HKQuantitySample)
+            }
+
+            store.execute(query)
+        }
+    }
+
+    func fetchBioMetrics() async -> BioMetrics {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            return .empty
+        }
+
+        async let weightSample = try? fetchMostRecentQuantitySample(for: .bodyMass)
+        async let bodyFatSample = try? fetchMostRecentQuantitySample(for: .bodyFatPercentage)
+        async let leanBodyMassSample = try? fetchMostRecentQuantitySample(for: .leanBodyMass)
+
+        let resolvedWeightSample = await weightSample
+        let resolvedBodyFatSample = await bodyFatSample
+        let resolvedLeanBodyMassSample = await leanBodyMassSample
+
+        return BioMetrics(
+            weight: formatMassSample(resolvedWeightSample),
+            bodyFatPercentage: formatBodyFatSample(resolvedBodyFatSample),
+            leanBodyMass: formatMassSample(resolvedLeanBodyMassSample)
+        )
+    }
+
     // MARK: - 4. Data Processing (The Brain Loop) 🔄
     
     private func processNewHealthData() async {
@@ -239,5 +304,36 @@ final class HealthKitManager {
             defaults.set(totalCoins, forKey: lastAwardedCoinsKey)
             print("💰 Earned \(deltaCoins) coins (total today: \(totalCoins))")
         }
+    }
+
+    private func formatMassSample(_ sample: HKQuantitySample?) -> String? {
+        guard let sample else { return nil }
+
+        let kilograms = sample.quantity.doubleValue(for: .gramUnit(with: .kilo))
+        return formattedQuantityString(kilograms, unitSuffix: "kg")
+    }
+
+    private func formatBodyFatSample(_ sample: HKQuantitySample?) -> String? {
+        guard let sample else { return nil }
+
+        let percentValue = sample.quantity.doubleValue(for: .percent()) * 100.0
+        return formattedQuantityString(percentValue, unitSuffix: "%")
+    }
+
+    private func formattedQuantityString(
+        _ value: Double,
+        unitSuffix: String,
+        maximumFractionDigits: Int = 1
+    ) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = .current
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = maximumFractionDigits
+
+        let formattedValue = formatter.string(from: NSNumber(value: value))
+            ?? String(format: "%.\(maximumFractionDigits)f", value)
+
+        return "\(formattedValue) \(unitSuffix)"
     }
 }
