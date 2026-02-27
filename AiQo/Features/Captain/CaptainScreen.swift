@@ -354,7 +354,11 @@ final class CaptainViewModel: ObservableObject {
                 reply: normalized,
                 preferredLanguage: preferredLanguage
             )
-            await addAnimatedMessage(finalReply)
+            let displayReply = prependUserNameIfNeeded(
+                to: finalReply,
+                preferredLanguage: preferredLanguage
+            )
+            await addAnimatedMessage(displayReply)
             isSending = false
         } catch {
             isTyping = false
@@ -418,6 +422,59 @@ final class CaptainViewModel: ObservableObject {
         case .english:
             return "Got it. I will reply in English. What is the first step you want to start with today?"
         }
+    }
+
+    private func prependUserNameIfNeeded(
+        to reply: String,
+        preferredLanguage: ReplyLanguage
+    ) -> String {
+        guard preferredLanguage == .arabic else { return reply }
+        guard let userName = captainReplyUserName() else { return reply }
+        guard !hasUserNamePrefix(reply, userName: userName) else { return reply }
+        return "\(userName)، \(reply)"
+    }
+
+    private func captainReplyUserName() -> String? {
+        let profile = UserProfileStore.shared.current
+        let candidates = [
+            profile.username,
+            customization.calling,
+            customization.name,
+            profile.name
+        ]
+
+        for candidate in candidates {
+            guard let rawCandidate = candidate else { continue }
+            var normalized = rawCandidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalized.hasPrefix("@") {
+                normalized.removeFirst()
+                normalized = normalized.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            if normalized.isEmpty { continue }
+
+            let lowered = normalized.lowercased()
+            if lowered == "captain" || lowered == "kaptain" {
+                continue
+            }
+
+            return normalized
+        }
+
+        return nil
+    }
+
+    private func hasUserNamePrefix(_ reply: String, userName: String) -> Bool {
+        let trimmedReply = reply.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let loweredName = userName.lowercased()
+        let prefixTokens = ["،", ",", ":", " "]
+
+        for token in prefixTokens {
+            if trimmedReply.hasPrefix(loweredName + token) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private func addAnimatedMessage(_ content: String) async {

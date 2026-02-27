@@ -17,6 +17,7 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
 
     @Published private(set) var cameraState: CameraState = .idle
     @Published private(set) var repCount: Int = 0
+    @Published private(set) var accuracyPercent: Double = 0
     @Published private(set) var coachingHint: String = L10n.t("quests.vision.hint.initial")
 
     let captureSession = AVCaptureSession()
@@ -28,6 +29,8 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
 
     private var isSessionConfigured = false
     private var usesFrontCamera = true
+    private var evaluatedFrameCount: Int = 0
+    private var goodFormFrameCount: Int = 0
 
     func start() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -130,7 +133,10 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
         }
 
         repCounter.reset()
+        evaluatedFrameCount = 0
+        goodFormFrameCount = 0
         publishRepCount(0)
+        publishAccuracy(0)
         publishHint(key: "quests.vision.hint.lower_then_push")
         return true
     }
@@ -159,6 +165,16 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.coachingHint = L10n.t(key)
         }
+    }
+
+    private func publishAccuracy(_ value: Double) {
+        DispatchQueue.main.async { [weak self] in
+            self?.accuracyPercent = max(0, min(100, value))
+        }
+    }
+
+    func currentSessionResult() -> (reps: Int, accuracy: Double) {
+        (repCount, accuracyPercent)
     }
 }
 
@@ -197,6 +213,14 @@ extension VisionCoachViewModel: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         let elbowAngle = angleDegrees(a: joints.shoulder, b: joints.elbow, c: joints.wrist)
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+
+        evaluatedFrameCount += 1
+        if joints.confidence >= 0.35, elbowAngle >= 70, elbowAngle <= 175 {
+            goodFormFrameCount += 1
+        }
+        let accuracy = (Double(goodFormFrameCount) / Double(max(evaluatedFrameCount, 1))) * 100
+        publishAccuracy(accuracy)
+
         let update = repCounter.process(elbowAngle: elbowAngle, timestamp: timestamp)
 
         if update.repDelta > 0 {

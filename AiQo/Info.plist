@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CAPTAIN_ARABIC_API_URL</key>
+	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
 	<key>CFBundleIconFile</key>
@@ -29,6 +31,19 @@
 	<array>
 		<string>spotify</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>يستخدم AiQo بيانات الصحة لقراءة النشاط والنوم والماء وتحديث تقدم المهام تلقائياً.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>يحتاج AiQo صلاحية كتابة الماء في Apple Health عند إضافة الشرب من داخل التطبيق.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>AiQo needs local network access to connect to Captain backend during development.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

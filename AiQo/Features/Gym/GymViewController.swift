@@ -49,7 +49,7 @@ struct GymView: View {
     @State private var activeSession: LiveWorkoutSession?
     @State private var showFootballSheet = false   // ✅ جديد
     @StateObject private var winsStore: WinsStore
-    @StateObject private var questsStore: QuestDailyStore
+    @StateObject private var questEngine: QuestEngine
 
     @Namespace private var animation
     private let topTabBarHeight: CGFloat = 72
@@ -57,7 +57,7 @@ struct GymView: View {
     init() {
         let winsStore = WinsStore()
         _winsStore = StateObject(wrappedValue: winsStore)
-        _questsStore = StateObject(wrappedValue: QuestDailyStore(winsStore: winsStore))
+        _questEngine = StateObject(wrappedValue: QuestEngine.shared)
     }
 
     var body: some View {
@@ -69,7 +69,7 @@ struct GymView: View {
             VStack(spacing: 0) {
                 // Header Section
                 headerSection
-                    .padding(.top, 16)
+                    .padding(.top, 6)
 
                 // Apple Segmented Navigation Bar
                 Picker("", selection: $selectedTab) {
@@ -81,7 +81,7 @@ struct GymView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: topTabBarHeight)
                 .padding(.horizontal, 6)
-                .padding(.top, 12)
+                .padding(.top, 6)
                 .tint(.yellow)
                 .controlSize(.large)
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
@@ -89,11 +89,11 @@ struct GymView: View {
                 // Content Area
                 TabContentView(
                     selectedTab: selectedTab,
-                    questsStore: questsStore,
+                    questEngine: questEngine,
                     winsStore: winsStore,
                     onSelectExercise: handleExerciseSelection
                 )
-                    .padding(.top, 24)
+                    .padding(.top, 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .ignoresSafeArea(.container, edges: .bottom)
@@ -207,7 +207,7 @@ private func configureSegmentedAppearance() {
 // MARK: - Tab Content View
 struct TabContentView: View {
     let selectedTab: GymTab
-    @ObservedObject var questsStore: QuestDailyStore
+    @ObservedObject var questEngine: QuestEngine
     @ObservedObject var winsStore: WinsStore
     var onSelectExercise: (GymExercise) -> Void
 
@@ -221,7 +221,7 @@ struct TabContentView: View {
                 .transition(.opacity)
 
             case .vitals:
-                QuestsView(questsStore: questsStore)
+                QuestsView(engine: questEngine)
                     .transition(.opacity)
 
             case .plan:

@@ -8,6 +8,7 @@ struct KitchenScreen: View {
     @State private var isRegenerating: Bool = false
     @State private var regenerateFeedbackTrigger = 0
     @State private var analyzeFeedbackTrigger = 0
+    @State private var saveFeedbackTrigger = 0
     
     // NEW: فتح شاشة KitchenHamoudi
     @State private var isKitchenHamoudiPresented: Bool = false
@@ -150,6 +151,24 @@ private extension KitchenScreen {
             }
             .buttonStyle(.plain)
             .sensoryFeedback(.selection, trigger: regenerateFeedbackTrigger)
+
+            Button {
+                saveFeedbackTrigger += 1
+                _ = viewModel.saveCurrentPlan()
+            } label: {
+                Text("حفظ الخطة")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(Color(red: 0.86, green: 0.95, blue: 0.86))
+                    )
+            }
+            .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: saveFeedbackTrigger)
+            .disabled(viewModel.currentPlan == nil)
             
             Button {
                 analyzeFeedbackTrigger += 1

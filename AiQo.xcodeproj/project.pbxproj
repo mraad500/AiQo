@@ -7,16 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		80235CEF2F1A2D4800A4983B /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80235CEE2F1A2D4800A4983B /* HealthKit.framework */; };
 		8025C5282EC26585004DECAA /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8025C5272EC26585004DECAA /* Supabase */; };
 		806715D02F37337700D6EAB4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		806715D12F37337700D6EAB4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
 		806715E22F37337800D6EAB4 /* AiQoWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		80D81CCA2EF4D8FA0020C88D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */; };
-		80D81CD22EF4D8FA0020C88D /* AiQoMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		80D81CDD2EF4D9230020C88D /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D81CDC2EF4D9230020C88D /* ManagedSettings.framework */; };
-		80D81CDF2EF4D9230020C88D /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D81CDE2EF4D9230020C88D /* ManagedSettingsUI.framework */; };
-		80D81CE72EF4D9230020C88D /* AiQoShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 80D81CDB2EF4D9230020C88D /* AiQoShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		80D9BD9E2F1A7E0400CDF8DC /* AiQoWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 80D9BD7E2F1A7E0300CDF8DC /* AiQoWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		80D9BE7C2F1B0A9400CDF8DC /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE7B2F1B0A9400CDF8DC /* WatchConnectivity.framework */; };
 		80D9BE9B2F1B936500CDF8DC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
@@ -48,20 +42,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 806715CE2F37337700D6EAB4;
 			remoteInfo = AiQoWidgetExtension;
-		};
-		80D81CD02EF4D8FA0020C88D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 80D81CC72EF4D8FA0020C88D;
-			remoteInfo = AiQoMonitor;
-		};
-		80D81CE52EF4D9230020C88D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 80D81CDA2EF4D9230020C88D;
-			remoteInfo = AiQoShield;
 		};
 		80D9BD8B2F1A7E0400CDF8DC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -110,8 +90,6 @@
 			dstSubfolderSpec = 13;
 			files = (
 				806715E22F37337800D6EAB4 /* AiQoWidgetExtension.appex in Embed Foundation Extensions */,
-				80D81CD22EF4D8FA0020C88D /* AiQoMonitor.appex in Embed Foundation Extensions */,
-				80D81CE72EF4D9230020C88D /* AiQoShield.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -159,9 +137,7 @@
 		8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiQoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		806715F32F37367700D6EAB4 /* AiQoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AiQoWidgetExtension.entitlements; sourceTree = "<group>"; };
-		80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		80D81CDB2EF4D9230020C88D /* AiQoShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D81CDC2EF4D9230020C88D /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		80D81CDE2EF4D9230020C88D /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		80D9BD7E2F1A7E0300CDF8DC /* AiQoWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AiQoWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -185,28 +161,6 @@
 				Info.plist,
 			);
 			target = 8025C4B02EC25EB7004DECAA /* AiQo */;
-		};
-		80D81CD62EF4D8FA0020C88D /* Exceptions for "AiQoMonitor" folder in "AiQoMonitor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 80D81CC72EF4D8FA0020C88D /* AiQoMonitor */;
-		};
-		80D81CEB2EF4D9230020C88D /* Exceptions for "AiQoShield" folder in "AiQoShield" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 80D81CDA2EF4D9230020C88D /* AiQoShield */;
-		};
-		80D81CF32EF4DE0D0020C88D /* Exceptions for "AiQo" folder in "AiQoMonitor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				AiQoActivityNames.swift,
-				AppGroupKeys.swift,
-			);
-			target = 80D81CC72EF4D8FA0020C88D /* AiQoMonitor */;
 		};
 		A1F000020000000000000001 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -234,7 +188,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				80234F5E2EEF43AF00F21DCF /* Exceptions for "AiQo" folder in "AiQo" target */,
-				80D81CF32EF4DE0D0020C88D /* Exceptions for "AiQo" folder in "AiQoMonitor" target */,
 			);
 			path = AiQo;
 			sourceTree = "<group>";
@@ -255,22 +208,6 @@
 				A1F000020000000000000001 /* Exceptions for "AiQoWidget" folder in "AiQoWidgetExtension" target */,
 			);
 			path = AiQoWidget;
-			sourceTree = "<group>";
-		};
-		80D81CCB2EF4D8FA0020C88D /* AiQoMonitor */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				80D81CD62EF4D8FA0020C88D /* Exceptions for "AiQoMonitor" folder in "AiQoMonitor" target */,
-			);
-			path = AiQoMonitor;
-			sourceTree = "<group>";
-		};
-		80D81CE02EF4D9230020C88D /* AiQoShield */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				80D81CEB2EF4D9230020C88D /* Exceptions for "AiQoShield" folder in "AiQoShield" target */,
-			);
-			path = AiQoShield;
 			sourceTree = "<group>";
 		};
 		80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */ = {
@@ -331,24 +268,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		80D81CC52EF4D8FA0020C88D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				80D81CCA2EF4D8FA0020C88D /* DeviceActivity.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		80D81CD82EF4D9230020C88D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				80235CEF2F1A2D4800A4983B /* HealthKit.framework in Frameworks */,
-				80D81CDD2EF4D9230020C88D /* ManagedSettings.framework in Frameworks */,
-				80D81CDF2EF4D9230020C88D /* ManagedSettingsUI.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		80D9BD7B2F1A7E0300CDF8DC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -406,8 +325,6 @@
 			children = (
 				806715F32F37367700D6EAB4 /* AiQoWidgetExtension.entitlements */,
 				8025C4B32EC25EB7004DECAA /* AiQo */,
-				80D81CE02EF4D9230020C88D /* AiQoShield */,
-				80D81CCB2EF4D8FA0020C88D /* AiQoMonitor */,
 				8025C4C12EC25EB8004DECAA /* AiQoTests */,
 				8025C4CB2EC25EB8004DECAA /* AiQoUITests */,
 				80235CB52F1A19E200A4983B /* LICENSE */,
@@ -428,8 +345,6 @@
 			children = (
 				8025C4BE2EC25EB8004DECAA /* AiQoTests.xctest */,
 				8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */,
-				80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */,
-				80D81CDB2EF4D9230020C88D /* AiQoShield.appex */,
 				80D9BD7E2F1A7E0300CDF8DC /* AiQoWatch Watch App.app */,
 				80D9BD8A2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests.xctest */,
 				80D9BD942F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests.xctest */,
@@ -481,8 +396,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				80D81CD12EF4D8FA0020C88D /* PBXTargetDependency */,
-				80D81CE62EF4D9230020C88D /* PBXTargetDependency */,
 				80D9BD9D2F1A7E0400CDF8DC /* PBXTargetDependency */,
 				806715E12F37337800D6EAB4 /* PBXTargetDependency */,
 			);
@@ -564,50 +477,6 @@
 			);
 			productName = AiQoWidgetExtension;
 			productReference = 806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
-		80D81CC72EF4D8FA0020C88D /* AiQoMonitor */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 80D81CD32EF4D8FA0020C88D /* Build configuration list for PBXNativeTarget "AiQoMonitor" */;
-			buildPhases = (
-				80D81CC42EF4D8FA0020C88D /* Sources */,
-				80D81CC52EF4D8FA0020C88D /* Frameworks */,
-				80D81CC62EF4D8FA0020C88D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				80D81CCB2EF4D8FA0020C88D /* AiQoMonitor */,
-			);
-			name = AiQoMonitor;
-			packageProductDependencies = (
-			);
-			productName = AiQoMonitor;
-			productReference = 80D81CC82EF4D8FA0020C88D /* AiQoMonitor.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
-		80D81CDA2EF4D9230020C88D /* AiQoShield */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 80D81CE82EF4D9230020C88D /* Build configuration list for PBXNativeTarget "AiQoShield" */;
-			buildPhases = (
-				80D81CD72EF4D9230020C88D /* Sources */,
-				80D81CD82EF4D9230020C88D /* Frameworks */,
-				80D81CD92EF4D9230020C88D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				80D81CE02EF4D9230020C88D /* AiQoShield */,
-			);
-			name = AiQoShield;
-			packageProductDependencies = (
-			);
-			productName = AiQoShield;
-			productReference = 80D81CDB2EF4D9230020C88D /* AiQoShield.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 		80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */ = {
@@ -764,12 +633,6 @@
 					806715CE2F37337700D6EAB4 = {
 						CreatedOnToolsVersion = 26.3;
 					};
-					80D81CC72EF4D8FA0020C88D = {
-						CreatedOnToolsVersion = 26.2;
-					};
-					80D81CDA2EF4D9230020C88D = {
-						CreatedOnToolsVersion = 26.2;
-					};
 					80D9BD7D2F1A7E0300CDF8DC = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -813,8 +676,6 @@
 				8025C4B02EC25EB7004DECAA /* AiQo */,
 				8025C4BD2EC25EB7004DECAA /* AiQoTests */,
 				8025C4C72EC25EB8004DECAA /* AiQoUITests */,
-				80D81CC72EF4D8FA0020C88D /* AiQoMonitor */,
-				80D81CDA2EF4D9230020C88D /* AiQoShield */,
 				80D9BD7D2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
 				A1F000010000000000000070 /* AiQoWatchWidgetExtension */,
 				80D9BD892F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
@@ -849,20 +710,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		806715CD2F37337700D6EAB4 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		80D81CC62EF4D8FA0020C88D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		80D81CD92EF4D9230020C88D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -942,20 +789,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		80D81CC42EF4D8FA0020C88D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		80D81CD72EF4D9230020C88D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		80D9BD7A2F1A7E0300CDF8DC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1015,16 +848,6 @@
 			isa = PBXTargetDependency;
 			target = 806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */;
 			targetProxy = 806715E02F37337800D6EAB4 /* PBXContainerItemProxy */;
-		};
-		80D81CD12EF4D8FA0020C88D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 80D81CC72EF4D8FA0020C88D /* AiQoMonitor */;
-			targetProxy = 80D81CD02EF4D8FA0020C88D /* PBXContainerItemProxy */;
-		};
-		80D81CE62EF4D9230020C88D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 80D81CDA2EF4D9230020C88D /* AiQoShield */;
-			targetProxy = 80D81CE52EF4D9230020C88D /* PBXContainerItemProxy */;
 		};
 		80D9BD8C2F1A7E0400CDF8DC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1185,6 +1008,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CAPTAIN_ARABIC_API_URL = "";
+				"CAPTAIN_ARABIC_API_URL[sdk=iphoneos*]" = "http://192.168.1.222:3000/captain-ar";
+				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1236,6 +1062,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CAPTAIN_ARABIC_API_URL = "";
+				"CAPTAIN_ARABIC_API_URL[sdk=iphoneos*]" = "http://192.168.1.222:3000/captain-ar";
+				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1421,126 +1250,6 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		80D81CD42EF4D8FA0020C88D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = AiQoMonitor/AiQoMonitor.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 65NCBC2455;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AiQoMonitor;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.monitor;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		80D81CD52EF4D8FA0020C88D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = AiQoMonitor/AiQoMonitor.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 65NCBC2455;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AiQoMonitor;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.monitor;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		80D81CE92EF4D9230020C88D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = AiQoShield/AiQoShield.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 65NCBC2455;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoShield/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AiQoShield;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.shield;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		80D81CEA2EF4D9230020C88D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = AiQoShield/AiQoShield.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 65NCBC2455;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AiQoShield/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AiQoShield;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1890,24 +1599,6 @@
 			buildConfigurations = (
 				806715E42F37337800D6EAB4 /* Debug */,
 				806715E52F37337800D6EAB4 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		80D81CD32EF4D8FA0020C88D /* Build configuration list for PBXNativeTarget "AiQoMonitor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				80D81CD42EF4D8FA0020C88D /* Debug */,
-				80D81CD52EF4D8FA0020C88D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		80D81CE82EF4D9230020C88D /* Build configuration list for PBXNativeTarget "AiQoShield" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				80D81CE92EF4D9230020C88D /* Debug */,
-				80D81CEA2EF4D9230020C88D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

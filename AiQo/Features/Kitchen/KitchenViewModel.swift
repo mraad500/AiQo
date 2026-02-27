@@ -16,6 +16,9 @@ final class KitchenViewModel {
     // MARK: - Services
     private let repository: MealsRepository
     private let generator: MealPlanGenerator
+    private let defaults: UserDefaults
+    private let hasMealPlanKey = "aiqo.quest.kitchen.hasMealPlan"
+    private let savedAtKey = "aiqo.quest.kitchen.savedAt"
 
     // MARK: - State
     var allMeals: [Meal] = []
@@ -25,9 +28,11 @@ final class KitchenViewModel {
 
     // MARK: - Init
     init(repository: MealsRepository,
-         generator: MealPlanGenerator = MealPlanGenerator()) {
+         generator: MealPlanGenerator = MealPlanGenerator(),
+         defaults: UserDefaults = .standard) {
         self.repository = repository
         self.generator = generator
+        self.defaults = defaults
     }
 
     // MARK: - Derived
@@ -86,5 +91,15 @@ final class KitchenViewModel {
         } catch {
             print("❌ generatePlan error:", error)
         }
+    }
+
+    @discardableResult
+    func saveCurrentPlan() -> Bool {
+        guard currentPlan != nil else { return false }
+
+        defaults.set(true, forKey: hasMealPlanKey)
+        defaults.set(Date().timeIntervalSince1970, forKey: savedAtKey)
+        NotificationCenter.default.post(name: .questKitchenPlanSaved, object: nil)
+        return true
     }
 }
