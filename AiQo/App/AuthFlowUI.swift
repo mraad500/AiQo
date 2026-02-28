@@ -295,11 +295,3 @@ struct AuthMetricRow: View {
         )
     }
 }
-
-extension UIApplication {
-    static func activeSceneDelegate() -> SceneDelegate? {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        let activeScene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
-        return activeScene?.delegate as? SceneDelegate
-    }
-}

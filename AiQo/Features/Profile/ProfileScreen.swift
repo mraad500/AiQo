@@ -88,7 +88,7 @@ struct ProfileScreen: View {
             VStack(spacing: 20) {
                 headerCard
 
-                LevelCardRepresentable()
+                LevelCardView()
                     .frame(height: 100)
                     .onTapGesture {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -582,16 +582,6 @@ struct ProfileScreen: View {
 
         guard let url = URL(string: "mailto:AppAiQo5@gmail.com") else { return }
         UIApplication.shared.open(url)
-    }
-}
-
-private struct LevelCardRepresentable: UIViewRepresentable {
-    func makeUIView(context: Context) -> LevelCardView {
-        LevelCardView()
-    }
-
-    func updateUIView(_ uiView: LevelCardView, context: Context) {
-        uiView.reloadFromStorage()
     }
 }
 

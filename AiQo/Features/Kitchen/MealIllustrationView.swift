@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct MealIllustrationView: View {
     let spec: MealImageSpec
@@ -37,8 +36,8 @@ private extension MealIllustrationView {
     func ingredientSticker(_ ingredient: IngredientKey, placement: PlatePlacement, size: CGSize) -> some View {
         let dimension = min(size.width, size.height) * placement.scale * 1.5
 
-        if UIImage(named: ingredient.assetName) != nil {
-            Image(ingredient.assetName)
+        if let image = IngredientAssetLibrary.image(for: ingredient) {
+            image
                 .resizable()
                 .scaledToFit()
                 .frame(width: dimension, height: dimension)
@@ -46,7 +45,6 @@ private extension MealIllustrationView {
                 .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
                 .position(x: size.width * placement.x, y: size.height * placement.y)
         } else {
-            // TODO: Keep Food_photos asset names synced with IngredientKey.assetName.
             ZStack {
                 Circle()
                     .fill(Color(.systemBackground).opacity(0.88))

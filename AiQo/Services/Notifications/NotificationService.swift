@@ -60,18 +60,7 @@ final class NotificationService {
         routeFromNotification(type: type)
     }
 
-    // ✅✅ هاي الدالة الضرورية للـ SceneDelegate
-    func handleInitial(response: UNNotificationResponse, window: UIWindow?) {
-        guard
-            let typeRaw = response.notification.request.content.userInfo["notification_type"] as? String,
-            let type = NotificationType(rawValue: typeRaw)
-        else { return }
-        routeFromNotification(type: type, window: window)
-    }
-
-    private func routeFromNotification(type: NotificationType, window: UIWindow? = nil) {
-        _ = window // kept for backward compatibility with current callers
-
+    private func routeFromNotification(type: NotificationType) {
         Task { @MainActor in
             switch type {
             case .dailyStepsReminder, .workoutReminder:

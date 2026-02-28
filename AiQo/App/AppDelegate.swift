@@ -1,11 +1,26 @@
+import SwiftUI
 import UIKit
 import UserNotifications
 import FamilyControls
 import WatchConnectivity
 import AppIntents
 import HealthKit
+import WidgetKit
 
 @main
+struct AiQoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
+    var body: some Scene {
+        WindowGroup {
+            AppRootView()
+                .onOpenURL { url in
+                    MusicManager.shared.handleSpotifyURL(url)
+                }
+        }
+    }
+}
+
 final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     func application(
@@ -58,6 +73,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        _ = PhoneConnectivityManager.shared
+        WidgetCenter.shared.reloadAllTimelines()
         clearAppBadge()
 
         Task {
@@ -72,25 +89,16 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         }
     }
 
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        _ = PhoneConnectivityManager.shared
+    }
+
     private func clearAppBadge() {
         if #available(iOS 17.0, *) {
             UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
         } else {
             UIApplication.shared.applicationIconBadgeNumber = 0
         }
-    }
-
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        let configuration = UISceneConfiguration(
-            name: "Default Configuration",
-            sessionRole: connectingSceneSession.role
-        )
-        configuration.delegateClass = SceneDelegate.self
-        return configuration
     }
 
     func application(

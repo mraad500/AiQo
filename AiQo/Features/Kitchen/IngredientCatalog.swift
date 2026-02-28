@@ -45,7 +45,7 @@ enum IngredientCatalog {
 
         let prioritizedAliasEntries = IngredientKey.allCases
             .flatMap { key in
-                key.aliases.map { (key: key, alias: normalize($0)) }
+                key.searchAliases.map { (key: key, alias: normalize($0)) }
             }
             .sorted { lhs, rhs in
                 if lhs.alias.count != rhs.alias.count {
@@ -66,7 +66,7 @@ enum IngredientCatalog {
         guard !normalized.isEmpty else { return [] }
 
         let normalizedAliasesByKey = IngredientKey.allCases.map { key in
-            (key: key, aliases: key.aliases.map { alias in normalize(alias) })
+            (key: key, aliases: key.searchAliases.map { alias in normalize(alias) })
         }
 
         let matches: [(IngredientKey, Int, Int)] = normalizedAliasesByKey.compactMap { item in

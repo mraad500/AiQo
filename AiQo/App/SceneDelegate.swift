@@ -1,10 +1,8 @@
-import UIKit
-import UserNotifications
-import FamilyControls
 import SwiftUI
-import WidgetKit
+import UserNotifications
 import Supabase
 import Auth
+internal import Combine
 
 private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
@@ -12,160 +10,88 @@ private enum OnboardingKeys {
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
 }
 
-final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+@MainActor
+final class AppFlowController: ObservableObject {
+    static let shared = AppFlowController()
 
-    var window: UIWindow?
-    let protectionModel = ProtectionModel()
+    enum RootScreen {
+        case login
+        case dating
+        case legacy
+        case main
+    }
 
-    func scene(
-        _ scene: UIScene,
-        willConnectTo session: UISceneSession,
-        options connectionOptions: UIScene.ConnectionOptions
-    ) {
-        _ = PhoneConnectivityManager.shared
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(appLanguageDidChange),
-            name: .appLanguageDidChange,
-            object: nil
-        )
+    @Published private(set) var currentScreen: RootScreen
+    @Published private(set) var refreshID = UUID()
 
-        guard let windowScene = scene as? UIWindowScene else { return }
-        let window = UIWindow(windowScene: windowScene)
-        self.window = window
+    private let protectionModel = ProtectionModel.shared
 
-        window.rootViewController = makeInitialRoot()
-
-        window.makeKeyAndVisible()
-
-        if let response = connectionOptions.notificationResponse {
-            let userInfo = response.notification.request.content.userInfo
-            if let source = userInfo["source"] as? String, source == "captain_hamoudi" {
-                CaptainNotificationHandler.shared.handleIncomingNotification(userInfo: userInfo)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    CaptainNavigationHelper.shared.navigateToCaptainScreen()
-                }
-            } else {
-                NotificationService.shared.handleInitial(response: response, window: window)
-            }
-        }
+    private init() {
+        currentScreen = Self.resolveCurrentScreen()
     }
 
     func didLoginSuccessfully() {
-        guard let window = window else { return }
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didShowFirstAuthScreen)
-
-        let datingRoot = makeDatingRoot()
-
-        UIView.transition(
-            with: window,
-            duration: 0.6,
-            options: .transitionFlipFromRight,
-            animations: { window.rootViewController = datingRoot },
-            completion: nil
-        )
+        transition(to: .dating)
     }
 
     func didCompleteDatingProfile() {
-        guard let window = window else { return }
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteDatingProfile)
-
-        let legacyRoot = makeLegacyRoot()
-
-        UIView.transition(
-            with: window,
-            duration: 0.5,
-            options: .transitionCrossDissolve,
-            animations: { window.rootViewController = legacyRoot },
-            completion: nil
-        )
+        transition(to: .legacy)
     }
 
     func onboardingFinished() {
-        Task {
+        Task { @MainActor in
             await requestNotificationAuthorizationIfNeeded()
             await protectionModel.requestAuthorization()
 
-            await MainActor.run {
-                self.switchToMainInterface()
-            }
+            UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
+            MainTabRouter.shared.navigate(to: .home)
+            transition(to: .main)
         }
     }
 
-    private func switchToMainInterface() {
-        guard let window = window else { return }
-
-        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
-
-        let mainRoot = makeMainRoot()
-
-        UIView.transition(
-            with: window,
-            duration: 0.5,
-            options: .transitionCrossDissolve,
-            animations: { window.rootViewController = mainRoot },
-            completion: nil
-        )
-    }
-
     func logout() {
-        Task {
+        Task { @MainActor in
             try? await SupabaseService.shared.client.auth.signOut()
+
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteLegacyCalculation)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteDatingProfile)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didShowFirstAuthScreen)
 
-            await MainActor.run {
-                guard let window = self.window else { return }
-                window.rootViewController = host(LoginScreenView())
-            }
+            MainTabRouter.shared.navigate(to: .home)
+            transition(to: .login)
         }
     }
 
-    private func makeInitialRoot() -> UIViewController {
+    func reloadCurrentScreen() {
+        currentScreen = Self.resolveCurrentScreen()
+        refreshID = UUID()
+    }
+
+    private func transition(to screen: RootScreen) {
+        withAnimation(.easeInOut(duration: 0.45)) {
+            currentScreen = screen
+            refreshID = UUID()
+        }
+    }
+
+    private static func resolveCurrentScreen() -> RootScreen {
         let isLoggedIn = SupabaseService.shared.client.auth.currentUser != nil
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
 
-        guard isLoggedIn else { return host(LoginScreenView()) }
+        guard isLoggedIn else { return .login }
 
         if !didCompleteDatingProfile {
-            return makeDatingRoot()
+            return .dating
         }
 
         if !didCompleteLegacyCalculation {
-            return makeLegacyRoot()
+            return .legacy
         }
 
-        return makeMainRoot()
-    }
-
-    private func makeDatingRoot() -> UIViewController {
-        host(DatingScreenView())
-    }
-
-    private func makeLegacyRoot() -> UIViewController {
-        host(LegacyCalculationScreenView())
-    }
-
-    private func makeMainRoot() -> UIViewController {
-        host(MainTabScreen())
-    }
-
-    private func host<V: View>(_ view: V) -> UIViewController {
-        UIHostingController(rootView: view)
-    }
-
-    func sceneWillEnterForeground(_ scene: UIScene) { _ = PhoneConnectivityManager.shared }
-
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        _ = PhoneConnectivityManager.shared
-        WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        guard let url = URLContexts.first?.url else { return }
-        MusicManager.shared.handleSpotifyURL(url)
+        return .main
     }
 
     private func requestNotificationAuthorizationIfNeeded() async {
@@ -175,9 +101,36 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             }
         }
     }
+}
 
-    @objc private func appLanguageDidChange() {
-        guard let window = window else { return }
-        window.rootViewController = makeInitialRoot()
+struct AppRootView: View {
+    @StateObject private var flow = AppFlowController.shared
+
+    var body: some View {
+        ZStack {
+            rootScreen
+                .id(flow.refreshID)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appLanguageDidChange)) { _ in
+            flow.reloadCurrentScreen()
+        }
+    }
+
+    @ViewBuilder
+    private var rootScreen: some View {
+        switch flow.currentScreen {
+        case .login:
+            LoginScreenView()
+                .transition(.opacity)
+        case .dating:
+            DatingScreenView()
+                .transition(.opacity)
+        case .legacy:
+            LegacyCalculationScreenView()
+                .transition(.opacity)
+        case .main:
+            MainTabScreen()
+                .transition(.opacity)
+        }
     }
 }

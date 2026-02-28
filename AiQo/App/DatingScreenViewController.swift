@@ -145,7 +145,7 @@ struct DatingScreenView: View {
         UserProfileStore.shared.current = profile
         NotificationPreferencesStore.shared.gender = gender
 
-        UIApplication.activeSceneDelegate()?.didCompleteDatingProfile()
+        AppFlowController.shared.didCompleteDatingProfile()
     }
 
     private func localized(_ key: String, fallback: String) -> String {

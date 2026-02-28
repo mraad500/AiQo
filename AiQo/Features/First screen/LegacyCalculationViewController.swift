@@ -223,7 +223,7 @@ final class LegacyCalculationViewModel: ObservableObject {
             break
 
         case .result:
-            UIApplication.activeSceneDelegate()?.onboardingFinished()
+            AppFlowController.shared.onboardingFinished()
         }
     }
 

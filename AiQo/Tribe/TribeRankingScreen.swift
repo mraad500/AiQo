@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Data Model
 struct TribeListMember: Identifiable, Hashable {
@@ -136,8 +135,8 @@ struct TribePillRow: View {
             Circle()
                 .fill(Color.tribeAvatar)
                 .overlay {
-                    if member.hasAvatar, let avatar = member.avatarName, let uiImage = UIImage(named: avatar) {
-                        Image(uiImage: uiImage)
+                    if member.hasAvatar, let avatar = member.avatarName {
+                        Image(avatar)
                             .resizable()
                             .scaledToFill()
                             .clipShape(Circle())

@@ -1,533 +1,244 @@
-import UIKit
-import SwiftUI // نحتاجها إذا كنا سنستخدم Color الخاصة بـ SwiftUI للتحويل، أو نستخدم ألوان UIKit مباشرة
+import SwiftUI
+internal import Combine
 
-/// Ultra Modern Level Card (Level + Shield + Line Score + Progress)
-final class LevelCardView: UIView {
+struct LevelCardView: View {
+    @State private var snapshot = LevelCardSnapshot.load()
+    @State private var shieldScale: CGFloat = 1
+    @State private var scoreScale: CGFloat = 1
 
-    private let useGroupingSeparator = true
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: LevelSystem.getShieldIconName(for: snapshot.level))
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(shieldColor)
+                        .frame(width: 22, height: 22)
+                        .scaleEffect(shieldScale)
 
-    // MARK: - UI
-    private let containerView = UIView()
+                    Text(NSLocalizedString("level", value: "Level", comment: ""))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.aiqoSub.opacity(0.95))
 
-    private let gradientView = UIView()
-    private let gradientLayer = CAGradientLayer()
+                    Text("\(snapshot.level)")
+                        .font(.system(size: 36, weight: .black))
+                        .foregroundStyle(Color.aiqoText)
+                        .offset(y: -4)
+                }
 
-    private let glassHost = UIVisualEffectView()
-    private let borderLayer = CAShapeLayer()
-    
-    // 🛡️ Shield & Level Info
-    private let shieldImageView = UIImageView()
-    private let leftTitleLabel = UILabel()
-    private let levelNumberLabel = UILabel()
-    private let scorePill = ScorePillView()
+                Spacer(minLength: 12)
 
-    private let progressBackground = UIView()
-    private let progressFill = UIView()
-    private let progressGlow = UIView()
-    private let progressIndicator = UIView()
+                LevelScorePillView(
+                    title: NSLocalizedString("line_score", value: "Line Score", comment: ""),
+                    value: formattedScore(snapshot.lineScore),
+                    scale: scoreScale
+                )
+            }
 
-    private var progressFillWidth: NSLayoutConstraint!
-    private var indicatorLeading: NSLayoutConstraint!
+            GeometryReader { geometry in
+                let barWidth = geometry.size.width
+                let clamped = snapshot.clampedProgress
+                let fillWidth = max(0, barWidth * clamped)
+                let indicatorOffset = max(7, min(fillWidth, barWidth - 7)) - 7
 
-    // ✅ نزول الرقم بدون قص
-    private let levelNumberBaselineOffset: CGFloat = -4
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.black.opacity(0.06))
 
-    // MARK: - State
-    var level: Int = 1 { didSet { updateUI(animated: true) } }
-    var levelProgress: CGFloat = 0 { didSet { updateProgress(animated: true) } }
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.aiqoSand.opacity(clamped > 0.02 ? 0.35 : 0))
+                        .frame(width: fillWidth)
+                        .blur(radius: 2)
 
-    private var lineScore: Int = 0 {
-        didSet {
-            scorePill.setValue(formatScore(lineScore))
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.aiqoSand)
+                        .frame(width: fillWidth)
+
+                    Circle()
+                        .fill(Color.white.opacity(0.92))
+                        .overlay(
+                            Circle()
+                                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                        )
+                        .frame(width: 14, height: 14)
+                        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
+                        .offset(x: indicatorOffset)
+                        .opacity(clamped > 0.02 ? 1 : 0)
+                }
+                .animation(
+                    .spring(response: 0.32, dampingFraction: 0.9),
+                    value: snapshot.clampedProgress
+                )
+            }
+            .frame(height: 16)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .background(cardBackground)
+        .shadow(color: Color.black.opacity(0.12), radius: 22, x: 0, y: 12)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Level \(snapshot.level), Line Score \(formattedScore(snapshot.lineScore))")
+        .onAppear {
+            reloadFromStorage(animated: false)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("XPUpdated"))) { _ in
+            reloadFromStorage(animated: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .levelStoreDidChange)) { _ in
+            reloadFromStorage(animated: true)
+        }
+    }
+
+    private var shieldColor: Color {
+        LevelSystem.getShield(for: snapshot.level).color
+    }
+
+    private var cardBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+
+        return shape
+            .fill(Color(Colors.card))
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.55),
+                        Color.aiqoSand.opacity(0.18),
+                        Color(Colors.card)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .clipShape(shape)
+            )
+            .overlay(
+                shape
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.95)
+            )
+            .overlay(
+                shape
+                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+            )
+    }
+
+    private func reloadFromStorage(animated: Bool) {
+        let newSnapshot = LevelCardSnapshot.load()
+        let oldSnapshot = snapshot
+
+        if animated {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                snapshot = newSnapshot
+            }
+        } else {
+            snapshot = newSnapshot
+        }
+
+        if newSnapshot.level != oldSnapshot.level {
+            pulseShield()
+        }
+        if newSnapshot.lineScore != oldSnapshot.lineScore {
             pulseScore()
         }
     }
 
-    // MARK: - Init
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupView()
-        setupObservers()
-        reloadFromStorage()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
-        setupObservers()
-        reloadFromStorage()
-    }
-
-    deinit { NotificationCenter.default.removeObserver(self) }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-
-        containerView.layer.shadowPath = UIBezierPath(
-            roundedRect: containerView.bounds,
-            cornerRadius: containerView.layer.cornerRadius
-        ).cgPath
-
-        gradientLayer.frame = gradientView.bounds
-
-        let path = UIBezierPath(
-            roundedRect: containerView.bounds.insetBy(dx: 0.5, dy: 0.5),
-            cornerRadius: containerView.layer.cornerRadius
-        )
-        borderLayer.path = path.cgPath
-        borderLayer.frame = containerView.bounds
-
-        updateProgress(animated: false)
-    }
-
-    // MARK: - Public
-    func configure(level: Int, progress: CGFloat? = nil, lineScore: Int? = nil) {
-        self.level = max(level, 1)
-        if let progress { self.levelProgress = min(max(progress, 0), 1) }
-        if let lineScore { self.lineScore = max(lineScore, 0) }
-    }
-
-    @objc func reloadFromStorage() {
-        let storedLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
-        level = storedLevel == 0 ? 1 : storedLevel
-
-        let storedProgress = UserDefaults.standard.double(forKey: LevelStorageKeys.currentLevelProgress)
-        levelProgress = CGFloat(min(max(storedProgress, 0), 1))
-
-        let storedScore = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
-        lineScore = max(storedScore, 0)
-
-        scorePill.setValue(formatScore(lineScore))
-        updateUI(animated: false)
-        updateProgress(animated: false)
-    }
-
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(reloadFromStorage),
-            name: NSNotification.Name("XPUpdated"),
-            object: nil
-        )
-    }
-
-    // MARK: - Setup
-    private func setupView() {
-        translatesAutoresizingMaskIntoConstraints = false
-        isAccessibilityElement = true
-
-        // Container
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        containerView.backgroundColor = Colors.card
-        containerView.layer.cornerRadius = 26
-        containerView.layer.cornerCurve = .continuous
-        containerView.layer.masksToBounds = false
-
-        containerView.layer.shadowColor = UIColor.black.withAlphaComponent(0.12).cgColor
-        containerView.layer.shadowOpacity = 1
-        containerView.layer.shadowRadius = 22
-        containerView.layer.shadowOffset = CGSize(width: 0, height: 12)
-
-        addSubview(containerView)
-        NSLayoutConstraint.activate([
-            containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            containerView.topAnchor.constraint(equalTo: topAnchor),
-            containerView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-
-        // Gradient
-        gradientView.translatesAutoresizingMaskIntoConstraints = false
-        gradientView.layer.cornerRadius = containerView.layer.cornerRadius
-        gradientView.layer.cornerCurve = .continuous
-        gradientView.layer.masksToBounds = true
-        containerView.addSubview(gradientView)
-
-        NSLayoutConstraint.activate([
-            gradientView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            gradientView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            gradientView.topAnchor.constraint(equalTo: containerView.topAnchor),
-            gradientView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-        ])
-
-        gradientLayer.type = .axial
-        gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
-        gradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-        gradientLayer.colors = [
-            UIColor.white.withAlphaComponent(0.55).cgColor,
-            Colors.sand.withAlphaComponent(0.18).cgColor,
-            Colors.card.withAlphaComponent(1.0).cgColor
-        ]
-        gradientLayer.locations = [0.0, 0.45, 1.0]
-        gradientView.layer.insertSublayer(gradientLayer, at: 0)
-
-        // Glass
-        glassHost.translatesAutoresizingMaskIntoConstraints = false
-        glassHost.isUserInteractionEnabled = false
-        glassHost.layer.cornerRadius = containerView.layer.cornerRadius
-        glassHost.layer.cornerCurve = .continuous
-        glassHost.layer.masksToBounds = true
-        containerView.addSubview(glassHost)
-
-        NSLayoutConstraint.activate([
-            glassHost.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            glassHost.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            glassHost.topAnchor.constraint(equalTo: containerView.topAnchor),
-            glassHost.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-        ])
-
-        applyGlassEffect()
-
-        // Border
-        borderLayer.fillColor = UIColor.clear.cgColor
-        borderLayer.strokeColor = UIColor.white.withAlphaComponent(0.45).cgColor
-        borderLayer.lineWidth = 1
-        containerView.layer.addSublayer(borderLayer)
-        
-        // 🛡️ Shield Icon
-        shieldImageView.translatesAutoresizingMaskIntoConstraints = false
-        shieldImageView.contentMode = .scaleAspectFit
-        shieldImageView.tintColor = Colors.text
-        
-        NSLayoutConstraint.activate([
-            shieldImageView.widthAnchor.constraint(equalToConstant: 22),
-            shieldImageView.heightAnchor.constraint(equalToConstant: 22)
-        ])
-
-        // Labels
-        leftTitleLabel.text = NSLocalizedString("level", value: "Level", comment: "")
-        leftTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        leftTitleLabel.textColor = Colors.subtext
-        leftTitleLabel.alpha = 0.95
-
-        levelNumberLabel.font = .systemFont(ofSize: 36, weight: .black)
-        levelNumberLabel.textColor = Colors.text
-        levelNumberLabel.baselineAdjustment = .alignCenters
-        levelNumberLabel.clipsToBounds = false
-
-        // ✅ Stack row: [Shield] + [Level Label] + [Number]
-        let levelRow = UIStackView(arrangedSubviews: [shieldImageView, leftTitleLabel, levelNumberLabel])
-        levelRow.axis = .horizontal
-        levelRow.alignment = .firstBaseline
-        levelRow.spacing = 8
-        levelRow.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Custom spacing: Shield should be closer to text? or a bit separate.
-        // Let's make shield centered vertically with the text somewhat.
-        // Since alignment is firstBaseline, we need to be careful with the image.
-        // Better: Put Shield in a separate center-aligned h-stack with the text stack.
-        
-        // Re-structure:
-        // V-Stack for (Level title, Number) ? No, side by side is better.
-        // Let's keep the row simple. Center alignment works best for icons + text usually, but baseline is good for text.
-        levelRow.alignment = .center
-
-        // Level Host
-        let levelRowHost = UIView()
-        levelRowHost.translatesAutoresizingMaskIntoConstraints = false
-        levelRowHost.clipsToBounds = false
-        levelRowHost.addSubview(levelRow)
-
-        NSLayoutConstraint.activate([
-            levelRow.leadingAnchor.constraint(equalTo: levelRowHost.leadingAnchor),
-            levelRow.trailingAnchor.constraint(lessThanOrEqualTo: levelRowHost.trailingAnchor),
-            levelRow.topAnchor.constraint(equalTo: levelRowHost.topAnchor),
-            levelRow.bottomAnchor.constraint(equalTo: levelRowHost.bottomAnchor),
-            levelRowHost.heightAnchor.constraint(greaterThanOrEqualToConstant: 28)
-        ])
-
-        // Score pill
-        scorePill.setTitle(NSLocalizedString("line_score", value: "Line Score", comment: ""))
-        scorePill.setValue(formatScore(lineScore))
-
-        // Top row (Level Info --- Score Pill)
-        let topRow = UIStackView(arrangedSubviews: [levelRowHost, UIView(), scorePill])
-        topRow.axis = .horizontal
-        topRow.alignment = .center
-        topRow.spacing = 12
-        topRow.translatesAutoresizingMaskIntoConstraints = false
-
-        containerView.addSubview(topRow)
-        NSLayoutConstraint.activate([
-            topRow.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
-            topRow.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
-            topRow.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 18)
-        ])
-
-        // Progress background
-        progressBackground.translatesAutoresizingMaskIntoConstraints = false
-        progressBackground.backgroundColor = UIColor.black.withAlphaComponent(0.06)
-        progressBackground.layer.cornerRadius = 9
-        progressBackground.layer.cornerCurve = .continuous
-        progressBackground.layer.masksToBounds = true
-
-        progressFill.translatesAutoresizingMaskIntoConstraints = false
-        progressFill.backgroundColor = Colors.sand
-        progressFill.layer.cornerRadius = 9
-        progressFill.layer.cornerCurve = .continuous
-        progressFill.layer.masksToBounds = true
-
-        progressGlow.translatesAutoresizingMaskIntoConstraints = false
-        progressGlow.backgroundColor = Colors.sand.withAlphaComponent(0.35)
-        progressGlow.layer.cornerRadius = 10
-        progressGlow.layer.cornerCurve = .continuous
-        progressGlow.layer.masksToBounds = false
-        progressGlow.layer.shadowColor = Colors.sand.withAlphaComponent(0.6).cgColor
-        progressGlow.layer.shadowOpacity = 1
-        progressGlow.layer.shadowRadius = 10
-        progressGlow.layer.shadowOffset = .zero
-
-        progressIndicator.translatesAutoresizingMaskIntoConstraints = false
-        progressIndicator.backgroundColor = .white.withAlphaComponent(0.92)
-        progressIndicator.layer.cornerRadius = 7
-        progressIndicator.layer.cornerCurve = .continuous
-        progressIndicator.layer.borderWidth = 1
-        progressIndicator.layer.borderColor = UIColor.black.withAlphaComponent(0.06).cgColor
-        progressIndicator.layer.shadowColor = UIColor.black.withAlphaComponent(0.12).cgColor
-        progressIndicator.layer.shadowOpacity = 1
-        progressIndicator.layer.shadowRadius = 8
-        progressIndicator.layer.shadowOffset = CGSize(width: 0, height: 4)
-
-        containerView.addSubview(progressBackground)
-        progressBackground.addSubview(progressGlow)
-        progressBackground.addSubview(progressFill)
-        progressBackground.addSubview(progressIndicator)
-
-        progressFillWidth = progressFill.widthAnchor.constraint(equalToConstant: 0)
-        indicatorLeading = progressIndicator.leadingAnchor.constraint(equalTo: progressBackground.leadingAnchor, constant: 0)
-
-        NSLayoutConstraint.activate([
-            progressBackground.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
-            progressBackground.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
-            progressBackground.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16),
-            progressBackground.heightAnchor.constraint(equalToConstant: 16),
-            progressBackground.topAnchor.constraint(greaterThanOrEqualTo: topRow.bottomAnchor, constant: 12),
-
-            progressGlow.leadingAnchor.constraint(equalTo: progressBackground.leadingAnchor),
-            progressGlow.topAnchor.constraint(equalTo: progressBackground.topAnchor, constant: 1),
-            progressGlow.bottomAnchor.constraint(equalTo: progressBackground.bottomAnchor, constant: -1),
-            progressGlow.widthAnchor.constraint(equalTo: progressFill.widthAnchor),
-
-            progressFill.leadingAnchor.constraint(equalTo: progressBackground.leadingAnchor),
-            progressFill.topAnchor.constraint(equalTo: progressBackground.topAnchor),
-            progressFill.bottomAnchor.constraint(equalTo: progressBackground.bottomAnchor),
-            progressFillWidth,
-
-            indicatorLeading,
-            progressIndicator.centerYAnchor.constraint(equalTo: progressBackground.centerYAnchor),
-            progressIndicator.widthAnchor.constraint(equalToConstant: 14),
-            progressIndicator.heightAnchor.constraint(equalToConstant: 14)
-        ])
-
-        updateUI(animated: false)
-        updateProgress(animated: false)
-    }
-
-    private func applyGlassEffect() {
-        if #available(iOS 18.0, *) {
-            glassHost.effect = UIGlassEffect()
-        } else {
-            glassHost.effect = UIBlurEffect(style: .systemThinMaterial)
+    private func pulseShield() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            shieldScale = 1.2
         }
-        glassHost.alpha = 0.95
-    }
-
-    // MARK: - Update
-    private func updateUI(animated: Bool) {
-        let title = leftTitleLabel.text ?? "Level"
-        let number = "\(level)"
-
-        let attrsTitle: [NSAttributedString.Key: Any] = [
-            .font: leftTitleLabel.font as Any,
-            .foregroundColor: leftTitleLabel.textColor as Any
-        ]
-
-        let attrsNumber: [NSAttributedString.Key: Any] = [
-            .font: levelNumberLabel.font as Any,
-            .foregroundColor: levelNumberLabel.textColor as Any,
-            .baselineOffset: levelNumberBaselineOffset
-        ]
-
-        leftTitleLabel.attributedText = NSAttributedString(string: title, attributes: attrsTitle)
-        levelNumberLabel.attributedText = NSAttributedString(string: number, attributes: attrsNumber)
-        
-        // 🛡️ Update Shield Icon & Color
-        let shieldType = LevelSystem.getShield(for: level)
-        shieldImageView.image = UIImage(systemName: LevelSystem.getShieldIconName(for: level))
-        shieldImageView.tintColor = getShieldColor(for: shieldType)
-
-        accessibilityLabel = "Level \(level), Line Score \(lineScore)"
-
-        if animated {
-            UIView.transition(with: levelNumberLabel, duration: 0.16, options: [.transitionCrossDissolve, .allowUserInteraction], animations: nil)
-            
-            // Pulse the shield
-            UIView.animate(withDuration: 0.2, animations: {
-                self.shieldImageView.transform = CGAffineTransform(scaleX: 1.2, y: 1.2)
-            }) { _ in
-                UIView.animate(withDuration: 0.2) {
-                    self.shieldImageView.transform = .identity
-                }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                shieldScale = 1
             }
-        }
-    }
-    
-    // Helper to map ShieldTier to UIColor
-    private func getShieldColor(for tier: LevelSystem.ShieldTier) -> UIColor {
-        switch tier {
-        case .wood:     return UIColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1)
-        case .bronze:   return UIColor(red: 0.8, green: 0.5, blue: 0.2, alpha: 1)
-        case .silver:   return .systemGray2
-        case .gold:     return .systemYellow
-        case .platinum: return UIColor(red: 0.8, green: 0.9, blue: 1.0, alpha: 1)
-        case .diamond:  return .systemCyan
-        case .master:   return .systemPurple
-        }
-    }
-
-    private func updateProgress(animated: Bool) {
-        layoutIfNeeded()
-        let w = progressBackground.bounds.width
-        guard w > 0 else { return }
-
-        let clamped = min(max(levelProgress, 0), 1)
-        let fillW = w * clamped
-        progressFillWidth.constant = fillW
-
-        let inset: CGFloat = 7
-        let x = max(inset, min(fillW, w - inset))
-        indicatorLeading.constant = x - inset
-
-        let animations = {
-            self.progressBackground.layoutIfNeeded()
-            self.progressGlow.alpha = clamped > 0.02 ? 1.0 : 0.0
-            self.progressIndicator.alpha = clamped > 0.02 ? 1.0 : 0.0
-        }
-
-        if animated {
-            UIView.animate(withDuration: 0.32,
-                           delay: 0,
-                           usingSpringWithDamping: 0.9,
-                           initialSpringVelocity: 0.18,
-                           options: [.allowUserInteraction, .curveEaseOut],
-                           animations: animations)
-        } else {
-            animations()
         }
     }
 
     private func pulseScore() {
-        UIView.animate(withDuration: 0.10, delay: 0, options: [.allowUserInteraction, .curveEaseOut]) {
-            self.scorePill.transform = CGAffineTransform(scaleX: 1.03, y: 1.03)
-        } completion: { _ in
-            UIView.animate(withDuration: 0.14, delay: 0, options: [.allowUserInteraction, .curveEaseIn]) {
-                self.scorePill.transform = .identity
+        withAnimation(.easeOut(duration: 0.1)) {
+            scoreScale = 1.03
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.easeInOut(duration: 0.14)) {
+                scoreScale = 1
             }
         }
     }
 
-    private func formatScore(_ value: Int) -> String {
-        guard useGroupingSeparator else { return "\(value)" }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.usesGroupingSeparator = true
-        return f.string(from: NSNumber(value: value)) ?? "\(value)"
+    private func formattedScore(_ value: Int) -> String {
+        Self.numberFormatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
+
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        return formatter
+    }()
 }
 
-// MARK: - Score Pill
-private final class ScorePillView: UIView {
+private struct LevelScorePillView: View {
+    let title: String
+    let value: String
+    let scale: CGFloat
 
-    private let iconView = UIImageView()
-    private let titleLabel = UILabel()
-    private let valueLabel = UILabel()
-    private let stack = UIStackView()
-    private let blurHost = UIVisualEffectView()
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.aiqoText.opacity(0.9))
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setup()
-    }
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.aiqoSub)
 
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setup()
-    }
-
-    private func setup() {
-        translatesAutoresizingMaskIntoConstraints = false
-
-        layer.cornerRadius = 18
-        layer.cornerCurve = .continuous
-        layer.masksToBounds = false
-
-        blurHost.translatesAutoresizingMaskIntoConstraints = false
-        blurHost.layer.cornerRadius = 18
-        blurHost.layer.cornerCurve = .continuous
-        blurHost.layer.masksToBounds = true
-        addSubview(blurHost)
-
-        NSLayoutConstraint.activate([
-            blurHost.leadingAnchor.constraint(equalTo: leadingAnchor),
-            blurHost.trailingAnchor.constraint(equalTo: trailingAnchor),
-            blurHost.topAnchor.constraint(equalTo: topAnchor),
-            blurHost.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-
-        if #available(iOS 18.0, *) {
-            blurHost.effect = UIGlassEffect()
-        } else {
-            blurHost.effect = UIBlurEffect(style: .systemThinMaterial)
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.aiqoText)
         }
-        blurHost.alpha = 0.92
-
-        layer.borderWidth = 1
-        layer.borderColor = UIColor.white.withAlphaComponent(0.35).cgColor
-        layer.shadowColor = UIColor.black.withAlphaComponent(0.10).cgColor
-        layer.shadowOpacity = 1
-        layer.shadowRadius = 14
-        layer.shadowOffset = CGSize(width: 0, height: 8)
-
-        iconView.image = UIImage(systemName: "chart.line.uptrend.xyaxis")
-        iconView.tintColor = Colors.text.withAlphaComponent(0.9)
-        iconView.contentMode = .scaleAspectFit
-
-        NSLayoutConstraint.activate([
-            iconView.widthAnchor.constraint(equalToConstant: 16),
-            iconView.heightAnchor.constraint(equalToConstant: 16)
-        ])
-
-        titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        titleLabel.textColor = Colors.subtext
-
-        valueLabel.font = .monospacedDigitSystemFont(ofSize: 16, weight: .bold)
-        valueLabel.textColor = Colors.text
-
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.spacing = 8
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        addSubview(stack)
-        stack.addArrangedSubview(iconView)
-        stack.addArrangedSubview(titleLabel)
-        stack.addArrangedSubview(valueLabel)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
-        ])
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 8)
+        .scaleEffect(scale)
     }
-
-    func setTitle(_ text: String) { titleLabel.text = text }
-    func setValue(_ text: String) { valueLabel.text = text }
 }
 
-// MARK: - Storage Keys
+private struct LevelCardSnapshot: Equatable {
+    let level: Int
+    let progress: CGFloat
+    let lineScore: Int
+
+    var clampedProgress: CGFloat {
+        min(max(progress, 0), 1)
+    }
+
+    static func load() -> LevelCardSnapshot {
+        let storedLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
+        let storedProgress = UserDefaults.standard.double(forKey: LevelStorageKeys.currentLevelProgress)
+        let storedScore = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
+
+        return LevelCardSnapshot(
+            level: storedLevel == 0 ? 1 : storedLevel,
+            progress: CGFloat(min(max(storedProgress, 0), 1)),
+            lineScore: max(storedScore, 0)
+        )
+    }
+}
+
 enum LevelStorageKeys {
     static let currentLevel = "aiqo.currentLevel"
     static let currentLevelProgress = "aiqo.currentLevelProgress"
     static let legacyTotalPoints = "aiqo.legacyTotalPoints"
+}
+
+#Preview {
+    LevelCardView()
+        .padding()
 }

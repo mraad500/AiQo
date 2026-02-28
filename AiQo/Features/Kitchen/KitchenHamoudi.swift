@@ -24,7 +24,7 @@ struct KitchenHamoudi: View {
             VStack {
                 ZStack {
                     // Title
-                    Text("Kitchen")
+                    Text("screen.kitchen.title".localized)
                         .font(.system(size: 21, weight: .semibold))
                         .foregroundColor(.black)
                         .padding(.horizontal, 16)

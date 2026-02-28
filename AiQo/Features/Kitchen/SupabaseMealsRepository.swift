@@ -1,6 +1,5 @@
 import Foundation
 import Supabase
-import UIKit
 
 final class SupabaseMealsRepository: MealsRepository {
 

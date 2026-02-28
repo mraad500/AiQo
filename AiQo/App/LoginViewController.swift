@@ -42,10 +42,12 @@ struct LoginScreenView: View {
                                 .tracking(0.6)
                                 .foregroundStyle(AuthFlowTheme.subtext)
 
-                            AppleSignInUIKitButton(
-                                isLoading: viewModel.isLoading,
-                                action: { viewModel.startAppleSignIn() }
-                            )
+                            SignInWithAppleButton(.signIn) { request in
+                                viewModel.prepareAppleSignInRequest(request)
+                            } onCompletion: { result in
+                                viewModel.handleAppleAuthorizationResult(result)
+                            }
+                            .signInWithAppleButtonStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
                             .overlay(
@@ -53,6 +55,8 @@ struct LoginScreenView: View {
                                     .stroke(Color.white.opacity(0.22), lineWidth: 1)
                             )
                             .shadow(color: Color.black.opacity(0.35), radius: 10, x: 0, y: 6)
+                            .disabled(viewModel.isLoading)
+                            .opacity(viewModel.isLoading ? 0.55 : 1.0)
 
                             if viewModel.isLoading {
                                 ProgressView()
@@ -77,7 +81,7 @@ struct LoginScreenView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             viewModel.onLoginSuccess = {
-                UIApplication.activeSceneDelegate()?.didLoginSuccessfully()
+                AppFlowController.shared.didLoginSuccessfully()
             }
         }
     }
@@ -87,50 +91,33 @@ struct LoginScreenView: View {
     }
 }
 
-final class LoginScreenViewModel: NSObject, ObservableObject {
+final class LoginScreenViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private var currentNonce: String?
     var onLoginSuccess: (() -> Void)?
 
-    func startAppleSignIn() {
+    func prepareAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
         let nonce = randomNonceString()
         currentNonce = nonce
-
-        let provider = ASAuthorizationAppleIDProvider()
-        let request = provider.createRequest()
         request.requestedScopes = [.fullName, .email]
         request.nonce = sha256(nonce)
 
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = self
-        controller.presentationContextProvider = self
-
         isLoading = true
         errorMessage = nil
-        controller.performRequests()
-    }
-}
-
-extension LoginScreenViewModel: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        let windowScenes = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-
-        if let keyWindow = windowScenes
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) {
-            return keyWindow
-        }
-
-        guard let windowScene = windowScenes.first else {
-            preconditionFailure("No active UIWindowScene for Apple Sign-In presentation anchor.")
-        }
-        return UIWindow(windowScene: windowScene)
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+    func handleAppleAuthorizationResult(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            handleSuccessfulAuthorization(authorization)
+        case .failure(let error):
+            handleAuthorizationError(error)
+        }
+    }
+
+    private func handleSuccessfulAuthorization(_ authorization: ASAuthorization) {
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
               let nonce = currentNonce,
               let identityToken = credential.identityToken,
@@ -169,7 +156,7 @@ extension LoginScreenViewModel: ASAuthorizationControllerDelegate, ASAuthorizati
         }
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+    private func handleAuthorizationError(_ error: Error) {
         DispatchQueue.main.async {
             self.isLoading = false
             if let authError = error as? ASAuthorizationError, authError.code == .canceled {
@@ -180,40 +167,6 @@ extension LoginScreenViewModel: ASAuthorizationControllerDelegate, ASAuthorizati
         }
     }
 }
-
-private struct AppleSignInUIKitButton: UIViewRepresentable {
-    let isLoading: Bool
-    let action: () -> Void
-
-    func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(type: .signIn, style: .white)
-        button.cornerRadius = 16
-        button.addTarget(context.coordinator, action: #selector(Coordinator.didTap), for: .touchUpInside)
-        return button
-    }
-
-    func updateUIView(_ uiView: ASAuthorizationAppleIDButton, context: Context) {
-        uiView.isEnabled = !isLoading
-        uiView.alpha = isLoading ? 0.55 : 1.0
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(action: action)
-    }
-
-    final class Coordinator: NSObject {
-        private let action: () -> Void
-
-        init(action: @escaping () -> Void) {
-            self.action = action
-        }
-
-        @objc func didTap() {
-            action()
-        }
-    }
-}
-
 
 private func randomNonceString(length: Int = 32) -> String {
     precondition(length > 0)
