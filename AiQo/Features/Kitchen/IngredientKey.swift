@@ -33,8 +33,8 @@ enum IngredientCategory: String {
 }
 
 enum IngredientKey: String, CaseIterable, Identifiable {
-    case ing_almonds
     case ing_apple
+    case ing_almonds
     case ing_avocado
     case ing_banana
     case ing_beef_lean
@@ -43,8 +43,8 @@ enum IngredientKey: String, CaseIterable, Identifiable {
     case ing_black_beans
     case ing_bread_whole_wheat
     case ing_broccoli
-    case ing_cauliflower
     case ing_carrot
+    case ing_cauliflower
     case ing_cheese_low_fat
     case ing_chia_seeds
     case ing_chicken_breast
@@ -62,12 +62,12 @@ enum IngredientKey: String, CaseIterable, Identifiable {
     case ing_ginger
     case ing_greek_yogurt
     case ing_honey
+    case ing_juice_glass
     case ing_kidney_beans
     case ing_lamb_lean
     case ing_lemon
-    case ing_juice_glass
-    case ing_lettuce
     case ing_lentils
+    case ing_lettuce
     case ing_mango
     case ing_milk
     case ing_mixed_veg
@@ -93,8 +93,8 @@ enum IngredientKey: String, CaseIterable, Identifiable {
     case ing_tahini
     case ing_tofu
     case ing_tomato
-    case ing_turkey_breast
     case ing_tuna_can
+    case ing_turkey_breast
     case ing_walnuts
     case ing_water_bottle
     case ing_watermelon
@@ -109,202 +109,201 @@ enum IngredientKey: String, CaseIterable, Identifiable {
 
     var localizedTitle: String {
         switch self {
-        case .ing_almonds:
-            return AppSettingsStore.shared.appLanguage == .english ? "Almonds" : "لوز"
         case .ing_apple:
-            return AppSettingsStore.shared.appLanguage == .english ? "Apple" : "تفاح"
+            return localized("Apple", "تفاح")
+        case .ing_almonds:
+            return localized("Almonds", "لوز")
         case .ing_avocado:
-            return AppSettingsStore.shared.appLanguage == .english ? "Avocado" : "أفوكادو"
+            return localized("Avocado", "أفوكادو")
         case .ing_banana:
-            return AppSettingsStore.shared.appLanguage == .english ? "Banana" : "موز"
+            return localized("Banana", "موز")
         case .ing_beef_lean:
-            return AppSettingsStore.shared.appLanguage == .english ? "Lean Beef" : "لحم بقري"
+            return localized("Lean Beef", "لحم بقري")
         case .ing_bell_pepper:
-            return AppSettingsStore.shared.appLanguage == .english ? "Bell Pepper" : "فلفل رومي"
+            return localized("Bell Pepper", "فلفل رومي")
         case .ing_berries:
-            return AppSettingsStore.shared.appLanguage == .english ? "Berries" : "توت"
+            return localized("Berries", "توت")
         case .ing_black_beans:
-            return AppSettingsStore.shared.appLanguage == .english ? "Black Beans" : "فاصوليا سوداء"
+            return localized("Black Beans", "فاصوليا سوداء")
         case .ing_bread_whole_wheat:
-            return AppSettingsStore.shared.appLanguage == .english ? "Whole Wheat Bread" : "خبز أسمر"
+            return localized("Whole Wheat Bread", "خبز أسمر")
         case .ing_broccoli:
-            return AppSettingsStore.shared.appLanguage == .english ? "Broccoli" : "بروكلي"
-        case .ing_cauliflower:
-            return AppSettingsStore.shared.appLanguage == .english ? "Cauliflower" : "قرنبيط"
+            return localized("Broccoli", "بروكلي")
         case .ing_carrot:
-            return AppSettingsStore.shared.appLanguage == .english ? "Carrot" : "جزر"
+            return localized("Carrot", "جزر")
+        case .ing_cauliflower:
+            return localized("Cauliflower", "قرنبيط")
         case .ing_cheese_low_fat:
-            return AppSettingsStore.shared.appLanguage == .english ? "Low Fat Cheese" : "جبن قليل الدسم"
+            return localized("Low Fat Cheese", "جبن قليل الدسم")
         case .ing_chia_seeds:
-            return AppSettingsStore.shared.appLanguage == .english ? "Chia Seeds" : "بذور الشيا"
+            return localized("Chia Seeds", "بذور الشيا")
         case .ing_chicken_breast:
-            return AppSettingsStore.shared.appLanguage == .english ? "Chicken Breast" : "صدر دجاج"
+            return localized("Chicken Breast", "صدر دجاج")
         case .ing_chicken_thigh:
-            return AppSettingsStore.shared.appLanguage == .english ? "Chicken Thigh" : "فخذ دجاج"
+            return localized("Chicken Thigh", "فخذ دجاج")
         case .ing_chickpeas:
-            return AppSettingsStore.shared.appLanguage == .english ? "Chickpeas" : "حمص"
+            return localized("Chickpeas", "حمص")
         case .ing_corn:
-            return AppSettingsStore.shared.appLanguage == .english ? "Corn" : "ذرة"
+            return localized("Corn", "ذرة")
         case .ing_cottage_cheese:
-            return AppSettingsStore.shared.appLanguage == .english ? "Cottage Cheese" : "جبن قريش"
+            return localized("Cottage Cheese", "جبن قريش")
         case .ing_cucumber:
-            return AppSettingsStore.shared.appLanguage == .english ? "Cucumber" : "خيار"
+            return localized("Cucumber", "خيار")
         case .ing_dates:
-            return AppSettingsStore.shared.appLanguage == .english ? "Dates" : "تمر"
+            return localized("Dates", "تمر")
         case .ing_egg_whites:
-            return AppSettingsStore.shared.appLanguage == .english ? "Egg Whites" : "بياض بيض"
+            return localized("Egg Whites", "بياض بيض")
         case .ing_egg_whole:
-            return AppSettingsStore.shared.appLanguage == .english ? "Egg" : "بيض"
+            return localized("Egg", "بيض")
         case .ing_eggplant:
-            return AppSettingsStore.shared.appLanguage == .english ? "Eggplant" : "باذنجان"
+            return localized("Eggplant", "باذنجان")
         case .ing_flax_seeds:
-            return AppSettingsStore.shared.appLanguage == .english ? "Flax Seeds" : "بذور الكتان"
+            return localized("Flax Seeds", "بذور الكتان")
         case .ing_garlic:
-            return AppSettingsStore.shared.appLanguage == .english ? "Garlic" : "ثوم"
+            return localized("Garlic", "ثوم")
         case .ing_ginger:
-            return AppSettingsStore.shared.appLanguage == .english ? "Ginger" : "زنجبيل"
+            return localized("Ginger", "زنجبيل")
         case .ing_greek_yogurt:
-            return AppSettingsStore.shared.appLanguage == .english ? "Greek Yogurt" : "زبادي يوناني"
+            return localized("Greek Yogurt", "زبادي يوناني")
         case .ing_honey:
-            return AppSettingsStore.shared.appLanguage == .english ? "Honey" : "عسل"
-        case .ing_kidney_beans:
-            return AppSettingsStore.shared.appLanguage == .english ? "Kidney Beans" : "فاصوليا حمراء"
-        case .ing_lamb_lean:
-            return AppSettingsStore.shared.appLanguage == .english ? "Lean Lamb" : "لحم ضأن قليل الدسم"
-        case .ing_lemon:
-            return AppSettingsStore.shared.appLanguage == .english ? "Lemon" : "ليمون"
+            return localized("Honey", "عسل")
         case .ing_juice_glass:
-            return AppSettingsStore.shared.appLanguage == .english ? "Juice" : "عصير"
-        case .ing_lettuce:
-            return AppSettingsStore.shared.appLanguage == .english ? "Lettuce" : "خس"
+            return localized("Juice", "عصير")
+        case .ing_kidney_beans:
+            return localized("Kidney Beans", "فاصوليا حمراء")
+        case .ing_lamb_lean:
+            return localized("Lean Lamb", "لحم غنم")
+        case .ing_lemon:
+            return localized("Lemon", "ليمون")
         case .ing_lentils:
-            return AppSettingsStore.shared.appLanguage == .english ? "Lentils" : "عدس"
+            return localized("Lentils", "عدس")
+        case .ing_lettuce:
+            return localized("Lettuce", "خس")
         case .ing_mango:
-            return AppSettingsStore.shared.appLanguage == .english ? "Mango" : "مانجو"
+            return localized("Mango", "مانجو")
         case .ing_milk:
-            return AppSettingsStore.shared.appLanguage == .english ? "Milk" : "حليب"
+            return localized("Milk", "حليب")
         case .ing_mixed_veg:
-            return AppSettingsStore.shared.appLanguage == .english ? "Mixed Vegetables" : "خضار مشكلة"
+            return localized("Mixed Vegetables", "خضار مشكلة")
         case .ing_mushrooms:
-            return AppSettingsStore.shared.appLanguage == .english ? "Mushrooms" : "مشروم"
+            return localized("Mushrooms", "مشروم")
         case .ing_nuts_mixed:
-            return AppSettingsStore.shared.appLanguage == .english ? "Mixed Nuts" : "مكسرات"
+            return localized("Mixed Nuts", "مكسرات")
         case .ing_oats:
-            return AppSettingsStore.shared.appLanguage == .english ? "Oats" : "شوفان"
+            return localized("Oats", "شوفان")
         case .ing_olive_oil:
-            return AppSettingsStore.shared.appLanguage == .english ? "Olive Oil" : "زيت زيتون"
+            return localized("Olive Oil", "زيت زيتون")
         case .ing_onion:
-            return AppSettingsStore.shared.appLanguage == .english ? "Onion" : "بصل"
+            return localized("Onion", "بصل")
         case .ing_orange:
-            return AppSettingsStore.shared.appLanguage == .english ? "Orange" : "برتقال"
+            return localized("Orange", "برتقال")
         case .ing_pasta:
-            return AppSettingsStore.shared.appLanguage == .english ? "Pasta" : "باستا"
+            return localized("Pasta", "باستا")
         case .ing_peanut_butter:
-            return AppSettingsStore.shared.appLanguage == .english ? "Peanut Butter" : "زبدة الفول السوداني"
+            return localized("Peanut Butter", "زبدة الفول السوداني")
         case .ing_peas:
-            return AppSettingsStore.shared.appLanguage == .english ? "Peas" : "بازلاء"
+            return localized("Peas", "بازلاء")
         case .ing_pineapple:
-            return AppSettingsStore.shared.appLanguage == .english ? "Pineapple" : "أناناس"
+            return localized("Pineapple", "أناناس")
         case .ing_potato:
-            return AppSettingsStore.shared.appLanguage == .english ? "Potato" : "بطاطا"
+            return localized("Potato", "بطاطا")
         case .ing_quinoa:
-            return AppSettingsStore.shared.appLanguage == .english ? "Quinoa" : "كينوا"
+            return localized("Quinoa", "كينوا")
         case .ing_rice_brown:
-            return AppSettingsStore.shared.appLanguage == .english ? "Brown Rice" : "رز بني"
+            return localized("Brown Rice", "رز بني")
         case .ing_rice_white:
-            return AppSettingsStore.shared.appLanguage == .english ? "White Rice" : "رز"
+            return localized("White Rice", "رز")
         case .ing_salmon:
-            return AppSettingsStore.shared.appLanguage == .english ? "Salmon" : "سلمون"
+            return localized("Salmon", "سلمون")
         case .ing_shrimp:
-            return AppSettingsStore.shared.appLanguage == .english ? "Shrimp" : "روبيان"
+            return localized("Shrimp", "روبيان")
         case .ing_soy_sauce:
-            return AppSettingsStore.shared.appLanguage == .english ? "Soy Sauce" : "صلصة الصويا"
+            return localized("Soy Sauce", "صلصة الصويا")
         case .ing_spinach:
-            return AppSettingsStore.shared.appLanguage == .english ? "Spinach" : "سبانخ"
+            return localized("Spinach", "سبانخ")
         case .ing_sweet_potato:
-            return AppSettingsStore.shared.appLanguage == .english ? "Sweet Potato" : "بطاطا حلوة"
+            return localized("Sweet Potato", "بطاطا حلوة")
         case .ing_tahini:
-            return AppSettingsStore.shared.appLanguage == .english ? "Tahini" : "طحينة"
+            return localized("Tahini", "طحينة")
         case .ing_tofu:
-            return AppSettingsStore.shared.appLanguage == .english ? "Tofu" : "توفو"
+            return localized("Tofu", "توفو")
         case .ing_tomato:
-            return AppSettingsStore.shared.appLanguage == .english ? "Tomato" : "طماطم"
-        case .ing_turkey_breast:
-            return AppSettingsStore.shared.appLanguage == .english ? "Turkey Breast" : "صدر ديك رومي"
+            return localized("Tomato", "طماطم")
         case .ing_tuna_can:
-            return AppSettingsStore.shared.appLanguage == .english ? "Tuna" : "تونة"
+            return localized("Tuna", "تونة")
+        case .ing_turkey_breast:
+            return localized("Turkey Breast", "صدر ديك رومي")
         case .ing_walnuts:
-            return AppSettingsStore.shared.appLanguage == .english ? "Walnuts" : "جوز"
+            return localized("Walnuts", "جوز")
         case .ing_water_bottle:
-            return AppSettingsStore.shared.appLanguage == .english ? "Water" : "ماء"
+            return localized("Water", "ماء")
         case .ing_watermelon:
-            return AppSettingsStore.shared.appLanguage == .english ? "Watermelon" : "بطيخ"
+            return localized("Watermelon", "بطيخ")
         case .ing_whey_scoop:
-            return AppSettingsStore.shared.appLanguage == .english ? "Whey Scoop" : "سكوب واي"
+            return localized("Whey Protein", "بروتين واي")
         case .ing_white_fish:
-            return AppSettingsStore.shared.appLanguage == .english ? "White Fish" : "سمك"
+            return localized("White Fish", "سمك")
         case .ing_yogurt:
-            return AppSettingsStore.shared.appLanguage == .english ? "Yogurt" : "زبادي"
+            return localized("Yogurt", "زبادي")
         case .ing_zucchini:
-            return AppSettingsStore.shared.appLanguage == .english ? "Zucchini" : "كوسا"
+            return localized("Zucchini", "كوسا")
         }
     }
 
     var estimatedProteinGrams: Int {
         switch self {
-        case .ing_almonds:
-            return 6
         case .ing_beef_lean:
             return 24
+        case .ing_black_beans, .ing_chickpeas, .ing_kidney_beans, .ing_lentils:
+            return 8
+        case .ing_cheese_low_fat:
+            return 10
         case .ing_chicken_breast:
             return 26
         case .ing_chicken_thigh:
             return 22
-        case .ing_black_beans, .ing_kidney_beans, .ing_lentils:
-            return 9
-        case .ing_cheese_low_fat, .ing_cottage_cheese:
+        case .ing_cottage_cheese:
             return 12
-        case .ing_chia_seeds:
+        case .ing_egg_whites:
+            return 11
+        case .ing_egg_whole:
+            return 6
+        case .ing_greek_yogurt:
+            return 17
+        case .ing_lamb_lean:
+            return 24
+        case .ing_milk:
+            return 8
+        case .ing_nuts_mixed:
+            return 6
+        case .ing_oats:
             return 5
-        case .ing_chickpeas:
+        case .ing_peanut_butter:
             return 8
         case .ing_salmon, .ing_white_fish:
             return 23
         case .ing_shrimp:
             return 20
-        case .ing_tuna_can:
-            return 24
         case .ing_tofu:
             return 12
+        case .ing_tuna_can:
+            return 24
         case .ing_turkey_breast:
-            return 27
-        case .ing_lamb_lean:
-            return 25
+            return 29
         case .ing_whey_scoop:
             return 24
-        case .ing_egg_whites:
-            return 11
-        case .ing_egg_whole:
-            return 6
         case .ing_yogurt:
             return 10
-        case .ing_greek_yogurt:
-            return 17
-        case .ing_milk:
-            return 8
-        case .ing_oats:
-            return 5
         case .ing_bread_whole_wheat:
             return 4
         case .ing_quinoa:
             return 4
-        case .ing_rice_brown, .ing_rice_white, .ing_pasta, .ing_potato, .ing_sweet_potato, .ing_corn:
+        case .ing_rice_brown, .ing_rice_white, .ing_pasta, .ing_potato, .ing_sweet_potato:
             return 2
-        case .ing_broccoli, .ing_spinach, .ing_mixed_veg, .ing_mushrooms, .ing_cauliflower, .ing_peas:
+        case .ing_broccoli, .ing_cauliflower, .ing_spinach, .ing_mixed_veg,
+             .ing_mushrooms, .ing_peas:
             return 2
-        case .ing_nuts_mixed, .ing_peanut_butter:
-            return 6
-        case .ing_flax_seeds, .ing_tahini, .ing_walnuts:
+        case .ing_almonds, .ing_chia_seeds, .ing_flax_seeds, .ing_tahini, .ing_walnuts:
             return 5
         default:
             return 1
@@ -322,32 +321,33 @@ enum IngredientKey: String, CaseIterable, Identifiable {
              .ing_potato, .ing_quinoa, .ing_rice_brown, .ing_rice_white,
              .ing_sweet_potato:
             return .carb
-        case .ing_avocado, .ing_bell_pepper, .ing_broccoli, .ing_cauliflower,
-             .ing_carrot, .ing_cucumber, .ing_eggplant, .ing_garlic,
-             .ing_ginger, .ing_lettuce, .ing_mixed_veg, .ing_mushrooms,
-             .ing_onion, .ing_peas, .ing_spinach, .ing_tomato, .ing_zucchini:
+        case .ing_avocado, .ing_bell_pepper, .ing_broccoli, .ing_carrot,
+             .ing_cauliflower, .ing_cucumber, .ing_eggplant, .ing_garlic,
+             .ing_lettuce, .ing_mixed_veg, .ing_mushrooms, .ing_onion,
+             .ing_peas, .ing_spinach, .ing_tomato, .ing_zucchini:
             return .veg
-        case .ing_apple, .ing_banana, .ing_berries, .ing_dates, .ing_lemon,
-             .ing_mango, .ing_orange, .ing_pineapple, .ing_watermelon:
+        case .ing_apple, .ing_banana, .ing_berries, .ing_dates,
+             .ing_lemon, .ing_mango, .ing_orange, .ing_pineapple, .ing_watermelon:
             return .fruit
-        case .ing_cheese_low_fat, .ing_cottage_cheese, .ing_greek_yogurt, .ing_milk, .ing_yogurt:
+        case .ing_cheese_low_fat, .ing_cottage_cheese, .ing_greek_yogurt,
+             .ing_milk, .ing_yogurt:
             return .dairy
         case .ing_almonds, .ing_chia_seeds, .ing_flax_seeds, .ing_nuts_mixed,
              .ing_olive_oil, .ing_peanut_butter, .ing_tahini, .ing_walnuts:
             return .fat
         case .ing_juice_glass, .ing_water_bottle:
             return .drink
-        case .ing_honey, .ing_soy_sauce:
+        case .ing_ginger, .ing_honey, .ing_soy_sauce:
             return .other
         }
     }
 
     var aliases: [String] {
         switch self {
-        case .ing_almonds:
-            return ["لوز", "almond", "almonds"]
         case .ing_apple:
             return ["تفاح", "apple", "green apple", "red apple"]
+        case .ing_almonds:
+            return ["لوز", "almond", "almonds"]
         case .ing_avocado:
             return ["افوكادو", "أفوكادو", "avocado"]
         case .ing_banana:
@@ -359,17 +359,17 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_berries:
             return ["توت", "berries", "berry", "blueberries", "strawberries"]
         case .ing_black_beans:
-            return ["فاصوليا سوداء", "black beans", "black bean"]
+            return ["فاصوليا سوداء", "لوبيا سوداء", "black beans", "black bean"]
         case .ing_bread_whole_wheat:
             return ["خبز اسمر", "خبز قمح كامل", "توست اسمر", "whole wheat bread", "brown bread", "toast"]
         case .ing_broccoli:
             return ["بروكلي", "broccoli"]
-        case .ing_cauliflower:
-            return ["قرنبيط", "cauliflower"]
         case .ing_carrot:
             return ["جزر", "carrot", "carrots"]
+        case .ing_cauliflower:
+            return ["قرنبيط", "زهرة", "cauliflower"]
         case .ing_cheese_low_fat:
-            return ["جبن قليل الدسم", "جبن لايت", "low fat cheese", "light cheese", "cheese"]
+            return ["جبن قليل الدسم", "جبنة قليلة الدسم", "low fat cheese", "light cheese"]
         case .ing_chia_seeds:
             return ["بذور الشيا", "chia seeds", "chia"]
         case .ing_chicken_breast:
@@ -377,9 +377,9 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_chicken_thigh:
             return ["فخذ دجاج", "افخاذ دجاج", "chicken thigh", "chicken thighs"]
         case .ing_chickpeas:
-            return ["حمص", "chickpeas", "chickpea", "garbanzo beans"]
+            return ["حمص", "chickpeas", "chickpea", "garbanzo"]
         case .ing_corn:
-            return ["ذرة", "corn", "sweet corn"]
+            return ["ذرة", "corn"]
         case .ing_cottage_cheese:
             return ["جبن قريش", "cottage cheese"]
         case .ing_cucumber:
@@ -393,7 +393,7 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_eggplant:
             return ["باذنجان", "eggplant", "aubergine"]
         case .ing_flax_seeds:
-            return ["بذور الكتان", "flax seeds", "flaxseed"]
+            return ["بذور الكتان", "flax seeds", "flaxseed", "flax"]
         case .ing_garlic:
             return ["ثوم", "garlic"]
         case .ing_ginger:
@@ -402,18 +402,18 @@ enum IngredientKey: String, CaseIterable, Identifiable {
             return ["زبادي يوناني", "لبن يوناني", "greek yogurt"]
         case .ing_honey:
             return ["عسل", "honey"]
+        case .ing_juice_glass:
+            return ["عصير", "juice", "fresh juice", "smoothie"]
         case .ing_kidney_beans:
             return ["فاصوليا حمراء", "kidney beans", "kidney bean", "red beans"]
         case .ing_lamb_lean:
-            return ["لحم ضأن", "لحم غنم", "lean lamb", "lamb"]
+            return ["لحم غنم", "لحم خروف", "lean lamb", "lamb"]
         case .ing_lemon:
             return ["ليمون", "lemon"]
-        case .ing_juice_glass:
-            return ["عصير", "juice", "fresh juice", "smoothie"]
-        case .ing_lettuce:
-            return ["خس", "lettuce", "romaine"]
         case .ing_lentils:
             return ["عدس", "lentils", "lentil"]
+        case .ing_lettuce:
+            return ["خس", "lettuce", "romaine"]
         case .ing_mango:
             return ["مانجو", "mango"]
         case .ing_milk:
@@ -439,7 +439,7 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_peas:
             return ["بازلاء", "peas", "green peas"]
         case .ing_pineapple:
-            return ["أناناس", "pineapple"]
+            return ["أناناس", "اناناس", "pineapple"]
         case .ing_potato:
             return ["بطاطا", "بطاطة", "potato", "potatoes"]
         case .ing_quinoa:
@@ -453,7 +453,7 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_shrimp:
             return ["روبيان", "جمبري", "shrimp", "prawns"]
         case .ing_soy_sauce:
-            return ["صلصة الصويا", "soy sauce"]
+            return ["صلصة الصويا", "soy sauce", "soya sauce"]
         case .ing_spinach:
             return ["سبانخ", "spinach"]
         case .ing_sweet_potato:
@@ -464,10 +464,10 @@ enum IngredientKey: String, CaseIterable, Identifiable {
             return ["توفو", "tofu"]
         case .ing_tomato:
             return ["طماطة", "طماطم", "بندورة", "tomato", "tomatoes"]
-        case .ing_turkey_breast:
-            return ["صدر ديك رومي", "تركي", "turkey breast", "turkey"]
         case .ing_tuna_can:
             return ["تونة", "tuna", "tuna can", "canned tuna"]
+        case .ing_turkey_breast:
+            return ["صدر ديك رومي", "turkey breast", "turkey"]
         case .ing_walnuts:
             return ["جوز", "عين الجمل", "walnut", "walnuts"]
         case .ing_water_bottle:
@@ -475,7 +475,7 @@ enum IngredientKey: String, CaseIterable, Identifiable {
         case .ing_watermelon:
             return ["بطيخ", "watermelon"]
         case .ing_whey_scoop:
-            return ["سكوب واي", "واي", "whey scoop", "whey protein", "protein scoop"]
+            return ["بروتين واي", "واي", "whey protein", "whey", "protein scoop"]
         case .ing_white_fish:
             return ["سمك", "فيليه", "fish", "white fish"]
         case .ing_yogurt:
@@ -484,8 +484,10 @@ enum IngredientKey: String, CaseIterable, Identifiable {
             return ["كوسا", "zucchini", "courgette"]
         }
     }
+}
 
-    var searchAliases: [String] {
-        aliases + [rawValue]
+private extension IngredientKey {
+    func localized(_ english: String, _ arabic: String) -> String {
+        AppSettingsStore.shared.appLanguage == .english ? english : arabic
     }
 }

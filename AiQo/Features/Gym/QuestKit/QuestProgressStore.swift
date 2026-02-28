@@ -1,10 +1,12 @@
 import Foundation
 
+@MainActor
 protocol QuestProgressStore {
     func load() -> [String: QuestProgressRecord]
     func save(_ records: [String: QuestProgressRecord])
 }
 
+@MainActor
 final class UserDefaultsQuestProgressStore: QuestProgressStore {
     private let defaults: UserDefaults
     private let storageKey = "aiqo.quest.progress.records.v1"

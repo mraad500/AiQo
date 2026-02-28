@@ -2,6 +2,11 @@ import Foundation
 import HealthKit
 import SwiftUI
 
+enum GymWorkoutKind: Hashable {
+    case standard
+    case cardioWithCaptainHamoudi
+}
+
 enum WorkoutCoachingProfile: Hashable {
     case standard
     case captainHamoudiZone2
@@ -16,6 +21,7 @@ struct GymExercise: Identifiable, Hashable {
     let location: HKWorkoutSessionLocationType
     let icon: String
     let tint: Color
+    let workoutKind: GymWorkoutKind
     let coachingProfile: WorkoutCoachingProfile
 
     init(
@@ -26,6 +32,7 @@ struct GymExercise: Identifiable, Hashable {
         location: HKWorkoutSessionLocationType = .indoor,
         icon: String = "figure.mixed.cardio",
         tint: Color = .aiqoBeige,
+        workoutKind: GymWorkoutKind = .standard,
         coachingProfile: WorkoutCoachingProfile = .standard
     ) {
         self.id = id
@@ -35,6 +42,7 @@ struct GymExercise: Identifiable, Hashable {
         self.location = location
         self.icon = icon
         self.tint = tint
+        self.workoutKind = workoutKind
         self.coachingProfile = coachingProfile
     }
 
@@ -69,6 +77,7 @@ extension GymExercise {
             location: .outdoor,
             icon: "figure.run.circle.fill",
             tint: .aiqoMint,
+            workoutKind: .cardioWithCaptainHamoudi,
             coachingProfile: .captainHamoudiZone2
         ),
         GymExercise(

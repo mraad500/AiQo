@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import SwiftData
 import Supabase
 import Auth
 internal import Combine
@@ -27,6 +28,7 @@ final class AppFlowController: ObservableObject {
     private let protectionModel = ProtectionModel.shared
 
     private init() {
+        QuestPersistenceController.shared.installQuestPersistence()
         currentScreen = Self.resolveCurrentScreen()
     }
 
@@ -111,6 +113,7 @@ struct AppRootView: View {
             rootScreen
                 .id(flow.refreshID)
         }
+        .modelContainer(QuestPersistenceController.shared.container)
         .onReceive(NotificationCenter.default.publisher(for: .appLanguageDidChange)) { _ in
             flow.reloadCurrentScreen()
         }

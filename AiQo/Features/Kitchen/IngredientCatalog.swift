@@ -45,14 +45,14 @@ enum IngredientCatalog {
 
         let prioritizedAliasEntries = IngredientKey.allCases
             .flatMap { key in
-                key.searchAliases.map { (key: key, alias: normalize($0)) }
+                (key.aliases + [key.rawValue]).map { (key: key, alias: normalize($0)) }
             }
-            .sorted { lhs, rhs in
+            .sorted(by: { lhs, rhs in
                 if lhs.alias.count != rhs.alias.count {
                     return lhs.alias.count > rhs.alias.count
                 }
                 return lhs.key.rawValue < rhs.key.rawValue
-            }
+            })
 
         for entry in prioritizedAliasEntries where normalized.contains(entry.alias) {
             return entry.key
@@ -65,11 +65,11 @@ enum IngredientCatalog {
         let normalized = normalize(text)
         guard !normalized.isEmpty else { return [] }
 
-        let normalizedAliasesByKey = IngredientKey.allCases.map { key in
-            (key: key, aliases: key.searchAliases.map { alias in normalize(alias) })
+        let normalizedAliasesByKey: [(key: IngredientKey, aliases: [String])] = IngredientKey.allCases.map { key in
+            (key: key, aliases: (key.aliases + [key.rawValue]).map { alias in normalize(alias) })
         }
 
-        let matches: [(IngredientKey, Int, Int)] = normalizedAliasesByKey.compactMap { item in
+        let matches: [(IngredientKey, Int, Int)] = normalizedAliasesByKey.compactMap { item -> (IngredientKey, Int, Int)? in
             guard let position = firstMatchPosition(in: normalized, aliases: item.aliases) else {
                 return nil
             }
@@ -77,7 +77,7 @@ enum IngredientCatalog {
         }
 
         return matches
-            .sorted { lhs, rhs in
+            .sorted(by: { lhs, rhs in
                 if lhs.1 != rhs.1 {
                     return lhs.1 < rhs.1
                 }
@@ -85,7 +85,7 @@ enum IngredientCatalog {
                     return lhs.2 < rhs.2
                 }
                 return lhs.0.rawValue < rhs.0.rawValue
-            }
+            })
             .map(\.0)
     }
 
@@ -98,7 +98,7 @@ enum IngredientCatalog {
             }
         }
 
-        return found.sorted { lhs, rhs in
+        return found.sorted(by: { lhs, rhs in
             if lhs.category.priority != rhs.category.priority {
                 return lhs.category.priority < rhs.category.priority
             }
@@ -106,7 +106,7 @@ enum IngredientCatalog {
                 return lhs.rawValue < rhs.rawValue
             }
             return lhsIndex < rhsIndex
-        }
+        })
     }
 
     private static func firstMatchPosition(in text: String, aliases: [String]) -> Int? {

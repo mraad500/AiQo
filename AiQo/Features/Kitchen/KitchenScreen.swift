@@ -315,13 +315,11 @@ struct MealDetailSheet: View {
                     VStack(spacing: 10) {
                         ForEach(presentation.ingredientItems) { ingredient in
                             HStack(spacing: 12) {
-                                IngredientLocalAssetView(ingredientName: ingredient.name, size: 28, cornerRadius: 9) {
-                                    Image(systemName: "fork.knife.circle.fill")
-                                        .foregroundStyle(Color.yellow)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .frame(width: 28, height: 28)
-                                        .background(Color(.tertiarySystemBackground))
-                                }
+                                IngredientIconView(
+                                    ingredientKey: ingredient.ingredientKey,
+                                    size: 36,
+                                    cornerRadius: 12
+                                )
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 8) {

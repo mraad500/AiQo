@@ -156,6 +156,7 @@ struct GymView: View {
             title: exercise.title,
             activityType: exercise.type,
             locationType: exercise.location,
+            currentWorkout: exercise.workoutKind,
             coachingProfile: exercise.coachingProfile
         )
         selectedExercise = exercise
@@ -172,6 +173,7 @@ struct GymView: View {
             title: exercise.title,
             activityType: exercise.type,
             locationType: exercise.location,
+            currentWorkout: exercise.workoutKind,
             coachingProfile: exercise.coachingProfile
         )
         activeSession = session

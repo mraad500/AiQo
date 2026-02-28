@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>يستخدم AiQo بيانات الصحة على Apple Watch لقراءة نبض القلب والسعرات والمسافة وبدء جلسات التمرين وعرضها مباشرة.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>يحتاج AiQo إلى حفظ جلسات التمرين وبياناتها في Apple Health من خلال Apple Watch بعد انتهاء النشاط.</string>
 	<key>UIBackgroundModes</key>
 	<array/>
 	<key>WKBackgroundModes</key>

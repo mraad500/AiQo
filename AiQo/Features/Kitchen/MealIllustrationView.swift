@@ -36,8 +36,8 @@ private extension MealIllustrationView {
     func ingredientSticker(_ ingredient: IngredientKey, placement: PlatePlacement, size: CGSize) -> some View {
         let dimension = min(size.width, size.height) * placement.scale * 1.5
 
-        if let image = IngredientAssetLibrary.image(for: ingredient) {
-            image
+        if let image = IngredientAssetCatalog.uiImage(for: ingredient) {
+            Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
                 .frame(width: dimension, height: dimension)
