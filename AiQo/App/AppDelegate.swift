@@ -15,6 +15,7 @@ struct AiQoApp: App {
         WindowGroup {
             AppRootView()
                 .onOpenURL { url in
+                    SpotifyVibeManager.shared.handleURL(url)
                     MusicManager.shared.handleSpotifyURL(url)
                 }
         }
@@ -34,6 +35,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         LocalizationManager.shared.applySavedLanguage()
         NotificationService.shared.requestPermissions()
+        Task { @MainActor in
+            PurchaseManager.shared.start()
+        }
 
         application.registerForRemoteNotifications()
 

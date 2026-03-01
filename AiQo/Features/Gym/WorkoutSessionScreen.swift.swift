@@ -5,17 +5,15 @@
 
 import SwiftUI
 import HealthKit
-import MediaPlayer
-internal import Combine
 
 // MARK: - Main Screen
 struct WorkoutSessionScreen: View {
     
     @ObservedObject var session: LiveWorkoutSession
-    @StateObject private var music = WorkoutMusicController()
     
     @State private var showSummary = false
     @State private var showActiveRecovery = false
+    @State private var showSpotifyLibrary = false
     @State private var summaryData: (
         duration: TimeInterval,
         calories: Double,
@@ -86,48 +84,12 @@ struct WorkoutSessionScreen: View {
                             }
                             .padding(.horizontal, 20)
                             
-                            let mediaHeight = max(360, geometry.size.height * 0.48)
-                            
                             // --- Music / Spotify Section ---
-                            VStack(spacing: 12) {
-                                MediaCardView(mode: .songs, musicController: music)
-                                HStack(spacing: 12) {
-                                    Button(action: {
-                                        SpotifyAuthManager.shared.startLogin()
-                                        music.pickProvider(.spotify)
-                                    }) {
-                                        HStack {
-                                            Image(systemName: "link")
-                                            Text("Connect Spotify")
-                                        }
-                                        .font(.headline.bold())
-                                        .foregroundColor(.black)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 52)
-                                        .background(WorkoutTheme.pastelMint)
-                                        .clipShape(Capsule())
-                                    }
-                                    
-                                    Button(action: {
-                                        music.pickProvider(.spotify)
-                                        music.playPause()
-                                    }) {
-                                        HStack {
-                                            Image(systemName: "play.fill")
-                                            Text("Open Spotify")
-                                        }
-                                        .font(.headline.bold())
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 52)
-                                        .background(Color.black.opacity(0.85))
-                                        .clipShape(Capsule())
-                                    }
-                                }
-                                .padding(.horizontal, 20)
+                            SpotifyWorkoutPlayerView {
+                                showSpotifyLibrary = true
                             }
-                            .frame(height: mediaHeight)
-                            .padding(.top, 10)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 10)
                             
                             // 🔥 مسافة فارغة في النهاية حتى لا يغطي الزر المحتوى عند السكرول
                             Spacer().frame(height: 110)
@@ -141,14 +103,12 @@ struct WorkoutSessionScreen: View {
                                 withAnimation {
                                     if session.phase == .running {
                                         session.pauseFromPhone()
-                                        music.onWorkoutPause()
                                     } else {
                                         if session.phase == .idle {
                                             session.startFromPhone()
                                         } else {
                                             session.resumeFromPhone()
                                         }
-                                        music.onWorkoutStart()
                                     }
                                 }
                             }) {
@@ -210,8 +170,11 @@ struct WorkoutSessionScreen: View {
                 .zIndex(100)
             }
         }
-        .onAppear {
-            if music.provider == .none { music.pickProvider(.appleMusic) }
+        .sheet(isPresented: $showSpotifyLibrary) {
+            SpotifyVibesLibrarySheet(playlistID: "37i9dQZF1DX4sWSpwq3LiO")
+                .presentationDetents([.fraction(0.6), .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial)
         }
         .fullScreenCover(isPresented: $showSummary) {
             if let data = summaryData {
@@ -287,8 +250,6 @@ struct WorkoutSessionScreen: View {
             estimatedSteps: estimatedSteps,
             workoutTitle: session.title
         )
-
-        music.onWorkoutEnd()
 
         if isCaptainHamoudiCardioWorkout {
             activeRecoveryContext = ActiveRecoveryContext(
@@ -583,105 +544,5 @@ struct Zone2AuraCard: View {
         let minutes = seconds / 60
         let remaining = seconds % 60
         return String(format: "%02d:%02d", minutes, remaining)
-    }
-}
-
-struct MediaCardView: View {
-    let mode: MediaMode
-    @ObservedObject var musicController: WorkoutMusicController
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12).fill(Color.gray.opacity(0.3))
-                if let art = musicController.artwork {
-                    Image(uiImage: art).resizable().aspectRatio(contentMode: .fill)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    Image(systemName: mode == .songs ? "music.note" : "play.rectangle.fill")
-                        .font(.title2).foregroundStyle(.white)
-                }
-            }
-            .frame(width: 50, height: 50)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(mode == .songs ? musicController.trackTitle : "Training Video")
-                    .font(.headline.bold())
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(mode == .songs ? musicController.artistName : "Coach Tip")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                    .lineLimit(1)
-            }
-            Spacer()
-            HStack(spacing: 15) {
-                Button(action: { musicController.previous() }) {
-                    Image(systemName: "backward.fill").font(.title3).foregroundStyle(.gray)
-                }
-                Button(action: { musicController.playPause() }) {
-                    Circle()
-                        .fill(Color(red: 0.0, green: 0.85, blue: 0.65))
-                        .frame(width: 45, height: 45)
-                        .overlay(Image(systemName: musicController.isPlaying ? "pause.fill" : "play.fill").foregroundStyle(.white).font(.title3))
-                        .shadow(color: Color.green.opacity(0.4), radius: 8)
-                }
-                Button(action: { musicController.next() }) {
-                    Image(systemName: "forward.fill").font(.title3).foregroundStyle(.gray)
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(red: 0.15, green: 0.15, blue: 0.18))
-                .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
-        )
-        .padding(.horizontal, 20)
-    }
-}
-
-// MARK: - Music Controller
-@MainActor
-final class WorkoutMusicController: ObservableObject {
-    enum Provider { case appleMusic, spotify, none }
-    @Published var provider: Provider = .none
-    @Published var trackTitle: String = "Not Playing"
-    @Published var artistName: String = "Select Music"
-    @Published var isPlaying: Bool = false
-    @Published var artwork: UIImage? = nil
-    private var cancellables = Set<AnyCancellable>()
-    private let applePlayer = MPMusicPlayerController.systemMusicPlayer
-
-    init() {
-        NotificationCenter.default.publisher(for: .MPMusicPlayerControllerNowPlayingItemDidChange)
-            .sink { [weak self] _ in self?.refreshAppleNowPlaying() }
-            .store(in: &cancellables)
-        NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)
-            .sink { [weak self] _ in self?.refreshApplePlaybackState() }
-            .store(in: &cancellables)
-        applePlayer.beginGeneratingPlaybackNotifications()
-    }
-    func pickProvider(_ p: Provider) { provider = p; refreshAppleNowPlaying() }
-    func playPause() {
-        if provider == .appleMusic { if applePlayer.playbackState == .playing { applePlayer.pause() } else { applePlayer.play() } }
-        else if provider == .spotify { openSpotify() }
-    }
-    func next() { if provider == .appleMusic { applePlayer.skipToNextItem() } }
-    func previous() { if provider == .appleMusic { applePlayer.skipToPreviousItem() } }
-    func onWorkoutStart() { if provider == .appleMusic { applePlayer.play() } }
-    func onWorkoutPause() { if provider == .appleMusic { applePlayer.pause() } }
-    func onWorkoutEnd() { if provider == .appleMusic { applePlayer.pause() } }
-    private func refreshAppleNowPlaying() {
-        guard provider == .appleMusic else { return }
-        if let item = applePlayer.nowPlayingItem {
-            trackTitle = item.title ?? "Unknown"
-            artistName = item.artist ?? "Unknown"
-            artwork = item.artwork?.image(at: CGSize(width: 150, height: 150))
-        }
-    }
-    private func refreshApplePlaybackState() { isPlaying = (applePlayer.playbackState == .playing) }
-    private func openSpotify() {
-        if let url = URL(string: "spotify://") { if UIApplication.shared.canOpenURL(url) { UIApplication.shared.open(url) } }
     }
 }

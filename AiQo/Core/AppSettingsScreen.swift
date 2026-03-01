@@ -4,7 +4,10 @@ import UserNotifications
 struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
+    @State private var showTribeFlow = false
+    @State private var showDeveloperPanel = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
+    @AppStorage(TribeScreenshotMode.key) private var screenshotModeEnabled = false
 
     var body: some View {
         Form {
@@ -110,6 +113,60 @@ struct AppSettingsScreen: View {
                 }
                 .padding(.vertical, 4)
             }
+
+            Section("Community") {
+                Button {
+                    showTribeFlow = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("AiQo Tribe")
+                                .foregroundStyle(.primary)
+
+                            Text("VIP community previews, rituals, and future member spaces.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+
+                #if DEBUG
+                Toggle("Screenshot Mode", isOn: $screenshotModeEnabled)
+                #endif
+            }
+
+            #if DEBUG
+            Section("debug.preview.navigation".localized) {
+                Button {
+                    showDeveloperPanel = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("debug.preview.navigation".localized)
+                                .foregroundStyle(.primary)
+
+                            Text("debug.preview.settingsHint".localized)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "hammer.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            }
+            #endif
         }
         .navigationTitle(
             NSLocalizedString(
@@ -154,6 +211,12 @@ struct AppSettingsScreen: View {
         .onChange(of: notificationLanguage) { _, language in
             let normalized = CoachNotificationLanguage(rawValue: language) ?? .arabic
             NotificationPreferencesStore.shared.language = normalized == .english ? .english : .arabic
+        }
+        .sheet(isPresented: $showTribeFlow) {
+            TribeExperienceFlowView(source: .settings)
+        }
+        .sheet(isPresented: $showDeveloperPanel) {
+            DeveloperPanelView()
         }
     }
 

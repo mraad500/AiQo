@@ -2,6 +2,31 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key></key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string></string>
+			</array>
+			<key>CFBundleIconName</key>
+			<string></string>
+			<key>UIPrerenderedIcon</key>
+			<false/>
+		</dict>
+		<key>UINewsstandIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string></string>
+			</array>
+			<key>UINewsstandBindingEdge</key>
+			<string>UINewsstandBindingEdgeLeft</string>
+			<key>UINewsstandBindingType</key>
+			<string>UINewsstandBindingTypeMagazine</string>
+		</dict>
+	</dict>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CFBundleGetInfoString</key>
@@ -23,6 +48,7 @@
 			<string>com.mraad500.aiqo</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>aiqo</string>
 				<string>aiqo-spotify</string>
 			</array>
 		</dict>
@@ -36,14 +62,6 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSCameraUsageDescription</key>
-	<string>يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>يستخدم AiQo بيانات الصحة لقراءة النشاط والنوم والماء وتحديث تقدم المهام تلقائياً.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>يحتاج AiQo صلاحية كتابة الماء في Apple Health عند إضافة الشرب من داخل التطبيق.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>AiQo needs local network access to connect to Captain backend during development.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

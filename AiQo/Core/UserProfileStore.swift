@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+public import Combine
 
 // ✅ التغيير الأساسي: جعل الـ Struct وخصائصه public لحل خطأ SupabaseService
 public struct UserProfile: Codable {
@@ -38,13 +39,26 @@ public struct UserProfile: Codable {
     }
 }
 
-public final class UserProfileStore {
+public final class UserProfileStore: ObservableObject {
     public static let shared = UserProfileStore()
     
     private let profileKey = "aiqo.userProfile"
     private let avatarKey  = "aiqo.userAvatar"
+    private let tribePrivacyModeKey = "aiqo.user.tribePrivacyMode"
+
+    @Published var tribePrivacyMode: PrivacyMode = .private {
+        didSet {
+            UserDefaults.standard.set(tribePrivacyMode.rawValue, forKey: tribePrivacyModeKey)
+            NotificationCenter.default.post(name: .userProfileDidChange, object: nil)
+        }
+    }
     
-    private init() {}
+    private init() {
+        if let rawValue = UserDefaults.standard.string(forKey: tribePrivacyModeKey),
+           let storedMode = PrivacyMode(rawValue: rawValue) {
+            tribePrivacyMode = storedMode
+        }
+    }
     
     public var current: UserProfile {
         get {
@@ -85,6 +99,13 @@ public final class UserProfileStore {
     public func loadAvatar() -> UIImage? {
         guard let data = UserDefaults.standard.data(forKey: avatarKey) else { return nil }
         return UIImage(data: data)
+    }
+
+    func setTribePrivacyMode(_ mode: PrivacyMode) {
+        guard tribePrivacyMode != mode else { return }
+        tribePrivacyMode = mode
+        TribeStore.shared.updateMyPrivacy(mode: mode)
+        print("🪶 Saved tribe privacy mode: \(mode.rawValue)")
     }
 }
 

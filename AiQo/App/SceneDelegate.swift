@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 import SwiftData
 import Supabase
 import Auth
@@ -34,7 +33,7 @@ final class AppFlowController: ObservableObject {
 
     func didLoginSuccessfully() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didShowFirstAuthScreen)
-        transition(to: .dating)
+        transition(to: Self.nextScreenAfterLogin())
     }
 
     func didCompleteDatingProfile() {
@@ -44,7 +43,7 @@ final class AppFlowController: ObservableObject {
 
     func onboardingFinished() {
         Task { @MainActor in
-            await requestNotificationAuthorizationIfNeeded()
+            requestNotificationAuthorizationIfNeeded()
             await protectionModel.requestAuthorization()
 
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
@@ -79,10 +78,12 @@ final class AppFlowController: ObservableObject {
     }
 
     private static func resolveCurrentScreen() -> RootScreen {
+        let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
         let isLoggedIn = SupabaseService.shared.client.auth.currentUser != nil
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
 
+        guard didShowFirstAuthScreen else { return .login }
         guard isLoggedIn else { return .login }
 
         if !didCompleteDatingProfile {
@@ -96,12 +97,23 @@ final class AppFlowController: ObservableObject {
         return .main
     }
 
-    private func requestNotificationAuthorizationIfNeeded() async {
-        await withCheckedContinuation { continuation in
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
-                continuation.resume()
-            }
+    private static func nextScreenAfterLogin() -> RootScreen {
+        let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
+        let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
+
+        if !didCompleteDatingProfile {
+            return .dating
         }
+
+        if !didCompleteLegacyCalculation {
+            return .legacy
+        }
+
+        return .main
+    }
+
+    private func requestNotificationAuthorizationIfNeeded() {
+        NotificationService.shared.requestPermissions()
     }
 }
 

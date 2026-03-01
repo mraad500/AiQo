@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+internal import Combine
 
 // MARK: - HomeView
 
@@ -10,6 +12,7 @@ struct HomeView: View {
     
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var dailyAuraViewModel = DailyAuraViewModel()
+    @StateObject private var vibeControlViewModel = VibeControlViewModel()
     
     // MARK: - Environment
     
@@ -23,8 +26,7 @@ struct HomeView: View {
     // MARK: - Sheet Presentation States
     
     @State private var isProfileSheetPresented: Bool = false
-    @State private var isTribeSheetPresented: Bool = false
-    
+    @State private var showVibeSheet: Bool = false
     // MARK: - Body
     
     var body: some View {
@@ -43,8 +45,8 @@ struct HomeView: View {
                     // Metrics Grid
                     metricsGrid
                     
-                    // Tribe Section
-                    tribeSection
+                    // Kitchen Section
+                    kitchenSection
                 }
                 .padding(.top, 6)
                 .padding(.bottom, 4)
@@ -54,6 +56,8 @@ struct HomeView: View {
 
                 Spacer(minLength: 0)
             }
+
+            vibeQuickAccessButton
         }
         .task {
             await viewModel.onAppear()
@@ -69,6 +73,9 @@ struct HomeView: View {
         .onChange(of: viewModel.currentSummary) { _, summary in
             guard let summary else { return }
             dailyAuraViewModel.ingest(todaySteps: Int(summary.steps), todayCalories: summary.activeKcal)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openKitchenFromHome)) { _ in
+            viewModel.openKitchen()
         }
         
         // MARK: - Metric Detail Sheet (with transparent paper effect)
@@ -101,14 +108,12 @@ struct HomeView: View {
                 .presentationDragIndicator(.visible)
                 .ignoresSafeArea(edges: .bottom)
         }
-        
-        // MARK: - Tribe Sheet
-        .sheet(isPresented: $isTribeSheetPresented) {
-            TribeRankingScreen()
-                .presentationDetents([.medium, .large])
+
+        .sheet(isPresented: $showVibeSheet) {
+            VibeControlSheet(viewModel: vibeControlViewModel)
+                .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial) // Transparent paper effect
-                .ignoresSafeArea(edges: .bottom)
+                .presentationBackground(.ultraThinMaterial)
         }
         
         // MARK: - Other Destination Sheets
@@ -180,21 +185,33 @@ struct HomeView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.expandedMetric)
     }
     
-    // MARK: - Tribe Section
+    // MARK: - Kitchen Section
     
-    private var tribeSection: some View {
+    private var kitchenSection: some View {
         VStack(spacing: 4) {
             Spacer()
                 .frame(height: 4)
-            
-            TribeButton {
-                isTribeSheetPresented = true
+
+            KitchenShortcutButton {
+                viewModel.openKitchen()
             }
             
-            Text(NSLocalizedString("screen.home.tribe", comment: "Tribe title under icon"))
+            Text(NSLocalizedString("tab.kitchen", comment: "Kitchen title under icon"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
         }
-        .frame(height: 100)
+        .frame(height: 112)
+    }
+
+    private var vibeQuickAccessButton: some View {
+        HStack {
+            Spacer()
+
+            VibeDashboardTriggerButton {
+                showVibeSheet = true
+            }
+        }
+        .padding(.top, 78)
+        .padding(.trailing, 24)
     }
     
     // MARK: - Destination Views
@@ -209,6 +226,9 @@ struct HomeView: View {
         case .tribe:
             // Handled by separate sheet binding now
             EmptyView()
+
+        case .kitchen:
+            HomeKitchenSheetView()
             
         case .waterDetail:
             // Water Sheet with medium/large detents (Goal #5)
@@ -237,15 +257,49 @@ struct HomeView: View {
 
 // MARK: - Profile Button View (Unified)
 
-// MARK: - Tribe Button
+private struct HomeKitchenRootView: View {
+    @State private var viewModel = KitchenViewModel(repository: LocalMealsRepository())
+    @StateObject private var kitchenStore = KitchenPersistenceStore()
 
-/// Animated tribe button with bouncing effect - uses custom "Tribeicon" asset
-struct TribeButton: View {
+    var body: some View {
+        KitchenScreen(
+            viewModel: viewModel,
+            kitchenStore: kitchenStore
+        )
+    }
+}
+
+private struct HomeKitchenSheetView: View {
+    @State private var selectedDetent: PresentationDetent = .fraction(0.75)
+
+    var body: some View {
+        NavigationStack {
+            HomeKitchenRootView()
+        }
+        .presentationDetents([.fraction(0.75), .large], selection: $selectedDetent)
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            selectedDetent = .fraction(0.75)
+        }
+    }
+}
+
+// MARK: - Kitchen Button
+
+/// Animated kitchen button that prefers the custom kitchen asset provided in the catalog.
+struct KitchenShortcutButton: View {
     var onTap: (() -> Void)?
     
     @State private var isPressed: Bool = false
     @State private var floatOffset: CGFloat = 0
     @State private var feedbackTrigger = 0
+
+    private let preferredKitchenIconName = "Kitchenـicon"
+    private let fallbackKitchenIconName = "Kitchen icon"
+
+    private var kitchenIconName: String {
+        UIImage(named: preferredKitchenIconName) != nil ? preferredKitchenIconName : fallbackKitchenIconName
+    }
     
     var body: some View {
         Button(action: {
@@ -263,8 +317,7 @@ struct TribeButton: View {
 
             onTap?()
         }) {
-            // RESTORED: Use the original custom "Tribeicon" asset image
-            Image("Tribeicon")
+            Image(kitchenIconName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 90, height: 90)
@@ -484,7 +537,7 @@ extension MetricKind {
         .background(Color(.systemBackground))
 }
 
-#Preview("Tribe Button") {
-    TribeButton { }
+#Preview("Kitchen Button") {
+    KitchenShortcutButton { }
         .padding()
 }

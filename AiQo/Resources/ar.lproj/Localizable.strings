@@ -978,3 +978,211 @@
 "quests.detail.status.idle" = "الحالة: لم يبدأ بعد";
 "quests.detail.status.started" = "الحالة: تم بدء التحدي";
 "quests.detail.status.finished" = "الحالة: تم إنهاء التحدي";
+
+/* Tribe + Premium */
+"common.done" = "تم";
+
+"debug.preview.navigation" = "دعم المطور";
+"debug.preview.unavailable" = "أدوات المعاينة للمطور غير متاحة في نسخ الإنتاج.";
+"debug.preview.section" = "معاينة القبيلة";
+"debug.preview.enable" = "معاينة القبيلة (فتح جميع ميزات القبيلة)";
+"debug.preview.useMock" = "استخدام بيانات قبيلة وهمية";
+"debug.preview.plan" = "خطة المعاينة";
+"debug.preview.reset" = "إعادة ضبط بيانات المعاينة";
+"debug.preview.status" = "حالة الوصول";
+"debug.preview.status.tribe" = "وصول القبيلة";
+"debug.preview.status.family" = "وصول الخطة العائلية";
+"debug.preview.status.data" = "مصدر البيانات";
+"debug.preview.on" = "مفعّل";
+"debug.preview.off" = "متوقف";
+"debug.preview.mockData" = "وهمي";
+"debug.preview.liveData" = "حي";
+"debug.preview.banner" = "وضع المعاينة";
+"debug.preview.settingsHint" = "فتح القبيلة ببيانات وهمية في وضع Debug فقط.";
+
+"tribe.screen.title" = "القبيلة";
+"tribe.screen.subtitle" = "مساحة هادئة للتقدم المشترك.";
+"tribe.presentationMode" = "وضع العرض";
+"tribe.tab.hub" = "المركز";
+"tribe.tab.arena" = "الأرينا";
+"tribe.tab.log" = "السجل";
+"tribe.tab.galaxy" = "المجرة";
+
+"tribe.hub.energy.complete" = "درع اليوم مكتمل.";
+"tribe.hub.energy.remaining" = "باقي %d طاقة لإكمال الدرع";
+"tribe.hub.energy.title" = "طاقة القبيلة اليوم";
+"tribe.hub.energy.description" = "نبضة هادئة من الاستمرارية المشتركة داخل القبيلة.";
+"tribe.hub.enterGalaxy" = "ادخل إلى المجرة";
+"tribe.hub.enterGalaxy.subtitle" = "خريطة الأرواح، التحديات، وشرارة سريعة.";
+"tribe.hub.inviteCode" = "رمز الدعوة: %@";
+"tribe.hub.privacy" = "الخصوصية";
+"tribe.hub.missions" = "مهام القبيلة";
+"tribe.hub.members" = "الأعضاء";
+
+"tribe.member.anonymous" = "عضو";
+"tribe.member.initialsFallback" = "أق";
+"tribe.member.level" = "المستوى %d";
+"tribe.member.accessibility" = "%@، المستوى %d";
+
+"tribe.privacy.private" = "خاص";
+"tribe.privacy.public" = "عام";
+
+"tribe.action.spark" = "شرارة";
+"tribe.action.view" = "شاهد";
+"tribe.action.start" = "ابدأ";
+"tribe.action.contribute" = "ساهم";
+"tribe.action.create" = "إنشاء";
+"tribe.action.suggestGalaxy" = "اقتراح للمجرة";
+
+"tribe.mock.name" = "قبيلة الهدوء";
+"tribe.mock.selfName" = "أنت";
+"tribe.mock.privateMember" = "عضو خاص";
+"tribe.mock.joinedName" = "قبيلة %@";
+
+"tribe.challenge.scope.personal" = "شخصي";
+"tribe.challenge.scope.tribe" = "القبيلة";
+"tribe.challenge.scope.galaxy" = "المجرة";
+"tribe.challenge.cadence.daily" = "يومي";
+"tribe.challenge.cadence.monthly" = "شهري";
+"tribe.challenge.section.daily" = "تحديات اليوم";
+"tribe.challenge.section.monthly" = "تحديات الشهر";
+"tribe.challenge.remaining" = "باقي %d %@";
+"tribe.challenge.timeRemaining.days" = "باقي %d يوم";
+"tribe.challenge.timeRemaining.hours" = "باقي %d ساعة";
+
+"tribe.metric.steps" = "خطوات";
+"tribe.metric.water" = "ماء";
+"tribe.metric.sleep" = "نوم";
+"tribe.metric.minutes" = "دقائق";
+"tribe.metric.custom" = "مخصص";
+"tribe.metric.sugarFree" = "بدون سكر";
+"tribe.metric.calmMinutes" = "دقائق هدوء";
+
+"tribe.unit.steps" = "خطوة";
+"tribe.unit.water" = "كوب";
+"tribe.unit.sleep" = "ساعة";
+"tribe.unit.minutes" = "دقيقة";
+"tribe.unit.custom" = "وحدة";
+"tribe.unit.sugarFree" = "يوم";
+
+"tribe.arena.title" = "الأرينا";
+"tribe.arena.subtitle" = "تحديات مختارة ولوحة ترتيب سريعة.";
+"tribe.arena.newChallenge" = "تحدي جديد";
+"tribe.arena.filter.myTribe" = "قبيلتي فقط";
+"tribe.arena.empty.filteredGalaxy" = "تم إخفاء تحديات المجرة لأن فلتر القبيلة مفعّل.";
+"tribe.arena.empty" = "لا توجد تحديات هنا بعد.";
+"tribe.arena.suggestions" = "اقتراحات المجرة المعلقة";
+"tribe.arena.leaderboard" = "لوحة الترتيب";
+"tribe.arena.composer.scope" = "النطاق";
+"tribe.arena.composer.cadence" = "المدة";
+"tribe.arena.composer.type" = "القياس";
+"tribe.arena.composer.content" = "التفاصيل";
+"tribe.arena.composer.title" = "العنوان";
+"tribe.arena.composer.subtitle" = "الوصف";
+"tribe.arena.composer.suggestionFallback" = "تحدي مقترح للمجرة";
+
+"tribe.galaxy.title" = "المجرة";
+"tribe.galaxy.subtitle" = "شبكة هادئة حول المصدر.";
+"tribe.galaxy.caption" = "كل روح مرتبطة بالمصدر";
+"tribe.galaxy.source" = "المصدر";
+"tribe.galaxy.layout.network" = "شبكة";
+"tribe.galaxy.layout.spokes" = "خيوط";
+"tribe.galaxy.mode.network" = "شبكة";
+"tribe.galaxy.mode.arena" = "الأرينا";
+"tribe.galaxy.node.accessibility.public" = "%@، المستوى %d، الطاقة %d";
+"tribe.galaxy.node.accessibility.private" = "عضو خاص، المستوى %d";
+"tribe.galaxy.node.energy" = "طاقة اليوم +%d";
+"tribe.galaxy.node.private" = "ملف خاص";
+"tribe.galaxy.quickSuggestion" = "ابدأ بـ %@";
+"tribe.galaxy.createChallenge" = "تحدي";
+"tribe.galaxy.openArena" = "افتح الأرينا";
+"tribe.galaxy.sheet.section" = "إنشاء من المجرة";
+"tribe.galaxy.sheet.createInTribe" = "إنشاء داخل القبيلة";
+"tribe.galaxy.sheet.createdFromGalaxy" = "تم الإنشاء من المجرة";
+
+"tribe.log.title" = "السجل";
+
+"tribe.toast.sparkSent" = "تم إرسال شرارة";
+"tribe.toast.challengeUpdated" = "تم تحديث التحدي";
+"tribe.toast.galaxyCuratedOnly" = "تحديات المجرة مختارة من AiQo.";
+"tribe.toast.challengeCreated" = "تم إنشاء التحدي";
+"tribe.toast.challengeTitleRequired" = "أضف عنواناً أولاً.";
+"tribe.toast.challengeSuggested" = "تم إرسال الاقتراح إلى القائمة المحلية.";
+
+"tribe.error.nameRequired" = "أدخل اسم القبيلة أولاً.";
+"tribe.error.familyRequired" = "تحتاج خطة عائلية لإنشاء قبيلة.";
+"tribe.error.inviteRequired" = "أدخل رمز الدعوة.";
+"tribe.error.premiumRequired" = "تحتاج اشتراك بريميوم نشط.";
+
+"tribe.challenge.template.steps.daily" = "10,000 خطوة اليوم";
+"tribe.challenge.template.steps.monthly" = "120,000 خطوة هذا الشهر";
+"tribe.challenge.template.water.daily" = "12 كوب ماء";
+"tribe.challenge.template.water.monthly" = "180 كوب ماء";
+"tribe.challenge.template.sleep.daily" = "8 ساعات نوم";
+"tribe.challenge.template.sleep.monthly" = "40 ساعة نوم";
+"tribe.challenge.template.calm.daily" = "20 دقيقة هدوء";
+"tribe.challenge.template.calm.monthly" = "240 دقيقة هدوء";
+"tribe.challenge.template.sugarFree.daily" = "يوم بدون سكر";
+"tribe.challenge.template.sugarFree.monthly" = "20 يوماً بدون سكر";
+"tribe.challenge.template.custom.daily" = "تحدي يومي مخصص";
+"tribe.challenge.template.custom.monthly" = "تحدي شهري مخصص";
+
+"tribe.mock.mission.energy" = "اجمع 500 طاقة للقبيلة";
+"tribe.mock.mission.calm" = "180 دقيقة هدوء";
+"tribe.mock.event.memberJoined" = "انضم عضو جديد إلى القبيلة";
+"tribe.mock.event.spark" = "أرسلت شرارة";
+"tribe.mock.event.challengeCompleted" = "تم إكمال تحدي";
+"tribe.mock.event.leadChanged" = "تغيّر المتصدر";
+"tribe.mock.event.contribution" = "تمت إضافة مساهمة";
+"tribe.mock.event.suggested" = "تم اقتراح تحدي للمجرة";
+
+"tribe.mock.challenge.personalCalm.title" = "20 دقيقة هدوء";
+"tribe.mock.challenge.personalCalm.subtitle" = "إعادة ضبط هادئة لليوم.";
+"tribe.mock.challenge.tribeSteps.title" = "50,000 خطوة اليوم";
+"tribe.mock.challenge.tribeSteps.subtitle" = "هدف حركة مشترك للقبيلة.";
+"tribe.mock.challenge.tribeWater.title" = "40 كوب ماء";
+"tribe.mock.challenge.tribeWater.subtitle" = "ترطيب جماعي هادئ.";
+"tribe.mock.challenge.personalMonthlySteps.title" = "120,000 خطوة هذا الشهر";
+"tribe.mock.challenge.personalMonthlySteps.subtitle" = "حافظ على نسقك بثبات.";
+"tribe.mock.challenge.tribeSleep.title" = "40 ساعة نوم";
+"tribe.mock.challenge.tribeSleep.subtitle" = "شهر أهدأ للقبيلة.";
+"tribe.mock.challenge.curatedDailyWater.title" = "نبضة ماء للمجرة";
+"tribe.mock.challenge.curatedDailyWater.subtitle" = "تحدي ترطيب هادئ للجميع.";
+"tribe.mock.challenge.curatedDailySugar.title" = "قوس بدون سكر";
+"tribe.mock.challenge.curatedDailySugar.subtitle" = "يوم أخف للمجرة كلها.";
+"tribe.mock.challenge.curatedDailyCalm.title" = "60 دقيقة هدوء";
+"tribe.mock.challenge.curatedDailyCalm.subtitle" = "اجمع سلسلة هدوء عالمية.";
+"tribe.mock.challenge.curatedMonthlySteps.title" = "250,000 خطوة للمجرة";
+"tribe.mock.challenge.curatedMonthlySteps.subtitle" = "مسار شهري للحركة مختار من AiQo.";
+"tribe.mock.challenge.curatedMonthlySleep.title" = "40 ساعة تعافٍ";
+"tribe.mock.challenge.curatedMonthlySleep.subtitle" = "طقس نوم عالمي للتعافي.";
+
+"tribe.store.mission.energy" = "ارفع درع القبيلة";
+"tribe.store.mission.checkin" = "تسجيل يومي";
+"tribe.store.mission.streak" = "حافظ على السلسلة";
+"tribe.event.contribution" = "%@ ساهم +%d طاقة";
+"tribe.event.sparkTo" = "%@ أرسل شرارة إلى %@";
+"tribe.event.created" = "%@ أنشأ القبيلة";
+"tribe.event.shieldUnlocked" = "تم تفعيل الدرع";
+"tribe.event.missionCompleted" = "اكتملت مهمة: %@";
+"tribe.event.memberJoined" = "%@ انضم إلى القبيلة";
+"tribe.event.spark" = "%@ أرسل شرارة";
+"tribe.event.challengeCompleted" = "%@ أكمل تحدياً";
+"tribe.event.leadChanged" = "%@ تصدّر الترتيب";
+"tribe.event.challengeSuggested" = "%@ اقترح تحدياً للمجرة";
+"tribe.system" = "النظام";
+
+"premium.title" = "AiQo Premium";
+"premium.subtitle" = "30 يوم. ينتهي تلقائياً. جدّد فقط إذا قررت.";
+"premium.restore" = "استعادة";
+"premium.buy" = "شراء";
+"premium.plan.individual" = "فردي";
+"premium.plan.family" = "عائلي";
+"premium.plan.individual.description" = "فتح وصول القبيلة لحساب واحد.";
+"premium.plan.family.description" = "فتح إنشاء القبيلة والوصول العائلي.";
+"premium.error.productMissing" = "هذه الباقة غير متاحة حالياً.";
+"premium.status.activeUntil" = "نشط حتى %@";
+"premium.status.synced" = "تمت مزامنة البريميوم";
+"premium.status.pending" = "الشراء قيد الانتظار";
+"premium.status.cancelled" = "تم إلغاء الشراء";
+"premium.status.failed" = "فشل الشراء: %@";

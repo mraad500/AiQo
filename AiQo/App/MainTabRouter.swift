@@ -9,8 +9,9 @@ final class MainTabRouter: ObservableObject {
     enum Tab: Int {
         case home = 0
         case gym = 1
-        case kitchen = 2
-        case captain = 3
+        case tribe = 2
+        case kitchen = 3
+        case captain = 4
     }
 
     @Published var selectedTab: Tab = .home
@@ -18,6 +19,18 @@ final class MainTabRouter: ObservableObject {
     private init() {}
 
     func navigate(to tab: Tab) {
+        if tab == .kitchen {
+            selectedTab = .home
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .openKitchenFromHome, object: nil)
+            }
+            return
+        }
+
         selectedTab = tab
     }
+}
+
+extension Notification.Name {
+    static let openKitchenFromHome = Notification.Name("aiqo.openKitchenFromHome")
 }

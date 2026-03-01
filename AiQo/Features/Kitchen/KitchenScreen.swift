@@ -2,7 +2,6 @@ import SwiftUI
 
 struct KitchenScreen: View {
     @State private var selectedMeal: Meal?
-    @State private var isProfileSheetPresented = false
     @State private var regenerateFeedbackTrigger = 0
 
     let viewModel: KitchenViewModel
@@ -33,13 +32,6 @@ struct KitchenScreen: View {
         .task {
             await viewModel.loadMeals()
         }
-        .sheet(isPresented: $isProfileSheetPresented) {
-            NavigationStack {
-                ProfileScreen()
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .sheet(item: $selectedMeal) { meal in
             if #available(iOS 17.0, *) {
                 MealDetailSheet(
@@ -63,29 +55,22 @@ struct KitchenScreen: View {
 
 private extension KitchenScreen {
     var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("screen.kitchen.title".localized)
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundColor(.primary)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("screen.kitchen.title".localized)
+                .font(.system(size: 34, weight: .heavy, design: .rounded))
+                .foregroundColor(.primary)
 
-                HStack(spacing: 6) {
-                    Text(formattedDate())
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                Text(formattedDate())
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
 
-                    Image(systemName: "calendar")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            FloatingProfileButton(size: 48) {
-                openProfile()
+                Image(systemName: "calendar")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 74)
         .padding(.horizontal, 24)
     }
@@ -236,10 +221,6 @@ private extension KitchenScreen {
         formatter.locale = .current
         formatter.dateFormat = "d/M"
         return formatter.string(from: Date())
-    }
-
-    func openProfile() {
-        isProfileSheetPresented = true
     }
 
     func activePinnedPlanMeal(for type: MealType) -> KitchenPlannedMeal? {

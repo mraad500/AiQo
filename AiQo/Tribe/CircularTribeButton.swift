@@ -13,17 +13,20 @@ struct CircularTribeButtonView: View {
             onTap()
         }) {
             ZStack {
-                // الخلفية الزجاجية
                 Circle()
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
-                
-                // الأيقونة
+                    .fill(.thinMaterial)
+                    .overlay(Circle().fill(TribePalette.surfaceMint))
+                    .overlay(
+                        Circle()
+                            .stroke(TribePalette.border, lineWidth: 1)
+                    )
+                    .shadow(color: TribePalette.shadow, radius: 12, x: 0, y: 6)
+
                 Image(systemName: "person.3.fill")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(TribePalette.textPrimary)
             }
-            .frame(width: 60, height: 60) // الحجم الافتراضي
+            .frame(width: 60, height: 60)
         }
         .buttonStyle(ScaleButtonStyle())
         .sensoryFeedback(.selection, trigger: feedbackTrigger)

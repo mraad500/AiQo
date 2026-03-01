@@ -45,13 +45,13 @@ struct MainTabScreen: View {
             }
 
             NavigationStack {
-                KitchenTabRootView()
+                TribeScreen()
             }
-            .tag(MainTabRouter.Tab.kitchen)
+            .tag(MainTabRouter.Tab.tribe)
             .tabItem {
                 Label(
-                    NSLocalizedString("tab.kitchen", comment: "Kitchen tab title"),
-                    systemImage: "fork.knife"
+                    NSLocalizedString("screen.home.tribe", comment: "Tribe tab title"),
+                    systemImage: "person.3.fill"
                 )
             }
 
@@ -100,24 +100,6 @@ struct MainTabScreen: View {
         UITabBar.appearance().barTintColor = .clear
         UITabBar.appearance().backgroundColor = .clear
         UITabBar.appearance().isTranslucent = true
-    }
-}
-
-private struct KitchenTabRootView: View {
-    @State private var viewModel: KitchenViewModel
-    @StateObject private var kitchenStore = KitchenPersistenceStore()
-
-    init() {
-        _viewModel = State(
-            initialValue: KitchenViewModel(repository: LocalMealsRepository())
-        )
-    }
-
-    var body: some View {
-        KitchenScreen(
-            viewModel: viewModel,
-            kitchenStore: kitchenStore
-        )
     }
 }
 

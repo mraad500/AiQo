@@ -821,10 +821,10 @@
 
 /* MARK: - Quests Rewrite (Stage + Quest Engine) */
 "quests.screen.title" = "Quests";
-"quests.card.levels" = "المستويات";
-"quests.card.camera_required" = "كاميرا مطلوبة";
+"quests.card.levels" = "Levels";
+"quests.card.camera_required" = "Camera required";
 "quests.common.tier_format" = "Tier %d/3";
-"quests.common.locked" = "مقفول";
+"quests.common.locked" = "Locked";
 "quests.share.message.format" = "AiQo Quest: %@";
 "quests.share.stage_quest.format" = "Stage %d Quest %d";
 "quests.detail.healthkit_title" = "HealthKit";
@@ -845,16 +845,16 @@
 
 "quests.stage.1.title" = "Stage 1: Awakening";
 "quests.stage.1.tab" = "Stage 1";
-"quests.stage.1.quest.1.title" = "شرارة الخير (مكافأة)";
-"quests.stage.1.quest.1.levels" = "مركز 1";
-"quests.stage.1.quest.2.title" = "نبع الماء (يومي)";
-"quests.stage.1.quest.2.levels" = "3.0ل / 2.5ل / 2.0ل";
-"quests.stage.1.quest.3.title" = "عرش التعافي (يومي)";
-"quests.stage.1.quest.3.levels" = "8س / 7.5س / 7س";
-"quests.stage.1.quest.4.title" = "نبض زون 2 (تراكمي)";
-"quests.stage.1.quest.4.levels" = "40د / 30د / 20د";
-"quests.stage.1.quest.5.title" = "تأسيس المطبخ";
-"quests.stage.1.quest.5.levels" = "مركز 1";
+"quests.stage.1.quest.1.title" = "Kindness Spark (Bonus)";
+"quests.stage.1.quest.1.levels" = "Tier 1";
+"quests.stage.1.quest.2.title" = "Water Spring (Daily)";
+"quests.stage.1.quest.2.levels" = "3.0L / 2.5L / 2.0L";
+"quests.stage.1.quest.3.title" = "Recovery Throne (Daily)";
+"quests.stage.1.quest.3.levels" = "8h / 7.5h / 7h";
+"quests.stage.1.quest.4.title" = "Zone 2 Pulse (Cumulative)";
+"quests.stage.1.quest.4.levels" = "40m / 30m / 20m";
+"quests.stage.1.quest.5.title" = "Kitchen Foundation";
+"quests.stage.1.quest.5.levels" = "Tier 1";
 
 "quests.stage.2.title" = "Stage 2: Engine Start";
 "quests.stage.2.tab" = "Stage 2";
@@ -979,3 +979,211 @@
 "quests.detail.status.idle" = "Status: Not started yet";
 "quests.detail.status.started" = "Status: Challenge started";
 "quests.detail.status.finished" = "Status: Challenge completed";
+
+/* Tribe + Premium */
+"common.done" = "Done";
+
+"debug.preview.navigation" = "Developer Support";
+"debug.preview.unavailable" = "Developer preview tools are unavailable in production builds.";
+"debug.preview.section" = "Tribe Preview";
+"debug.preview.enable" = "Preview Tribe (unlock all tribe features)";
+"debug.preview.useMock" = "Use Mock Tribe Data";
+"debug.preview.plan" = "Preview Plan";
+"debug.preview.reset" = "Reset Preview Data";
+"debug.preview.status" = "Access Status";
+"debug.preview.status.tribe" = "Tribe Access";
+"debug.preview.status.family" = "Family Plan Access";
+"debug.preview.status.data" = "Data Source";
+"debug.preview.on" = "On";
+"debug.preview.off" = "Off";
+"debug.preview.mockData" = "Mock";
+"debug.preview.liveData" = "Live";
+"debug.preview.banner" = "Preview Mode";
+"debug.preview.settingsHint" = "Unlock Tribe with mock data in Debug builds only.";
+
+"tribe.screen.title" = "Tribe";
+"tribe.screen.subtitle" = "A calm space for shared progress.";
+"tribe.presentationMode" = "Presentation Mode";
+"tribe.tab.hub" = "Hub";
+"tribe.tab.arena" = "Arena";
+"tribe.tab.log" = "Log";
+"tribe.tab.galaxy" = "Galaxy";
+
+"tribe.hub.energy.complete" = "Shield charged for today.";
+"tribe.hub.energy.remaining" = "%d energy left to complete the shield";
+"tribe.hub.energy.title" = "Tribe energy today";
+"tribe.hub.energy.description" = "A soft pulse of shared consistency across the tribe.";
+"tribe.hub.enterGalaxy" = "Enter Galaxy";
+"tribe.hub.enterGalaxy.subtitle" = "The social star map, challenges, and a quick spark.";
+"tribe.hub.inviteCode" = "Invite code: %@";
+"tribe.hub.privacy" = "Visibility";
+"tribe.hub.missions" = "Tribe missions";
+"tribe.hub.members" = "Members";
+
+"tribe.member.anonymous" = "Member";
+"tribe.member.initialsFallback" = "AQ";
+"tribe.member.level" = "Level %d";
+"tribe.member.accessibility" = "%@, level %d";
+
+"tribe.privacy.private" = "Private";
+"tribe.privacy.public" = "Public";
+
+"tribe.action.spark" = "Spark";
+"tribe.action.view" = "View";
+"tribe.action.start" = "Start";
+"tribe.action.contribute" = "Contribute";
+"tribe.action.create" = "Create";
+"tribe.action.suggestGalaxy" = "Suggest to Galaxy";
+
+"tribe.mock.name" = "Tribe of Calm";
+"tribe.mock.selfName" = "You";
+"tribe.mock.privateMember" = "Private Member";
+"tribe.mock.joinedName" = "Tribe %@";
+
+"tribe.challenge.scope.personal" = "Personal";
+"tribe.challenge.scope.tribe" = "Tribe";
+"tribe.challenge.scope.galaxy" = "Galaxy";
+"tribe.challenge.cadence.daily" = "Daily";
+"tribe.challenge.cadence.monthly" = "Monthly";
+"tribe.challenge.section.daily" = "Today's challenges";
+"tribe.challenge.section.monthly" = "This month's challenges";
+"tribe.challenge.remaining" = "%d %@ remaining";
+"tribe.challenge.timeRemaining.days" = "%d days left";
+"tribe.challenge.timeRemaining.hours" = "%d hours left";
+
+"tribe.metric.steps" = "Steps";
+"tribe.metric.water" = "Water";
+"tribe.metric.sleep" = "Sleep";
+"tribe.metric.minutes" = "Minutes";
+"tribe.metric.custom" = "Custom";
+"tribe.metric.sugarFree" = "Sugar-free";
+"tribe.metric.calmMinutes" = "Calm minutes";
+
+"tribe.unit.steps" = "steps";
+"tribe.unit.water" = "cups";
+"tribe.unit.sleep" = "hours";
+"tribe.unit.minutes" = "minutes";
+"tribe.unit.custom" = "units";
+"tribe.unit.sugarFree" = "days";
+
+"tribe.arena.title" = "Arena";
+"tribe.arena.subtitle" = "Curated challenges and a fast leaderboard.";
+"tribe.arena.newChallenge" = "New Challenge";
+"tribe.arena.filter.myTribe" = "My tribe only";
+"tribe.arena.empty.filteredGalaxy" = "Galaxy challenges are hidden while the tribe filter is on.";
+"tribe.arena.empty" = "No challenges here yet.";
+"tribe.arena.suggestions" = "Pending galaxy suggestions";
+"tribe.arena.leaderboard" = "Leaderboard";
+"tribe.arena.composer.scope" = "Scope";
+"tribe.arena.composer.cadence" = "Cadence";
+"tribe.arena.composer.type" = "Metric";
+"tribe.arena.composer.content" = "Details";
+"tribe.arena.composer.title" = "Title";
+"tribe.arena.composer.subtitle" = "Subtitle";
+"tribe.arena.composer.suggestionFallback" = "Suggested Galaxy Challenge";
+
+"tribe.galaxy.title" = "Galaxy";
+"tribe.galaxy.subtitle" = "A soft network around the source.";
+"tribe.galaxy.caption" = "Every soul is connected to the source";
+"tribe.galaxy.source" = "Source";
+"tribe.galaxy.layout.network" = "Network";
+"tribe.galaxy.layout.spokes" = "Spokes";
+"tribe.galaxy.mode.network" = "Network";
+"tribe.galaxy.mode.arena" = "Arena";
+"tribe.galaxy.node.accessibility.public" = "%@, level %d, energy %d";
+"tribe.galaxy.node.accessibility.private" = "Private member, level %d";
+"tribe.galaxy.node.energy" = "Today energy +%d";
+"tribe.galaxy.node.private" = "Private profile";
+"tribe.galaxy.quickSuggestion" = "Start with %@";
+"tribe.galaxy.createChallenge" = "Challenge";
+"tribe.galaxy.openArena" = "Open Arena";
+"tribe.galaxy.sheet.section" = "Create from Galaxy";
+"tribe.galaxy.sheet.createInTribe" = "Create in Tribe";
+"tribe.galaxy.sheet.createdFromGalaxy" = "Created from Galaxy";
+
+"tribe.log.title" = "Log";
+
+"tribe.toast.sparkSent" = "Spark sent";
+"tribe.toast.challengeUpdated" = "Challenge updated";
+"tribe.toast.galaxyCuratedOnly" = "Galaxy challenges are curated by AiQo.";
+"tribe.toast.challengeCreated" = "Challenge created";
+"tribe.toast.challengeTitleRequired" = "Add a title first.";
+"tribe.toast.challengeSuggested" = "Suggestion sent to the local queue.";
+
+"tribe.error.nameRequired" = "Enter a tribe name first.";
+"tribe.error.familyRequired" = "A family plan is required to create a tribe.";
+"tribe.error.inviteRequired" = "Enter an invite code.";
+"tribe.error.premiumRequired" = "An active premium plan is required.";
+
+"tribe.challenge.template.steps.daily" = "10,000 steps today";
+"tribe.challenge.template.steps.monthly" = "120,000 steps this month";
+"tribe.challenge.template.water.daily" = "12 cups of water";
+"tribe.challenge.template.water.monthly" = "180 cups of water";
+"tribe.challenge.template.sleep.daily" = "8 hours of sleep";
+"tribe.challenge.template.sleep.monthly" = "40 hours of sleep";
+"tribe.challenge.template.calm.daily" = "20 calm minutes";
+"tribe.challenge.template.calm.monthly" = "240 calm minutes";
+"tribe.challenge.template.sugarFree.daily" = "Sugar-free today";
+"tribe.challenge.template.sugarFree.monthly" = "20 sugar-free days";
+"tribe.challenge.template.custom.daily" = "Custom daily challenge";
+"tribe.challenge.template.custom.monthly" = "Custom monthly challenge";
+
+"tribe.mock.mission.energy" = "Gather 500 tribe energy";
+"tribe.mock.mission.calm" = "180 calm minutes";
+"tribe.mock.event.memberJoined" = "A new member joined the tribe";
+"tribe.mock.event.spark" = "You sent a spark";
+"tribe.mock.event.challengeCompleted" = "A challenge was completed";
+"tribe.mock.event.leadChanged" = "The lead changed";
+"tribe.mock.event.contribution" = "A contribution was added";
+"tribe.mock.event.suggested" = "A galaxy challenge was suggested";
+
+"tribe.mock.challenge.personalCalm.title" = "20 calm minutes";
+"tribe.mock.challenge.personalCalm.subtitle" = "A quiet reset for today.";
+"tribe.mock.challenge.tribeSteps.title" = "50,000 steps today";
+"tribe.mock.challenge.tribeSteps.subtitle" = "Shared tribe movement goal.";
+"tribe.mock.challenge.tribeWater.title" = "40 cups of water";
+"tribe.mock.challenge.tribeWater.subtitle" = "Hydrate together.";
+"tribe.mock.challenge.personalMonthlySteps.title" = "120,000 steps this month";
+"tribe.mock.challenge.personalMonthlySteps.subtitle" = "Keep your pace steady.";
+"tribe.mock.challenge.tribeSleep.title" = "40 hours of sleep";
+"tribe.mock.challenge.tribeSleep.subtitle" = "A calmer month for the tribe.";
+"tribe.mock.challenge.curatedDailyWater.title" = "Galaxy water pulse";
+"tribe.mock.challenge.curatedDailyWater.subtitle" = "One calm hydration challenge for everyone.";
+"tribe.mock.challenge.curatedDailySugar.title" = "Sugar-free arc";
+"tribe.mock.challenge.curatedDailySugar.subtitle" = "A lighter day for the whole galaxy.";
+"tribe.mock.challenge.curatedDailyCalm.title" = "60 calm minutes";
+"tribe.mock.challenge.curatedDailyCalm.subtitle" = "Collect a global quiet streak.";
+"tribe.mock.challenge.curatedMonthlySteps.title" = "250,000 galaxy steps";
+"tribe.mock.challenge.curatedMonthlySteps.subtitle" = "A monthly movement arc curated by AiQo.";
+"tribe.mock.challenge.curatedMonthlySleep.title" = "40 recovery hours";
+"tribe.mock.challenge.curatedMonthlySleep.subtitle" = "A global sleep recovery ritual.";
+
+"tribe.store.mission.energy" = "Raise the tribe shield";
+"tribe.store.mission.checkin" = "Daily check-in";
+"tribe.store.mission.streak" = "Keep the streak";
+"tribe.event.contribution" = "%@ added +%d energy";
+"tribe.event.sparkTo" = "%@ sent a spark to %@";
+"tribe.event.created" = "%@ created the tribe";
+"tribe.event.shieldUnlocked" = "The shield is now active";
+"tribe.event.missionCompleted" = "Mission completed: %@";
+"tribe.event.memberJoined" = "%@ joined the tribe";
+"tribe.event.spark" = "%@ sent a spark";
+"tribe.event.challengeCompleted" = "%@ completed a challenge";
+"tribe.event.leadChanged" = "%@ took the lead";
+"tribe.event.challengeSuggested" = "%@ suggested a galaxy challenge";
+"tribe.system" = "System";
+
+"premium.title" = "AiQo Premium";
+"premium.subtitle" = "30 days. Ends automatically. Renew only when you decide.";
+"premium.restore" = "Restore";
+"premium.buy" = "Buy";
+"premium.plan.individual" = "Individual";
+"premium.plan.family" = "Family";
+"premium.plan.individual.description" = "Unlock Tribe access for one account.";
+"premium.plan.family.description" = "Unlock Tribe creation and family access.";
+"premium.error.productMissing" = "This product is unavailable right now.";
+"premium.status.activeUntil" = "Active until %@";
+"premium.status.synced" = "Premium synced";
+"premium.status.pending" = "Purchase is pending";
+"premium.status.cancelled" = "Purchase cancelled";
+"premium.status.failed" = "Purchase failed: %@";

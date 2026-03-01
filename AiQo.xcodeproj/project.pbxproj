@@ -19,6 +19,8 @@
 		A1F000010000000000000001 /* AiQoWatchWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A1F000010000000000000002 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		A1F000010000000000000003 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
+		A1F0000A0000000000000001 /* SpotifyiOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1F0000A0000000000000003 /* SpotifyiOS.framework */; };
+		A1F0000A0000000000000002 /* SpotifyiOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A1F0000A0000000000000003 /* SpotifyiOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +102,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				A1F0000A0000000000000002 /* SpotifyiOS.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -149,6 +152,7 @@
 		80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = "Watch Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWatchWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1F0000A0000000000000003 /* SpotifyiOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpotifyiOS.framework; path = AiQo/Frameworks/SpotifyiOS.framework; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -240,6 +244,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1F0000A0000000000000001 /* SpotifyiOS.framework in Frameworks */,
 				80E88B702F3BE7BC00EA7B74 /* SDWebImageSwiftUI in Frameworks */,
 				8025C5282EC26585004DECAA /* Supabase in Frameworks */,
 			);
@@ -359,6 +364,7 @@
 		80B1F64D2EEFDB41009A810C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A1F0000A0000000000000003 /* SpotifyiOS.framework */,
 				80D9BE7B2F1B0A9400CDF8DC /* WatchConnectivity.framework */,
 				80235CEC2F1A297A00A4983B /* HealthKit.framework */,
 				80235CEE2F1A2D4800A4983B /* HealthKit.framework */,
@@ -1027,10 +1033,11 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera to detect your body pose and count push-up reps in Vision Coach.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "يستخدم AiQo بيانات الصحة لقراءة النشاط والنوم والماء وتحديث تقدم المهام تلقائياً.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "يحتاج AiQo صلاحية كتابة الماء في Apple Health عند إضافة الشرب من داخل التطبيق.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "AiQo saves your edited progress photos to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AiQo needs access to your photo library to pick progress photos.";
@@ -1048,12 +1055,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -1081,10 +1092,11 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera to detect your body pose and count push-up reps in Vision Coach.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads workouts and steps to give smart Captain coaching and reminders.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes workout and health updates to keep your progress synced.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "يستخدم AiQo بيانات الصحة لقراءة النشاط والنوم والماء وتحديث تقدم المهام تلقائياً.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "يحتاج AiQo صلاحية كتابة الماء في Apple Health عند إضافة الشرب من داخل التطبيق.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "AiQo saves your edited progress photos to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AiQo needs access to your photo library to pick progress photos.";
@@ -1102,12 +1114,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

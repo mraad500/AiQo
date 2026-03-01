@@ -5,26 +5,43 @@ import HealthKit
 
 final class NotificationService {
     static let shared = NotificationService()
+    private let defaults = UserDefaults.standard
+    private let notificationPromptedKey = "aiqo.notifications.didPromptPermission"
+
     private init() {}
 
     func requestPermissions() {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else {
-                self.configureCategories()
-                return
-            }
+            self.configureCategories()
 
-            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                if let error = error {
-                    print("❌ Permission error: \(error)")
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                guard !self.defaults.bool(forKey: self.notificationPromptedKey) else {
+                    print("🔔 Notification permission was already requested once. Skipping repeat prompt.")
+                    return
                 }
-                if granted {
-                    self.configureCategories()
-                    DispatchQueue.main.async {
-                        UIApplication.shared.registerForRemoteNotifications()
+
+                self.defaults.set(true, forKey: self.notificationPromptedKey)
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if let error = error {
+                        print("❌ Permission error: \(error)")
+                    }
+
+                    if granted {
+                        DispatchQueue.main.async {
+                            UIApplication.shared.registerForRemoteNotifications()
+                        }
                     }
                 }
+            case .authorized, .provisional, .ephemeral:
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            case .denied:
+                print("🔔 Notifications are disabled. The app will not prompt again automatically.")
+            @unknown default:
+                break
             }
         }
     }
