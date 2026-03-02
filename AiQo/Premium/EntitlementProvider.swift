@@ -16,15 +16,17 @@ struct EntitlementSnapshot: Equatable {
     )
 }
 
+@MainActor
 protocol EntitlementProvider {
     func snapshot() -> EntitlementSnapshot
 }
 
+@MainActor
 struct StoreKitEntitlementProvider: EntitlementProvider {
     private let entitlementStore: EntitlementStore
 
-    init(entitlementStore: EntitlementStore = .shared) {
-        self.entitlementStore = entitlementStore
+    init(entitlementStore: EntitlementStore? = nil) {
+        self.entitlementStore = entitlementStore ?? .shared
     }
 
     func snapshot() -> EntitlementSnapshot {
@@ -49,6 +51,7 @@ struct StoreKitEntitlementProvider: EntitlementProvider {
     }
 }
 
+@MainActor
 struct PreviewEntitlementProvider: EntitlementProvider {
     let selectedPlan: PremiumPlan
 

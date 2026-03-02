@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UserNotifications
+import BackgroundTasks
 import FamilyControls
 import WatchConnectivity
 import AppIntents
@@ -15,8 +16,7 @@ struct AiQoApp: App {
         WindowGroup {
             AppRootView()
                 .onOpenURL { url in
-                    SpotifyVibeManager.shared.handleURL(url)
-                    MusicManager.shared.handleSpotifyURL(url)
+                    _ = SpotifyVibeManager.shared.handleURL(url)
                 }
         }
     }
@@ -35,6 +35,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         LocalizationManager.shared.applySavedLanguage()
         NotificationService.shared.requestPermissions()
+        NotificationIntelligenceManager.shared.registerBackgroundTask()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
@@ -50,6 +51,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         if AppSettingsStore.shared.notificationsEnabled {
             scheduleAngelNotifications()
+            NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
+        } else {
+            NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
         }
         
         if #available(iOS 16.0, *) {
@@ -95,6 +99,16 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         _ = PhoneConnectivityManager.shared
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        NotificationIntelligenceManager.shared.scheduleQueuedDeveloperWhisperIfNeeded()
+
+        if AppSettingsStore.shared.notificationsEnabled {
+            NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
+        } else {
+            NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
+        }
     }
 
     private func clearAppBadge() {

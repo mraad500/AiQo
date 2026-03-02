@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 internal import Combine
 
-enum VibeMode: String, CaseIterable, Identifiable {
+enum VibeMode: String, CaseIterable, Identifiable, Codable {
     case awakening = "Awakening"
     case deepFocus = "Deep Focus"
     case egoDeath = "Ego-Death (Zen)"
@@ -76,43 +76,70 @@ enum VibeMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum VibePlaybackSource: String, CaseIterable, Identifiable {
+    case aiqoSounds = "AiQo Sounds"
+    case spotify = "Spotify"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class VibeControlViewModel: ObservableObject {
     @Published private(set) var selectedMode: VibeMode
-    @Published private(set) var lastSyncedMode: VibeMode?
+    @Published private(set) var lastActivatedMode: VibeMode?
+    @Published var selectedSource: VibePlaybackSource {
+        didSet {
+            UserDefaults.standard.set(selectedSource.rawValue, forKey: Self.sourceDefaultsKey)
+        }
+    }
+    @Published var mixWithOthers: Bool {
+        didSet {
+            UserDefaults.standard.set(mixWithOthers, forKey: Self.mixDefaultsKey)
+        }
+    }
+    @Published var nativeIntensity: Double {
+        didSet {
+            UserDefaults.standard.set(nativeIntensity, forKey: Self.intensityDefaultsKey)
+        }
+    }
 
-    var onSyncToSpotify: ((VibeMode) -> Void)?
-
-    init(
-        selectedMode: VibeMode = .deepFocus,
-        onSyncToSpotify: ((VibeMode) -> Void)? = nil
-    ) {
+    init(selectedMode: VibeMode = .deepFocus) {
         self.selectedMode = selectedMode
-        self.onSyncToSpotify = onSyncToSpotify
+        self.selectedSource = VibePlaybackSource(
+            rawValue: UserDefaults.standard.string(forKey: Self.sourceDefaultsKey) ?? ""
+        ) ?? .aiqoSounds
+        self.mixWithOthers = UserDefaults.standard.object(forKey: Self.mixDefaultsKey) as? Bool ?? false
+        self.nativeIntensity = UserDefaults.standard.object(forKey: Self.intensityDefaultsKey) as? Double ?? 0.55
     }
 
     var title: String { "My Vibe" }
-    var subtitle: String { "Subconscious Audio Sync" }
-    var castTargetsLabel: String { "Alexa / JBL" }
+    var subtitle: String {
+        switch selectedSource {
+        case .aiqoSounds:
+            return "AiQo background ambient audio"
+        case .spotify:
+            return "Spotify playlist control"
+        }
+    }
 
     func select(_ mode: VibeMode) {
         guard selectedMode != mode else { return }
         selectedMode = mode
     }
 
-    func markLastSyncedMode() {
-        lastSyncedMode = selectedMode
+    func markLastActivatedMode() {
+        lastActivatedMode = selectedMode
     }
 
-    func syncToSpotify() {
-        markLastSyncedMode()
-        onSyncToSpotify?(selectedMode)
-    }
+    private static let sourceDefaultsKey = "com.aiqo.vibe.source"
+    private static let mixDefaultsKey = "com.aiqo.vibe.mixWithOthers"
+    private static let intensityDefaultsKey = "com.aiqo.vibe.nativeIntensity"
 }
 
 struct VibeControlSheet: View {
     @ObservedObject var viewModel: VibeControlViewModel
     @ObservedObject var vibeManager = SpotifyVibeManager.shared
+    @ObservedObject var vibeAudioEngine = VibeAudioEngine.shared
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -151,7 +178,17 @@ struct VibeControlSheet: View {
             .ignoresSafeArea()
         }
         .animation(.spring(), value: viewModel.selectedMode)
+        .animation(.spring(), value: viewModel.selectedSource)
         .animation(.spring(), value: vibeManager.isConnected)
+        .animation(.spring(), value: vibeManager.playbackState)
+        .animation(.spring(), value: vibeAudioEngine.currentState.playbackState)
+        .alert("My Vibe", isPresented: errorAlertIsPresented) {
+            Button("OK", role: .cancel) {
+                clearActiveAlert()
+            }
+        } message: {
+            Text(activeAlertMessage ?? "Something went wrong while starting audio.")
+        }
     }
 
     private var header: some View {
@@ -181,98 +218,489 @@ struct VibeControlSheet: View {
     }
 
     private var actionArea: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Selected: \(viewModel.selectedMode.rawValue)")
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Audio Source")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
-                Button {
-                    withAnimation(.spring()) {
-                        viewModel.markLastSyncedMode()
+            Picker("Audio Source", selection: $viewModel.selectedSource) {
+                ForEach(VibePlaybackSource.allCases) { source in
+                    Text(source.rawValue).tag(source)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if viewModel.selectedSource == .aiqoSounds {
+                Toggle(isOn: $viewModel.mixWithOthers) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mix with other audio")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        Text("Keep AiQo Sounds active while music or podcasts play.")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
                     }
-                    vibeManager.playVibe(uri: viewModel.selectedMode.spotifyURI)
-                } label: {
-                    HStack(spacing: 12) {
+                }
+                .toggleStyle(.switch)
+                .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
+                .onChange(of: viewModel.mixWithOthers) { _, _ in
+                    if vibeAudioEngine.currentState.playbackState == .playing {
+                        restartNativeAudio()
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Intensity")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text("\(Int(viewModel.nativeIntensity * 100))%")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Slider(value: $viewModel.nativeIntensity, in: 0.1...1)
+                        .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
+                        .onChange(of: viewModel.nativeIntensity) { _, newValue in
+                            vibeAudioEngine.setIntensity(newValue)
+                        }
+                }
+            }
+
+            Text("Selected Mode")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.selectedMode.rawValue)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+
+                HStack(spacing: 8) {
+                    StatusPill(label: sourceStatusLabel)
+                    StatusPill(label: "Playback: \(selectedSourcePlaybackState.rawValue)")
+
+                    if viewModel.selectedSource == .aiqoSounds {
+                        StatusPill(label: currentNativeDayPartTitle)
+                    }
+                }
+
+                Text("Current Vibe: \(displayedVibeTitle)")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+
+                if viewModel.selectedSource == .aiqoSounds {
+                    Text(vibeAudioEngine.currentState.detailText)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+
+                    if vibeAudioEngine.currentState.playbackState == .playing {
+                        StatusPill(label: "Running in background")
+                    }
+                } else if vibeManager.currentTrackName != "Not Playing" {
+                    Text("Track: \(vibeManager.currentTrackName)")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Button(action: handlePlayTapped) {
+                HStack(spacing: 12) {
+                    if viewModel.selectedSource == .spotify {
                         SpotifyGlyph()
+                    } else {
+                        AiQoSoundGlyph()
+                    }
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(vibeManager.isConnected ? "Play Vibe" : "Connect & Sync")
-                                .font(.system(size: 17, weight: .bold, design: .rounded))
-                                .contentTransition(.opacity)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(primaryButtonTitle)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .contentTransition(.opacity)
 
-                            Text(vibeManager.isConnected ? viewModel.selectedMode.spotifyURI : "Launch Spotify and authenticate App Remote")
-                                .font(
-                                    .system(
-                                        size: 11,
-                                        weight: .medium,
-                                        design: vibeManager.isConnected ? .monospaced : .rounded
+                        Text(playButtonDetail)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .contentTransition(.opacity)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: primaryButtonSystemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(primaryButtonTintColor)
+                        .shadow(
+                            color: primaryButtonTintColor.opacity(buttonGlowOpacity),
+                            radius: 12,
+                            x: 0,
+                            y: 4
+                        )
+                }
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, minHeight: 62)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: viewModel.selectedSource == .spotify && vibeManager.isConnected
+                                            ? [
+                                                Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.26),
+                                                Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.18)
+                                            ]
+                                            : viewModel.selectedSource == .aiqoSounds
+                                            ? [
+                                                Color(red: 0.10, green: 0.56, blue: 0.52).opacity(0.22),
+                                                Color(red: 0.30, green: 0.78, blue: 0.70).opacity(0.16)
+                                            ]
+                                            : [
+                                                Color.white.opacity(0.26),
+                                                Color.white.opacity(0.1)
+                                            ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
                                     )
                                 )
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .contentTransition(.opacity)
                         }
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(
+                            (viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds
+                                ? Color.white.opacity(0.42)
+                                : Color.white.opacity(0.32),
+                            lineWidth: ((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1.2 : 1
+                        )
+                }
+                .shadow(
+                    color: primaryButtonTintColor.opacity(buttonShadowOpacity),
+                    radius: buttonShadowRadius,
+                    x: 0,
+                    y: 10
+                )
+                .scaleEffect(((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1 : 0.985)
+            }
+            .buttonStyle(.plain)
+            .disabled(!isPlayActionAvailable)
+            .opacity(isPlayActionAvailable ? 1 : 0.58)
+            .animation(.spring(), value: viewModel.selectedSource)
 
-                        Spacer(minLength: 0)
+            HStack(spacing: 12) {
+                secondaryControlButton(
+                    title: currentPlaybackState == .playing ? "Pause" : "Resume",
+                    systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill",
+                    isEnabled: isPauseResumeAvailable
+                ) {
+                    handlePauseResumeTapped()
+                }
 
-                        Image(systemName: vibeManager.isConnected ? "play.circle.fill" : "link.circle.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(vibeManager.isConnected ? Color(red: 0.12, green: 0.85, blue: 0.38) : .primary.opacity(0.66))
-                            .shadow(
-                                color: Color(red: 0.12, green: 0.85, blue: 0.38).opacity(vibeManager.isConnected ? 0.32 : 0),
-                                radius: 12,
-                                x: 0,
-                                y: 4
-                            )
-                    }
-                    .padding(.horizontal, 18)
-                    .frame(maxWidth: .infinity, minHeight: 62)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: vibeManager.isConnected
-                                                ? [
-                                                    Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.26),
-                                                    Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.18)
-                                                ]
-                                                : [
-                                                    Color.white.opacity(0.26),
-                                                    Color.white.opacity(0.1)
-                                                ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                            }
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .strokeBorder(
-                                vibeManager.isConnected
-                                    ? Color.white.opacity(0.42)
-                                    : Color.white.opacity(0.32),
-                                lineWidth: vibeManager.isConnected ? 1.2 : 1
-                            )
-                    }
-                    .shadow(
-                        color: Color(red: 0.12, green: 0.85, blue: 0.38).opacity(vibeManager.isConnected ? 0.18 : 0.05),
-                        radius: vibeManager.isConnected ? 18 : 10,
-                        x: 0,
-                        y: 10
-                    )
-                    .scaleEffect(vibeManager.isConnected ? 1 : 0.985)
+                secondaryControlButton(
+                    title: "Stop",
+                    systemName: "stop.fill",
+                    isEnabled: currentPlaybackState != .stopped
+                ) {
+                    handleStopTapped()
+                }
+            }
+
+            if viewModel.selectedSource == .spotify && !vibeManager.isPlaybackAvailable {
+                Button("Why unavailable?") {
+                    vibeManager.presentAvailabilityError()
                 }
                 .buttonStyle(.plain)
-                .animation(.spring(), value: vibeManager.isConnected)
-
-                VibeCastBadge(label: viewModel.castTargetsLabel)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(red: 0.10, green: 0.42, blue: 0.36))
+            } else if viewModel.selectedSource == .aiqoSounds {
+                Text("AiQo audio can keep playing in the background while active. Pause or stop it instantly at any time.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var activeAlertMessage: String? {
+        vibeAudioEngine.lastErrorMessage ?? vibeManager.lastErrorMessage
+    }
+
+    private var errorAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { activeAlertMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearActiveAlert()
+                }
+            }
+        )
+    }
+
+    private var sourceStatusLabel: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            switch vibeAudioEngine.currentState.playbackState {
+            case .playing:
+                return "AiQo Sounds active"
+            case .paused:
+                return "AiQo Sounds paused"
+            case .stopped:
+                return "AiQo Sounds ready"
+            }
+        case .spotify:
+            if vibeManager.isConnected {
+                return "Spotify connected"
+            }
+
+            if vibeManager.isPlaybackAvailable {
+                return "Spotify disconnected"
+            }
+
+            return "Spotify unavailable"
+        }
+    }
+
+    private var currentNativeDayPartTitle: String {
+        (vibeAudioEngine.currentState.currentDayPart ?? VibeDayPart.current()).title
+    }
+
+    private var selectedSourcePlaybackState: VibePlaybackState {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return vibeAudioEngine.currentState.playbackState
+        case .spotify:
+            return vibeManager.playbackState
+        }
+    }
+
+    private var currentPlaybackState: VibePlaybackState {
+        switch controlledSource {
+        case .aiqoSounds:
+            return vibeAudioEngine.currentState.playbackState
+        case .spotify:
+            return vibeManager.playbackState
+        }
+    }
+
+    private var controlledSource: VibePlaybackSource {
+        if vibeAudioEngine.currentState.playbackState != .stopped {
+            return .aiqoSounds
+        }
+
+        if vibeManager.playbackState != .stopped {
+            return .spotify
+        }
+
+        return viewModel.selectedSource
+    }
+
+    private var displayedVibeTitle: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return vibeAudioEngine.currentState.currentMode?.rawValue ?? viewModel.selectedMode.rawValue
+        case .spotify:
+            return vibeManager.currentVibeTitle ?? viewModel.selectedMode.rawValue
+        }
+    }
+
+    private var primaryButtonTitle: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return vibeAudioEngine.currentState.playbackState == .paused ? "Resume AiQo Sounds" : "Play AiQo Sounds"
+        case .spotify:
+            return vibeManager.isConnected ? "Play in Spotify" : "Connect Spotify"
+        }
+    }
+
+    private var primaryButtonSystemImage: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return "waveform.circle.fill"
+        case .spotify:
+            return vibeManager.isConnected ? "play.circle.fill" : "link.circle.fill"
+        }
+    }
+
+    private var primaryButtonTintColor: Color {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return Color(red: 0.10, green: 0.56, blue: 0.52)
+        case .spotify:
+            return vibeManager.isConnected
+                ? Color(red: 0.12, green: 0.85, blue: 0.38)
+                : .primary.opacity(0.66)
+        }
+    }
+
+    private var buttonGlowOpacity: Double {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return 0.24
+        case .spotify:
+            return vibeManager.isConnected ? 0.32 : 0
+        }
+    }
+
+    private var buttonShadowOpacity: Double {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return 0.18
+        case .spotify:
+            return vibeManager.isConnected ? 0.18 : 0.05
+        }
+    }
+
+    private var buttonShadowRadius: Double {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return 18
+        case .spotify:
+            return vibeManager.isConnected ? 18 : 10
+        }
+    }
+
+    private var isPlayActionAvailable: Bool {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return true
+        case .spotify:
+            return vibeManager.isPlaybackAvailable
+        }
+    }
+
+    private var isPauseResumeAvailable: Bool {
+        switch controlledSource {
+        case .aiqoSounds:
+            return vibeAudioEngine.currentState.playbackState != .stopped
+        case .spotify:
+            return vibeManager.isConnected
+        }
+    }
+
+    private var playButtonDetail: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return "Runs in background and follows morning, noon, afternoon, and night while active"
+        case .spotify:
+            if !vibeManager.isSpotifyAppInstalled {
+                return "Install Spotify to use playlist controls"
+            }
+
+            if !vibeManager.canAttemptAuthorization {
+                return "Spotify authentication is unavailable"
+            }
+
+            if vibeManager.isConnected {
+                return "Start the selected playlist in Spotify"
+            }
+
+            return "Open Spotify and approve playback control"
+        }
+    }
+
+    private func handlePlayTapped() {
+        withAnimation(.spring()) {
+            viewModel.markLastActivatedMode()
+        }
+
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            stopSpotifyIfNeeded()
+
+            let currentDayPart = VibeDayPart.current()
+            var profile = vibeAudioEngine.currentProfile
+            profile.set(viewModel.selectedMode, for: currentDayPart)
+
+            vibeAudioEngine.setIntensity(viewModel.nativeIntensity)
+            vibeAudioEngine.start(profile: profile, mixWithOthers: viewModel.mixWithOthers)
+        case .spotify:
+            guard vibeManager.isPlaybackAvailable else {
+                vibeManager.presentAvailabilityError()
+                return
+            }
+
+            if vibeAudioEngine.currentState.isActive {
+                vibeAudioEngine.stop()
+            }
+
+            vibeManager.playVibe(
+                uri: viewModel.selectedMode.spotifyURI,
+                vibeTitle: viewModel.selectedMode.rawValue
+            )
+        }
+    }
+
+    private func handlePauseResumeTapped() {
+        switch controlledSource {
+        case .aiqoSounds:
+            if vibeAudioEngine.currentState.playbackState == .playing {
+                vibeAudioEngine.pause()
+            } else {
+                vibeAudioEngine.resume()
+            }
+        case .spotify:
+            if vibeManager.playbackState == .playing {
+                vibeManager.pauseVibe()
+            } else {
+                vibeManager.resumeVibe()
+            }
+        }
+    }
+
+    private func handleStopTapped() {
+        switch controlledSource {
+        case .aiqoSounds:
+            vibeAudioEngine.stop()
+        case .spotify:
+            vibeManager.stopVibe()
+        }
+    }
+
+    private func restartNativeAudio() {
+        vibeAudioEngine.setIntensity(viewModel.nativeIntensity)
+        vibeAudioEngine.start(profile: vibeAudioEngine.currentProfile, mixWithOthers: viewModel.mixWithOthers)
+    }
+
+    private func stopSpotifyIfNeeded() {
+        if vibeManager.playbackState != .stopped || vibeManager.isConnected {
+            vibeManager.stopVibe()
+        }
+    }
+
+    private func clearActiveAlert() {
+        vibeAudioEngine.clearError()
+        vibeManager.clearError()
+    }
+
+    private func secondaryControlButton(
+        title: String,
+        systemName: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemName)
+                    .font(.system(size: 13, weight: .semibold))
+
+                Text(title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white.opacity(isEnabled ? 0.28 : 0.18))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Color.white.opacity(isEnabled ? 0.34 : 0.2), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.6)
     }
 }
 
@@ -308,13 +736,14 @@ struct VibeDashboardTriggerButton: View {
                         Image(vibeIconName)
                             .resizable()
                             .scaledToFit()
+                            .frame(width: 40, height: 40)
                     } else {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.primary.opacity(0.78))
+                            .frame(width: 32, height: 32)
                     }
                 }
-                .frame(width: 32, height: 32)
             }
             .frame(width: 54, height: 54)
             .background(.ultraThinMaterial, in: Circle())
@@ -414,31 +843,46 @@ private struct VibeModeCard: View {
     }
 }
 
-private struct VibeCastBadge: View {
+private struct StatusPill: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary.opacity(0.72))
+        Text(label)
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.3))
+            )
+            .overlay {
+                Capsule()
+                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 1)
+            }
+    }
+}
 
-            Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+private struct AiQoSoundGlyph: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.10, green: 0.56, blue: 0.52),
+                            Color(red: 0.26, green: 0.78, blue: 0.68)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Image(systemName: "waveform.path")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.96))
         }
-        .frame(width: 76, height: 62)
-        .padding(.horizontal, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(0.34))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.28), lineWidth: 1)
-        }
+        .frame(width: 28, height: 28)
     }
 }
 

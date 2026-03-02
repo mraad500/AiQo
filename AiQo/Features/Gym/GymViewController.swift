@@ -141,7 +141,12 @@ struct GymView: View {
             .animation(.spring(), value: selectedExercise?.id)
         }
         .animation(.easeInOut(duration: 0.25), value: selectedExercise?.id)
-        .onAppear { configureSegmentedAppearance() }
+        .onAppear {
+            configureSegmentedAppearance()
+            Task(priority: .utility) {
+                await MatchPrefetchManager.shared.prefetchIfNeeded()
+            }
+        }
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {

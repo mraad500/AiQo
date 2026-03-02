@@ -11,38 +11,54 @@ final class NotificationService {
     private init() {}
 
     func requestPermissions() {
+        Task {
+            _ = await ensureAuthorizationIfNeeded()
+        }
+    }
+
+    func ensureAuthorizationIfNeeded() async -> Bool {
         let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            self.configureCategories()
+        configureCategories()
 
-            switch settings.authorizationStatus {
-            case .notDetermined:
-                guard !self.defaults.bool(forKey: self.notificationPromptedKey) else {
-                    print("🔔 Notification permission was already requested once. Skipping repeat prompt.")
-                    return
-                }
+        let settings: UNNotificationSettings = await withCheckedContinuation {
+            (continuation: CheckedContinuation<UNNotificationSettings, Never>) in
+            center.getNotificationSettings { settings in
+                continuation.resume(returning: settings)
+            }
+        }
 
-                self.defaults.set(true, forKey: self.notificationPromptedKey)
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            await MainActor.run {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+            return true
+        case .notDetermined:
+            defaults.set(true, forKey: notificationPromptedKey)
+
+            let granted: Bool = await withCheckedContinuation {
+                (continuation: CheckedContinuation<Bool, Never>) in
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                    if let error = error {
+                    if let error {
                         print("❌ Permission error: \(error)")
                     }
 
-                    if granted {
-                        DispatchQueue.main.async {
-                            UIApplication.shared.registerForRemoteNotifications()
-                        }
-                    }
+                    continuation.resume(returning: granted)
                 }
-            case .authorized, .provisional, .ephemeral:
-                DispatchQueue.main.async {
+            }
+
+            if granted {
+                await MainActor.run {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
-            case .denied:
-                print("🔔 Notifications are disabled. The app will not prompt again automatically.")
-            @unknown default:
-                break
             }
+
+            return granted
+        case .denied:
+            print("🔔 Notifications are disabled. The app will not prompt again automatically.")
+            return false
+        @unknown default:
+            return false
         }
     }
 

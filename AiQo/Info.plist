@@ -62,8 +62,17 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>aiqo.captain.spiritual-whispers.refresh</string>
+	</array>
+	<key>SPIRITUAL_WHISPERS_LLM_API_URL</key>
+	<string>https://api.openai.com/v1/chat/completions</string>
+	<key>SPIRITUAL_WHISPERS_LLM_API_KEY</key>
+	<string></string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>remote-notification</string>
 		<string>fetch</string>
 	</array>

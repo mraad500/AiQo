@@ -8,6 +8,10 @@ struct AppSettingsScreen: View {
     @State private var showDeveloperPanel = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
     @AppStorage(TribeScreenshotMode.key) private var screenshotModeEnabled = false
+    #if DEBUG
+    @State private var isPreparingTestWhisper = false
+    @State private var testWhisperStatus: String?
+    #endif
 
     var body: some View {
         Form {
@@ -165,6 +169,40 @@ struct AppSettingsScreen: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    triggerTestSpiritualWhisper()
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Trigger Test Spiritual Whisper")
+                                .foregroundStyle(.primary)
+
+                            Text("Queues an Iraqi Arabic whisper and fires it 5 seconds after backgrounding.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        if isPreparingTestWhisper {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "bell.and.waves.left.and.right.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(isPreparingTestWhisper)
+
+                if let testWhisperStatus {
+                    Text(testWhisperStatus)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             #endif
         }
@@ -190,7 +228,9 @@ struct AppSettingsScreen: View {
             if enabled {
                 NotificationService.shared.requestPermissions()
                 rescheduleNotifications(language: appLanguage)
+                NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
             } else {
+                NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
                 UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                 UNUserNotificationCenter.current().removeAllDeliveredNotifications()
             }
@@ -226,6 +266,26 @@ struct AppSettingsScreen: View {
             language: language == .english ? .english : .arabic
         )
     }
+
+    #if DEBUG
+    private func triggerTestSpiritualWhisper() {
+        guard !isPreparingTestWhisper else { return }
+
+        isPreparingTestWhisper = true
+        testWhisperStatus = "Preparing test whisper..."
+
+        Task {
+            let didQueue = await NotificationIntelligenceManager.shared.queueDeveloperTestSpiritualWhisper()
+
+            await MainActor.run {
+                isPreparingTestWhisper = false
+                testWhisperStatus = didQueue
+                    ? "Ready. Send the app to the background to receive it in 5 seconds."
+                    : "Notification permission is unavailable. Enable notifications for AiQo first."
+            }
+        }
+    }
+    #endif
 }
 
 #Preview {

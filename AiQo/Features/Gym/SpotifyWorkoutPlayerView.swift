@@ -165,7 +165,7 @@ struct SpotifyWorkoutPlayerView: View {
 
     private func togglePlayback() {
         if vibeManager.isPaused {
-            vibeManager.playVibe()
+            vibeManager.resumeVibe()
         } else {
             vibeManager.pauseVibe()
         }

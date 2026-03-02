@@ -54,10 +54,10 @@ final class AccessManager: ObservableObject {
 
     private init(
         defaults: UserDefaults = .standard,
-        storeKitProvider: StoreKitEntitlementProvider = StoreKitEntitlementProvider()
+        storeKitProvider: StoreKitEntitlementProvider? = nil
     ) {
         self.defaults = defaults
-        self.storeKitProvider = storeKitProvider
+        self.storeKitProvider = storeKitProvider ?? StoreKitEntitlementProvider()
         restorePersistedOverrides()
         bind()
         rebuildSnapshot()

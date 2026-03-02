@@ -69,6 +69,104 @@ enum CaptainTone: String, Codable, CaseIterable {
     }
 }
 
+enum CoachCognitiveState: Equatable {
+    case idle
+    case readingEnergy
+    case analyzingBiometrics
+    case translatingThoughts
+    case typing
+
+    var statusText: String? {
+        switch self {
+        case .idle:
+            return nil
+        case .readingEnergy:
+            return "الكابتن يقرأ طاقتك"
+        case .analyzingBiometrics:
+            return "الكابتن يحلل المؤشرات الحيوية"
+        case .translatingThoughts:
+            return "الكابتن يرتب أفكاره ويترجمها"
+        case .typing:
+            return "الكابتن يكتب الرد"
+        }
+    }
+
+    var detailText: String {
+        switch self {
+        case .idle:
+            return "Captain ready"
+        case .readingEnergy:
+            return "يفهم نبرة الرسالة والطاقة"
+        case .analyzingBiometrics:
+            return "يراجع النوم، الحركة، والنبض"
+        case .translatingThoughts:
+            return "يحافظ على وعي واحد ويرتب الرد"
+        case .typing:
+            return "يصوغ الرد النهائي بصوت حمّودي"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .idle:
+            return "sparkles"
+        case .readingEnergy:
+            return "eye.fill"
+        case .analyzingBiometrics:
+            return "waveform.path.ecg"
+        case .translatingThoughts:
+            return "character.bubble.fill"
+        case .typing:
+            return "ellipsis.bubble.fill"
+        }
+    }
+
+    var accentColors: [Color] {
+        switch self {
+        case .idle:
+            return [Color.white.opacity(0.18), Color.white.opacity(0.08)]
+        case .readingEnergy:
+            return [Color(red: 0.68, green: 0.91, blue: 0.84), Color(red: 0.43, green: 0.80, blue: 0.72)]
+        case .analyzingBiometrics:
+            return [Color(red: 1.00, green: 0.82, blue: 0.42), Color(red: 0.97, green: 0.62, blue: 0.35)]
+        case .translatingThoughts:
+            return [Color(red: 0.72, green: 0.67, blue: 0.98), Color(red: 0.53, green: 0.59, blue: 0.97)]
+        case .typing:
+            return [Color(red: 0.88, green: 0.77, blue: 0.53), Color(red: 0.95, green: 0.89, blue: 0.73)]
+        }
+    }
+
+    var pulseScale: CGFloat {
+        switch self {
+        case .idle:
+            return 1
+        case .readingEnergy:
+            return 1.24
+        case .analyzingBiometrics:
+            return 1.38
+        case .translatingThoughts:
+            return 1.5
+        case .typing:
+            return 1.18
+        }
+    }
+
+    var rotationDuration: Double {
+        switch self {
+        case .idle:
+            return 1
+        case .readingEnergy:
+            return 5.4
+        case .analyzingBiometrics:
+            return 4.2
+        case .translatingThoughts:
+            return 3.4
+        case .typing:
+            return 2.6
+        }
+    }
+}
+
 // MARK: - Theme (Light/Dark)
 
 struct CaptainTheme {
@@ -139,6 +237,7 @@ struct CaptainScreen: View {
                             ChatContainerView(
                                 messages: viewModel.messages,
                                 isTyping: viewModel.isTyping,
+                                coachState: viewModel.coachState,
                                 scrollEnabled: layout.chatScrollEnabled
                             )
                             .frame(height: layout.chatHeight)
@@ -200,6 +299,7 @@ final class CaptainViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isSending: Bool = false
     @Published var isTyping: Bool = false
+    @Published var coachState: CoachCognitiveState = .idle
     @Published var showCustomization: Bool = false
     @Published var showProfile: Bool = false
     @Published var customization: CaptainCustomization = .default
@@ -207,6 +307,8 @@ final class CaptainViewModel: ObservableObject {
 
     private let userDefaults = UserDefaults.standard
     private let intelligenceManager = CaptainIntelligenceManager.shared
+    private let brainMiddleware: CoachBrainMiddleware
+    private let minimumCognitiveDelay: TimeInterval = 5.6
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -222,7 +324,8 @@ final class CaptainViewModel: ObservableObject {
         case english
     }
 
-    init() {
+    init(brainMiddleware: CoachBrainMiddleware? = nil) {
+        self.brainMiddleware = brainMiddleware ?? CoachBrainMiddleware()
         loadCustomization()
         addWelcomeMessage()
     }
@@ -346,7 +449,26 @@ final class CaptainViewModel: ObservableObject {
     private func processMessage(_ text: String) async {
         do {
             let preferredLanguage = detectReplyLanguage(from: text)
-            let reply = try await intelligenceManager.generateCaptainResponse(for: text)
+            let startedAt = Date()
+            let replyTask = Task<String, Error> { [brainMiddleware, intelligenceManager] in
+                switch preferredLanguage {
+                case .arabic:
+                    return await brainMiddleware.processArabicMessage(text)
+                case .english:
+                    return try await intelligenceManager.generateCaptainResponse(for: text)
+                }
+            }
+
+            await runCognitiveTimeline()
+            let reply = try await replyTask.value
+
+            let elapsed = Date().timeIntervalSince(startedAt)
+            if elapsed < minimumCognitiveDelay {
+                let remaining = minimumCognitiveDelay - elapsed
+                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+            }
+
+            await transitionCoachState(to: .typing, hold: 0.35)
 
             isTyping = false
             let normalized = normalizeReplyForDisplay(reply)
@@ -359,11 +481,32 @@ final class CaptainViewModel: ObservableObject {
                 preferredLanguage: preferredLanguage
             )
             await addAnimatedMessage(displayReply)
+            coachState = .idle
+            isSending = false
+        } catch is CancellationError {
+            coachState = .idle
+            isTyping = false
             isSending = false
         } catch {
+            coachState = .idle
             isTyping = false
             await addAnimatedMessage("صار خلل محلي بسيط. خلينا نعيد المحاولة بعد ثواني.")
             isSending = false
+        }
+    }
+
+    private func runCognitiveTimeline() async {
+        await transitionCoachState(to: .readingEnergy, hold: 1.15)
+        await transitionCoachState(to: .analyzingBiometrics, hold: 1.45)
+        await transitionCoachState(to: .translatingThoughts, hold: 1.25)
+        coachState = .typing
+    }
+
+    private func transitionCoachState(to state: CoachCognitiveState, hold: TimeInterval) async {
+        coachState = state
+        let nanoseconds = UInt64(max(0, hold) * 1_000_000_000)
+        if nanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: nanoseconds)
         }
     }
 
@@ -430,6 +573,7 @@ final class CaptainViewModel: ObservableObject {
     ) -> String {
         guard preferredLanguage == .arabic else { return reply }
         guard let userName = captainReplyUserName() else { return reply }
+        guard containsArabicCharacters(in: userName) else { return reply }
         guard !hasUserNamePrefix(reply, userName: userName) else { return reply }
         return "\(userName)، \(reply)"
     }
@@ -437,10 +581,10 @@ final class CaptainViewModel: ObservableObject {
     private func captainReplyUserName() -> String? {
         let profile = UserProfileStore.shared.current
         let candidates = [
-            profile.username,
             customization.calling,
             customization.name,
-            profile.name
+            profile.name,
+            profile.username
         ]
 
         for candidate in candidates {
@@ -475,6 +619,17 @@ final class CaptainViewModel: ObservableObject {
         }
 
         return false
+    }
+
+    private func containsArabicCharacters(in text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     private func addAnimatedMessage(_ content: String) async {
@@ -557,6 +712,7 @@ struct CaptainHeaderView: View {
 struct ChatContainerView: View {
     let messages: [ChatMessage]
     var isTyping: Bool = false
+    var coachState: CoachCognitiveState = .idle
     var scrollEnabled: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -574,7 +730,13 @@ struct ChatContainerView: View {
 
                         if isTyping {
                             HStack {
-                                TypingIndicatorView()
+                                if coachState != .idle {
+                                    BreathingRingIndicatorView(
+                                        state: coachState
+                                    )
+                                } else {
+                                    TypingIndicatorView()
+                                }
                                 Spacer()
                             }
                             .padding(.horizontal, 6)
@@ -693,6 +855,368 @@ struct TypingIndicatorView: View {
         .onReceive(timer) { _ in
             phase = (phase + 1) % 3
         }
+    }
+}
+
+// MARK: - Cognitive Indicator
+
+private struct CoachGlassCardModifier: ViewModifier {
+    let theme: CaptainTheme
+    let accentColors: [Color]
+    let cornerRadius: CGFloat
+
+    private var accent: Color {
+        accentColors.last ?? Color.white.opacity(0.18)
+    }
+
+    private var glow: Color {
+        accentColors.first ?? Color.white.opacity(0.12)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        glow.opacity(theme.colorScheme == .dark ? 0.14 : 0.22),
+                                        Color.white.opacity(theme.colorScheme == .dark ? 0.02 : 0.12)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(theme.colorScheme == .dark ? 0.18 : 0.42),
+                                accent.opacity(0.36),
+                                Color.white.opacity(theme.colorScheme == .dark ? 0.08 : 0.16)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.9
+                    )
+            )
+            .shadow(
+                color: accent.opacity(theme.colorScheme == .dark ? 0.18 : 0.10),
+                radius: 16,
+                x: 0,
+                y: 10
+            )
+    }
+}
+
+private struct BreathingGlassRingModifier: ViewModifier {
+    let state: CoachCognitiveState
+    let pulseScale: CGFloat
+    let rotationDegrees: Double
+    let highlightDrift: CGFloat
+
+    private var accent: Color {
+        state.accentColors.last ?? Color.white.opacity(0.16)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(pulseScale)
+            .rotationEffect(.degrees(rotationDegrees))
+            .shadow(color: accent.opacity(0.28), radius: 12, x: 0, y: 4)
+            .overlay(
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.48), Color.clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .blur(radius: 6)
+                    .scaleEffect(0.7)
+                    .offset(x: highlightDrift, y: -highlightDrift * 0.35)
+                    .blendMode(.screen)
+            )
+    }
+}
+
+private struct CoachSignalBarsView: View {
+    let state: CoachCognitiveState
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+
+            HStack(alignment: .center, spacing: 4) {
+                ForEach(0..<4, id: \.self) { index in
+                    let speed = max(1.1, state.rotationDuration * 0.55) + (Double(index) * 0.12)
+                    let wave = (sin((time / speed) + Double(index)) + 1) * 0.5
+                    let height = 9 + (wave * (12 + Double(index * 2)))
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    state.accentColors.first?.opacity(0.9) ?? Color.white.opacity(0.7),
+                                    state.accentColors.last?.opacity(0.55) ?? Color.white.opacity(0.35)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 4, height: height)
+                }
+            }
+            .frame(width: 28, height: 24)
+        }
+    }
+}
+
+private struct CoachOrbitingGlassOrbView: View {
+    let state: CoachCognitiveState
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            let progress = time / max(1.8, state.rotationDuration)
+            let primaryAngle = progress * Double.pi * 2
+            let secondaryAngle = progress * Double.pi * -2.7
+            let pulse = CGFloat(
+                0.92 + (((sin(primaryAngle) + 1) * 0.5) * Double(state.pulseScale - 0.92))
+            )
+            let haloScale = CGFloat(
+                1.04 + (((cos(primaryAngle * 0.8) + 1) * 0.5) * 0.18)
+            )
+            let leadingColor = state.accentColors.first ?? Color.white.opacity(0.25)
+            let trailingColor = state.accentColors.last ?? Color.white.opacity(0.18)
+
+            ZStack {
+                orbCore()
+                orbGlow(color: leadingColor, size: 20, blur: 8, angle: primaryAngle, radius: 10)
+                orbGlow(color: trailingColor, size: 30, blur: 12, angle: primaryAngle + 1.4, radius: 14)
+                orbRings(
+                    progress: progress,
+                    leadingColor: leadingColor,
+                    trailingColor: trailingColor,
+                    haloScale: haloScale
+                )
+                orbParticle(size: 4, opacity: 0.72, angle: secondaryAngle, radius: 16)
+                orbParticle(size: 5, opacity: 0.56, angle: secondaryAngle + 2.1, radius: 19)
+                orbParticle(size: 6, opacity: 0.42, angle: secondaryAngle + 4.2, radius: 22)
+                orbSymbol(leadingColor: leadingColor)
+            }
+            .scaleEffect(pulse)
+            .frame(width: 54, height: 54)
+            .drawingGroup(opaque: false)
+        }
+    }
+
+    private func orbCore() -> some View {
+        Circle()
+            .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.34))
+            .frame(width: 46, height: 46)
+    }
+
+    private func orbGlow(
+        color: Color,
+        size: CGFloat,
+        blur: CGFloat,
+        angle: Double,
+        radius: CGFloat
+    ) -> some View {
+        Circle()
+            .fill(color.opacity(colorScheme == .dark ? 0.24 : 0.30))
+            .frame(width: size, height: size)
+            .blur(radius: blur)
+            .offset(
+                x: cos(angle) * radius,
+                y: sin(angle) * radius
+            )
+    }
+
+    private func orbRings(
+        progress: Double,
+        leadingColor: Color,
+        trailingColor: Color,
+        haloScale: CGFloat
+    ) -> some View {
+        ZStack {
+            Circle()
+                .stroke(theme.border.opacity(0.65), lineWidth: 1)
+                .frame(width: 46, height: 46)
+
+            Circle()
+                .stroke(
+                    AngularGradient(
+                        colors: [leadingColor, trailingColor, leadingColor],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 3.6, lineCap: .round)
+                )
+                .frame(width: 46, height: 46)
+                .rotationEffect(.degrees(progress * 360))
+
+            Circle()
+                .trim(from: 0.16, to: 0.58)
+                .stroke(
+                    Color.white.opacity(colorScheme == .dark ? 0.35 : 0.62),
+                    style: StrokeStyle(lineWidth: 1.4, lineCap: .round)
+                )
+                .frame(width: 38, height: 38)
+                .rotationEffect(.degrees(progress * -420))
+
+            Circle()
+                .stroke(trailingColor.opacity(0.24), lineWidth: 9)
+                .blur(radius: 10)
+                .frame(width: 46, height: 46)
+                .scaleEffect(haloScale)
+        }
+    }
+
+    private func orbParticle(
+        size: CGFloat,
+        opacity: Double,
+        angle: Double,
+        radius: CGFloat
+    ) -> some View {
+        Circle()
+            .fill(Color.white.opacity(opacity))
+            .frame(width: size, height: size)
+            .offset(
+                x: cos(angle) * radius,
+                y: sin(angle) * radius
+            )
+    }
+
+    private func orbSymbol(leadingColor: Color) -> some View {
+        Image(systemName: state.symbolName)
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.98),
+                        leadingColor
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .symbolEffect(.pulse, options: .repeating.speed(0.8), value: state)
+    }
+}
+
+private extension View {
+    func coachGlassCard(
+        theme: CaptainTheme,
+        accentColors: [Color],
+        cornerRadius: CGFloat = 22
+    ) -> some View {
+        modifier(
+            CoachGlassCardModifier(
+                theme: theme,
+                accentColors: accentColors,
+                cornerRadius: cornerRadius
+            )
+        )
+    }
+
+    func breathingGlassRing(
+        state: CoachCognitiveState,
+        pulseScale: CGFloat,
+        rotationDegrees: Double,
+        highlightDrift: CGFloat
+    ) -> some View {
+        modifier(
+            BreathingGlassRingModifier(
+                state: state,
+                pulseScale: pulseScale,
+                rotationDegrees: rotationDegrees,
+                highlightDrift: highlightDrift
+            )
+        )
+    }
+}
+
+struct BreathingRingIndicatorView: View {
+    let state: CoachCognitiveState
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            CoachOrbitingGlassOrbView(state: state)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Captain Consciousness")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.subtext.opacity(0.8))
+
+                Text(state.statusText ?? "الكابتن حاضر")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.text)
+
+                Text(state.detailText)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.subtext)
+                    .lineLimit(2)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            CoachSignalBarsView(state: state)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .coachGlassCard(
+            theme: theme,
+            accentColors: state.accentColors
+        )
+        .overlay(alignment: .topLeading) {
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(colorScheme == .dark ? 0.18 : 0.42),
+                            state.accentColors.first?.opacity(0.34) ?? Color.white.opacity(0.18),
+                            Color.clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: 112, height: 1.2)
+                .padding(.top, 8)
+                .padding(.leading, 14)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            state.accentColors.last?.opacity(0.18) ?? Color.white.opacity(0.12),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: 30
+                    )
+                )
+                .frame(width: 44, height: 44)
+                .offset(x: 8, y: 10)
+        }
+        .contentTransition(.opacity)
+        .animation(.spring(response: 0.5, dampingFraction: 0.82), value: state)
     }
 }
 
