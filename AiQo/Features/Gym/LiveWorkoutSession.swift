@@ -37,7 +37,6 @@ final class LiveWorkoutSession: ObservableObject {
     
     // MARK: - Managers
     private let connectivity = PhoneConnectivityManager.shared
-    private let healthKitManager = HealthKitManager.shared  // ✅ NEW: Reference to HealthKitManager
     private let liveActivity = WorkoutLiveActivityManager.shared
     
     // MARK: - Published State
@@ -56,6 +55,9 @@ final class LiveWorkoutSession: ObservableObject {
     @Published private(set) var zone2UpperBoundBPM: Double = 0
     @Published private(set) var resolvedUserAge: Int = 0
     @Published private(set) var activeLiveBuffs: [WorkoutActivityAttributes.Buff] = []
+    @Published private(set) var remoteConnectionState: WorkoutConnectionState = .idle
+    @Published private(set) var mirroredSessionID: String?
+    @Published private(set) var isControlPending: Bool = false
     
     @Published var isWatchReachable: Bool = false
     
@@ -70,10 +72,25 @@ final class LiveWorkoutSession: ObservableObject {
     private var lastRecordedKm: Int = 0
     private var cancellables = Set<AnyCancellable>()
     private let audioCoachManager = AudioCoachManager()
+    private var elapsedAnchorSeconds: TimeInterval = 0
+    private var elapsedAnchorDate: Date?
+    private var smoothingTimer: Timer?
+    private var liveActivityIsActive = false
+    private var isCaptainWarmupAmbientActive = false
+
+    private static let captainWarmupAmbientTrackName = "SoundOfEnergy"
     
     // MARK: - Computed Properties
     
     var statusText: String {
+        if remoteConnectionState == .disconnected && phase != .idle {
+            return "Disconnected"
+        }
+
+        if isControlPending {
+            return "Syncing..."
+        }
+
         switch phase {
         case .idle: return "Ready"
         case .starting: return "Connecting..."
@@ -83,10 +100,14 @@ final class LiveWorkoutSession: ObservableObject {
         }
     }
     
-    var canStart: Bool { phase == .idle }
-    var canEnd: Bool { phase == .running || phase == .paused }
-    var canPause: Bool { phase == .running }
-    var canResume: Bool { phase == .paused }
+    var canStart: Bool { phase == .idle && !isControlPending }
+    var canEnd: Bool { (phase == .running || phase == .paused) && canSendControlCommand }
+    var canPause: Bool { phase == .running && canSendControlCommand }
+    var canResume: Bool { phase == .paused && canSendControlCommand }
+
+    private var canSendControlCommand: Bool {
+        !isControlPending && remoteConnectionState != .disconnected && remoteConnectionState != .failed
+    }
 
     var isZone2GuidedWorkout: Bool {
         currentWorkout == .cardioWithCaptainHamoudi
@@ -126,64 +147,46 @@ final class LiveWorkoutSession: ObservableObject {
         audioCoachManager.reset(for: currentWorkout, zone2Target: resolvedZone2Target)
         zone2AuraState = isZone2GuidedWorkout ? .warmingUp : .inactive
         setupBindings()
+        startElapsedSmoothingTimer()
     }
 
     // MARK: - Data Bindings
     
     private func setupBindings() {
-        
-        // Watch reachability
-        connectivity.$isReachable
+        connectivity.$workoutConnectionState
             .receive(on: RunLoop.main)
             .removeDuplicates()
-            .assign(to: &$isWatchReachable)
-        
-        // Heart rate from Watch
-        connectivity.$currentHeartRate
-            .receive(on: RunLoop.main)
-            .removeDuplicates()
-            .sink { [weak self] value in
-                self?.heartRate = value
-                self?.syncCoachingState()
-                self?.pushLiveActivityUpdateIfNeeded()
+            .sink { [weak self] state in
+                self?.applyConnectionState(state)
             }
             .store(in: &cancellables)
-        
-        // Active energy from Watch
-        connectivity.$activeEnergy
+
+        connectivity.$latestSnapshot
             .receive(on: RunLoop.main)
-            .removeDuplicates()
-            .sink { [weak self] value in
-                self?.activeEnergy = value
-                self?.pushLiveActivityUpdateIfNeeded()
+            .sink { [weak self] snapshot in
+                guard let snapshot else { return }
+                self?.applyRemoteSnapshot(snapshot)
             }
             .store(in: &cancellables)
-        
-        // Distance with milestone checking
-        connectivity.$currentDistance
+
+        connectivity.$currentWorkoutPhase
             .receive(on: RunLoop.main)
             .removeDuplicates()
-            .sink { [weak self] distance in
-                guard let self = self else { return }
-                self.distanceMeters = distance
-                self.checkForMilestone(totalMeters: distance)
-                self.pushLiveActivityUpdateIfNeeded()
+            .sink { [weak self] remotePhase in
+                self?.applyRemotePhaseFallback(remotePhase)
             }
             .store(in: &cancellables)
-        
-        // Duration from Watch
-        connectivity.$currentDuration
+
+        connectivity.$isCommandInFlight
             .receive(on: RunLoop.main)
-            .map { Int($0) }
             .removeDuplicates()
-            .sink { [weak self] value in
-                self?.elapsedSeconds = value
-                self?.syncCoachingState()
-                self?.pushLiveActivityUpdateIfNeeded()
-            }
-            .store(in: &cancellables)
-        
-        // Error tracking
+            .assign(to: &$isControlPending)
+
+        connectivity.$mirroredSessionID
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .assign(to: &$mirroredSessionID)
+
         connectivity.$lastError
             .receive(on: RunLoop.main)
             .sink { [weak self] error in
@@ -225,194 +228,216 @@ final class LiveWorkoutSession: ObservableObject {
         }
     }
 
-    // MARK: - ✅ NEW: Start Workout Using startWatchApp (RELIABLE METHOD)
-    
-    /// Starts the workout by using HKHealthStore.startWatchApp(with:completion:)
-    /// This is the RECOMMENDED approach for reliably waking the Watch app.
+    // MARK: - Start / Controls
+
     func startFromPhone() {
         guard canStart else { return }
-        
-        refreshZone2Configuration()
-        // Reset state for new workout
-        resetWorkoutState()
-        
-        withAnimation { phase = .starting }
-        lastError = nil
-        
-        print("🚀 [LiveWorkoutSession] Starting workout via startWatchApp...")
-        print("   Activity: \(activityType.rawValue), Location: \(locationType.rawValue)")
-        
-        // ✅ PRIMARY METHOD: Use HKHealthStore.startWatchApp
-        // This is the RELIABLE way to wake the Watch app from any state
-        healthKitManager.startWatchWorkout(
-            activityType: activityType,
-            locationType: locationType
-        ) { [weak self] success, error in
-            guard let self = self else { return }
-            
-            if success {
-                print("✅ [LiveWorkoutSession] Watch app woken successfully!")
-                
-                // The Watch app's WKExtensionDelegate will receive the configuration
-                // and start the workout automatically. We just need to wait briefly
-                // for the Watch to begin sending live data.
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation(.snappy) {
-                        self.phase = .running
-                    }
-                    self.syncCoachingState()
-                    self.liveActivity.start(
-                        title: self.title,
-                        zone2State: self.liveActivityHeartRateState,
-                        activeBuffs: self.activeLiveBuffs
-                    )
-                    self.pushLiveActivityUpdateIfNeeded(force: true)
-                }
-            } else {
-                print("❌ [LiveWorkoutSession] Failed to launch Watch app: \(error?.localizedDescription ?? "Unknown error")")
-                
-                self.lastError = error?.localizedDescription ?? "Failed to connect to Watch"
-                
-                // FALLBACK: Try WCSession as backup
-                self.startWithWCSessionFallback()
-            }
-        }
-    }
-    
-    /// Fallback method using WCSession (less reliable for background starts)
-    private func startWithWCSessionFallback() {
-        print("⚠️ [LiveWorkoutSession] Trying WCSession fallback...")
-        
-        // First, try to launch the Watch app
+
+        prepareForWorkoutStart()
+
         connectivity.launchWatchAppForWorkout(
             activityType: activityType,
             locationType: locationType
         )
-        
-        // Then send the start command
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            
-            self.connectivity.startWorkoutOnWatch(
-                activityTypeRaw: Int(self.activityType.rawValue),
-                locationTypeRaw: Int(self.locationType.rawValue)
-            )
-            
-            withAnimation(.snappy) {
-                self.phase = .running
-            }
-            self.syncCoachingState()
-            self.liveActivity.start(
-                title: self.title,
-                zone2State: self.liveActivityHeartRateState,
-                activeBuffs: self.activeLiveBuffs
-            )
-            self.pushLiveActivityUpdateIfNeeded(force: true)
-        }
     }
-    
-    // MARK: - Alternative Start Method (Direct Configuration)
-    
-    /// Alternative method that accepts a pre-configured HKWorkoutConfiguration
+
     func startFromPhone(with configuration: HKWorkoutConfiguration) {
         guard canStart else { return }
-        
-        refreshZone2Configuration()
-        resetWorkoutState()
-        
-        withAnimation { phase = .starting }
-        lastError = nil
-        
-        print("🚀 [LiveWorkoutSession] Starting workout with custom configuration...")
-        
-        healthKitManager.startWatchWorkout(workoutConfiguration: configuration) { [weak self] success, error in
-            guard let self = self else { return }
-            
-            if success {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation(.snappy) {
-                        self.phase = .running
-                    }
-                    self.syncCoachingState()
-                    self.liveActivity.start(
-                        title: self.title,
-                        zone2State: self.liveActivityHeartRateState,
-                        activeBuffs: self.activeLiveBuffs
-                    )
-                    self.pushLiveActivityUpdateIfNeeded(force: true)
-                }
-            } else {
-                self.lastError = error?.localizedDescription ?? "Failed to connect to Watch"
-                self.startWithWCSessionFallback()
-            }
-        }
+
+        prepareForWorkoutStart()
+
+        connectivity.launchWatchAppForWorkout(
+            activityType: configuration.activityType,
+            locationType: configuration.locationType
+        )
     }
-    
-    // MARK: - Pause/Resume Controls
-    
+
     func pauseFromPhone() {
         guard canPause else { return }
-        withAnimation(.snappy) { phase = .paused }
-        audioCoachManager.stop()
-        syncCoachingState()
-        pushLiveActivityUpdateIfNeeded(force: true)
-        // Note: You may want to send a pause command to Watch via WCSession
-        // connectivity.sendCommand(["command": "pauseWorkout"])
+        lastError = nil
+        connectivity.pauseWorkoutOnWatch()
     }
-    
+
     func resumeFromPhone() {
         guard canResume else { return }
-        withAnimation(.snappy) { phase = .running }
-        syncCoachingState()
-        pushLiveActivityUpdateIfNeeded(force: true)
-        // Note: You may want to send a resume command to Watch via WCSession
-        // connectivity.sendCommand(["command": "resumeWorkout"])
+        lastError = nil
+        connectivity.resumeWorkoutOnWatch()
     }
-    
-    // MARK: - End Workout
-    
+
     func endFromPhone() {
         guard canEnd else { return }
-        withAnimation(.snappy) { phase = .ending }
-        audioCoachManager.stop()
-        syncCoachingState()
-        pushLiveActivityUpdateIfNeeded(force: true)
-        
-        // Send stop command to Watch
-        connectivity.stopWorkoutOnWatch()
-        
-        // Allow time for Watch to save, then reset
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.liveActivity.end(
-                title: self.title,
-                elapsedSeconds: self.elapsedSeconds,
-                heartRate: self.heartRate,
-                activeCalories: self.activeEnergy,
-                distanceMeters: self.distanceMeters,
-                zone2State: self.liveActivityHeartRateState,
-                activeBuffs: self.activeLiveBuffs
-            )
-            withAnimation(.snappy) {
-                self.resetWorkoutState()
-                self.phase = .idle
-            }
-        }
+        lastError = nil
+        connectivity.endWorkoutOnWatch()
     }
     
     // MARK: - Private Helpers
+
+    private func startElapsedSmoothingTimer() {
+        smoothingTimer?.invalidate()
+
+        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.tickElapsedDisplay()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        smoothingTimer = timer
+    }
+
+    private func tickElapsedDisplay() {
+        guard phase == .running, let elapsedAnchorDate else { return }
+
+        let nextValue = Int((elapsedAnchorSeconds + Date().timeIntervalSince(elapsedAnchorDate)).rounded(.down))
+        guard nextValue != elapsedSeconds else { return }
+
+        elapsedSeconds = max(nextValue, Int(elapsedAnchorSeconds.rounded(.down)))
+        syncCoachingState()
+    }
+
+    private func applyConnectionState(_ state: WorkoutConnectionState) {
+        remoteConnectionState = state
+        isWatchReachable = state != .disconnected && state != .failed && state != .idle
+
+        switch state {
+        case .launching, .awaitingMirror:
+            if phase == .idle {
+                withAnimation(.snappy) {
+                    phase = .starting
+                }
+            }
+        case .failed:
+            if phase == .starting {
+                stopCaptainWarmupAudioIfNeeded()
+                withAnimation(.snappy) {
+                    phase = .idle
+                }
+            }
+        case .disconnected:
+            pushLiveActivityUpdateIfNeeded(force: true)
+        case .mirrored, .reconnecting, .ended, .idle:
+            break
+        }
+    }
+
+    private func applyRemoteSnapshot(_ snapshot: WorkoutSessionStateDTO) {
+        let previousConnectionState = remoteConnectionState
+        let previousPhase = phase
+
+        remoteConnectionState = snapshot.connectionState
+        isWatchReachable = snapshot.connectionState != .disconnected && snapshot.connectionState != .failed
+        heartRate = snapshot.heartRate ?? 0
+        activeEnergy = snapshot.activeEnergy ?? 0
+        distanceMeters = snapshot.distance ?? 0
+        checkForMilestone(totalMeters: distanceMeters)
+
+        elapsedAnchorSeconds = snapshot.elapsedTime
+        elapsedAnchorDate = Date()
+        elapsedSeconds = Int(snapshot.elapsedTime.rounded(.down))
+
+        if snapshot.currentState == .ended {
+            handleRemoteEnded()
+            return
+        }
+
+        let nextPhase = phase(from: snapshot.currentState)
+        if nextPhase != phase {
+            withAnimation(.snappy) {
+                phase = nextPhase
+            }
+        }
+
+        if phase == .paused || phase == .ending {
+            elapsedSeconds = Int(snapshot.elapsedTime.rounded())
+        }
+
+        if phase == .running || phase == .paused || phase == .ending {
+            ensureLiveActivityStartedIfNeeded()
+        }
+
+        if phase == .paused || phase == .ending {
+            audioCoachManager.stop()
+        }
+
+        syncCoachingState()
+        let shouldForceLiveActivityPush =
+            phase != previousPhase ||
+            snapshot.connectionState != previousConnectionState
+        pushLiveActivityUpdateIfNeeded(force: shouldForceLiveActivityPush)
+    }
+
+    private func applyRemotePhaseFallback(_ remotePhase: WorkoutSessionPhase) {
+        guard remotePhase == .ended else { return }
+        guard phase != .idle else { return }
+        handleRemoteEnded()
+    }
+
+    private func ensureLiveActivityStartedIfNeeded() {
+        guard !liveActivityIsActive else { return }
+        guard phase == .running || phase == .paused || phase == .ending else { return }
+
+        liveActivity.start(
+            title: title,
+            zone2State: liveActivityHeartRateState,
+            activeBuffs: activeLiveBuffs
+        )
+        liveActivityIsActive = true
+    }
+
+    private func handleRemoteEnded() {
+        stopCaptainWarmupAudioIfNeeded()
+        audioCoachManager.stop()
+
+        if liveActivityIsActive {
+            liveActivity.end(
+                title: title,
+                elapsedSeconds: elapsedSeconds,
+                heartRate: heartRate,
+                activeCalories: activeEnergy,
+                distanceMeters: distanceMeters,
+                zone2State: liveActivityHeartRateState,
+                activeBuffs: activeLiveBuffs
+            )
+            liveActivityIsActive = false
+        }
+
+        resetWorkoutState()
+        withAnimation(.snappy) {
+            phase = .idle
+        }
+    }
+
+    private func phase(from remotePhase: WorkoutSessionPhase) -> Phase {
+        switch remotePhase {
+        case .idle:
+            return .idle
+        case .preparing:
+            return .starting
+        case .running:
+            return .running
+        case .paused:
+            return .paused
+        case .stopping:
+            return .ending
+        case .ended:
+            return .idle
+        }
+    }
     
     private func resetWorkoutState() {
+        stopCaptainWarmupAudioIfNeeded()
         heartRate = 0
         activeEnergy = 0
         distanceMeters = 0
         elapsedSeconds = 0
+        elapsedAnchorSeconds = 0
+        elapsedAnchorDate = nil
         lastRecordedKm = 0
         showMilestoneAlert = false
         milestoneAlertText = ""
         audioCoachManager.reset(for: currentWorkout, zone2Target: resolvedZone2Target)
         zone2AuraState = isZone2GuidedWorkout ? .warmingUp : .inactive
         activeLiveBuffs = []
+        liveActivityIsActive = false
     }
 
     private var resolvedZone2Target: AudioCoachManager.Zone2Target {
@@ -488,6 +513,7 @@ final class LiveWorkoutSession: ObservableObject {
 
     private func syncCoachingState() {
         evaluateZone2Coaching()
+        updateCaptainWarmupAmbientIfNeeded()
         audioCoachManager.handleTimerTick(
             elapsedTime: TimeInterval(elapsedSeconds),
             heartRate: heartRate,
@@ -545,6 +571,42 @@ final class LiveWorkoutSession: ObservableObject {
             activeBuffs: activeLiveBuffs,
             force: force
         )
+    }
+
+    private func prepareForWorkoutStart() {
+        refreshZone2Configuration()
+        resetWorkoutState()
+        startCaptainWarmupAudioIfNeeded()
+        withAnimation(.snappy) {
+            phase = .starting
+        }
+        lastError = nil
+    }
+
+    private func startCaptainWarmupAudioIfNeeded() {
+        guard isZone2GuidedWorkout else { return }
+
+        AiQoAudioManager.shared.playAmbient(trackName: Self.captainWarmupAmbientTrackName)
+        isCaptainWarmupAmbientActive = true
+    }
+
+    private func updateCaptainWarmupAmbientIfNeeded() {
+        guard isCaptainWarmupAmbientActive else { return }
+        guard elapsedSeconds >= AudioCoachManager.warmUpDurationSeconds else { return }
+
+        stopCaptainWarmupAmbientIfNeeded()
+    }
+
+    private func stopCaptainWarmupAudioIfNeeded() {
+        stopCaptainWarmupAmbientIfNeeded()
+    }
+
+    private func stopCaptainWarmupAmbientIfNeeded() {
+        guard isCaptainWarmupAmbientActive else { return }
+        isCaptainWarmupAmbientActive = false
+
+        guard AiQoAudioManager.shared.currentTrackName == Self.captainWarmupAmbientTrackName else { return }
+        AiQoAudioManager.shared.stopAmbient()
     }
 }
 

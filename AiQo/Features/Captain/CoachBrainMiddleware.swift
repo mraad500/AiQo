@@ -8,11 +8,6 @@ protocol CoachBrainTranslating: Sendable {
 }
 
 struct CoachBrainLLMTranslator: CoachBrainTranslating {
-    private struct Configuration {
-        let endpointURL: URL
-        let apiKey: String
-    }
-
     private struct ChatCompletionsRequest: Encodable {
         let model: String
         let messages: [Message]
@@ -44,19 +39,19 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
         let choices: [Choice]
     }
 
-    enum Error: LocalizedError {
-        case invalidEndpoint
-        case missingAPIKey
+    enum Error: LocalizedError, Equatable {
+        case networkUnavailable
+        case requestFailed
         case badStatusCode(Int)
         case invalidResponse
         case emptyResponse
 
         var errorDescription: String? {
             switch self {
-            case .invalidEndpoint:
-                return "Coach Brain translation endpoint is invalid."
-            case .missingAPIKey:
-                return "Coach Brain translation API key is missing."
+            case .networkUnavailable:
+                return "Coach Brain translation service is unavailable."
+            case .requestFailed:
+                return "Coach Brain translation request failed."
             case let .badStatusCode(statusCode):
                 return "Coach Brain translation API returned status code \(statusCode)."
             case .invalidResponse:
@@ -71,6 +66,10 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
     private let bundle: Bundle
     private let processInfo: ProcessInfo
     private let model: String
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "CoachBrainTranslator"
+    )
 
     init(
         session: URLSession = .shared,
@@ -90,7 +89,10 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
             throw Error.emptyResponse
         }
 
-        let configuration = try resolveConfiguration()
+        let configuration = try CoachBrainTranslationConfig.resolve(
+            bundle: bundle,
+            processInfo: processInfo
+        )
         var request = URLRequest(url: configuration.endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
@@ -108,7 +110,19 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
         )
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            let networkUnavailable = isNetworkUnavailable(error)
+            let category = networkUnavailable ? "network_unavailable" : "request_failed"
+            logger.error("translation_request_failed category=\(category, privacy: .public)")
+            throw networkUnavailable
+                ? CoachBrainLLMTranslator.Error.networkUnavailable
+                : CoachBrainLLMTranslator.Error.requestFailed
+        }
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw Error.invalidResponse
         }
@@ -131,39 +145,26 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
         return translated
     }
 
-    private func resolveConfiguration() throws -> Configuration {
-        let info = bundle.infoDictionary ?? [:]
-        let endpointString = normalized(
-            info["COACH_BRAIN_LLM_API_URL"] as? String
-        ) ?? normalized(
-            info["SPIRITUAL_WHISPERS_LLM_API_URL"] as? String
-        ) ?? "https://api.openai.com/v1/chat/completions"
-
-        guard let endpointURL = URL(string: endpointString) else {
-            throw Error.invalidEndpoint
+    private func isNetworkUnavailable(_ error: Swift.Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorTimedOut,
+                 NSURLErrorNetworkConnectionLost:
+                return true
+            default:
+                break
+            }
         }
 
-        let apiKey = normalized(info["COACH_BRAIN_LLM_API_KEY"] as? String)
-            ?? normalized(info["SPIRITUAL_WHISPERS_LLM_API_KEY"] as? String)
-            ?? normalized(processInfo.environment["COACH_BRAIN_LLM_API_KEY"])
-            ?? normalized(processInfo.environment["SPIRITUAL_WHISPERS_LLM_API_KEY"])
-            ?? normalized(processInfo.environment["OPENAI_API_KEY"])
-
-        guard let apiKey else {
-            throw Error.missingAPIKey
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Swift.Error {
+            return isNetworkUnavailable(underlying)
         }
 
-        return Configuration(endpointURL: endpointURL, apiKey: apiKey)
-    }
-
-    private func normalized(_ value: String?) -> String? {
-        guard let value else { return nil }
-
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
-
-        return trimmed
+        return false
     }
 }
 
@@ -171,6 +172,7 @@ enum CoachBrainMiddlewareError: LocalizedError {
     case emptyUserInput
     case emptyEnglishIntent
     case emptyAppleReply
+    case emptyArabicReply
 
     var errorDescription: String? {
         switch self {
@@ -180,6 +182,8 @@ enum CoachBrainMiddlewareError: LocalizedError {
             return "The translated English intent was empty."
         case .emptyAppleReply:
             return "The on-device coach returned an empty reply."
+        case .emptyArabicReply:
+            return "The translated Arabic reply was empty."
         }
     }
 }
@@ -213,6 +217,9 @@ final class CoachBrainMiddleware: ObservableObject {
     @Published private(set) var lastInjectedSystemContext: String?
     @Published private(set) var phase: CoachBrainPhase = .idle
     @Published private(set) var liveStatusText: String?
+#if DEBUG
+    @Published private(set) var debugDiagnosticMessage: String?
+#endif
 
     private let translator: any CoachBrainTranslating
     private let intelligenceManager: CaptainIntelligenceManager
@@ -222,8 +229,8 @@ final class CoachBrainMiddleware: ObservableObject {
         category: "CoachBrainMiddleware"
     )
 
-    private let inputTranslationPrompt = "Translate this user message to clear English so a fitness AI coach can understand the intent perfectly."
-    private let outputTranslationPrompt = "Translate this to a friendly, motivational Iraqi Arabic dialect. You are Captain Hamoudi, a smart and caring fitness coach."
+    private let inputTranslationPrompt = "Translate the user's Arabic message to clear English only. Return plain English text with no Arabic and no commentary."
+    private let outputTranslationPrompt = "Translate the text to clear, friendly Iraqi Arabic only. Return Iraqi Arabic only with no English and no extra commentary."
     private let genericFallbackArabicMessage = "أنا حاضر وياك. احچيلي شنو تريد بالضبط، وأنا أرتبه إلك بشكل واضح وعملي."
 
     init(
@@ -244,6 +251,10 @@ final class CoachBrainMiddleware: ObservableObject {
             return genericFallbackArabicMessage
         }
 
+        logInputLanguageDetection(isArabic: true)
+#if DEBUG
+        debugDiagnosticMessage = nil
+#endif
         let systemContext = await contextBuilder.buildSystemContext()
         let gracefulFallback = await fallbackReply(for: message)
         lastInjectedSystemContext = systemContext.systemPrefix
@@ -260,9 +271,17 @@ final class CoachBrainMiddleware: ObservableObject {
 
         do {
             try Task.checkCancellation()
-            let normalizedEnglishIntent = await resolveEnglishIntent(for: message)
-            guard !normalizedEnglishIntent.isEmpty else {
-                throw CoachBrainMiddlewareError.emptyEnglishIntent
+            let normalizedEnglishIntent: String
+            do {
+                normalizedEnglishIntent = try await resolveEnglishIntent(for: message)
+            } catch let error as CancellationError {
+                throw error
+            } catch {
+                return handleTranslationUnavailable(
+                    for: message,
+                    stage: "input",
+                    error: error
+                )
             }
 
             lastResolvedEnglishIntent = normalizedEnglishIntent
@@ -270,181 +289,100 @@ final class CoachBrainMiddleware: ObservableObject {
                 systemPrefix: systemContext.systemPrefix,
                 englishIntent: normalizedEnglishIntent
             )
+            lastInjectedSystemContext = reasoningContext
 
             try Task.checkCancellation()
             await transition(to: .thinking, minimumDuration: 0)
 
-            let englishReply = try await generateAppleIntelligenceReply(
-                context: reasoningContext
-            )
+            logger.notice("on_device_generation_started language=english_from_arabic")
+            let englishReply: String
+            do {
+                englishReply = try await intelligenceManager.generateOnDeviceReply(
+                    prompt: reasoningContext,
+                    instructions: englishOnlyCaptainInstructions()
+                )
+            } catch let error as CancellationError {
+                throw error
+            } catch {
+                let category = onDeviceErrorCategory(error)
+                logger.error(
+                    "on_device_generation_failed category=\(category, privacy: .public)"
+                )
+                lastPipelineError = error.localizedDescription
+                recordDebugDiagnostic("arabic_on_device_failed: \(category)")
+                let fallbackReply = await resolveOnDeviceFailureFallback(for: message)
+                await transition(to: .preparingReply, minimumDuration: 0)
+                return fallbackReply
+            }
+            logger.notice("on_device_generation_succeeded language=english_from_arabic")
+
             let normalizedEnglishReply = englishReply.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !normalizedEnglishReply.isEmpty else {
                 throw CoachBrainMiddlewareError.emptyAppleReply
             }
 
             try Task.checkCancellation()
-            let finalReply = await resolveArabicReply(
-                from: normalizedEnglishReply,
-                originalMessage: message
-            )
+            let finalReply: String
+            do {
+                finalReply = try await resolveArabicReply(from: normalizedEnglishReply)
+            } catch let error as CancellationError {
+                throw error
+            } catch {
+                return handleTranslationUnavailable(
+                    for: message,
+                    stage: "output",
+                    error: error
+                )
+            }
+
             await transition(to: .preparingReply, minimumDuration: 0)
             return finalReply
         } catch is CancellationError {
             lastPipelineError = "The coach analysis was cancelled."
             return gracefulFallback
         } catch {
-            logger.error("Coach brain pipeline failed: \(error.localizedDescription, privacy: .public)")
+            let category = pipelineErrorCategory(error)
+            logger.error(
+                "coach_brain_pipeline_failed category=\(category, privacy: .public)"
+            )
             lastPipelineError = error.localizedDescription
+            recordDebugDiagnostic("pipeline_failed: \(category)")
             return gracefulFallback
         }
     }
 
-    /// Mock stand-in for the Apple Intelligence on-device brain.
-    /// The middleware always feeds it English context so the local reasoning stays single-track.
-    func generateAppleIntelligenceReply(context: String) async throws -> String {
-        let normalizedContext = context
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let intent = extractUserIntent(from: normalizedContext) ?? normalizedContext
+    private func resolveEnglishIntent(for rawMessage: String) async throws -> String {
+        await transition(to: .translatingInput, minimumDuration: 0)
+        logger.notice("translation_started stage=input")
 
-        guard !normalizedContext.isEmpty else {
+        let translated = try await translator.translate(
+            rawMessage,
+            systemPrompt: inputTranslationPrompt
+        )
+        let normalized = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
             throw CoachBrainMiddlewareError.emptyEnglishIntent
         }
 
-        try Task.checkCancellation()
-
-        if isGreetingIntent(intent) {
-            return "Good to have you here. I am fully with you. Tell me what you want to tune today: training, food, recovery, or energy."
-        }
-
-        if isTimeIntent(intent) {
-            return englishCurrentTimeReply()
-        }
-
-        if isDateIntent(intent) {
-            return englishCurrentDateReply()
-        }
-
-        if intent.contains("sleep") || intent.contains("tired") || intent.contains("exhausted") {
-            return "Your body needs smart energy today. Keep the intensity light, walk for 12 minutes, hydrate now, and protect tonight's recovery."
-        }
-
-        if intent.contains("health data") || intent.contains("steps") || intent.contains("heart rate") || intent.contains("recovery data") {
-            return healthAwareReply(from: normalizedContext)
-        }
-
-        if intent.contains("aiqo") || intent.contains("application") || intent.contains("app") || intent.contains("explain the app") {
-            return "AiQo is your bio-digital coach. It reads your health context, tracks your lifestyle habits, and turns fitness, recovery, and daily discipline into guided actions."
-        }
-
-        if intent.contains("weight") || intent.contains("fat loss") || intent.contains("lose weight") {
-            return "Focus on one clean win first: hit a protein-rich meal, take a brisk 15-minute walk, and stay consistent instead of chasing extremes."
-        }
-
-        if intent.contains("muscle") || intent.contains("strength") || intent.contains("gym") {
-            return "Build momentum with quality reps today. Start with your main lift, control the tempo, and finish with one extra set you can own."
-        }
-
-        if intent.contains("stress") || intent.contains("anxious") || intent.contains("overwhelmed") {
-            return "Calm the system first. Take five slow breaths, loosen your shoulders, and do a short walk so your body can reset and think clearly."
-        }
-
-        if intent.contains("food") || intent.contains("meal") || intent.contains("nutrition") {
-            return "Keep it simple: choose a balanced plate with protein, fiber, and water first, then let the next healthy choice come from that win."
-        }
-
-        return "You already have enough energy to move forward. Take one deliberate action in the next 10 minutes and let that small win lead the day."
+        logger.notice("translation_succeeded stage=input")
+        return normalized
     }
 
-    private func resolveEnglishIntent(for rawMessage: String) async -> String {
-        await transition(to: .translatingInput, minimumDuration: 0)
-
-        do {
-            let translated = try await translator.translate(
-                rawMessage,
-                systemPrompt: inputTranslationPrompt
-            )
-            let normalized = translated.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !normalized.isEmpty {
-                return normalized
-            }
-        } catch {
-            logger.error("Arabic input translation failed: \(error.localizedDescription, privacy: .public)")
-        }
-
-        return await localEnglishIntentFallback(for: rawMessage)
-    }
-
-    private func resolveArabicReply(from englishReply: String, originalMessage: String) async -> String {
+    private func resolveArabicReply(from englishReply: String) async throws -> String {
         await transition(to: .translatingOutput, minimumDuration: 0)
+        logger.notice("translation_started stage=output")
 
-        do {
-            let arabicReply = try await translator.translate(
-                englishReply,
-                systemPrompt: outputTranslationPrompt
-            )
-            let normalizedArabicReply = arabicReply.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !normalizedArabicReply.isEmpty {
-                return normalizedArabicReply
-            }
-        } catch {
-            logger.error("Arabic output translation failed: \(error.localizedDescription, privacy: .public)")
-        }
-
-        return await localArabicReplyFallback(
-            for: englishReply,
-            originalMessage: originalMessage
+        let arabicReply = try await translator.translate(
+            englishReply,
+            systemPrompt: outputTranslationPrompt
         )
-    }
-
-    private func localEnglishIntentFallback(for rawMessage: String) async -> String {
-        let normalized = rawMessage
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-
-        guard !normalized.isEmpty else {
-            return "The user wants practical, motivational coaching with one clear next action."
+        let normalizedArabicReply = arabicReply.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedArabicReply.isEmpty else {
+            throw CoachBrainMiddlewareError.emptyArabicReply
         }
 
-        if let intent = detectLocalIntent(in: normalized) {
-            return await localEnglishIntentDescription(for: intent)
-        }
-
-        return "The user wants supportive fitness guidance in Arabic. Give one clear next action that is easy to start in the next 10 minutes."
-    }
-
-    private func localArabicReplyFallback(for englishReply: String, originalMessage: String) async -> String {
-        let normalizedOriginal = originalMessage
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let normalizedEnglishReply = englishReply.lowercased()
-
-        if let intent = detectLocalIntent(in: normalizedOriginal),
-           let deterministicReply = await deterministicArabicReply(for: intent) {
-            return deterministicReply
-        }
-
-        if normalizedEnglishReply.contains("aiqo") || normalizedEnglishReply.contains("bio-digital coach") || normalizedEnglishReply.contains("application") || normalizedEnglishReply.contains("lifestyle habits") {
-            return "AiQo هو نظامك الذكي للحياة واللياقة. يقرأ مؤشراتك الصحية، يتابع عاداتك، ويحوّل يومك إلى خطوات عملية للتمرين، التعافي، والانضباط."
-        }
-
-        if normalizedEnglishReply.contains("protein") || normalizedEnglishReply.contains("meal") || normalizedEnglishReply.contains("balanced plate") {
-            return "خلّينا نبدي صح: اختَر وجبة بيها بروتين ومَي هسه، وبعدها نبني باقي يومك على هذا الفوز."
-        }
-
-        if normalizedEnglishReply.contains("walk") || normalizedEnglishReply.contains("hydrate") {
-            return "أحسن خطوة إلك هسه: امشِ 10 إلى 12 دقيقة، واشرب مي، وخلي جسمك يرجع يدخل مود النشاط."
-        }
-
-        if normalizedEnglishReply.contains("breaths") || normalizedEnglishReply.contains("calm") || normalizedEnglishReply.contains("stress") {
-            return "هدّي جسمك أولاً: خذ خمس أنفاس بطيئة، حرّك كتوفك، وامشِ دقيقتين حتى ترجع ماسك زمامك."
-        }
-
-        if normalizedEnglishReply.contains("lift") || normalizedEnglishReply.contains("set") || normalizedEnglishReply.contains("reps") {
-            return "يلا بطل، نبدي بإحماء خفيف 5 دقايق، وبعدها أول تمرين أساسي بثبات، وخلي أول سِت تكون نظيفة."
-        }
-
-        return await fallbackReply(for: originalMessage)
+        logger.notice("translation_succeeded stage=output")
+        return normalizedArabicReply
     }
 
     private func fallbackReply(for rawMessage: String) async -> String {
@@ -462,21 +400,6 @@ final class CoachBrainMiddleware: ObservableObject {
         }
 
         return genericFallbackArabicMessage
-    }
-
-    private func healthSnapshotSummaryForEnglishIntent() async -> String? {
-        guard let metrics = await loadHealthMetrics() else { return nil }
-
-        var parts: [String] = [
-            "Today steps: \(max(0, metrics.stepCount)).",
-            "Sleep: \(String(format: "%.1f", max(0, metrics.sleepHours))) hours."
-        ]
-
-        if let heartRate = metrics.averageOrCurrentHeartRateBPM {
-            parts.append("Current or average heart rate: \(max(0, heartRate)) bpm.")
-        }
-
-        return parts.joined(separator: " ")
     }
 
     private func loadHealthMetrics() async -> CaptainDailyHealthMetrics? {
@@ -515,9 +438,135 @@ final class CoachBrainMiddleware: ObservableObject {
     private func buildReasoningContext(systemPrefix: String, englishIntent: String) -> String {
         """
         \(systemPrefix)
-        [USER INTENT IN ENGLISH: \(englishIntent)]
-        [COACH DIRECTIVE: If the user is only greeting you, greet them naturally and invite the next topic. Otherwise reply with one concise, high-agency coaching response in English before Arabic translation.]
+        User original language: Arabic.
+        User message translated to English: \(englishIntent)
+        Respond in English only so the final answer can be translated to Iraqi Arabic.
         """
+    }
+
+    private func resolveOnDeviceFailureFallback(for originalMessage: String) async -> String {
+        let englishFallback = CaptainFallbackPolicy.englishOnDeviceFallback(for: originalMessage)
+
+        do {
+            logger.notice("translation_started stage=fallback_output")
+            let translatedFallback = try await translator.translate(
+                englishFallback,
+                systemPrompt: outputTranslationPrompt
+            )
+            let normalized = translatedFallback.trimmingCharacters(in: .whitespacesAndNewlines)
+            logger.notice("translation_succeeded stage=fallback_output")
+            return CaptainFallbackPolicy.arabicOnDeviceFallback(
+                for: originalMessage,
+                translatedFallback: normalized
+            )
+        } catch _ as CancellationError {
+            logger.error("translation_failed stage=fallback_output category=cancelled")
+            return CaptainFallbackPolicy.arabicOnDeviceFallback(
+                for: originalMessage,
+                translatedFallback: nil
+            )
+        } catch {
+            let category = translationErrorCategory(error)
+            logger.error(
+                "translation_failed stage=fallback_output category=\(category, privacy: .public)"
+            )
+            recordDebugDiagnostic("fallback_output_translation_failed: \(category)")
+            return CaptainFallbackPolicy.arabicOnDeviceFallback(
+                for: originalMessage,
+                translatedFallback: nil
+            )
+        }
+    }
+
+    private func handleTranslationUnavailable(
+        for message: String,
+        stage: String,
+        error: Error
+    ) -> String {
+        let category = translationErrorCategory(error)
+        logger.error("translation_failed stage=\(stage, privacy: .public) category=\(category, privacy: .public)")
+        lastPipelineError = error.localizedDescription
+        recordDebugDiagnostic("translation_failed[\(stage)]: \(category)")
+        return CaptainFallbackPolicy.translationUnavailableArabic(for: message)
+    }
+
+    private func englishOnlyCaptainInstructions() -> String {
+        """
+        \(CaptainPersonaBuilder.buildInstructions())
+        Respond ONLY in English. Do not include Arabic.
+        """
+    }
+
+    private func logInputLanguageDetection(isArabic: Bool) {
+        let detected = isArabic ? "arabic" : "non_arabic"
+        logger.notice("input_language_detected value=\(detected, privacy: .public)")
+    }
+
+    private func translationErrorCategory(_ error: Error) -> String {
+        switch error {
+        case is CoachBrainTranslationConfigurationError:
+            return "configuration"
+        case let translatorError as CoachBrainLLMTranslator.Error:
+            switch translatorError {
+            case .networkUnavailable:
+                return "network"
+            case .requestFailed:
+                return "transport"
+            case .badStatusCode:
+                return "http_status"
+            case .invalidResponse:
+                return "invalid_response"
+            case .emptyResponse:
+                return "empty_response"
+            }
+        case is URLError:
+            return "network"
+        default:
+            return "other"
+        }
+    }
+
+    private func onDeviceErrorCategory(_ error: Error) -> String {
+        if let captainError = error as? CaptainIntelligenceError {
+            switch captainError {
+            case .foundationModelsUnavailable:
+                return "foundation_models_unavailable"
+            case .onDeviceModelUnavailable:
+                return "model_unavailable"
+            case .unsupportedDeviceLanguage:
+                return "unsupported_language"
+            case .emptyModelResponse:
+                return "empty_response"
+            default:
+                return "other"
+            }
+        }
+
+        return "other"
+    }
+
+    private func pipelineErrorCategory(_ error: Error) -> String {
+        if error is CoachBrainMiddlewareError {
+            return "middleware"
+        }
+
+        if error is CoachBrainTranslationConfigurationError || error is CoachBrainLLMTranslator.Error {
+            return "translation"
+        }
+
+        if error is CaptainIntelligenceError {
+            return "on_device"
+        }
+
+        return "other"
+    }
+
+    private func recordDebugDiagnostic(_ message: String) {
+#if DEBUG
+        debugDiagnosticMessage = message
+#else
+        _ = message
+#endif
     }
 
     private func transition(to newPhase: CoachBrainPhase, minimumDuration: TimeInterval) async {
@@ -544,89 +593,6 @@ final class CoachBrainMiddleware: ObservableObject {
 
     private func containsAny(of terms: [String], in text: String) -> Bool {
         terms.contains { text.contains($0) }
-    }
-
-    private func isGreetingIntent(_ text: String) -> Bool {
-        containsAny(
-            of: [
-                "the user is greeting the coach",
-                "greeting the coach",
-                "hello",
-                "hi",
-                "hey",
-                "good morning",
-                "good evening",
-                "how are you"
-            ],
-            in: text
-        )
-    }
-
-    private func isTimeIntent(_ text: String) -> Bool {
-        containsAny(
-            of: [
-                "current time",
-                "what time",
-                "time now",
-                "the user is asking for the current time"
-            ],
-            in: text
-        )
-    }
-
-    private func isDateIntent(_ text: String) -> Bool {
-        containsAny(
-            of: [
-                "current date",
-                "today's date",
-                "what date",
-                "what day is it",
-                "the user is asking for today's date"
-            ],
-            in: text
-        )
-    }
-
-    private func extractUserIntent(from normalizedContext: String) -> String? {
-        extractSegment(
-            in: normalizedContext,
-            prefix: "[user intent in english:"
-        )
-    }
-
-    private func extractSegment(in text: String, prefix: String) -> String? {
-        guard let startRange = text.range(of: prefix) else { return nil }
-        let trailingText = text[startRange.upperBound...]
-        guard let closingBracket = trailingText.firstIndex(of: "]") else { return nil }
-
-        let extracted = trailingText[..<closingBracket]
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return extracted.isEmpty ? nil : String(extracted)
-    }
-
-    private func healthAwareReply(from normalizedContext: String) -> String {
-        let steps = extractIntMetric(after: "steps:", in: normalizedContext)
-        let heartRate = extractIntMetric(after: "heart rate:", in: normalizedContext)
-        let sleepHours = extractDoubleMetric(after: "sleep:", in: normalizedContext)
-
-        if let sleepHours, sleepHours > 0.25, sleepHours < 5.8 {
-            return "Your sleep looks light today. Lead with recovery: keep training easy, walk for 10 minutes, hydrate now, and protect tonight's reset."
-        }
-
-        if let heartRate, heartRate > 96 {
-            return "Your body looks a little activated right now. Slow the system first: take one calm minute of breathing, then do a gentle walk before any hard effort."
-        }
-
-        if let steps, steps < 2200 {
-            return "Your momentum is still waking up. The smartest move now is 10 to 12 minutes of walking, one full glass of water, then we reassess your energy."
-        }
-
-        if let steps, steps >= 8500 {
-            return "You already built solid momentum today. Keep the next move clean: short mobility, water, and one disciplined meal so you finish strong."
-        }
-
-        return "Your body data is steady enough for a smart next move. Start with a brisk 10-minute walk, hydrate well, and build from that clean baseline."
     }
 
     private func detectLocalIntent(in normalizedText: String) -> LocalCaptainIntent? {
@@ -728,32 +694,6 @@ final class CoachBrainMiddleware: ObservableObject {
         return normalized.contains("تاريخ") && normalized.contains("اليوم")
     }
 
-    private func localEnglishIntentDescription(for intent: LocalCaptainIntent) async -> String {
-        switch intent {
-        case .greeting:
-            return "The user is greeting the coach and wants help deciding what to focus on today."
-        case .healthOverview:
-            if let metricsSummary = await healthSnapshotSummaryForEnglishIntent() {
-                return "The user wants the best next action based on today's health data. \(metricsSummary) Recommend one clear next step."
-            }
-            return "The user wants the best next action based on their current health data and energy. Recommend one clear next step."
-        case .explainAiQo:
-            return "The user wants a simple explanation of what AiQo is and how it helps with fitness, energy, and lifestyle."
-        case .currentTime:
-            return "The user is asking for the current time. Answer clearly with the current local time."
-        case .currentDate:
-            return "The user is asking for today's date. Answer clearly with the exact local date."
-        case .recovery:
-            return "The user feels tired and needs recovery-focused coaching. Give one simple action that protects recovery."
-        case .nutrition:
-            return "The user wants nutrition guidance. Give one practical food-related action that is easy to start right now."
-        case .workout:
-            return "The user wants workout coaching. Give one practical exercise-focused action that builds momentum."
-        case .stress:
-            return "The user feels stressed. Give one calming physical action that reduces stress and restores control."
-        }
-    }
-
     private func deterministicArabicReply(for intent: LocalCaptainIntent) async -> String? {
         switch intent {
         case .greeting:
@@ -778,22 +718,6 @@ final class CoachBrainMiddleware: ObservableObject {
         case .stress:
             return "أهدأ أولاً، خذ خمس أنفاس بطيئة، حرّك جسمك دقيقتين، وبعدها نحول الضغط إلى خطوة مفيدة."
         }
-    }
-
-    private func englishCurrentTimeReply() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .autoupdatingCurrent
-        formatter.dateFormat = "h:mm a"
-        return "Your local time right now is \(formatter.string(from: Date()))."
-    }
-
-    private func englishCurrentDateReply() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .autoupdatingCurrent
-        formatter.dateFormat = "EEEE, MMMM d, yyyy"
-        return "Today's local date is \(formatter.string(from: Date()))."
     }
 
     private func arabicCurrentTimeReply() -> String {
@@ -831,32 +755,4 @@ final class CoachBrainMiddleware: ObservableObject {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%02d", value)
     }
 
-    private func extractIntMetric(after label: String, in text: String) -> Int? {
-        guard let metricSlice = extractMetricSlice(after: label, in: text) else { return nil }
-        let digits = metricSlice.prefix { $0.isNumber }
-        guard !digits.isEmpty else { return nil }
-        return Int(digits)
-    }
-
-    private func extractDoubleMetric(after label: String, in text: String) -> Double? {
-        guard let metricSlice = extractMetricSlice(after: label, in: text) else { return nil }
-        let valueString = metricSlice.prefix { character in
-            character.isNumber || character == "."
-        }
-        guard !valueString.isEmpty else { return nil }
-        return Double(valueString)
-    }
-
-    private func extractMetricSlice(after label: String, in text: String) -> Substring? {
-        guard let range = text.range(of: label) else { return nil }
-        let trailingText = text[range.upperBound...]
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trailingText.isEmpty else { return nil }
-
-        let endIndex = trailingText.firstIndex { character in
-            character == "," || character == "." || character == "]"
-        } ?? trailingText.endIndex
-
-        return trailingText[..<endIndex]
-    }
 }

@@ -14,13 +14,14 @@ struct ControlsView: View {
         HStack {
             VStack {
                 Button {
-                    workoutManager.stopWorkout()
+                    workoutManager.endWorkout()
                 } label: {
-                    Image(systemName: "xmark")
+                    Image(systemName: workoutManager.workoutPhase == .stopping ? "hourglass" : "xmark")
                 }
                 .tint(.red)
                 .font(.title2)
-                Text("End")
+                .disabled(workoutManager.workoutPhase == .stopping)
+                Text(workoutManager.workoutPhase == .stopping ? "Ending" : "End")
             }
             VStack {
                 Button {
@@ -30,6 +31,7 @@ struct ControlsView: View {
                 }
                 .tint(.yellow)
                 .font(.title2)
+                .disabled(workoutManager.workoutPhase == .stopping)
                 Text(workoutManager.running ? "Pause" : "Resume")
             }
         }

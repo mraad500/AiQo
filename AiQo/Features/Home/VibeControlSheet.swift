@@ -6,6 +6,7 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
     case awakening = "Awakening"
     case deepFocus = "Deep Focus"
     case egoDeath = "Ego-Death (Zen)"
+    case energy = "Energy"
     case recovery = "Recovery"
 
     var id: String { rawValue }
@@ -18,6 +19,8 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
             return "Precision and clarity"
         case .egoDeath:
             return "Stillness and dissolve"
+        case .energy:
+            return "Brain ignition and warmup"
         case .recovery:
             return "Slow reset and repair"
         }
@@ -31,6 +34,8 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
             return "scope"
         case .egoDeath:
             return "sparkles"
+        case .energy:
+            return "bolt.fill"
         case .recovery:
             return "moon.stars.fill"
         }
@@ -53,11 +58,31 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
                 Color(red: 0.76, green: 0.62, blue: 0.98),
                 Color(red: 0.56, green: 0.45, blue: 0.92)
             ]
+        case .energy:
+            return [
+                Color(red: 1.00, green: 0.67, blue: 0.24),
+                Color(red: 0.63, green: 0.93, blue: 0.29)
+            ]
         case .recovery:
             return [
                 Color(red: 0.12, green: 0.18, blue: 0.34),
                 Color(red: 0.05, green: 0.08, blue: 0.17)
             ]
+        }
+    }
+
+    var aiqoTrackName: String {
+        switch self {
+        case .awakening:
+            return "SerotoninFlow"
+        case .deepFocus:
+            return "GammaFlow"
+        case .egoDeath:
+            return "ThetaTrance"
+        case .energy:
+            return "SoundOfEnergy"
+        case .recovery:
+            return "Hypnagogic_state"
         }
     }
 
@@ -70,6 +95,8 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
             return "spotify:playlist:37i9dQZF1DWZeKCadgRdKQ"
         case .egoDeath:
             return "spotify:playlist:37i9dQZF1DWU0ScTcjJBdj"
+        case .energy:
+            return "spotify:playlist:37i9dQZF1DX76Wlfdnj7AP"
         case .recovery:
             return "spotify:playlist:37i9dQZF1DX4sWSpwq3LiO"
         }
@@ -108,7 +135,7 @@ final class VibeControlViewModel: ObservableObject {
         self.selectedSource = VibePlaybackSource(
             rawValue: UserDefaults.standard.string(forKey: Self.sourceDefaultsKey) ?? ""
         ) ?? .aiqoSounds
-        self.mixWithOthers = UserDefaults.standard.object(forKey: Self.mixDefaultsKey) as? Bool ?? false
+        self.mixWithOthers = UserDefaults.standard.object(forKey: Self.mixDefaultsKey) as? Bool ?? true
         self.nativeIntensity = UserDefaults.standard.object(forKey: Self.intensityDefaultsKey) as? Double ?? 0.55
     }
 
@@ -139,12 +166,8 @@ final class VibeControlViewModel: ObservableObject {
 struct VibeControlSheet: View {
     @ObservedObject var viewModel: VibeControlViewModel
     @ObservedObject var vibeManager = SpotifyVibeManager.shared
+    @ObservedObject var aiqoAudioManager = AiQoAudioManager.shared
     @ObservedObject var vibeAudioEngine = VibeAudioEngine.shared
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 14),
-        GridItem(.flexible(), spacing: 14)
-    ]
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -181,10 +204,13 @@ struct VibeControlSheet: View {
         .animation(.spring(), value: viewModel.selectedSource)
         .animation(.spring(), value: vibeManager.isConnected)
         .animation(.spring(), value: vibeManager.playbackState)
-        .animation(.spring(), value: vibeAudioEngine.currentState.playbackState)
+        .animation(.spring(), value: aiqoAudioManager.playbackState)
+        .onChange(of: viewModel.selectedMode) { _, _ in
+            syncAiQoTrackToSelectedModeIfNeeded()
+        }
         .alert("My Vibe", isPresented: errorAlertIsPresented) {
             Button("OK", role: .cancel) {
-                clearActiveAlert()
+                scheduleActiveAlertClear()
             }
         } message: {
             Text(activeAlertMessage ?? "Something went wrong while starting audio.")
@@ -203,16 +229,38 @@ struct VibeControlSheet: View {
     }
 
     private var vibeGrid: some View {
-        LazyVGrid(columns: columns, spacing: 14) {
-            ForEach(VibeMode.allCases) { mode in
-                VibeModeCard(
-                    mode: mode,
-                    isSelected: viewModel.selectedMode == mode
-                ) {
-                    withAnimation(.spring()) {
-                        viewModel.select(mode)
+        Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 14) {
+            ForEach(Array(vibeRows.enumerated()), id: \.offset) { _, row in
+                GridRow {
+                    if row.count == 1, let mode = row.first {
+                        vibeCard(for: mode)
+                            .gridCellColumns(2)
+                    } else {
+                        ForEach(row) { mode in
+                            vibeCard(for: mode)
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private var vibeRows: [[VibeMode]] {
+        let modes = VibeMode.allCases
+        return stride(from: 0, to: modes.count, by: 2).map { startIndex in
+            let endIndex = min(startIndex + 2, modes.count)
+            return Array(modes[startIndex..<endIndex])
+        }
+    }
+
+    @ViewBuilder
+    private func vibeCard(for mode: VibeMode) -> some View {
+        VibeModeCard(
+            mode: mode,
+            isSelected: viewModel.selectedMode == mode
+        ) {
+            withAnimation(.spring()) {
+                viewModel.select(mode)
             }
         }
     }
@@ -243,7 +291,9 @@ struct VibeControlSheet: View {
                 .toggleStyle(.switch)
                 .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
                 .onChange(of: viewModel.mixWithOthers) { _, _ in
-                    if vibeAudioEngine.currentState.playbackState == .playing {
+                    aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
+
+                    if aiqoAudioManager.playbackState == .playing {
                         restartNativeAudio()
                     }
                 }
@@ -264,7 +314,7 @@ struct VibeControlSheet: View {
                     Slider(value: $viewModel.nativeIntensity, in: 0.1...1)
                         .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
                         .onChange(of: viewModel.nativeIntensity) { _, newValue in
-                            vibeAudioEngine.setIntensity(newValue)
+                            aiqoAudioManager.setVolume(Float(newValue))
                         }
                 }
             }
@@ -291,11 +341,11 @@ struct VibeControlSheet: View {
                     .foregroundStyle(.secondary)
 
                 if viewModel.selectedSource == .aiqoSounds {
-                    Text(vibeAudioEngine.currentState.detailText)
+                    Text(aiqoAudioManager.detailText)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
 
-                    if vibeAudioEngine.currentState.playbackState == .playing {
+                    if aiqoAudioManager.playbackState == .playing {
                         StatusPill(label: "Running in background")
                     }
                 } else if vibeManager.currentTrackName != "Not Playing" {
@@ -423,7 +473,7 @@ struct VibeControlSheet: View {
     }
 
     private var activeAlertMessage: String? {
-        vibeAudioEngine.lastErrorMessage ?? vibeManager.lastErrorMessage
+        aiqoAudioManager.lastErrorMessage ?? vibeManager.lastErrorMessage
     }
 
     private var errorAlertIsPresented: Binding<Bool> {
@@ -431,7 +481,7 @@ struct VibeControlSheet: View {
             get: { activeAlertMessage != nil },
             set: { isPresented in
                 if !isPresented {
-                    clearActiveAlert()
+                    scheduleActiveAlertClear()
                 }
             }
         )
@@ -440,7 +490,7 @@ struct VibeControlSheet: View {
     private var sourceStatusLabel: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            switch vibeAudioEngine.currentState.playbackState {
+            switch aiqoAudioManager.playbackState {
             case .playing:
                 return "AiQo Sounds active"
             case .paused:
@@ -462,13 +512,13 @@ struct VibeControlSheet: View {
     }
 
     private var currentNativeDayPartTitle: String {
-        (vibeAudioEngine.currentState.currentDayPart ?? VibeDayPart.current()).title
+        VibeDayPart.current().title
     }
 
     private var selectedSourcePlaybackState: VibePlaybackState {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return vibeAudioEngine.currentState.playbackState
+            return aiqoAudioManager.playbackState
         case .spotify:
             return vibeManager.playbackState
         }
@@ -477,14 +527,14 @@ struct VibeControlSheet: View {
     private var currentPlaybackState: VibePlaybackState {
         switch controlledSource {
         case .aiqoSounds:
-            return vibeAudioEngine.currentState.playbackState
+            return aiqoAudioManager.playbackState
         case .spotify:
             return vibeManager.playbackState
         }
     }
 
     private var controlledSource: VibePlaybackSource {
-        if vibeAudioEngine.currentState.playbackState != .stopped {
+        if aiqoAudioManager.playbackState != .stopped {
             return .aiqoSounds
         }
 
@@ -498,7 +548,7 @@ struct VibeControlSheet: View {
     private var displayedVibeTitle: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return vibeAudioEngine.currentState.currentMode?.rawValue ?? viewModel.selectedMode.rawValue
+            return viewModel.selectedMode.rawValue
         case .spotify:
             return vibeManager.currentVibeTitle ?? viewModel.selectedMode.rawValue
         }
@@ -507,7 +557,7 @@ struct VibeControlSheet: View {
     private var primaryButtonTitle: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return vibeAudioEngine.currentState.playbackState == .paused ? "Resume AiQo Sounds" : "Play AiQo Sounds"
+            return aiqoAudioManager.playbackState == .paused ? "Resume AiQo Sounds" : "Play AiQo Sounds"
         case .spotify:
             return vibeManager.isConnected ? "Play in Spotify" : "Connect Spotify"
         }
@@ -572,16 +622,20 @@ struct VibeControlSheet: View {
     private var isPauseResumeAvailable: Bool {
         switch controlledSource {
         case .aiqoSounds:
-            return vibeAudioEngine.currentState.playbackState != .stopped
+            return aiqoAudioManager.playbackState != .stopped
         case .spotify:
             return vibeManager.isConnected
         }
     }
 
+    private var selectedAiQoTrackDisplayName: String {
+        viewModel.selectedMode.aiqoTrackName.replacingOccurrences(of: "_", with: " ")
+    }
+
     private var playButtonDetail: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return "Runs in background and follows morning, noon, afternoon, and night while active"
+            return "Loops \(selectedAiQoTrackDisplayName) in the background while active"
         case .spotify:
             if !vibeManager.isSpotifyAppInstalled {
                 return "Install Spotify to use playlist controls"
@@ -607,19 +661,20 @@ struct VibeControlSheet: View {
         switch viewModel.selectedSource {
         case .aiqoSounds:
             stopSpotifyIfNeeded()
+            if vibeAudioEngine.currentState.isActive {
+                vibeAudioEngine.stop()
+            }
 
-            let currentDayPart = VibeDayPart.current()
-            var profile = vibeAudioEngine.currentProfile
-            profile.set(viewModel.selectedMode, for: currentDayPart)
-
-            vibeAudioEngine.setIntensity(viewModel.nativeIntensity)
-            vibeAudioEngine.start(profile: profile, mixWithOthers: viewModel.mixWithOthers)
+            aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
+            aiqoAudioManager.setVolume(Float(viewModel.nativeIntensity))
+            aiqoAudioManager.playAmbient(trackName: viewModel.selectedMode.aiqoTrackName)
         case .spotify:
             guard vibeManager.isPlaybackAvailable else {
                 vibeManager.presentAvailabilityError()
                 return
             }
 
+            aiqoAudioManager.stopAmbient()
             if vibeAudioEngine.currentState.isActive {
                 vibeAudioEngine.stop()
             }
@@ -634,10 +689,10 @@ struct VibeControlSheet: View {
     private func handlePauseResumeTapped() {
         switch controlledSource {
         case .aiqoSounds:
-            if vibeAudioEngine.currentState.playbackState == .playing {
-                vibeAudioEngine.pause()
+            if aiqoAudioManager.playbackState == .playing {
+                aiqoAudioManager.pauseAmbient()
             } else {
-                vibeAudioEngine.resume()
+                aiqoAudioManager.playAmbient(trackName: viewModel.selectedMode.aiqoTrackName)
             }
         case .spotify:
             if vibeManager.playbackState == .playing {
@@ -651,15 +706,29 @@ struct VibeControlSheet: View {
     private func handleStopTapped() {
         switch controlledSource {
         case .aiqoSounds:
-            vibeAudioEngine.stop()
+            aiqoAudioManager.stopAmbient()
+            if vibeAudioEngine.currentState.isActive {
+                vibeAudioEngine.stop()
+            }
         case .spotify:
             vibeManager.stopVibe()
         }
     }
 
     private func restartNativeAudio() {
-        vibeAudioEngine.setIntensity(viewModel.nativeIntensity)
-        vibeAudioEngine.start(profile: vibeAudioEngine.currentProfile, mixWithOthers: viewModel.mixWithOthers)
+        aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
+        aiqoAudioManager.setVolume(Float(viewModel.nativeIntensity))
+    }
+
+    private func syncAiQoTrackToSelectedModeIfNeeded() {
+        guard aiqoAudioManager.isPlaying else { return }
+
+        let nextTrackName = viewModel.selectedMode.aiqoTrackName
+        guard aiqoAudioManager.currentTrackName != nextTrackName else { return }
+
+        aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
+        aiqoAudioManager.setVolume(Float(viewModel.nativeIntensity))
+        aiqoAudioManager.playAmbient(trackName: nextTrackName)
     }
 
     private func stopSpotifyIfNeeded() {
@@ -668,7 +737,14 @@ struct VibeControlSheet: View {
         }
     }
 
+    private func scheduleActiveAlertClear() {
+        DispatchQueue.main.async {
+            clearActiveAlert()
+        }
+    }
+
     private func clearActiveAlert() {
+        aiqoAudioManager.clearError()
         vibeAudioEngine.clearError()
         vibeManager.clearError()
     }
@@ -709,6 +785,10 @@ struct VibeDashboardTriggerButton: View {
 
     private let preferredVibeIconName = "vibe_ icon"
     private let fallbackVibeIconName = "vibe_icon"
+    private let buttonSize: CGFloat = 70
+    private let imageSize: CGFloat = 64
+    private let fallbackSymbolSize: CGFloat = 30
+    private let fallbackFrameSize: CGFloat = 42
 
     private var vibeIconName: String? {
         if UIImage(named: preferredVibeIconName) != nil {
@@ -736,16 +816,16 @@ struct VibeDashboardTriggerButton: View {
                         Image(vibeIconName)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 40, height: 40)
+                            .frame(width: imageSize, height: imageSize)
                     } else {
                         Image(systemName: "waveform.path.ecg")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: fallbackSymbolSize, weight: .semibold))
                             .foregroundStyle(.primary.opacity(0.78))
-                            .frame(width: 32, height: 32)
+                            .frame(width: fallbackFrameSize, height: fallbackFrameSize)
                     }
                 }
             }
-            .frame(width: 54, height: 54)
+            .frame(width: buttonSize, height: buttonSize)
             .background(.ultraThinMaterial, in: Circle())
             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
         }

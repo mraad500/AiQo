@@ -482,15 +482,7 @@ actor HealthKitService {
                 }
             }
 
-            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                builder.finishWorkout { _, error in
-                    if let error = error {
-                        cont.resume(throwing: error)
-                    } else {
-                        cont.resume(returning: ())
-                    }
-                }
-            }
+            _ = try await builder.finishWorkout()
         } else {
             let workout = HKWorkout(
                 activityType: .running,

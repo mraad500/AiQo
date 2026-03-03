@@ -55,7 +55,7 @@ struct AiQoWatchApp: App {
         WindowGroup {
             NavigationView {
                 // Show different views based on workout state
-                if workoutManager.running || workoutManager.selectedWorkout != nil {
+                if workoutManager.hasActiveSession {
                     // Workout is active - show the session controls
                     SessionPagingView()
                         .environmentObject(workoutManager)
@@ -72,6 +72,7 @@ struct AiQoWatchApp: App {
             }
             .onAppear {
                 workoutManager.requestAuthorization()
+                workoutManager.recoverActiveWorkoutIfNeeded()
                 WorkoutNotificationCenter.configure()
             }
         }

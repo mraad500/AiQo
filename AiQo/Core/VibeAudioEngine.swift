@@ -121,6 +121,11 @@ private struct TonePreset {
             supportFrequency = 204.2
             shimmerFrequency = 272.2
             pulseFrequency = 0.05
+        case .energy:
+            baseFrequency = 196
+            supportFrequency = 293.66
+            shimmerFrequency = 392
+            pulseFrequency = 0.22
         case .recovery:
             baseFrequency = 110
             supportFrequency = 165

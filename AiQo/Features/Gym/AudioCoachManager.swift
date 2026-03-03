@@ -159,6 +159,8 @@ final class AudioCoachManager {
     }
 
     private func deactivateAudioSessionIfNeeded() {
+        guard !AiQoAudioManager.shared.isPlaying else { return }
+
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
         } catch {

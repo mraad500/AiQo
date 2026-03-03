@@ -7,6 +7,8 @@ final class WorkoutLiveActivityManager {
 
     private var activity: Activity<WorkoutActivityAttributes>?
     private var startedAt: Date?
+    private var runningElapsedAnchorDate: Date?
+    private var lastRenderedState: WorkoutActivityAttributes.ContentState?
     private var lastPushTime: Date = .distantPast
 
     private init() {}
@@ -30,6 +32,7 @@ final class WorkoutLiveActivityManager {
         let initialState = WorkoutActivityAttributes.ContentState(
             title: title,
             elapsedSeconds: 0,
+            elapsedAnchorDate: startedAt,
             heartRate: 0,
             activeCalories: 0,
             distanceMeters: 0,
@@ -37,6 +40,8 @@ final class WorkoutLiveActivityManager {
             heartRateState: zone2State,
             activeBuffs: normalizedBuffs(activeBuffs)
         )
+        runningElapsedAnchorDate = startedAt
+        lastRenderedState = initialState
 
         Task {
             do {
@@ -46,6 +51,10 @@ final class WorkoutLiveActivityManager {
                     pushType: nil
                 )
             } catch {
+                self.activity = nil
+                self.startedAt = nil
+                self.runningElapsedAnchorDate = nil
+                self.lastRenderedState = nil
                 #if DEBUG
                 print("[WorkoutLiveActivity] request failed: \(error.localizedDescription)")
                 #endif
@@ -66,22 +75,51 @@ final class WorkoutLiveActivityManager {
     ) {
         guard let activity else { return }
 
-        if !force {
-            let now = Date()
-            guard now.timeIntervalSince(lastPushTime) >= 1.0 else { return }
-            lastPushTime = now
+        let sanitizedElapsedSeconds = max(0, elapsedSeconds)
+        let sanitizedDistanceMeters = max(0, (distanceMeters / 10).rounded() * 10)
+        let normalizedBuffs = normalizedBuffs(activeBuffs)
+
+        if phase == .running {
+            let shouldResetAnchor =
+                runningElapsedAnchorDate == nil ||
+                lastRenderedState?.phase != .running ||
+                force
+
+            if shouldResetAnchor {
+                runningElapsedAnchorDate = Date().addingTimeInterval(-TimeInterval(sanitizedElapsedSeconds))
+            }
+        } else {
+            runningElapsedAnchorDate = nil
         }
 
         let updatedState = WorkoutActivityAttributes.ContentState(
             title: title,
-            elapsedSeconds: max(0, elapsedSeconds),
+            elapsedSeconds: sanitizedElapsedSeconds,
+            elapsedAnchorDate: phase == .running ? runningElapsedAnchorDate : nil,
             heartRate: max(0, Int(heartRate.rounded())),
             activeCalories: max(0, Int(activeCalories.rounded())),
-            distanceMeters: max(0, distanceMeters),
+            distanceMeters: sanitizedDistanceMeters,
             phase: phase,
             heartRateState: zone2State,
-            activeBuffs: normalizedBuffs(activeBuffs)
+            activeBuffs: normalizedBuffs
         )
+
+        guard updatedState != lastRenderedState else { return }
+
+        let now = Date()
+        let lastPhase = lastRenderedState?.phase
+        let minimumInterval: TimeInterval
+
+        if force {
+            minimumInterval = lastPhase != updatedState.phase ? 0 : 0.75
+        } else {
+            minimumInterval = 5.0
+        }
+
+        guard now.timeIntervalSince(lastPushTime) >= minimumInterval else { return }
+
+        lastPushTime = now
+        lastRenderedState = updatedState
 
         Task {
             await activity.update(ActivityContent(state: updatedState, staleDate: nil))
@@ -102,6 +140,7 @@ final class WorkoutLiveActivityManager {
         let finalState = WorkoutActivityAttributes.ContentState(
             title: title,
             elapsedSeconds: max(0, elapsedSeconds),
+            elapsedAnchorDate: nil,
             heartRate: max(0, Int(heartRate.rounded())),
             activeCalories: max(0, Int(activeCalories.rounded())),
             distanceMeters: max(0, distanceMeters),
@@ -119,6 +158,8 @@ final class WorkoutLiveActivityManager {
 
         self.activity = nil
         self.startedAt = nil
+        self.runningElapsedAnchorDate = nil
+        self.lastRenderedState = nil
         self.lastPushTime = .distantPast
     }
 
@@ -142,6 +183,7 @@ struct WorkoutActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var title: String
         var elapsedSeconds: Int
+        var elapsedAnchorDate: Date?
         var heartRate: Int
         var activeCalories: Int
         var distanceMeters: Double

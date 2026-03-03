@@ -23,6 +23,7 @@ struct WorkoutSessionScreen: View {
     )?
     @State private var activeRecoveryContext: ActiveRecoveryContext?
     @State private var pendingRecoveryResult: PendingRecoveryResult?
+    @State private var pendingCoachingSummary: WorkoutCoachingSummary?
 
     var body: some View {
         ZStack {
@@ -103,18 +104,16 @@ struct WorkoutSessionScreen: View {
                                 withAnimation {
                                     if session.phase == .running {
                                         session.pauseFromPhone()
-                                    } else {
-                                        if session.phase == .idle {
-                                            session.startFromPhone()
-                                        } else {
-                                            session.resumeFromPhone()
-                                        }
+                                    } else if session.phase == .paused {
+                                        session.resumeFromPhone()
+                                    } else if session.phase == .idle {
+                                        session.startFromPhone()
                                     }
                                 }
                             }) {
                                 HStack {
-                                    Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
-                                    Text(session.phase == .running ? "Pause Workout" : (session.phase == .idle ? "Start Workout" : "Resume"))
+                                    Image(systemName: primaryControlIcon)
+                                    Text(primaryControlTitle)
                                 }
                                 .font(.system(.title3, design: .rounded).weight(.bold))
                                 .foregroundStyle(.black)
@@ -124,8 +123,9 @@ struct WorkoutSessionScreen: View {
                                 .clipShape(Capsule())
                                 .shadow(color: WorkoutTheme.pastelMint.opacity(0.3), radius: 10)
                             }
+                            .disabled(session.phase == .starting || session.phase == .ending || session.isControlPending)
                             
-                            if session.phase == .paused {
+                            if session.canEnd {
                                 Button(action: { endWorkout() }) {
                                     Image(systemName: "stop.fill")
                                         .font(.title2)
@@ -134,6 +134,7 @@ struct WorkoutSessionScreen: View {
                                         .background(Color(red: 1.0, green: 0.35, blue: 0.40))
                                         .clipShape(Circle())
                                 }
+                                .disabled(session.isControlPending)
                                 .transition(.scale.combined(with: .opacity))
                             }
                         }
@@ -220,6 +221,20 @@ struct WorkoutSessionScreen: View {
                 )
             }
         }
+        .onChange(of: session.phase) { _, newPhase in
+            guard newPhase == .idle else { return }
+            guard summaryData != nil, !showSummary else { return }
+
+            if let pendingCoachingSummary {
+                let summary = pendingCoachingSummary
+                self.pendingCoachingSummary = nil
+                Task {
+                    await CaptainSmartNotificationService.shared.handleWorkoutCompleted(summary: summary)
+                }
+            }
+
+            showSummary = true
+        }
     }
     
     // MARK: - Helpers
@@ -277,24 +292,44 @@ struct WorkoutSessionScreen: View {
         )
 
         session.endFromPhone()
-        showSummary = true
-
-        Task {
-            await CaptainSmartNotificationService.shared.handleWorkoutCompleted(
-                summary: WorkoutCoachingSummary(
-                    duration: snapshot.duration,
-                    calories: snapshot.calories,
-                    averageHeartRate: snapshot.avgHeartRate,
-                    distanceMeters: snapshot.distanceMeters,
-                    estimatedSteps: snapshot.estimatedSteps,
-                    workoutType: snapshot.workoutTitle
-                )
-            )
-        }
+        pendingCoachingSummary = WorkoutCoachingSummary(
+            duration: snapshot.duration,
+            calories: snapshot.calories,
+            averageHeartRate: snapshot.avgHeartRate,
+            distanceMeters: snapshot.distanceMeters,
+            estimatedSteps: snapshot.estimatedSteps,
+            workoutType: snapshot.workoutTitle
+        )
     }
 
     private var isCaptainHamoudiCardioWorkout: Bool {
         session.currentWorkout == .cardioWithCaptainHamoudi
+    }
+
+    private var primaryControlIcon: String {
+        switch session.phase {
+        case .running:
+            return "pause.fill"
+        case .paused, .idle:
+            return "play.fill"
+        case .starting, .ending:
+            return "hourglass"
+        }
+    }
+
+    private var primaryControlTitle: String {
+        switch session.phase {
+        case .running:
+            return "Pause Workout"
+        case .paused:
+            return "Resume"
+        case .idle:
+            return "Start Workout"
+        case .starting:
+            return "Connecting..."
+        case .ending:
+            return "Ending..."
+        }
     }
 }
 

@@ -201,4 +201,13 @@ final class LiveMetricsHeader: UIView {
         let ss = s % 60
         time.text = String(format: "%02d:%02d", mm, ss)
     }
+
+    public func setConnectionState(_ state: WorkoutConnectionState) {
+        if state == .disconnected {
+            pace.text = "offline"
+            pace.textColor = .systemRed
+        } else {
+            pace.textColor = .label
+        }
+    }
 }

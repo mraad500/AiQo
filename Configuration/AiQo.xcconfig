@@ -1,0 +1,5 @@
+// Shared build settings for the main AiQo app target.
+// Local secrets live in Configuration/Secrets.xcconfig.
+// The translation endpoint defaults in code, so only the API key is required here.
+
+#include? "Secrets.xcconfig"

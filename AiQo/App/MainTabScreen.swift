@@ -4,6 +4,7 @@ internal import Combine
 
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
+    private let appTint = Color.aiqoAccent
 
     var body: some View {
         Group {
@@ -66,7 +67,7 @@ struct MainTabScreen: View {
                 )
             }
         }
-        .tint(.yellow)
+        .tint(appTint)
     }
 
     private func configureTabBarAppearance() {
@@ -77,7 +78,7 @@ struct MainTabScreen: View {
         appearance.shadowColor = .clear
         appearance.shadowImage = UIImage()
 
-        let selectedColor = UIColor.systemYellow
+        let selectedColor = Colors.accent
         let unselectedColor = UIColor.systemGray
 
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
@@ -100,6 +101,8 @@ struct MainTabScreen: View {
         UITabBar.appearance().barTintColor = .clear
         UITabBar.appearance().backgroundColor = .clear
         UITabBar.appearance().isTranslucent = true
+        UITabBar.appearance().tintColor = selectedColor
+        UITabBar.appearance().unselectedItemTintColor = unselectedColor
     }
 }
 

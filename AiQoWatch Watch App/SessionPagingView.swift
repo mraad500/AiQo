@@ -30,14 +30,14 @@ struct SessionPagingView: View {
             Color.clear.tag(Tab.nowPlaying)
 #endif
         }
-        .navigationTitle(workoutManager.selectedWorkout.map { $0.displayName } ?? "")
+        .navigationTitle(workoutManager.displayWorkoutTitle)
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(selection == .nowPlaying)
-        .onChange(of: workoutManager.running) {
+        .onChange(of: workoutManager.running) { _, _ in
             displayMetricsView()
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: isLuminanceReduced ? .never : .automatic))
-        .onChange(of: isLuminanceReduced) {
+        .onChange(of: isLuminanceReduced) { _, _ in
             displayMetricsView()
         }
     }

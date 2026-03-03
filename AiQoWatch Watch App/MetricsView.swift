@@ -14,12 +14,15 @@ struct MetricsView: View {
     var body: some View {
         TimelineView(MetricsTimelineSchedule(from: workoutManager.builder?.startDate ?? Date())) { context in
             VStack(alignment: .leading) {
-                ElapsedTimeView(elapsedTime: workoutManager.builder?.elapsedTime ?? 0, showSubseconds: context.cadence == .live)
+                ElapsedTimeView(elapsedTime: workoutManager.displayElapsedTime, showSubseconds: context.cadence == .live)
                     .foregroundStyle(.yellow)
                 Text(Measurement(value: workoutManager.activeEnergy, unit: UnitEnergy.kilocalories)
                         .formatted(.measurement(width: .abbreviated, usage: .workout, numberFormatStyle: .number.precision(.fractionLength(0)))))
                 Text(workoutManager.heartRate.formatted(.number.precision(.fractionLength(0))) + " bpm")
                 Text(Measurement(value: workoutManager.distance, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)))
+                Text(workoutManager.connectionState.rawValue)
+                    .font(.caption2)
+                    .foregroundStyle(workoutManager.connectionState == .disconnected ? .red : .secondary)
             }
             .font(.system(.title, design: .rounded).monospacedDigit().lowercaseSmallCaps())
             .frame(maxWidth: .infinity, alignment: .leading)

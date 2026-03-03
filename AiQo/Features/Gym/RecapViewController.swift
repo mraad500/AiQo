@@ -465,21 +465,21 @@ struct WorkoutDetailContent: View {
                     }
                 }
 
-                SectionCard(title: "Session") {
-                    KeyValueRow(title: "Date", value: item.date)
-                    KeyValueRow(title: "Time", value: item.timeRange)
-                    KeyValueRow(title: "Location", value: item.location)
-                    KeyValueRow(title: "Intensity", value: item.intensity)
+                SectionCard(title: L10n.t("recap.section.session")) {
+                    KeyValueRow(title: L10n.t("recap.info.date"), value: item.date)
+                    KeyValueRow(title: L10n.t("recap.info.time"), value: item.timeRange)
+                    KeyValueRow(title: L10n.t("recap.info.location"), value: item.location)
+                    KeyValueRow(title: L10n.t("recap.info.intensity"), value: item.intensity)
                 }
 
-                SectionCard(title: "Tracking") {
-                    KeyValueRow(title: "Device", value: item.device)
-                    KeyValueRow(title: "Source", value: item.source)
-                    KeyValueRow(title: "Workout ID", value: shortId(item.workoutId))
+                SectionCard(title: L10n.t("recap.section.tracking")) {
+                    KeyValueRow(title: L10n.t("recap.info.device"), value: item.device)
+                    KeyValueRow(title: L10n.t("recap.info.source"), value: item.source)
+                    KeyValueRow(title: L10n.t("recap.info.workout_id"), value: shortId(item.workoutId))
                 }
 
                 if !item.notes.isEmpty {
-                    SectionCard(title: "Notes") {
+                    SectionCard(title: L10n.t("recap.section.notes")) {
                         Text(item.notes)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
@@ -538,12 +538,11 @@ struct WorkoutDetailContent: View {
 
     private var kpiRow: some View {
         HStack(spacing: 10) {
-            SummaryPill(title: "Duration", value: item.duration, icon: "timer", accent: item.tint)
-            SummaryPill(title: "Calories", value: item.calories, icon: "flame.fill", accent: Color(red: 1.00, green: 0.65, blue: 0.20))
+            SummaryPill(title: L10n.t("recap.metric.duration"), value: item.duration, icon: "timer", accent: item.tint)
+            SummaryPill(title: L10n.t("recap.metric.calories"), value: item.calories, icon: "flame.fill", accent: Color(red: 1.00, green: 0.65, blue: 0.20))
 
-            // إذا ما تريدها، شيلها
             if let dist = item.metrics.first(where: { $0.title == L10n.t("gym.metric.distance") })?.value, dist != "--" {
-                SummaryPill(title: "Distance", value: dist, icon: "figure.walk", accent: Color(red: 0.25, green: 0.85, blue: 0.70))
+                SummaryPill(title: L10n.t("recap.metric.distance"), value: dist, icon: "figure.walk", accent: Color(red: 0.25, green: 0.85, blue: 0.70))
             }
         }
     }

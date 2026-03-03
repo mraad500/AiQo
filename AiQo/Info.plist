@@ -29,6 +29,10 @@
 	</dict>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
+	<key>COACH_BRAIN_LLM_API_KEY</key>
+	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
+	<key>COACH_BRAIN_LLM_API_URL</key>
+	<string>$(COACH_BRAIN_LLM_API_URL)</string>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
 	<key>CFBundleIconFile</key>

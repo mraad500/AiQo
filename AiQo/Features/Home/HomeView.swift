@@ -30,21 +30,21 @@ struct HomeView: View {
     // MARK: - Body
     
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
             // Background
             Color(.systemBackground)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // Header
                 headerView
-                
+
                 VStack(spacing: 6) {
                     dailyAuraSection
 
                     // Metrics Grid
                     metricsGrid
-                    
+
                     // Kitchen Section
                     kitchenSection
                 }
@@ -56,8 +56,6 @@ struct HomeView: View {
 
                 Spacer(minLength: 0)
             }
-
-            vibeQuickAccessButton
         }
         .task {
             await viewModel.onAppear()
@@ -126,18 +124,19 @@ struct HomeView: View {
     
     private var headerView: some View {
         HStack {
-            Text(NSLocalizedString("screen.home.title", comment: "Home header title"))
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-            
+            VibeDashboardTriggerButton {
+                showVibeSheet = true
+            }
+
             Spacer()
-            
+
             FloatingProfileButton {
                 isProfileSheetPresented = true
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, -10)
-        .frame(height: 60)
+        .padding(.top, 4)
+        .frame(height: 68)
     }
     
     // MARK: - Metrics Grid
@@ -202,18 +201,6 @@ struct HomeView: View {
         .frame(height: 112)
     }
 
-    private var vibeQuickAccessButton: some View {
-        HStack {
-            Spacer()
-
-            VibeDashboardTriggerButton {
-                showVibeSheet = true
-            }
-        }
-        .padding(.top, 78)
-        .padding(.trailing, 24)
-    }
-    
     // MARK: - Destination Views
     
     @ViewBuilder

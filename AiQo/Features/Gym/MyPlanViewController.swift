@@ -35,22 +35,46 @@ struct TemplateExerciseItem: Identifiable {
 // MARK: - My Plan View
 struct MyPlanView: View {
     @State private var stats: [StatItem] = [
-        StatItem(icon: "figure.walk", title: L10n.t("metric.steps.title"), value: "8,234 / 10,000"),
-        StatItem(icon: "flame.fill", title: L10n.t("metric.calories.title"), value: "420 / 600 kcal"),
-        StatItem(icon: "drop.fill", title: L10n.t("metric.water.title"), value: "6 / 8 glasses"),
+        StatItem(
+            icon: "figure.walk",
+            title: L10n.t("metric.steps.title"),
+            value: String.localizedStringWithFormat(
+                NSLocalizedString("plan.sample.stats.steps", comment: ""),
+                L10n.num(8_234),
+                L10n.num(10_000)
+            )
+        ),
+        StatItem(
+            icon: "flame.fill",
+            title: L10n.t("metric.calories.title"),
+            value: String.localizedStringWithFormat(
+                NSLocalizedString("plan.sample.stats.calories", comment: ""),
+                L10n.num(420),
+                L10n.num(600)
+            )
+        ),
+        StatItem(
+            icon: "drop.fill",
+            title: L10n.t("metric.water.title"),
+            value: String.localizedStringWithFormat(
+                NSLocalizedString("plan.sample.stats.water", comment: ""),
+                L10n.num(6),
+                L10n.num(8)
+            )
+        ),
         StatItem(icon: "sparkles", title: L10n.t("plan.suggested.title"), value: L10n.t("plan.suggested.value"), isSuggestion: true)
     ]
     
     @State private var todayWorkouts: [WorkoutExerciseItem] = [
-        WorkoutExerciseItem(name: "Push-ups (3 sets)", isCompleted: false),
-        WorkoutExerciseItem(name: "Squats (3 sets)", isCompleted: true),
-        WorkoutExerciseItem(name: "Plank (60 sec)", isCompleted: false)
+        WorkoutExerciseItem(name: L10n.t("plan.sample.workout.pushups"), isCompleted: false),
+        WorkoutExerciseItem(name: L10n.t("plan.sample.workout.squats"), isCompleted: true),
+        WorkoutExerciseItem(name: L10n.t("plan.sample.workout.plank"), isCompleted: false)
     ]
     
     @State private var templates: [TemplateExerciseItem] = [
-        TemplateExerciseItem(name: "Morning Stretch"),
-        TemplateExerciseItem(name: "Full Body Workout"),
-        TemplateExerciseItem(name: "Evening Run")
+        TemplateExerciseItem(name: L10n.t("plan.sample.template.morning_stretch")),
+        TemplateExerciseItem(name: L10n.t("plan.sample.template.full_body")),
+        TemplateExerciseItem(name: L10n.t("plan.sample.template.evening_run"))
     ]
     
     @State private var newExerciseName: String = ""

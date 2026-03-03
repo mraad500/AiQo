@@ -2,52 +2,79 @@ import SwiftUI
 import WatchConnectivity
 
 struct ConnectivityDiagnosticsView: View {
-    
     @ObservedObject var manager = PhoneConnectivityManager.shared
 
     var body: some View {
         List {
-            Section("State") {
-                Text("activationState: \(activationText)")
-                Text("isReachable: \(manager.isReachable.description)")
+            Section("Mirror State") {
+                Text("Connection: \(manager.connectionStateText)")
+                Text("Workout: \(manager.currentWorkoutStateText)")
+                Text("Session ID: \(manager.currentWorkoutId ?? "None")")
+                Text("Mirrored Session: \(manager.hasMirroredSession.description)")
+                Text("Command In Flight: \(manager.isCommandInFlight.description)")
+            }
+
+            Section("Watch Connectivity") {
+                Text("activationState: \(manager.activationStateText)")
+                Text("reachability: \(manager.reachabilityText)")
                 Text("isPaired: \(manager.isPaired.description)")
                 Text("isWatchAppInstalled: \(manager.isWatchAppInstalled.description)")
             }
-            
-            Section("Test") {
+
+            Section("Actions") {
                 Button("Re-Activate Session") {
                     if WCSession.isSupported() {
                         WCSession.default.activate()
                     }
                 }
-                
-                Button("Send Start Command") {
-                    // ✅ التصحيح: نمرر بيانات افتراضية (جري) للتجربة
+
+                Button("Launch Watch Workout") {
                     manager.startWorkoutOnWatch(activityTypeRaw: 37, locationTypeRaw: 2)
                 }
+
+                Button("Request Snapshot") {
+                    manager.requestLatestSnapshot()
+                }
+
+                Button("Pause") {
+                    manager.pauseWorkoutOnWatch()
+                }
+
+                Button("Resume") {
+                    manager.resumeWorkoutOnWatch()
+                }
+
+                Button("End") {
+                    manager.endWorkoutOnWatch()
+                }
             }
-            
-            Section("Last Received") {
+
+            Section("Traffic") {
+                Text("Last Sent: \(manager.lastSent)")
+                    .font(.footnote)
+
                 Text(manager.lastReceived)
                     .font(.footnote)
+
+                Text("Last Ack: \(manager.lastAcknowledgementText)")
+                    .font(.footnote)
             }
-            
+
             Section("Last Error") {
                 Text(manager.lastError)
                     .font(.footnote)
                     .foregroundColor(.red)
             }
+
+            Section("Recent Events") {
+                ForEach(Array(manager.eventLog.enumerated()), id: \.offset) { _, entry in
+                    Text(entry)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
-        .navigationTitle("WC Diagnostics")
-    }
-    
-    private var activationText: String {
-        switch manager.activationState {
-        case .notActivated: return "notActivated"
-        case .inactive: return "inactive"
-        case .activated: return "activated"
-        @unknown default: return "unknown"
-        }
+        .navigationTitle("Workout Diagnostics")
     }
 }
 

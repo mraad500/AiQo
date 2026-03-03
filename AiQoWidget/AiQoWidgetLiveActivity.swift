@@ -13,6 +13,7 @@ struct WorkoutActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var title: String
         var elapsedSeconds: Int
+        var elapsedAnchorDate: Date?
         var heartRate: Int
         var activeCalories: Int
         var distanceMeters: Double
@@ -125,7 +126,7 @@ private struct LiveActivityLockScreenView: View {
                 }
             }
 
-            Text(elapsedString(state.elapsedSeconds))
+            elapsedTimeText(for: state)
                 .font(.system(size: 50, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
@@ -220,7 +221,7 @@ private struct ExpandedTimerModule: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(elapsedString(state.elapsedSeconds))
+            elapsedTimeText(for: state)
                 .font(.title3.weight(.bold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -260,23 +261,16 @@ private struct CompactLeadingModule: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            PulseHeartGlyph(state: state, size: 22)
+        HStack(spacing: 4) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(state.accentTint)
+                .symbolEffect(.pulse.byLayer, isActive: state.phase == .running)
 
-            if !state.activeBuffs.isEmpty {
-                ZStack {
-                    Circle()
-                        .fill(.black.opacity(0.82))
-                    Text("\(state.activeBuffs.count)")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 12, height: 12)
-                .overlay {
-                    Circle().stroke(.white.opacity(0.12), lineWidth: 0.5)
-                }
-                .offset(x: 4, y: -4)
-            }
+            Text(state.compactHeartRateLabel)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.95))
         }
     }
 }
@@ -285,7 +279,7 @@ private struct CompactTrailingModule: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        Text(elapsedString(state.elapsedSeconds))
+        elapsedTimeText(for: state)
             .font(.caption2.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(.white.opacity(0.92))
@@ -520,6 +514,10 @@ private extension WorkoutActivityAttributes.ContentState {
     var keylineTint: Color {
         isZone2Active ? glowTint.opacity(0.92) : .white.opacity(0.70)
     }
+
+    var compactHeartRateLabel: String {
+        heartRate > 0 ? "\(heartRate)" : "--"
+    }
 }
 
 private extension WorkoutActivityAttributes.HeartRateState {
@@ -656,6 +654,15 @@ private func elapsedString(_ seconds: Int) -> String {
     return String(format: "%02d:%02d", minutes, secs)
 }
 
+@ViewBuilder
+private func elapsedTimeText(for state: WorkoutActivityAttributes.ContentState) -> some View {
+    if state.phase == .running, let elapsedAnchorDate = state.elapsedAnchorDate {
+        Text(elapsedAnchorDate, style: .timer)
+    } else {
+        Text(elapsedString(state.elapsedSeconds))
+    }
+}
+
 extension WorkoutActivityAttributes {
     fileprivate static var preview: WorkoutActivityAttributes {
         WorkoutActivityAttributes(workoutID: UUID().uuidString, startedAt: .now)
@@ -667,6 +674,7 @@ extension WorkoutActivityAttributes.ContentState {
         WorkoutActivityAttributes.ContentState(
             title: "Zone 2 Run",
             elapsedSeconds: 1286,
+            elapsedAnchorDate: .now.addingTimeInterval(-1286),
             heartRate: 132,
             activeCalories: 286,
             distanceMeters: 4210,
@@ -683,6 +691,7 @@ extension WorkoutActivityAttributes.ContentState {
         WorkoutActivityAttributes.ContentState(
             title: "Zone 2 Run",
             elapsedSeconds: 1450,
+            elapsedAnchorDate: nil,
             heartRate: 118,
             activeCalories: 304,
             distanceMeters: 4520,

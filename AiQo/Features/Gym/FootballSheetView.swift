@@ -10,23 +10,23 @@ struct FootballSheetView: View {
 
                 if let errorMessage = viewModel.errorMessage, viewModel.matches.isEmpty {
                     MatchBanner(
-                        message: "Could not refresh matches right now. \(errorMessage)",
+                        message: String(format: L10n.t("football.error.refresh"), errorMessage),
                         tint: GymTheme.punchyPink
                     )
                 }
 
                 MatchSection(
-                    title: "Results",
+                    title: L10n.t("football.results"),
                     matches: viewModel.topMatches,
-                    emptyMessage: "No finished or live matches.",
+                    emptyMessage: L10n.t("football.empty.results"),
                     style: .result,
                     showsSkeleton: viewModel.showsSkeleton
                 )
 
                 MatchSection(
-                    title: "Upcoming Matches",
+                    title: L10n.t("football.upcoming"),
                     matches: viewModel.upcomingMatches,
-                    emptyMessage: "No upcoming matches.",
+                    emptyMessage: L10n.t("football.empty.upcoming"),
                     style: .upcoming,
                     showsSkeleton: viewModel.showsSkeleton
                 )
@@ -46,11 +46,11 @@ struct FootballSheetView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Top Matches")
+            Text(verbatim: L10n.t("football.title"))
                 .font(.system(size: 34, weight: .heavy, design: .rounded))
                 .foregroundStyle(.primary)
 
-            Text("Quietly preloaded, ready instantly.")
+            Text(verbatim: L10n.t("football.subtitle"))
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -58,7 +58,7 @@ struct FootballSheetView: View {
 
     private var footballBackground: some View {
         ZStack {
-            Color(.systemBackground)
+            Color.clear
 
             RadialGradient(
                 colors: [
@@ -95,8 +95,8 @@ private struct MatchSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
-                .font(.system(size: title == "Results" ? 18 : 28, weight: .bold, design: .rounded))
-                .foregroundStyle(title == "Results" ? .secondary : .primary)
+                .font(.system(size: style == .result ? 18 : 28, weight: .bold, design: .rounded))
+                .foregroundStyle(style == .result ? .secondary : .primary)
 
             if showsSkeleton {
                 VStack(spacing: 12) {
@@ -150,7 +150,9 @@ private struct ResultMatchCard: View {
                     Spacer()
 
                     MatchStatusPill(
-                        title: match.status.uppercased() == "LIVE" ? "LIVE" : "FT",
+                        title: match.status.uppercased() == "LIVE"
+                            ? L10n.t("football.status.live")
+                            : L10n.t("football.status.ft"),
                         accent: match.status.uppercased() == "LIVE" ? GymTheme.intenseTeal : GymTheme.warmOrange
                     )
                 }
@@ -168,7 +170,7 @@ private struct ResultMatchCard: View {
                             .font(.system(size: 30, weight: .black, design: .rounded))
                             .foregroundStyle(.primary)
 
-                        Text("Final")
+                        Text(verbatim: L10n.t("football.status.final"))
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -200,7 +202,7 @@ private struct UpcomingMatchCard: View {
                     Spacer()
 
                     MatchStatusPill(
-                        title: "Scheduled",
+                        title: L10n.t("football.label.scheduled"),
                         accent: GymTheme.gold
                     )
                 }
@@ -214,7 +216,7 @@ private struct UpcomingMatchCard: View {
                     )
 
                     VStack(spacing: 6) {
-                        Text("VS")
+                        Text(verbatim: L10n.t("football.vs"))
                             .font(.system(size: 22, weight: .black, design: .rounded))
                             .foregroundStyle(.primary)
 
@@ -435,9 +437,9 @@ private func formattedKickoff(_ date: Date) -> String {
     let calendar = Calendar.current
     let prefix: String
     if calendar.isDateInToday(date) {
-        prefix = "Today"
+        prefix = L10n.t("football.date.today")
     } else if calendar.isDateInTomorrow(date) {
-        prefix = "Tomorrow"
+        prefix = L10n.t("football.date.tomorrow")
     } else {
         prefix = date.formatted(.dateTime.weekday(.abbreviated))
     }

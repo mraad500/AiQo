@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import os.log
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -75,17 +76,15 @@ final class CaptainIntelligenceManager {
     private let healthStore: HKHealthStore
     private let calendar: Calendar
     private let session: URLSession
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "CaptainIntelligenceManager"
+    )
     private let stateQueue = DispatchQueue(label: "AiQo.CaptainIntelligenceManager.state")
     private var hasLoggedModelUnavailable = false
     private var lastNetworkFailureLogAt: Date?
 
-    private let captainInstructions = """
-    You are Captain Hamoudi, an Iraqi VIP fitness coach.
-    Speak with a motivational, practical, and slightly youthful tone.
-    Give concise, actionable next steps.
-    Keep advice safe and avoid diagnosis, prescriptions, or claims of medical certainty.
-    Reply in the same language as the user's message when possible.
-    """
+    private let captainInstructions = CaptainPersonaBuilder.buildInstructions()
 
     init(
         healthStore: HKHealthStore = HKHealthStore(),
@@ -160,6 +159,19 @@ final class CaptainIntelligenceManager {
     ) async throws -> String {
         let cleanedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return "" }
+        let detectedLanguage = textContainsArabic(cleanedInput) ? "arabic" : "non_arabic"
+        let routeLabel: String
+        switch forcedRoute {
+        case .automatic:
+            routeLabel = "automatic"
+        case .arabicAPI:
+            routeLabel = "arabic_api"
+        case .onDevice:
+            routeLabel = "on_device"
+        }
+        logger.notice(
+            "input_language_detected value=\(detectedLanguage, privacy: .public) route=\(routeLabel, privacy: .public)"
+        )
 
         switch forcedRoute {
         case .automatic:
@@ -213,13 +225,11 @@ final class CaptainIntelligenceManager {
         let contextualPrompt: String
         do {
             let metrics = try await fetchTodayEssentialMetrics()
-            contextualPrompt = buildContextPrompt(userInput: cleanedInput, metrics: metrics)
+            contextualPrompt = await buildContextPrompt(userInput: cleanedInput, metrics: metrics)
         } catch {
             if shouldContinueWithoutHealthContext(error) {
-                print(
-                    "🤖 [CaptainIntelligenceManager] Health context unavailable (\(error.localizedDescription)). Continuing with AI reply without health snapshot."
-                )
-                contextualPrompt = buildContextPromptWithoutHealthData(userInput: cleanedInput)
+                logger.notice("health_context_unavailable using=minimal")
+                contextualPrompt = await buildContextPromptWithoutHealthData(userInput: cleanedInput)
             } else {
                 printGenerationFailure(error)
                 return localFallbackResponse(for: cleanedInput, error: error)
@@ -280,8 +290,9 @@ final class CaptainIntelligenceManager {
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-            print("🤖 [CaptainIntelligenceManager] Arabic API error body: \(body)")
+            logger.error(
+                "arabic_api_failed category=bad_status code=\(httpResponse.statusCode, privacy: .public)"
+            )
             throw CaptainIntelligenceError.arabicAPIBadResponse(statusCode: httpResponse.statusCode)
         }
 
@@ -335,7 +346,7 @@ final class CaptainIntelligenceManager {
             let decoded = try JSONDecoder().decode(CaptainArabicAPIResponse.self, from: data)
             let trimmed = decoded.reply.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
-                print("🤖 [CaptainIntelligenceManager] Arabic API response missing non-empty 'reply'.")
+                logger.error("arabic_api_failed category=empty_reply")
                 throw CaptainIntelligenceError.arabicAPIEmptyResponse
             }
             return trimmed
@@ -344,8 +355,7 @@ final class CaptainIntelligenceManager {
                 throw captainError
             }
 
-            let body = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-            print("🤖 [CaptainIntelligenceManager] Arabic API invalid JSON body: \(body)")
+            logger.error("arabic_api_failed category=invalid_json")
             throw CaptainIntelligenceError.arabicAPIInvalidResponse
         }
     }
@@ -404,11 +414,14 @@ final class CaptainIntelligenceManager {
     private func buildContextPrompt(
         userInput: String,
         metrics: CaptainDailyHealthMetrics
-    ) -> String {
+    ) async -> String {
         let heartRateText = metrics.averageOrCurrentHeartRateBPM.map { "\($0) bpm" } ?? "Not available"
         let sleepText = String(format: "%.1f", metrics.sleepHours)
+        let runtimeContext = await runtimeContextSummary()
 
         return """
+        \(runtimeContext)
+
         User health snapshot from Apple Health (today, fully local on-device):
         - Step Count: \(metrics.stepCount)
         - Active Energy Burned: \(metrics.activeEnergyKilocalories) kcal
@@ -425,8 +438,12 @@ final class CaptainIntelligenceManager {
         """
     }
 
-    private func buildContextPromptWithoutHealthData(userInput: String) -> String {
-        """
+    private func buildContextPromptWithoutHealthData(userInput: String) async -> String {
+        let runtimeContext = await runtimeContextSummary()
+
+        return """
+        \(runtimeContext)
+
         User health snapshot from Apple Health is currently unavailable for this request.
 
         User asks: "\(userInput)"
@@ -461,10 +478,21 @@ final class CaptainIntelligenceManager {
         return false
     }
 
+    private func runtimeContextSummary() async -> String {
+        let systemContext = await CaptainContextBuilder.shared.buildSystemContext()
+
+        return """
+        AiQo runtime telemetry:
+        - Stage: \(systemContext.stageNumber) (\(systemContext.stageTitle))
+        - Time of day: \(systemContext.timeOfDay)
+        - My Vibe: \(systemContext.vibeTitle)
+        """
+    }
+
     private func printGenerationFailure(_ error: Error) {
         if isNetworkUnavailable(error) {
             guard consumeNetworkFailureLogPermit() else { return }
-            print("🤖 [CaptainIntelligenceManager] Arabic API unreachable. Using fallback reply.")
+            logger.error("generation_failed category=network")
             return
         }
 
@@ -477,13 +505,8 @@ final class CaptainIntelligenceManager {
             }
         }
 
-        print("🤖 [CaptainIntelligenceManager] Response generation failed: \(error.localizedDescription)")
-
-        var currentUnderlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error
-        while let nestedError = currentUnderlying {
-            print("🤖 [CaptainIntelligenceManager] Underlying error: \(nestedError.localizedDescription)")
-            currentUnderlying = (nestedError as NSError).userInfo[NSUnderlyingErrorKey] as? Error
-        }
+        let category = self.generationErrorCategory(error)
+        logger.error("generation_failed category=\(category, privacy: .public)")
     }
 
     private func consumeNetworkFailureLogPermit() -> Bool {
@@ -504,16 +527,16 @@ final class CaptainIntelligenceManager {
             switch captainError {
             case .healthAuthorizationDenied:
                 return prefersArabic
-                    ? "فعّل صلاحية Health حتى أبني خطة أدق. هسه ابدأ 10 دقايق مشي سريع واشرب مي."
-                    : "Enable Health permission so I can build a more accurate plan. For now, do a 10-minute brisk walk and hydrate."
+                    ? CaptainFallbackPolicy.arabicOnDeviceFallback(for: userInput, translatedFallback: nil)
+                    : CaptainFallbackPolicy.englishOnDeviceFallback(for: userInput)
             case .unsupportedDeviceLanguage:
                 return prefersArabic
-                    ? "لغة الجهاز الحالية غير مدعومة لـ Apple Intelligence حالياً. جرّب لغة مدعومة أو اكتب بالعربي/الإنجليزي."
-                    : "Your current device language is not supported by Apple Intelligence yet. Try a supported language or write in Arabic/English."
-            case .onDeviceModelUnavailable, .foundationModelsUnavailable:
+                    ? CaptainFallbackPolicy.arabicOnDeviceFallback(for: userInput, translatedFallback: nil)
+                    : CaptainFallbackPolicy.englishOnDeviceFallback(for: userInput)
+            case .onDeviceModelUnavailable, .foundationModelsUnavailable, .emptyModelResponse:
                 return prefersArabic
-                    ? "Apple Intelligence غير متاح حالياً على هذا الجهاز. خلّينا نبدأ بخطة بسيطة: 12 دقيقة مشي + 2 دقيقة تنفّس."
-                    : "Apple Intelligence is currently unavailable on this device. Start with a simple plan: 12-minute walk + 2 minutes breathing."
+                    ? CaptainFallbackPolicy.arabicOnDeviceFallback(for: userInput, translatedFallback: nil)
+                    : CaptainFallbackPolicy.englishOnDeviceFallback(for: userInput)
             case .arabicAPIConfigurationMissing:
                 return prefersArabic
                     ? "ضبط Captain API للعربي مو كامل. على المحاكي استخدم localhost، وعلى الجهاز الحقيقي حدد CAPTAIN_ARABIC_API_URL بعنوان Mac."
@@ -544,14 +567,19 @@ final class CaptainIntelligenceManager {
         }
 
         return prefersArabic
-            ? "صار خلل محلي بسيط. هسه سوّي 3 جولات: 20 سكوات + 10 ضغط + 40 ثانية بلانك."
-            : "A local error happened. Do 3 rounds: 20 squats + 10 push-ups + 40-second plank."
+            ? CaptainFallbackPolicy.arabicOnDeviceFallback(for: userInput, translatedFallback: nil)
+            : CaptainFallbackPolicy.englishOnDeviceFallback(for: userInput)
     }
 
     private func textContainsArabic(_ text: String) -> Bool {
         text.unicodeScalars.contains { scalar in
             switch scalar.value {
-            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+            case 0x0600...0x06FF,
+                 0x0750...0x077F,
+                 0x0870...0x089F,
+                 0x08A0...0x08FF,
+                 0xFB50...0xFDFF,
+                 0xFE70...0xFEFF:
                 return true
             default:
                 return false
@@ -565,8 +593,8 @@ final class CaptainIntelligenceManager {
             let model = SystemLanguageModel.default
             if model.availability != .available {
                 if consumeModelUnavailableLogPermit() {
-                    print(
-                        "🤖 [CaptainIntelligenceManager] Model availability: \(String(describing: model.availability)); locale: \(Locale.current.identifier)"
+                    logger.error(
+                        "on_device_model_unavailable availability=\(String(describing: model.availability), privacy: .public) locale=\(Locale.current.identifier, privacy: .public)"
                     )
                 }
                 return .onDeviceModelUnavailable
@@ -592,22 +620,70 @@ final class CaptainIntelligenceManager {
 
     // MARK: - On-Device AI
 
-    private func generateOnDeviceReply(prompt: String) async throws -> String {
+    func generateOnDeviceReply(prompt: String, instructions: String) async throws -> String {
 #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             try validateOnDeviceModelAvailability()
+            logger.notice("on_device_model_started")
 
-            let session = LanguageModelSession(instructions: captainInstructions)
+            let session = LanguageModelSession(instructions: instructions)
             let response = try await session.respond(to: prompt)
             let finalText = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
 
             guard !finalText.isEmpty else {
                 throw CaptainIntelligenceError.emptyModelResponse
             }
+            logger.notice("on_device_model_succeeded")
             return finalText
         }
 #endif
         throw CaptainIntelligenceError.foundationModelsUnavailable
+    }
+
+    private func generateOnDeviceReply(prompt: String) async throws -> String {
+        try await generateOnDeviceReply(
+            prompt: prompt,
+            instructions: captainInstructions
+        )
+    }
+
+    private func generationErrorCategory(_ error: Error) -> String {
+        if let captainError = error as? CaptainIntelligenceError {
+            switch captainError {
+            case .healthKitUnavailable:
+                return "healthkit_unavailable"
+            case .healthAuthorizationDenied:
+                return "health_permission_denied"
+            case .missingHealthType:
+                return "missing_health_type"
+            case .foundationModelsUnavailable:
+                return "foundation_models_unavailable"
+            case .onDeviceModelUnavailable:
+                return "model_unavailable"
+            case .unsupportedDeviceLanguage:
+                return "unsupported_language"
+            case .emptyModelResponse:
+                return "empty_model_response"
+            case .arabicAPIConfigurationMissing:
+                return "arabic_api_configuration_missing"
+            case .arabicAPIBadResponse:
+                return "arabic_api_bad_status"
+            case .arabicAPIInvalidResponse:
+                return "arabic_api_invalid_response"
+            case .arabicAPILocalNetworkDenied:
+                return "arabic_api_local_network_denied"
+            case .arabicAPINetworkUnavailable:
+                return "arabic_api_network_unavailable"
+            case .arabicAPIEmptyResponse:
+                return "arabic_api_empty_response"
+            }
+        }
+
+        if error is URLError {
+            return "network"
+        }
+
+        return "other"
     }
 
 #if canImport(FoundationModels)

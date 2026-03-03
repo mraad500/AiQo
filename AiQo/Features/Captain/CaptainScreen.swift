@@ -455,7 +455,10 @@ final class CaptainViewModel: ObservableObject {
                 case .arabic:
                     return await brainMiddleware.processArabicMessage(text)
                 case .english:
-                    return try await intelligenceManager.generateCaptainResponse(for: text)
+                    return try await intelligenceManager.generateCaptainResponse(
+                        for: text,
+                        forcedRoute: .onDevice
+                    )
                 }
             }
 
@@ -513,7 +516,12 @@ final class CaptainViewModel: ObservableObject {
     private func detectReplyLanguage(from text: String) -> ReplyLanguage {
         let hasArabic = text.unicodeScalars.contains { scalar in
             switch scalar.value {
-            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+            case 0x0600...0x06FF,
+                 0x0750...0x077F,
+                 0x0870...0x089F,
+                 0x08A0...0x08FF,
+                 0xFB50...0xFDFF,
+                 0xFE70...0xFEFF:
                 return true
             default:
                 return false
@@ -525,7 +533,12 @@ final class CaptainViewModel: ObservableObject {
     private func response(_ text: String, matches language: ReplyLanguage) -> Bool {
         let hasArabic = text.unicodeScalars.contains { scalar in
             switch scalar.value {
-            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+            case 0x0600...0x06FF,
+                 0x0750...0x077F,
+                 0x0870...0x089F,
+                 0x08A0...0x08FF,
+                 0xFB50...0xFDFF,
+                 0xFE70...0xFEFF:
                 return true
             default:
                 return false
@@ -731,7 +744,7 @@ struct ChatContainerView: View {
                         if isTyping {
                             HStack {
                                 if coachState != .idle {
-                                    BreathingRingIndicatorView(
+                                    ModernCognitiveIndicatorView(
                                         state: coachState
                                     )
                                 } else {
