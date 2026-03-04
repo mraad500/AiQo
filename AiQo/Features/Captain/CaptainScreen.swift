@@ -71,21 +71,21 @@ enum CaptainTone: String, Codable, CaseIterable {
 
 enum CoachCognitiveState: Equatable {
     case idle
-    case readingEnergy
-    case analyzingBiometrics
-    case translatingThoughts
+    case readingMessage
+    case thinkingOnDevice
+    case shapingReply
     case typing
 
     var statusText: String? {
         switch self {
         case .idle:
             return nil
-        case .readingEnergy:
-            return "الكابتن يقرأ طاقتك"
-        case .analyzingBiometrics:
-            return "الكابتن يحلل المؤشرات الحيوية"
-        case .translatingThoughts:
-            return "الكابتن يرتب أفكاره ويترجمها"
+        case .readingMessage:
+            return "الكابتن يقرأ رسالتك"
+        case .thinkingOnDevice:
+            return "الكابتن يشغّل Apple Intelligence"
+        case .shapingReply:
+            return "الكابتن يرتب الرد باللهجة العراقية"
         case .typing:
             return "الكابتن يكتب الرد"
         }
@@ -95,12 +95,12 @@ enum CoachCognitiveState: Equatable {
         switch self {
         case .idle:
             return "Captain ready"
-        case .readingEnergy:
-            return "يفهم نبرة الرسالة والطاقة"
-        case .analyzingBiometrics:
-            return "يراجع النوم، الحركة، والنبض"
-        case .translatingThoughts:
-            return "يحافظ على وعي واحد ويرتب الرد"
+        case .readingMessage:
+            return "يلتقط طلبك مباشرة من غير ترجمة"
+        case .thinkingOnDevice:
+            return "المعالجة تصير محلياً على الجهاز"
+        case .shapingReply:
+            return "يصوغ جواب قصير وعملي بصوت حمّودي"
         case .typing:
             return "يصوغ الرد النهائي بصوت حمّودي"
         }
@@ -110,11 +110,11 @@ enum CoachCognitiveState: Equatable {
         switch self {
         case .idle:
             return "sparkles"
-        case .readingEnergy:
+        case .readingMessage:
             return "eye.fill"
-        case .analyzingBiometrics:
-            return "waveform.path.ecg"
-        case .translatingThoughts:
+        case .thinkingOnDevice:
+            return "cpu.fill"
+        case .shapingReply:
             return "character.bubble.fill"
         case .typing:
             return "ellipsis.bubble.fill"
@@ -125,11 +125,11 @@ enum CoachCognitiveState: Equatable {
         switch self {
         case .idle:
             return [Color.white.opacity(0.18), Color.white.opacity(0.08)]
-        case .readingEnergy:
+        case .readingMessage:
             return [Color(red: 0.68, green: 0.91, blue: 0.84), Color(red: 0.43, green: 0.80, blue: 0.72)]
-        case .analyzingBiometrics:
-            return [Color(red: 1.00, green: 0.82, blue: 0.42), Color(red: 0.97, green: 0.62, blue: 0.35)]
-        case .translatingThoughts:
+        case .thinkingOnDevice:
+            return [Color(red: 0.77, green: 0.86, blue: 1.00), Color(red: 0.53, green: 0.70, blue: 0.98)]
+        case .shapingReply:
             return [Color(red: 0.72, green: 0.67, blue: 0.98), Color(red: 0.53, green: 0.59, blue: 0.97)]
         case .typing:
             return [Color(red: 0.88, green: 0.77, blue: 0.53), Color(red: 0.95, green: 0.89, blue: 0.73)]
@@ -140,11 +140,11 @@ enum CoachCognitiveState: Equatable {
         switch self {
         case .idle:
             return 1
-        case .readingEnergy:
+        case .readingMessage:
             return 1.24
-        case .analyzingBiometrics:
-            return 1.38
-        case .translatingThoughts:
+        case .thinkingOnDevice:
+            return 1.34
+        case .shapingReply:
             return 1.5
         case .typing:
             return 1.18
@@ -155,11 +155,11 @@ enum CoachCognitiveState: Equatable {
         switch self {
         case .idle:
             return 1
-        case .readingEnergy:
+        case .readingMessage:
             return 5.4
-        case .analyzingBiometrics:
-            return 4.2
-        case .translatingThoughts:
+        case .thinkingOnDevice:
+            return 3.9
+        case .shapingReply:
             return 3.4
         case .typing:
             return 2.6
@@ -176,6 +176,14 @@ struct CaptainTheme {
     var card: Color { Color(UIColor.secondarySystemBackground) }
     var text: Color { Color.primary }
     var subtext: Color { Color(UIColor.secondaryLabel) }
+    var captainText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
+    }
+    var userText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.74) : Color.black.opacity(0.72)
+    }
+    var chatBubbleText: Color { Color.black.opacity(colorScheme == .dark ? 0.82 : 0.86) }
+    var spatialMint: Color { Color.mint.opacity(colorScheme == .dark ? 0.92 : 0.72) }
 
     var border: Color {
         colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
@@ -188,13 +196,17 @@ struct CaptainTheme {
     var accent: Color { Color(hex: "FFD700") }
 
     var captainBubble: Color {
-        let base = Color(hex: "F4CD8F")
-        return colorScheme == .dark ? base.opacity(0.85) : base.opacity(0.95)
+        Color(
+            uiColor: UIColor(named: "ChatAssistantBubble")
+                ?? UIColor(red: 0.95, green: 0.90, blue: 0.80, alpha: 1)
+        )
     }
 
     var userBubble: Color {
-        let base = Color(hex: "A8E6CF")
-        return colorScheme == .dark ? base.opacity(0.75) : base.opacity(0.95)
+        Color(
+            uiColor: UIColor(named: "ChatUserBubble")
+                ?? UIColor(red: 0.75, green: 0.91, blue: 0.84, alpha: 1)
+        )
     }
 
     var inputBackground: Color { card }
@@ -306,9 +318,8 @@ final class CaptainViewModel: ObservableObject {
     @Published var feedbackTrigger: Int = 0
 
     private let userDefaults = UserDefaults.standard
-    private let intelligenceManager = CaptainIntelligenceManager.shared
-    private let brainMiddleware: CoachBrainMiddleware
-    private let minimumCognitiveDelay: TimeInterval = 5.6
+    private let chatEngine = CaptainOnDeviceChatEngine()
+    private let minimumLoadingStateDuration: TimeInterval = 0.8
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -319,13 +330,7 @@ final class CaptainViewModel: ObservableObject {
         static let tone = "captain_tone"
     }
 
-    private enum ReplyLanguage {
-        case arabic
-        case english
-    }
-
-    init(brainMiddleware: CoachBrainMiddleware? = nil) {
-        self.brainMiddleware = brainMiddleware ?? CoachBrainMiddleware()
+    init() {
         loadCustomization()
         addWelcomeMessage()
     }
@@ -413,6 +418,7 @@ final class CaptainViewModel: ObservableObject {
 
         isSending = true
         isTyping = true
+        coachState = .readingMessage
 
         Task { await processMessage(text) }
     }
@@ -448,41 +454,25 @@ final class CaptainViewModel: ObservableObject {
 
     private func processMessage(_ text: String) async {
         do {
-            let preferredLanguage = detectReplyLanguage(from: text)
             let startedAt = Date()
-            let replyTask = Task<String, Error> { [brainMiddleware, intelligenceManager] in
-                switch preferredLanguage {
-                case .arabic:
-                    return await brainMiddleware.processArabicMessage(text)
-                case .english:
-                    return try await intelligenceManager.generateCaptainResponse(
-                        for: text,
-                        forcedRoute: .onDevice
-                    )
-                }
+            let replyTask = Task<String, Error> { [chatEngine] in
+                try await chatEngine.respond(to: text)
             }
 
             await runCognitiveTimeline()
             let reply = try await replyTask.value
 
             let elapsed = Date().timeIntervalSince(startedAt)
-            if elapsed < minimumCognitiveDelay {
-                let remaining = minimumCognitiveDelay - elapsed
+            if elapsed < minimumLoadingStateDuration {
+                let remaining = minimumLoadingStateDuration - elapsed
                 try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
 
-            await transitionCoachState(to: .typing, hold: 0.35)
+            await transitionCoachState(to: .typing, hold: 0.18)
 
             isTyping = false
             let normalized = normalizeReplyForDisplay(reply)
-            let finalReply = enforceReplyLanguageIfNeeded(
-                reply: normalized,
-                preferredLanguage: preferredLanguage
-            )
-            let displayReply = prependUserNameIfNeeded(
-                to: finalReply,
-                preferredLanguage: preferredLanguage
-            )
+            let displayReply = prependUserNameIfNeeded(to: normalized)
             await addAnimatedMessage(displayReply)
             coachState = .idle
             isSending = false
@@ -493,15 +483,15 @@ final class CaptainViewModel: ObservableObject {
         } catch {
             coachState = .idle
             isTyping = false
-            await addAnimatedMessage("صار خلل محلي بسيط. خلينا نعيد المحاولة بعد ثواني.")
+            await addAnimatedMessage(prependUserNameIfNeeded(to: fallbackMessage(for: error)))
             isSending = false
         }
     }
 
     private func runCognitiveTimeline() async {
-        await transitionCoachState(to: .readingEnergy, hold: 1.15)
-        await transitionCoachState(to: .analyzingBiometrics, hold: 1.45)
-        await transitionCoachState(to: .translatingThoughts, hold: 1.25)
+        await transitionCoachState(to: .readingMessage, hold: 0.18)
+        await transitionCoachState(to: .thinkingOnDevice, hold: 0.24)
+        await transitionCoachState(to: .shapingReply, hold: 0.22)
         coachState = .typing
     }
 
@@ -510,46 +500,6 @@ final class CaptainViewModel: ObservableObject {
         let nanoseconds = UInt64(max(0, hold) * 1_000_000_000)
         if nanoseconds > 0 {
             try? await Task.sleep(nanoseconds: nanoseconds)
-        }
-    }
-
-    private func detectReplyLanguage(from text: String) -> ReplyLanguage {
-        let hasArabic = text.unicodeScalars.contains { scalar in
-            switch scalar.value {
-            case 0x0600...0x06FF,
-                 0x0750...0x077F,
-                 0x0870...0x089F,
-                 0x08A0...0x08FF,
-                 0xFB50...0xFDFF,
-                 0xFE70...0xFEFF:
-                return true
-            default:
-                return false
-            }
-        }
-        return hasArabic ? .arabic : .english
-    }
-
-    private func response(_ text: String, matches language: ReplyLanguage) -> Bool {
-        let hasArabic = text.unicodeScalars.contains { scalar in
-            switch scalar.value {
-            case 0x0600...0x06FF,
-                 0x0750...0x077F,
-                 0x0870...0x089F,
-                 0x08A0...0x08FF,
-                 0xFB50...0xFDFF,
-                 0xFE70...0xFEFF:
-                return true
-            default:
-                return false
-            }
-        }
-
-        switch language {
-        case .arabic:
-            return hasArabic
-        case .english:
-            return !hasArabic
         }
     }
 
@@ -564,31 +514,26 @@ final class CaptainViewModel: ObservableObject {
         return normalized
     }
 
-    private func enforceReplyLanguageIfNeeded(
-        reply: String,
-        preferredLanguage: ReplyLanguage
-    ) -> String {
-        guard !response(reply, matches: preferredLanguage) else {
-            return reply
-        }
-
-        switch preferredLanguage {
-        case .arabic:
-            return "حبيبي، فهمت عليك. هسه أجاوبك بالعربي. شنو أول خطوة تريد نبدأ بيها اليوم؟"
-        case .english:
-            return "Got it. I will reply in English. What is the first step you want to start with today?"
-        }
-    }
-
-    private func prependUserNameIfNeeded(
-        to reply: String,
-        preferredLanguage: ReplyLanguage
-    ) -> String {
-        guard preferredLanguage == .arabic else { return reply }
+    private func prependUserNameIfNeeded(to reply: String) -> String {
         guard let userName = captainReplyUserName() else { return reply }
         guard containsArabicCharacters(in: userName) else { return reply }
         guard !hasUserNamePrefix(reply, userName: userName) else { return reply }
         return "\(userName)، \(reply)"
+    }
+
+    private func fallbackMessage(for error: Error) -> String {
+        if let chatError = error as? CaptainOnDeviceChatError {
+            switch chatError {
+            case .modelUnavailable, .foundationModelsUnavailable:
+                return "يا بطل، Apple Intelligence مو متاح هسه على هذا الجهاز. جرّب بعد شوي."
+            case .unsupportedLanguageOrLocale:
+                return "يا بطل، لغة الجهاز أو المنطقة الحالية مو مدعومة هسه. غيّرها ورجعلي."
+            case .emptyResponse:
+                return "يا بطل، الرد طلع فارغ. عيد رسالتك وأنا أجاوبك مباشرة."
+            }
+        }
+
+        return "يا بطل، صار خلل بسيط محلياً. لا تشيل هم، جرّب بعد شوي."
     }
 
     private func captainReplyUserName() -> String? {
@@ -668,15 +613,62 @@ struct CaptainBackgroundView: View {
         ZStack {
             theme.background.ignoresSafeArea()
 
+            if #available(iOS 18.0, *) {
+                MeshGradient(
+                    width: 3,
+                    height: 3,
+                    points: [
+                        SIMD2<Float>(0.0, 0.0),
+                        SIMD2<Float>(0.5, 0.08),
+                        SIMD2<Float>(1.0, 0.0),
+                        SIMD2<Float>(0.04, 0.58),
+                        SIMD2<Float>(0.5, 0.52),
+                        SIMD2<Float>(0.96, 0.48),
+                        SIMD2<Float>(0.0, 1.0),
+                        SIMD2<Float>(0.5, 0.94),
+                        SIMD2<Float>(1.0, 1.0)
+                    ],
+                    colors: [
+                        Color(hex: "F7FFF9").opacity(colorScheme == .dark ? 0.04 : 0.46),
+                        Color(hex: "B7FFE5").opacity(colorScheme == .dark ? 0.10 : 0.34),
+                        Color(hex: "F8F4E8").opacity(colorScheme == .dark ? 0.04 : 0.28),
+                        Color(hex: "D6FFF1").opacity(colorScheme == .dark ? 0.06 : 0.22),
+                        Color.clear,
+                        Color(hex: "DCF7FF").opacity(colorScheme == .dark ? 0.08 : 0.22),
+                        Color(hex: "F8FFF4").opacity(colorScheme == .dark ? 0.05 : 0.22),
+                        Color(hex: "CFFBEA").opacity(colorScheme == .dark ? 0.05 : 0.18),
+                        Color(hex: "FFF8EE").opacity(colorScheme == .dark ? 0.05 : 0.22)
+                    ]
+                )
+                .blur(radius: 80)
+                .opacity(colorScheme == .dark ? 0.85 : 1)
+                .ignoresSafeArea()
+            }
+
             LinearGradient(
                 colors: [
-                    Color(hex: "A8E6CF").opacity(colorScheme == .dark ? 0.10 : 0.08),
-                    Color.clear
+                    Color.white.opacity(colorScheme == .dark ? 0.04 : 0.38),
+                    Color.clear,
+                    Color.black.opacity(colorScheme == .dark ? 0.16 : 0.03)
                 ],
                 startPoint: .top,
-                endPoint: UnitPoint(x: 0.5, y: 0.3)
+                endPoint: .bottom
             )
             .ignoresSafeArea()
+
+            Circle()
+                .fill(theme.spatialMint.opacity(colorScheme == .dark ? 0.12 : 0.18))
+                .frame(width: 320, height: 320)
+                .blur(radius: 80)
+                .offset(x: -110, y: -240)
+                .blendMode(.screen)
+
+            Ellipse()
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.03 : 0.18))
+                .frame(width: 360, height: 220)
+                .blur(radius: 90)
+                .offset(x: 120, y: 120)
+                .blendMode(.screen)
         }
     }
 }
@@ -691,32 +683,37 @@ struct CaptainHeaderView: View {
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
 
     var body: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center, spacing: 18) {
             Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundColor(theme.text)
+                .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
 
             Spacer()
 
-            VStack(spacing: 12) {
-                FloatingProfileButton(size: 48) { onProfileTap() }
-
-                Button(action: onCustomizeTap) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(theme.text)
-                        .frame(width: 38, height: 38)
-                        .background(
-                            Circle()
-                                .fill(theme.card)
-                                .shadow(color: theme.shadow, radius: 10, x: 0, y: 6)
-                        )
-                        .overlay(Circle().stroke(theme.border, lineWidth: 0.8))
-                }
+            HStack(spacing: 10) {
+                compactHeaderButton(symbol: "person.crop.circle.fill", action: onProfileTap)
+                compactHeaderButton(symbol: "slider.horizontal.3", action: onCustomizeTap)
             }
         }
         .padding(.horizontal, 24)
         .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func compactHeaderButton(symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(theme.text.opacity(0.92))
+                .frame(width: 42, height: 42)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.10 : 0.34), lineWidth: 0.8)
+                )
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.22 : 0.10), radius: 18, x: 0, y: 10)
+        }
     }
 }
 
@@ -727,118 +724,138 @@ struct ChatContainerView: View {
     var isTyping: Bool = false
     var coachState: CoachCognitiveState = .idle
     var scrollEnabled: Bool = false
-
-    @Environment(\.colorScheme) private var colorScheme
-    private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
+    private let thinkingIndicatorID = "captain-thinking-indicator"
 
     var body: some View {
-        GeometryReader { geo in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(messages) { message in
-                            MessageBubble(message: message, containerWidth: geo.size.width)
-                                .id(message.id)
-                        }
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 10) {
+                    ForEach(messages) { message in
+                        ChatBubbleView(
+                            text: message.content,
+                            isUser: message.isUser
+                        )
+                        .id(message.id)
+                    }
 
-                        if isTyping {
-                            HStack {
-                                if coachState != .idle {
-                                    ModernCognitiveIndicatorView(
-                                        state: coachState
-                                    )
-                                } else {
-                                    TypingIndicatorView()
-                                }
-                                Spacer()
-                            }
-                            .padding(.horizontal, 6)
+                    if isTyping {
+                        HStack {
+                            TypingIndicatorView(state: coachState)
+                            Spacer()
                         }
-                    }
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-                }
-                .scrollDisabled(!scrollEnabled)
-                .onChange(of: messages.count) {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        if let last = messages.last {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
+                        .id(thinkingIndicatorID)
+                        .padding(.top, 6)
                     }
                 }
-                .onChange(of: messages.last?.content) {
-                    withAnimation(.easeOut(duration: 0.1)) {
-                        if let last = messages.last {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
-                    }
-                }
+                .padding(.top, 24)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 20)
+            }
+            .scrollDisabled(!scrollEnabled)
+            .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                scrollToBottom(using: proxy, animated: false)
+            }
+            .onChange(of: messages.count) {
+                scrollToBottom(using: proxy)
+            }
+            .onChange(of: messages.last?.content) {
+                scrollToBottom(using: proxy)
+            }
+            .onChange(of: isTyping) {
+                scrollToBottom(using: proxy)
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(theme.card)
-                .shadow(color: theme.shadow, radius: 14, x: 0, y: 8)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(theme.border, lineWidth: 0.8)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+    }
+
+    private func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
+        let targetID: AnyHashable? = isTyping ? AnyHashable(thinkingIndicatorID) : messages.last.map { AnyHashable($0.id) }
+        guard let targetID else { return }
+
+        guard animated else {
+            proxy.scrollTo(targetID, anchor: .bottom)
+            return
+        }
+
+        if #available(iOS 17.0, *) {
+            withAnimation(.smooth(duration: 0.24)) {
+                proxy.scrollTo(targetID, anchor: .bottom)
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.24)) {
+                proxy.scrollTo(targetID, anchor: .bottom)
+            }
+        }
     }
 }
 
-// MARK: - Message Bubble
+// MARK: - Chat Bubble
 
-struct MessageBubble: View {
-    let message: ChatMessage
-    let containerWidth: CGFloat
+struct ChatBubbleView: View {
+    let text: String
+    let isUser: Bool
 
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
-
-    @State private var appeared = false
+    private let maxBubbleWidth = UIScreen.main.bounds.width * 0.78
+    private var canSpeakReply: Bool {
+        !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         HStack {
-            if message.isUser { Spacer(minLength: 44) }
+            if isUser { Spacer(minLength: 52) }
 
-            Text(message.content)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(theme.text)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .frame(
-                    maxWidth: containerWidth * 0.74,
-                    alignment: message.isUser ? .trailing : .leading
-                )
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(message.isUser ? theme.userBubble : theme.captainBubble)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(theme.border.opacity(0.9), lineWidth: 0.7)
-                )
-                .padding(message.isUser ? .leading : .trailing, 8)
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 10) {
+                Text(text)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.chatBubbleText)
+                    .lineSpacing(3)
+                    .multilineTextAlignment(isUser ? .trailing : .leading)
 
-            if !message.isUser { Spacer(minLength: 44) }
-        }
-        .padding(.horizontal, 6)
-        .scaleEffect(appeared ? 1 : 0.92)
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                appeared = true
+                if canSpeakReply {
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        Button {
+                            Task {
+                                await CaptainVoiceService.shared.speak(text: text)
+                            }
+                        } label: {
+                            Image(systemName: "speaker.wave.2")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .padding(7)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
+            .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .trailing : .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isUser ? theme.userBubble : theme.captainBubble)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(isUser ? "User message" : "Captain message")
+            .accessibilityValue(text)
+
+            if !isUser { Spacer(minLength: 52) }
         }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
     }
 }
 
 // MARK: - Typing Indicator
 
 struct TypingIndicatorView: View {
+    let state: CoachCognitiveState
+
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
 
@@ -846,27 +863,36 @@ struct TypingIndicatorView: View {
     private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .fill(theme.subtext.opacity(0.7))
-                    .frame(width: 8, height: 8)
-                    .scaleEffect(phase == index ? 1.25 : 0.85)
-                    .animation(.easeInOut(duration: 0.25), value: phase)
+        HStack(spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .fill(theme.spatialMint.opacity(phase == index ? 0.98 : 0.30))
+                        .frame(width: 5, height: 5)
+                        .scaleEffect(phase == index ? 1.22 : 0.82)
+                        .blur(radius: phase == index ? 0.2 : 0)
+                        .blendMode(.screen)
+                        .animation(.easeInOut(duration: 0.24), value: phase)
+                }
             }
+
+            Text(thinkingLabel)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(theme.subtext.opacity(0.80))
+                .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 4)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(theme.captainBubble)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(theme.border.opacity(0.9), lineWidth: 0.7)
-        )
+        .padding(.leading, 4)
         .onReceive(timer) { _ in
             phase = (phase + 1) % 3
+        }
+    }
+
+    private var thinkingLabel: String {
+        switch state {
+        case .readingMessage:
+            return "الكابتن يقرا..."
+        default:
+            return "الكابتن يفكر..."
         }
     }
 }
@@ -1271,40 +1297,44 @@ struct CaptainInputView: View {
                     .foregroundColor(theme.subtext.opacity(0.75)),
                 axis: .vertical
             )
-            .font(.system(size: 17, weight: .medium, design: .rounded))
+            .font(.system(size: 18, weight: .medium, design: .rounded))
             .foregroundColor(theme.text)
             .lineLimit(1...4)
+            .submitLabel(.send)
+            .onSubmit(onSend)
             .padding(.leading, 18)
-            .padding(.vertical, 14)
-
-            Button(action: {}) {
-                Image(systemName: "mic")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(theme.icon)
-            }
+            .padding(.vertical, 16)
 
             Button(action: onSend) {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(canSend ? .black : theme.subtext.opacity(0.55))
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(canSend ? theme.accent : theme.fieldBackground))
-                    .rotationEffect(.degrees(isSending ? 360 : 0))
-                    .animation(
-                        isSending ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                        value: isSending
-                    )
+                ZStack {
+                    Circle()
+                        .fill(canSend ? theme.spatialMint.opacity(0.20) : Color.white.opacity(0.05))
+                        .background(.ultraThinMaterial, in: Circle())
+
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(canSend ? theme.spatialMint : theme.subtext.opacity(0.50))
+                }
+                .frame(width: 42, height: 42)
+                .shadow(
+                    color: theme.spatialMint.opacity(canSend ? 0.28 : 0),
+                    radius: 14,
+                    x: 0,
+                    y: 8
+                )
+                .scaleEffect(isSending ? 0.94 : 1)
+                .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isSending)
             }
             .disabled(!canSend)
             .padding(.trailing, 8)
         }
-        .frame(minHeight: 52)
-        .background(
+        .frame(minHeight: 58)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
             Capsule()
-                .fill(theme.inputBackground)
-                .shadow(color: theme.shadow, radius: 14, x: 0, y: 8)
+                .stroke(Color.white.opacity(colorScheme == .dark ? 0.10 : 0.38), lineWidth: 0.8)
         )
-        .overlay(Capsule().stroke(theme.border, lineWidth: 0.8))
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0.24 : 0.10), radius: 20, x: 0, y: 12)
         .padding(.horizontal, 22)
     }
 

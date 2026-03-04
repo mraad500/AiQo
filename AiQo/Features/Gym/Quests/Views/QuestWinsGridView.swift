@@ -2,11 +2,13 @@ import SwiftUI
 
 struct QuestWinsGridView: View {
     @ObservedObject var winsStore: WinsStore
+    var onScrollOffsetChange: ((CGFloat) -> Void)? = nil
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
         GridItem(.flexible(), spacing: 14)
     ]
+    private let railScrollOffsetSpaceName = "QuestWinsRailScroll"
 
     var body: some View {
         let visibleWins = winsStore.wins.filter { !isHiddenWin($0) }
@@ -29,6 +31,13 @@ struct QuestWinsGridView: View {
             .padding(.horizontal, 18)
             .padding(.top, 14)
             .padding(.bottom, 32)
+            .background(alignment: .top) {
+                RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)
+            }
+        }
+        .coordinateSpace(name: railScrollOffsetSpaceName)
+        .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
+            onScrollOffsetChange?(offset)
         }
     }
 

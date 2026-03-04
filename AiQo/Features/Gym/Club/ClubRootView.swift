@@ -38,17 +38,19 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
 
 @MainActor
 struct ClubRootView: View {
-    private let footballButtonSize: CGFloat = 42
-
     @State private var selectedTab: ClubTopTab = .body
     @State private var selectedExercise: GymExercise?
+    @State private var selectedCinematicExercise: GymExercise?
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
+    @State private var activeCinematicContext: CinematicGrindLaunchContext?
     @State private var showMatchesSheet = false
     @State private var matchesSheetDetent: PresentationDetent = .fraction(0.5)
 
     @StateObject private var winsStore: WinsStore
     @StateObject private var questEngine: QuestEngine
+
+    private let displayedTabs: [ClubTopTab] = [.impact, .challenges, .plan, .body]
 
     init() {
         _questEngine = StateObject(wrappedValue: .shared)
@@ -72,25 +74,12 @@ struct ClubRootView: View {
                 selectedContentView
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .animation(.easeInOut(duration: 0.22), value: selectedTab)
+            .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
         }
-        .navigationTitle(L10n.t("club_title"))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                PrimarySegmentedTabs(selection: $selectedTab)
-                    .frame(width: segmentedTabsWidth)
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                FootballHeaderButton(size: footballButtonSize) {
-                    matchesSheetDetent = .fraction(0.5)
-                    showMatchesSheet = true
-                }
-                .padding(.leading, 8)
-            }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topHeaderBar
         }
-        .clubSegmentedControlStyleScope()
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showMatchesSheet) {
             FootballSheetView()
                 .presentationDetents([.fraction(0.5), .large], selection: $matchesSheetDetent)
@@ -125,6 +114,36 @@ struct ClubRootView: View {
             .presentationBackground(.ultraThinMaterial)
             .presentationCornerRadius(30)
         }
+        .fullScreenCover(item: $selectedCinematicExercise) { exercise in
+            if let session = sessionForExercise(exercise) {
+                CinematicGrindFlowView(
+                    exercise: exercise,
+                    session: session,
+                    launchContext: $activeCinematicContext
+                ) {
+                    selectedCinematicExercise = nil
+                    if session.phase == .idle {
+                        activeExercise = nil
+                        activeSession = nil
+                        activeCinematicContext = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private var topHeaderBar: some View {
+        HStack(alignment: .center, spacing: 12) {
+            GlobalTopCapsuleTabsView(
+                tabs: displayedTabs.map { L10n.t($0.titleKey) },
+                selection: displayedSelectedTabIndex
+            )
+
+            footballToolbarButton
+        }
+        .padding(.top, 10)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 6)
     }
 
     @ViewBuilder
@@ -150,7 +169,14 @@ struct ClubRootView: View {
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
         if let session = activeSession, session.phase != .idle, let activeExercise {
-            selectedExercise = activeExercise
+            presentExercise(activeExercise)
+            return
+        }
+
+        if exercise.workoutKind == .cinematicGrind {
+            activeExercise = exercise
+            activeSession = sessionForExercise(exercise)
+            selectedCinematicExercise = exercise
             return
         }
 
@@ -182,56 +208,48 @@ struct ClubRootView: View {
         return session
     }
 
-    private var toolbarContentWidth: CGFloat {
-        min(UIScreen.main.bounds.width - 24, 460)
+    private func presentExercise(_ exercise: GymExercise) {
+        if exercise.workoutKind == .cinematicGrind {
+            selectedCinematicExercise = exercise
+        } else {
+            selectedExercise = exercise
+        }
     }
 
-    private var segmentedTabsWidth: CGFloat {
-        min(408, toolbarContentWidth - footballButtonSize - 28)
-    }
-}
-
-private struct FootballHeaderButton: View {
-    let size: CGFloat
-    let action: () -> Void
-
-    @State private var isPressed = false
-
-    init(size: CGFloat = 44, action: @escaping () -> Void) {
-        self.size = size
-        self.action = action
+    private var displayedSelectedTabIndex: Binding<Int> {
+        Binding(
+            get: {
+                displayedTabs.firstIndex(of: selectedTab) ?? 0
+            },
+            set: { newValue in
+                guard displayedTabs.indices.contains(newValue) else { return }
+                selectedTab = displayedTabs[newValue]
+            }
+        )
     }
 
-    var body: some View {
-        Button(action: action) {
+    private var footballToolbarButton: some View {
+        Button {
+            matchesSheetDetent = .fraction(0.5)
+            showMatchesSheet = true
+        } label: {
             ZStack {
                 Circle()
-                    .fill(Color(uiColor: .secondarySystemBackground))
+                    .fill(.ultraThinMaterial)
+
+                Circle()
+                    .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
 
                 Image("football")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: size - 4, height: size - 4)
+                    .frame(width: 28, height: 28)
             }
-            .frame(width: size, height: size)
-            .clipShape(Circle())
-            .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+            .frame(width: 44, height: 44)
+            .frame(width: 56, height: 56)
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
         }
-        .frame(width: size + 10, height: 44)
-        .contentShape(Rectangle())
         .buttonStyle(.plain)
-        .zIndex(1)
-        .scaleEffect(isPressed ? 0.94 : 1.0)
-        .animation(.easeInOut(duration: 0.12), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    isPressed = false
-                }
-        )
         .accessibilityLabel(Text(verbatim: L10n.t("matches_button")))
         .accessibilityHint(Text(verbatim: L10n.t("club.header.football.accessibility.hint")))
     }

@@ -110,7 +110,7 @@ final class LiveWorkoutSession: ObservableObject {
     }
 
     var isZone2GuidedWorkout: Bool {
-        currentWorkout == .cardioWithCaptainHamoudi
+        coachingProfile == .captainHamoudiZone2
     }
 
     var isZone2WarmupActive: Bool {
@@ -308,6 +308,18 @@ final class LiveWorkoutSession: ObservableObject {
         case .failed:
             if phase == .starting {
                 stopCaptainWarmupAudioIfNeeded()
+                if liveActivityIsActive {
+                    liveActivity.end(
+                        title: title,
+                        elapsedSeconds: elapsedSeconds,
+                        heartRate: heartRate,
+                        activeCalories: activeEnergy,
+                        distanceMeters: distanceMeters,
+                        zone2State: liveActivityHeartRateState,
+                        activeBuffs: activeLiveBuffs
+                    )
+                    liveActivityIsActive = false
+                }
                 withAnimation(.snappy) {
                     phase = .idle
                 }
@@ -519,6 +531,11 @@ final class LiveWorkoutSession: ObservableObject {
             heartRate: heartRate,
             isRunning: phase == .running
         )
+        audioCoachManager.handleDynamicZone2Coaching(
+            heartRate: heartRate,
+            distanceMeters: distanceMeters,
+            isRunning: phase == .running
+        )
     }
 
     func setActiveBuffs(_ buffs: [WorkoutActivityAttributes.Buff]) {
@@ -576,6 +593,14 @@ final class LiveWorkoutSession: ObservableObject {
     private func prepareForWorkoutStart() {
         refreshZone2Configuration()
         resetWorkoutState()
+        if !liveActivityIsActive {
+            liveActivity.start(
+                title: title,
+                zone2State: liveActivityHeartRateState,
+                activeBuffs: activeLiveBuffs
+            )
+            liveActivityIsActive = true
+        }
         startCaptainWarmupAudioIfNeeded()
         withAnimation(.snappy) {
             phase = .starting
@@ -584,7 +609,7 @@ final class LiveWorkoutSession: ObservableObject {
     }
 
     private func startCaptainWarmupAudioIfNeeded() {
-        guard isZone2GuidedWorkout else { return }
+        guard currentWorkout == .cardioWithCaptainHamoudi else { return }
 
         AiQoAudioManager.shared.playAmbient(trackName: Self.captainWarmupAmbientTrackName)
         isCaptainWarmupAmbientActive = true

@@ -66,6 +66,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>aiqo.captain.spiritual-whispers.refresh</string>

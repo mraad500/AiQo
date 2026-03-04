@@ -48,6 +48,9 @@ struct RecapView: View {
 
     @State private var selectedItem: WorkoutHistoryItem?
     @State private var showSheet = false
+    var onScrollOffsetChange: ((CGFloat) -> Void)? = nil
+
+    private let railScrollOffsetSpaceName = "RecapRailScroll"
     
     var body: some View {
         ZStack {
@@ -83,6 +86,13 @@ struct RecapView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
+                .background(alignment: .top) {
+                    RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)
+                }
+            }
+            .coordinateSpace(name: railScrollOffsetSpaceName)
+            .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
+                onScrollOffsetChange?(offset)
             }
             .blur(radius: showSheet ? 6 : 0)
             .animation(.easeOut(duration: 0.18), value: showSheet)

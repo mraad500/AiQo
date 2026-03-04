@@ -62,14 +62,37 @@ final class AudioCoachManager {
             hasPlayedStartCue = true
         }
 
-        guard elapsedSeconds >= Self.warmUpDurationSeconds else { return }
+        // Dynamic spoken Zone 2 coaching now comes from CaptainVoiceService.
+    }
+
+    func handleDynamicZone2Coaching(
+        heartRate: Double,
+        distanceMeters: Double,
+        isRunning: Bool
+    ) {
+        guard currentWorkout == .cardioWithCaptainHamoudi else { return }
+        guard isRunning else { return }
         guard heartRate > 0 else { return }
 
         let bpm = Int(heartRate.rounded())
-        if bpm < zone2Target.lowerBoundBPM {
-            playZone2CueIfNeeded(.speedUpZone2)
-        } else if bpm > zone2Target.upperBoundBPM {
-            playZone2CueIfNeeded(.slowDownZone2)
+        guard bpm < zone2Target.lowerBoundBPM || bpm > zone2Target.upperBoundBPM else { return }
+
+        let now = Date()
+        if let lastZone2CueAt, now.timeIntervalSince(lastZone2CueAt) < Self.feedbackCooldown {
+            return
+        }
+
+        lastZone2CueAt = now
+
+        let distanceKM = max(0, distanceMeters) / 1000.0
+        let zoneBounds = zone2Target.lowerBoundBPM...zone2Target.upperBoundBPM
+
+        Task { @MainActor in
+            await CaptainVoiceService.shared.generateAndSpeakWorkoutPrompt(
+                liveHR: bpm,
+                zoneBounds: zoneBounds,
+                distance: distanceKM
+            )
         }
     }
 

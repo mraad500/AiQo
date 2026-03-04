@@ -5,6 +5,7 @@ import SwiftUI
 enum GymWorkoutKind: Hashable {
     case standard
     case cardioWithCaptainHamoudi
+    case cinematicGrind
 }
 
 enum WorkoutCoachingProfile: Hashable {
@@ -70,6 +71,16 @@ extension GymExercise {
 
     /// Workout list used by the Body tab cards.
     static let samples: [GymExercise] = [
+        GymExercise(
+            titleKey: "gym.exercise.cinematic_grind",
+            subtitleKey: "gym.exercise.cinematic_grind.subtitle",
+            type: .mixedCardio,
+            location: .indoor,
+            icon: "popcorn.fill",
+            tint: .aiqoLav,
+            workoutKind: .cinematicGrind,
+            coachingProfile: .captainHamoudiZone2
+        ),
         GymExercise(
             titleKey: "gym.exercise.cardio_captain_hamoudi",
             subtitleKey: "gym.exercise.cardio_captain_hamoudi.subtitle",

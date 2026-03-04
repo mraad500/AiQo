@@ -24,6 +24,10 @@ final class AiQoAudioManager: ObservableObject {
     private var observerTokens: [NSObjectProtocol] = []
     private var shouldResumeAfterInterruption = false
     private var mixWithOthers = true
+    private var ambientVolume: Float = 1
+    private var speechDuckedVolume: Float = 0.26
+    private var activeSpeechDuckCount = 0
+    private var volumeRampTask: Task<Void, Never>?
 
     private init() {
         configurePlayer()
@@ -88,6 +92,7 @@ final class AiQoAudioManager: ObservableObject {
     }
 
     func stopAmbient() {
+        volumeRampTask?.cancel()
         stopCurrentLoop()
         isPlaying = false
         playbackState = .stopped
@@ -101,7 +106,8 @@ final class AiQoAudioManager: ObservableObject {
     }
 
     func setVolume(_ volume: Float) {
-        queuePlayer.volume = min(max(volume, 0), 1)
+        ambientVolume = min(max(volume, 0), 1)
+        applyEffectiveVolume(duration: 0)
     }
 
     func setMixWithOthers(_ enabled: Bool) {
@@ -113,6 +119,26 @@ final class AiQoAudioManager: ObservableObject {
         }
     }
 
+    /// Smoothly lowers ambient playback while spoken coaching is active.
+    func beginSpeechDucking(
+        targetVolume: Float = 0.26,
+        fadeDuration: TimeInterval = 0.2
+    ) {
+        speechDuckedVolume = min(max(targetVolume, 0), 1)
+        activeSpeechDuckCount += 1
+        applyEffectiveVolume(duration: fadeDuration)
+    }
+
+    /// Restores the user-selected ambient level after spoken coaching finishes.
+    func endSpeechDucking(fadeDuration: TimeInterval = 0.32) {
+        activeSpeechDuckCount = max(0, activeSpeechDuckCount - 1)
+        applyEffectiveVolume(duration: fadeDuration)
+    }
+
+    func refreshAudioSessionConfiguration() {
+        configureAudioSession()
+    }
+
     func clearError() {
         lastErrorMessage = nil
         lastErrorCode = nil
@@ -121,7 +147,7 @@ final class AiQoAudioManager: ObservableObject {
     private func configurePlayer() {
         queuePlayer.actionAtItemEnd = .none
         queuePlayer.automaticallyWaitsToMinimizeStalling = false
-        queuePlayer.volume = 1
+        queuePlayer.volume = effectiveVolume
     }
 
     private func configureAudioSession() {
@@ -151,6 +177,41 @@ final class AiQoAudioManager: ObservableObject {
 
         if resetTrackSelection {
             currentTrackName = nil
+        }
+    }
+
+    private var effectiveVolume: Float {
+        guard activeSpeechDuckCount > 0 else { return ambientVolume }
+        return min(ambientVolume, speechDuckedVolume)
+    }
+
+    private func applyEffectiveVolume(duration: TimeInterval) {
+        let targetVolume = effectiveVolume
+        volumeRampTask?.cancel()
+
+        guard duration > 0.01 else {
+            queuePlayer.volume = targetVolume
+            return
+        }
+
+        let startingVolume = queuePlayer.volume
+        let steps = max(1, Int(duration / 0.03))
+        let sleepDuration = UInt64((duration / Double(steps)) * 1_000_000_000)
+
+        volumeRampTask = Task { [weak self] in
+            guard let self else { return }
+
+            for step in 1...steps {
+                if Task.isCancelled { return }
+
+                let progress = Float(step) / Float(steps)
+                let easedProgress = progress * progress * (3 - (2 * progress))
+                queuePlayer.volume = startingVolume + ((targetVolume - startingVolume) * easedProgress)
+
+                try? await Task.sleep(nanoseconds: sleepDuration)
+            }
+
+            queuePlayer.volume = targetVolume
         }
     }
 
@@ -272,6 +333,7 @@ final class AiQoAudioManager: ObservableObject {
 
     private func reportError(_ message: String, code: String) {
         print(message)
+        volumeRampTask?.cancel()
         lastErrorMessage = message
         lastErrorCode = code
         isPlaying = false

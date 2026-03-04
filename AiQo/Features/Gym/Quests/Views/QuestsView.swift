@@ -6,7 +6,6 @@ struct QuestsView: View {
     @ObservedObject var engine: QuestEngine
 
     @Environment(\.layoutDirection) private var layoutDirection
-    @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedStageID = 1
     @State private var selectedQuest: QuestDefinition?
@@ -16,8 +15,12 @@ struct QuestsView: View {
     @State private var hasCenterBaseline = false
     @State private var centerToastMessage: String?
     @State private var centerToastHideTask: Task<Void, Never>?
+    @State private var isRailCollapsed = true
+    @State private var isRailHidden = false
+    @State private var previousScrollOffset: CGFloat = 0
 
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+    private let scrollOffsetSpaceName = "QuestsRailScroll"
 
     var body: some View {
         ZStack {
@@ -25,8 +28,6 @@ struct QuestsView: View {
                 .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 16) {
-                stageSelector
-
                 Text(questLocalizedText(selectedStage.titleKey))
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
@@ -48,12 +49,42 @@ struct QuestsView: View {
                                 selectedQuest = quest
                             }
                         }
+
+                        if selectedStage.quests.isEmpty {
+                            Text("محتوى هذه المرحلة سيظهر هنا قريباً.")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.primary.opacity(0.62))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(24)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                                .fill(AiQoColors.beige.opacity(0.16))
+                                        )
+                                )
+                        }
                     }
                     .padding(.bottom, 120)
+                    .background(alignment: .top) {
+                        RailScrollOffsetReader(coordinateSpaceName: scrollOffsetSpaceName)
+                    }
                 }
+                .coordinateSpace(name: scrollOffsetSpaceName)
             }
             .padding(.horizontal, 18)
-            .padding(.top, 0)
+            .padding(.top, 18)
+            .clubPhysicalRightContentInset(layoutDirection: layoutDirection)
+            .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedStageID)
+        }
+        .clubRightRailOverlay {
+            RightSideVerticalRail(
+                items: stageRailItems,
+                selection: stageRailSelection,
+                isCollapsed: $isRailCollapsed,
+                isHidden: $isRailHidden
+            )
         }
         .overlay(alignment: .top) {
             if let centerToastMessage {
@@ -85,7 +116,7 @@ struct QuestsView: View {
             }
         }
         .onAppear {
-            selectedStageID = max(1, min(selectedStageID, 10))
+            selectedStageID = visibleStages.first(where: { $0.id == selectedStageID })?.id ?? (visibleStages.first?.id ?? 1)
             engine.refreshAllProgress(reason: .manualPull)
             syncStageOneCenterBaseline()
         }
@@ -95,113 +126,81 @@ struct QuestsView: View {
         .onChange(of: engine.progressByQuestId) { _, _ in
             handleStageOneCenterUpgrades()
         }
+        .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
+            handleRailScroll(offset: offset)
+        }
         .onDisappear {
             centerToastHideTask?.cancel()
         }
     }
 
     private var selectedStage: QuestStageViewModel {
-        engine.stages.first(where: { $0.id == selectedStageID }) ?? engine.stages[0]
+        visibleStages.first(where: { $0.id == selectedStageID }) ?? visibleStages[0]
     }
 
-    private var displayedStages: [QuestStageViewModel] {
-        if layoutDirection == .rightToLeft {
-            return Array(engine.stages.reversed())
-        }
-
-        return engine.stages
+    private var visibleStages: [QuestStageViewModel] {
+        Array(engine.stages.prefix(4))
     }
 
-    private var stageSelector: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(displayedStages) { stage in
-                        let isLocked = !engine.isStageUnlocked(stage.id)
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.22)) {
-                                selectedStageID = stage.id
-                                proxy.scrollTo(stage.id, anchor: .center)
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Text(questLocalizedText(stage.tabTitleKey))
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-
-                                if isLocked {
-                                    Image(systemName: "lock.fill")
-                                        .font(.system(size: 11, weight: .bold))
-                                }
-                            }
-                            .foregroundStyle(
-                                stage.id == selectedStageID
-                                    ? Color.black.opacity(0.82)
-                                    : Color.primary.opacity(0.78)
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(stageCapsuleBackground(isSelected: stage.id == selectedStageID))
-                            .overlay(stageCapsuleOverlay(isSelected: stage.id == selectedStageID))
-                        }
-                        .buttonStyle(.plain)
-                        .id(stage.id)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-            .onAppear {
-                proxy.scrollTo(selectedStageID, anchor: .center)
-            }
-            .onChange(of: selectedStageID) { _, newValue in
-                withAnimation(.easeInOut(duration: 0.22)) {
-                    proxy.scrollTo(newValue, anchor: .center)
-                }
-            }
+    private var stageRailItems: [RailItem] {
+        visibleStages.enumerated().map { index, stage in
+            RailItem(
+                id: "\(stage.id)",
+                title: questLocalizedText(stage.tabTitleKey),
+                icon: stageRailIcon(for: stage),
+                tint: index.isMultiple(of: 2) ? AiQoColors.mint : AiQoColors.beige,
+                isLocked: !engine.isStageUnlocked(stage.id)
+            )
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+    }
+
+    private var stageRailSelection: Binding<Int> {
+        Binding(
+            get: {
+                visibleStages.firstIndex(where: { $0.id == selectedStageID }) ?? 0
+            },
+            set: { newValue in
+                guard visibleStages.indices.contains(newValue) else { return }
+                let nextStage = visibleStages[newValue]
+                guard engine.isStageUnlocked(nextStage.id) else { return }
+                selectedStageID = nextStage.id
+            }
         )
     }
 
-    private func stageCapsuleBackground(isSelected: Bool) -> some View {
-        Capsule()
-            .fill(
-                isSelected
-                    ? LinearGradient(
-                        colors: [
-                            Color(uiColor: .systemYellow),
-                            Color(red: 0.98, green: 0.86, blue: 0.45)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    : LinearGradient(
-                        colors: [
-                            Color(uiColor: .systemBackground),
-                            Color(uiColor: .systemBackground)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-            )
-            .shadow(
-                color: isSelected ? Color(uiColor: .systemYellow).opacity(0.34) : .clear,
-                radius: 6,
-                x: 0,
-                y: 3
-            )
+    private func stageRailIcon(for stage: QuestStageViewModel) -> String {
+        switch stage.id {
+        case 1:
+            return "flag"
+        case 2:
+            return "flag.fill"
+        case 3:
+            return engine.isStageUnlocked(stage.id) ? "flag.checkered" : "lock.fill"
+        default:
+            return "crown"
+        }
     }
 
-    private func stageCapsuleOverlay(isSelected: Bool) -> some View {
-        Capsule()
-            .stroke(
-                isSelected
-                    ? Color.white.opacity(0.6)
-                    : (colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.12)),
-                lineWidth: 1
-            )
+    private func handleRailScroll(offset: CGFloat) {
+        let delta = offset - previousScrollOffset
+
+        if delta <= -15 {
+            withAnimation(.easeOut(duration: 0.25)) {
+                isRailHidden = true
+            }
+        } else if delta >= 15 || offset >= -8 {
+            withAnimation(.easeOut(duration: 0.25)) {
+                isRailHidden = false
+            }
+        }
+
+        if offset <= -180, !isRailCollapsed {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+                isRailCollapsed = true
+            }
+        }
+
+        previousScrollOffset = offset
     }
 
     private func syncStageOneCenterBaseline() {
