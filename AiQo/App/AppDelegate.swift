@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import UIKit
 import UserNotifications
 import BackgroundTasks
@@ -19,6 +20,7 @@ struct AiQoApp: App {
                     _ = SpotifyVibeManager.shared.handleURL(url)
                 }
         }
+        .modelContainer(for: [AiQoDailyRecord.self, WorkoutTask.self])
     }
 }
 

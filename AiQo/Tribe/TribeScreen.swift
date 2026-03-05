@@ -8,6 +8,7 @@ struct TribeScreen: View {
     @State private var isGalaxyScreenPresented = false
 
     private let topTitles = ["القبيلة", "الارينا", "العالمي"]
+    private let topInsetOverlap: CGFloat = 8
 
     private let arenaChallenges: [ArenaChallengePlaceholder] = [
         ArenaChallengePlaceholder(title: "تحدي 50K خطوة", subtitle: "أسبوعي - كل القبيلة", progress: 0.64, participants: 18),
@@ -29,11 +30,12 @@ struct TribeScreen: View {
             ) { index in
                 pageContent(for: index)
                     .padding(.horizontal, 16)
+                    .padding(.top, -6)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.bottom, 8)
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        .safeAreaInset(edge: .top, spacing: -topInsetOverlap) {
             TribeTopChrome(
                 titles: topTitles,
                 selection: $selection,
@@ -42,7 +44,6 @@ struct TribeScreen: View {
             )
             .padding(.horizontal, 8)
             .padding(.top, 2)
-            .padding(.bottom, 8)
         }
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(isPresented: $isGalaxyScreenPresented) {
@@ -130,35 +131,8 @@ extension TribeScreen {
 
     struct TribeGlassBackground: View {
         var body: some View {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.96, green: 0.99, blue: 0.98),
-                        Color(red: 0.98, green: 0.96, blue: 0.92)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+            Color.white
                 .ignoresSafeArea()
-
-                Circle()
-                    .fill(Palette.mint.opacity(0.50))
-                    .frame(width: 320, height: 320)
-                    .blur(radius: 60)
-                    .offset(x: -120, y: -250)
-
-                Circle()
-                    .fill(Palette.sand.opacity(0.62))
-                    .frame(width: 360, height: 360)
-                    .blur(radius: 72)
-                    .offset(x: 120, y: -210)
-
-                Circle()
-                    .fill(Palette.mint.opacity(0.30))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 62)
-                    .offset(x: 160, y: 250)
-            }
         }
     }
 
@@ -179,8 +153,6 @@ extension TribeScreen {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(Color.white.opacity(0.58), lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(0.12), radius: 16, x: 0, y: 9)
-                .shadow(color: Color.white.opacity(0.35), radius: 2, x: 0, y: 1)
         }
     }
 
@@ -475,7 +447,6 @@ extension TribeScreen {
 
 extension TribeScreen {
     struct InnerTribeView: View {
-        private let collectiveProgress: Double = 0.73
         private let members: [TribeMemberSnapshot] = [
             TribeMemberSnapshot(name: "محمد", initials: "م", move: 0.88, exercise: 0.72, stand: 0.92, level: 17),
             TribeMemberSnapshot(name: "سارة", initials: "س", move: 0.74, exercise: 0.66, stand: 0.91, level: 15),
@@ -483,13 +454,25 @@ extension TribeScreen {
             TribeMemberSnapshot(name: "ليلى", initials: "ل", move: 0.82, exercise: 0.76, stand: 0.95, level: 16),
             TribeMemberSnapshot(name: "نور", initials: "ن", move: 0.61, exercise: 0.49, stand: 0.80, level: 13)
         ]
-        private let memberCardBorderColors: [Color] = [
+        private let memberColors: [Color] = [
             Color(red: 0.98, green: 0.94, blue: 0.08), // Yellow
             Color(red: 0.66, green: 0.54, blue: 0.95), // Purple
             Color(red: 0.55, green: 0.91, blue: 0.82), // Mint
             Color(red: 0.09, green: 0.40, blue: 0.98), // Blue
             Color(red: 0.93, green: 0.84, blue: 0.67) // Beige
         ]
+
+        private var memberDailyProgresses: [CGFloat] {
+            members.map { member in
+                CGFloat(((member.move + member.exercise + member.stand) / 3.0).clampedToUnitInterval)
+            }
+        }
+
+        private var collectiveProgress: Double {
+            guard !memberDailyProgresses.isEmpty else { return 0 }
+            let total = memberDailyProgresses.reduce(0, +)
+            return Double(total / CGFloat(memberDailyProgresses.count))
+        }
 
         private var teamEnergy: Int {
             let value = members.reduce(0.0) { $0 + $1.move } / Double(max(members.count, 1))
@@ -505,7 +488,10 @@ extension TribeScreen {
                 VStack(spacing: 14) {
                     GlassPanel(cornerRadius: 30) {
                         VStack(spacing: 16) {
-                            TribeActivityRing()
+                            TribeActivityRing(
+                                memberProgresses: memberDailyProgresses,
+                                orbitColors: memberColors
+                            )
 
 
                             Text("هدف القبيلة المشترك")
@@ -529,7 +515,7 @@ extension TribeScreen {
                         ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
                             TribeMemberRow(
                                 member: member,
-                                borderColor: memberCardBorderColors[index % memberCardBorderColors.count]
+                                borderColor: memberColors[index % memberColors.count]
                             )
                         }
                     }
@@ -565,10 +551,14 @@ extension TribeScreen {
     }
 
     struct TribeActivityRing: View {
+        let memberProgresses: [CGFloat]
+        let orbitColors: [Color]
+
         var body: some View {
-            Image("Tribe-Ring")
-                .resizable()
-                .scaledToFit()
+            TribeOrbitsView(
+                memberProgresses: memberProgresses,
+                orbitColors: orbitColors
+            )
                 .frame(width: 252, height: 252)
                 .shadow(color: Palette.mintStrong.opacity(0.30), radius: 14, x: 0, y: 6)
                 .padding(.top, 4)
@@ -618,7 +608,6 @@ extension TribeScreen {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(borderColor.opacity(0.94), lineWidth: 2.8)
             )
-            .shadow(color: borderColor.opacity(0.22), radius: 8, x: 0, y: 2)
         }
     }
 }
@@ -728,6 +717,10 @@ extension TribeScreen {
 }
 
 private extension Double {
+    var clampedToUnitInterval: Double {
+        min(max(self, 0), 1)
+    }
+
     var clampedToProgressRange: CGFloat {
         CGFloat(min(max(self, 0), 1))
     }

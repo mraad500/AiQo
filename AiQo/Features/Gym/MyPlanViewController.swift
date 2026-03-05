@@ -34,6 +34,8 @@ struct TemplateExerciseItem: Identifiable {
 
 // MARK: - My Plan View
 struct MyPlanView: View {
+    private let workoutCardTint = GymTheme.beige
+
     @State private var stats: [StatItem] = [
         StatItem(
             icon: "figure.walk",
@@ -89,6 +91,8 @@ struct MyPlanView: View {
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .padding(.top, 18)
+
+                workoutPlanEntryCard
                 
                 // Stats Overview Section
                 sectionHeader(L10n.t("plan.overview"))
@@ -110,7 +114,7 @@ struct MyPlanView: View {
                 
                 templatesCard
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .padding(.bottom, 40)
         }
         .background(Color(.systemBackground))
@@ -123,6 +127,53 @@ struct MyPlanView: View {
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .foregroundColor(.secondary)
             .tracking(0.5)
+    }
+
+    private var workoutPlanEntryCard: some View {
+        NavigationLink {
+            WorkoutPlanDashboard()
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text("🏋️‍♂️")
+                            .font(.system(size: 24))
+
+                        Text("خطة التمرين")
+                            .font(.system(size: 21, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                    }
+
+                    Text("بلمسة وحدة، ابدي خطة تدريب يومية ويّا الكابتن.")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 6)
+
+                Image(systemName: "chevron.left.circle.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.primary.opacity(0.75))
+            }
+            .padding(18)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(workoutCardTint.opacity(0.82))
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 7)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 10)
     }
     
     // MARK: - Stats Card
@@ -254,19 +305,14 @@ struct PlanGlassCard<Content: View>: View {
     
     var body: some View {
         ZStack {
-            // Glass Background
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(tone.color)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(tone.color.opacity(0.25))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.35), lineWidth: 0.5)
+                        .stroke(Color.white.opacity(0.30), lineWidth: 0.5)
                 )
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
-            
+
             content
         }
     }

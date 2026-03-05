@@ -26,8 +26,8 @@ struct WorkoutCardItem: Identifiable, Hashable {
 struct WorkoutCategoriesView: View {
     let onSelectExercise: (GymExercise) -> Void
 
-    private let contentLeadingPadding: CGFloat = 16
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
+    private let contentLeadingPadding: CGFloat = 10
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 8
 
     @State private var selection = 0
     @State private var visibleCardIDs = Set<UUID>()
@@ -85,12 +85,14 @@ struct WorkoutCategoriesView: View {
                 .padding(.leading, contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.bottom, 120)
+                .offset(x: -2)
             }
 
             SlimRightSideRail(
                 items: railItems,
                 selection: $selection
             )
+            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
             .accessibilityLabel(Text("فئات التمارين"))
         }
         .onAppear {
@@ -120,7 +122,7 @@ struct WorkoutCategoriesView: View {
     }
 
     private func cardBackgroundColor(for index: Int) -> Color {
-        index.isMultiple(of: 2) ? AiQoColors.mint : AiQoColors.beige
+        index.isMultiple(of: 2) ? GymTheme.mint : GymTheme.beige
     }
 }
 
@@ -246,16 +248,16 @@ struct GlassWorkoutCard: View {
     private let cornerRadius: CGFloat = 30
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             textContent
 
             Spacer(minLength: 0)
 
             iconChip
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, minHeight: 128)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, minHeight: 109)
         .background(cardBackground)
         .overlay(cardStroke)
         .shadow(color: Color.black.opacity(0.055), radius: 16, x: 0, y: 10)
@@ -268,7 +270,7 @@ struct GlassWorkoutCard: View {
     }
 
     private var textContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(item.title)
                 .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
@@ -333,31 +335,6 @@ struct GlassWorkoutCard: View {
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(backgroundColor)
-            .overlay(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.22),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .center
-                        )
-                    )
-                    .blur(radius: 5)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial.opacity(0.20))
-            }
-            .overlay(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(Color.white.opacity(0.16))
-                    .frame(width: 122, height: 122)
-                    .blur(radius: 28)
-                    .offset(x: 18, y: 22)
-            }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 

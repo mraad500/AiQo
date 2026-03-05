@@ -364,7 +364,7 @@ final class CaptainViewModel: ObservableObject {
 
         // Chat starts a bit higher, then moves down clearly with each message.
         let chatHeight = min(availableHeight * 0.62, availableHeight * (0.27 + (0.085 * effectiveSteps)))
-        let chatStartOffset = -availableHeight * 0.08
+        let chatStartOffset = -availableHeight * 0.02
         let perMessageChatDrop = availableHeight * 0.11
         let proposedChatOffset = chatStartOffset + (perMessageChatDrop * effectiveSteps)
 
@@ -735,7 +735,7 @@ struct ChatContainerView: View {
                             ChatBubbleView(
                                 text: message.content,
                                 isUser: message.isUser,
-                                maxBubbleWidth: geometry.size.width * 0.78
+                                maxBubbleWidth: geometry.size.width * 0.72
                             )
                             .id(message.id)
                         }
@@ -811,7 +811,7 @@ struct ChatBubbleView: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 10) {
                 Text(text)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundColor(theme.chatBubbleText)
                     .lineSpacing(3)
                     .multilineTextAlignment(isUser ? .trailing : .leading)
@@ -836,11 +836,15 @@ struct ChatBubbleView: View {
                 }
             }
             .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .trailing : .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(isUser ? theme.userBubble : theme.captainBubble)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill((isUser ? theme.userBubble : theme.captainBubble).opacity(colorScheme == .dark ? 0.10 : 0.20))
+                    )
             )
             .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
             .accessibilityElement(children: .contain)

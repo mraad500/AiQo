@@ -785,10 +785,10 @@ struct VibeDashboardTriggerButton: View {
 
     private let preferredVibeIconName = "vibe_ icon"
     private let fallbackVibeIconName = "vibe_icon"
-    private let buttonSize: CGFloat = 70
-    private let imageSize: CGFloat = 64
-    private let fallbackSymbolSize: CGFloat = 30
-    private let fallbackFrameSize: CGFloat = 42
+    private let buttonSize: CGFloat = 64
+    private let imageSize: CGFloat = 58
+    private let fallbackSymbolSize: CGFloat = 28
+    private let fallbackFrameSize: CGFloat = 38
 
     private var vibeIconName: String? {
         if UIImage(named: preferredVibeIconName) != nil {

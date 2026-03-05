@@ -50,7 +50,7 @@ struct ImpactContainerView: View {
 
     let winsStore: WinsStore
 
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
 
     private var railItems: [RailItem] {
         ImpactSubTab.allCases.map {
@@ -84,6 +84,7 @@ struct ImpactContainerView: View {
                 items: railItems,
                 selection: selectedTabIndex
             )
+            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
             .accessibilityLabel(Text(verbatim: L10n.t("club.impact_tabs.accessibility.label")))
         }
     }

@@ -38,9 +38,16 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
 
 @MainActor
 struct ClubRootView: View {
+    private struct PresentedExercise: Identifiable {
+        let exercise: GymExercise
+        let session: LiveWorkoutSession
+
+        var id: UUID { exercise.id }
+    }
+
     @State private var selectedTab: ClubTopTab = .body
-    @State private var selectedExercise: GymExercise?
-    @State private var selectedCinematicExercise: GymExercise?
+    @State private var presentedExercise: PresentedExercise?
+    @State private var presentedCinematicExercise: PresentedExercise?
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
@@ -51,6 +58,11 @@ struct ClubRootView: View {
     @StateObject private var questEngine: QuestEngine
 
     private let displayedTabs: [ClubTopTab] = [.impact, .challenges, .plan, .body]
+    private var topTabsHorizontalOffset: CGFloat {
+        (
+            ClubChromeLayout.trailingLaneWidth - (ClubChromeLayout.headerLeadingInset - ClubChromeLayout.headerTrailingInset)
+        ) / 2
+    }
 
     init() {
         _questEngine = StateObject(wrappedValue: .shared)
@@ -87,15 +99,13 @@ struct ClubRootView: View {
                 .presentationCornerRadius(30)
                 .presentationBackground(.ultraThinMaterial)
         }
-        .sheet(item: $selectedExercise) { exercise in
+        .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
-                if let session = resolvedSession(for: exercise) {
-                    WorkoutSessionScreen(session: session)
-                        .background(Color.clear)
-                }
+                WorkoutSessionScreen(session: presented.session)
+                    .background(Color.clear)
 
                 Button {
-                    selectedExercise = nil
+                    presentedExercise = nil
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 30))
@@ -114,19 +124,17 @@ struct ClubRootView: View {
             .presentationBackground(.ultraThinMaterial)
             .presentationCornerRadius(30)
         }
-        .fullScreenCover(item: $selectedCinematicExercise) { exercise in
-            if let session = resolvedSession(for: exercise) {
-                CinematicGrindFlowView(
-                    exercise: exercise,
-                    session: session,
-                    launchContext: $activeCinematicContext
-                ) {
-                    selectedCinematicExercise = nil
-                    if session.phase == .idle {
-                        activeExercise = nil
-                        activeSession = nil
-                        activeCinematicContext = nil
-                    }
+        .fullScreenCover(item: $presentedCinematicExercise) { presented in
+            CinematicGrindFlowView(
+                exercise: presented.exercise,
+                session: presented.session,
+                launchContext: $activeCinematicContext
+            ) {
+                presentedCinematicExercise = nil
+                if presented.session.phase == .idle {
+                    activeExercise = nil
+                    activeSession = nil
+                    activeCinematicContext = nil
                 }
             }
         }
@@ -139,6 +147,7 @@ struct ClubRootView: View {
                 selectedTints: displayedTabs.map(topTabTint(for:)),
                 selection: displayedSelectedTabIndex
             )
+            .offset(x: topTabsHorizontalOffset)
 
             footballToolbarButton
                 .frame(width: ClubChromeLayout.trailingLaneWidth, alignment: .center)
@@ -171,24 +180,16 @@ struct ClubRootView: View {
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
-        Task { @MainActor in
-            await Task.yield()
-            if let session = activeSession, session.phase != .idle, let activeExercise {
-                presentExercise(activeExercise)
-                return
-            }
-
-            activeExercise = exercise
-            activeSession = makeSession(for: exercise)
-            presentExercise(exercise)
+        if let activeSession, activeSession.phase != .idle, let activeExercise {
+            presentExercise(activeExercise, session: activeSession)
+            return
         }
-    }
 
-    private func resolvedSession(for exercise: GymExercise) -> LiveWorkoutSession? {
-        guard let session = activeSession, let activeExercise, activeExercise == exercise else {
-            return nil
-        }
-        return session
+        let session = makeSession(for: exercise)
+        activeExercise = exercise
+        activeSession = session
+        activeCinematicContext = nil
+        presentExercise(exercise, session: session)
     }
 
     private func makeSession(for exercise: GymExercise) -> LiveWorkoutSession {
@@ -201,14 +202,13 @@ struct ClubRootView: View {
         )
     }
 
-    private func presentExercise(_ exercise: GymExercise) {
-        Task { @MainActor in
-            await Task.yield()
-            if exercise.workoutKind == .cinematicGrind {
-                selectedCinematicExercise = exercise
-            } else {
-                selectedExercise = exercise
-            }
+    private func presentExercise(_ exercise: GymExercise, session: LiveWorkoutSession) {
+        if exercise.workoutKind == .cinematicGrind {
+            presentedExercise = nil
+            presentedCinematicExercise = PresentedExercise(exercise: exercise, session: session)
+        } else {
+            presentedCinematicExercise = nil
+            presentedExercise = PresentedExercise(exercise: exercise, session: session)
         }
     }
 
@@ -257,9 +257,9 @@ struct ClubRootView: View {
                 Image("football")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 50, height: 50)
             .frame(width: 56, height: 56)
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
         }

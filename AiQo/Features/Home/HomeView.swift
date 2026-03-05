@@ -130,7 +130,7 @@ struct HomeView: View {
 
             Spacer()
 
-            FloatingProfileButton {
+            FloatingProfileButton(size: 64) {
                 isProfileSheetPresented = true
             }
         }
@@ -187,16 +187,18 @@ struct HomeView: View {
     // MARK: - Kitchen Section
     
     private var kitchenSection: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             Spacer()
-                .frame(height: 4)
+                .frame(height: 8)
 
             KitchenShortcutButton {
                 viewModel.openKitchen()
             }
+            .offset(y: 2)
             
             Text(NSLocalizedString("tab.kitchen", comment: "Kitchen title under icon"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .padding(.top, -4)
         }
         .frame(height: 112)
     }
@@ -307,7 +309,7 @@ struct KitchenShortcutButton: View {
             Image(kitchenIconName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 90, height: 90)
+                .frame(width: 100, height: 100)
                 .offset(y: floatOffset)
         }
         .buttonStyle(.plain)

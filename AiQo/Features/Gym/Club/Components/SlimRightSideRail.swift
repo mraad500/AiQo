@@ -7,10 +7,13 @@ enum ClubChromeLayout {
     static let headerTopPadding: CGFloat = 14
     static let headerBottomPadding: CGFloat = 8
 
-    static let railWidth: CGFloat = 58
+    static let railWidth: CGFloat = 46
     static let trailingLaneWidth: CGFloat = 78
     static let trailingScreenInset: CGFloat = 2
-    static let contentTrailingPadding: CGFloat = trailingLaneWidth + trailingScreenInset
+    static let railRightShift: CGFloat = 13
+    static let railLocalScreenOffsetX: CGFloat = 1
+    static let contentTrailingPadding: CGFloat =
+        trailingScreenInset + (trailingLaneWidth / 2) - railRightShift + (railWidth / 2) + 10
     static let railVerticalOffset: CGFloat = 240
 }
 
@@ -34,7 +37,7 @@ struct SlimRightSideRail: View {
             )
             .frame(width: ClubChromeLayout.railWidth)
             .position(
-                x: proxy.size.width - ClubChromeLayout.trailingScreenInset - (ClubChromeLayout.trailingLaneWidth / 2),
+                x: proxy.size.width - ClubChromeLayout.trailingScreenInset - (ClubChromeLayout.trailingLaneWidth / 2) + ClubChromeLayout.railRightShift,
                 y: (proxy.size.height / 2) + ClubChromeLayout.railVerticalOffset
             )
         }
@@ -131,7 +134,7 @@ private final class AppleVerticalRailControlView: UIView {
         let itemHeight: CGFloat = 64
         let spacing = stackView.spacing * CGFloat(max(currentItems.count - 1, 0))
         let height = CGFloat(currentItems.count) * itemHeight + spacing + 12
-        return CGSize(width: 58, height: height)
+        return CGSize(width: ClubChromeLayout.railWidth, height: height)
     }
 
     override func layoutSubviews() {

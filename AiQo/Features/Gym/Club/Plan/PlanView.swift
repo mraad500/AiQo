@@ -3,7 +3,7 @@ import SwiftUI
 struct PlanView: View {
     @State private var railSelection = 0
 
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 14
 
     private var railItems: [RailItem] {
         [

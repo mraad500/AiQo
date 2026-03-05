@@ -15,8 +15,8 @@ struct QuestsView: View {
     @State private var centerToastHideTask: Task<Void, Never>?
 
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    private let contentLeadingPadding: CGFloat = 16
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
+    private let contentLeadingPadding: CGFloat = 8
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
 
     var body: some View {
         ZStack {
@@ -75,6 +75,7 @@ struct QuestsView: View {
                 items: stageRailItems,
                 selection: stageRailSelection
             )
+            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
             .accessibilityLabel(Text("مراحل القمم"))
         }
         .overlay(alignment: .top) {

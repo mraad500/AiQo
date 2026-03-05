@@ -75,11 +75,7 @@ struct QuestCard: View {
         .frame(maxWidth: .infinity, minHeight: 166)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(cardTint.opacity(0.22))
-                )
+                .fill(cardTint)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(Color.white.opacity(0.28), lineWidth: 0.9)
@@ -139,6 +135,6 @@ struct QuestCard: View {
     }
 
     private var cardTint: Color {
-        quest.stageIndex.isMultiple(of: 2) ? AiQoColors.beige : AiQoColors.mint
+        quest.stageIndex.isMultiple(of: 2) ? GymTheme.beige : GymTheme.mint
     }
 }

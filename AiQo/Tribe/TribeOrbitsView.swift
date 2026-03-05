@@ -1,60 +1,133 @@
 import SwiftUI
 
-/// واجهة تعرض 5 مسارات بيضاوية متقاطعة تشترك في نفس المركز الهندسي
 struct TribeOrbitsView: View {
-    // مصفوفة تحتوي على قيم التقدم (من 0.0 إلى 1.0) لكل مسار
     var memberProgresses: [CGFloat]
-    
-    // مصفوفة تحتوي على الألوان الخاصة بكل مسار
-    let orbitColors: [Color]
-    
+    var orbitColors: [Color] = [
+        Color(red: 0.98, green: 0.94, blue: 0.08),
+        Color(red: 0.66, green: 0.54, blue: 0.95),
+        Color(red: 0.55, green: 0.91, blue: 0.82),
+        Color(red: 0.09, green: 0.40, blue: 0.98),
+        Color(red: 0.93, green: 0.84, blue: 0.67)
+    ]
+
+    private let innerOrbitLineWidth: CGFloat = 8
+    private let outerRingLineWidth: CGFloat = 8
+    private let outerRingSize: CGFloat = 260
+
+    // Mapping is kept consistent with member card border colors:
+    // 0: Yellow, 1: Purple, 2: Mint, 3: Blue, 4: Beige(outer energy ring)
+    private let innerSpecs: [(index: Int, rotation: Double, trimStart: Double, width: CGFloat, height: CGFloat)] = [
+        (2, 90, -96, 208, 76),   // Mint vertical
+        (1, -35, -36, 230, 78),  // Purple diagonal
+        (0, 35, 38, 230, 78),    // Yellow diagonal
+        (3, 0, 2, 244, 72)       // Blue horizontal
+    ]
+
     var body: some View {
-        // نستخدم ZStack بمركز ثابت لضمان عدم تحرك الأشكال
         ZStack(alignment: .center) {
-            
-            // 1. الهالة الخارجية (Outer Aura)
+            // Fifth member: outer beige orbit ring.
             Circle()
                 .stroke(
-                    Color(red: 0.85, green: 0.75, blue: 0.55), // لون بيج/ذهبي ناعم
-                    style: StrokeStyle(lineWidth: 3, dash: [12, 18])
+                    color(at: 4).opacity(0.22),
+                    style: StrokeStyle(lineWidth: outerRingLineWidth, lineCap: .round, dash: [58, 44])
                 )
-                .frame(width: 240, height: 240)
-            
-            // 2. المسارات البيضاوية الخمسة (5 Intersecting Ellipses)
-            ForEach(0..<5, id: \.self) { index in
-                // التحقق من وجود القيم في المصفوفة لتجنب أي أخطاء (Out of Bounds)
-                let progress = memberProgresses.indices.contains(index) ? memberProgresses[index] : 0.0
-                let color = orbitColors.indices.contains(index) ? orbitColors[index] : .gray
-                
-                Ellipse()
-                    // تطبيق القص بناءً على قيمة التقدم
-                    .trim(from: 0, to: progress)
-                    // رسم الحدود باللون المحدد وحواف دائرية
-                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    // أداة الحل الأساسية: إطار ثابت تماماً للشكل البيضاوي قبل تدويره
-                    .frame(width: 200, height: 70)
-                    // التدوير بزيادة 72 درجة لكل مسار حول المركز الدقيق
-                    .rotationEffect(.degrees(Double(index) * 72.0), anchor: .center)
+                .rotationEffect(.degrees(-90))
+                .frame(width: outerRingSize, height: outerRingSize)
+
+            Circle()
+                .trim(from: 0, to: progress(at: 4))
+                .stroke(
+                    color(at: 4).opacity(0.96),
+                    style: StrokeStyle(lineWidth: outerRingLineWidth, lineCap: .round, dash: [58, 44])
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: outerRingSize, height: outerRingSize)
+
+            // Small aura dots around the outer ring.
+            ForEach(0..<8, id: \.self) { idx in
+                Circle()
+                    .fill(color(at: 4).opacity(0.96))
+                    .frame(width: 9, height: 9)
+                    .offset(y: -outerRingSize / 2)
+                    .rotationEffect(.degrees(Double(idx) * 45 + 22.5))
             }
+
+            // Inner four member orbits.
+            ForEach(Array(innerSpecs.enumerated()), id: \.offset) { _, spec in
+                let progress = progress(at: spec.index)
+                let color = color(at: spec.index)
+
+                Ellipse()
+                    .stroke(
+                        color.opacity(0.10),
+                        style: StrokeStyle(lineWidth: innerOrbitLineWidth, lineCap: .round, lineJoin: .round)
+                    )
+                    .frame(width: spec.width, height: spec.height, alignment: .center)
+                    .rotationEffect(.degrees(spec.rotation))
+
+                Ellipse()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        color,
+                        style: StrokeStyle(lineWidth: innerOrbitLineWidth, lineCap: .round, lineJoin: .round)
+                    )
+                    .rotationEffect(.degrees(spec.trimStart))
+                    .frame(width: spec.width, height: spec.height, alignment: .center)
+                    .rotationEffect(.degrees(spec.rotation))
+            }
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.18),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: 92
+                    )
+                )
+                .frame(width: 176, height: 176)
         }
-        // تغليف نهائي بإطار ثابت يمنع الإزاحة ويقوم بتثبيت الحجم الإجمالي
-        .frame(width: 240, height: 240)
-        // إضافة الحركة (Animation) المطلوبة عند تغير قيم التقدم
-        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: memberProgresses)
+        .frame(width: 276, height: 276)
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: normalizedProgresses)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Tribe progress orbits")
+        .accessibilityValue("\(Int((averageProgress * 100).rounded())) percent")
+    }
+
+    private var normalizedProgresses: [CGFloat] {
+        (0..<5).map { progress(at: $0) }
+    }
+
+    private var averageProgress: CGFloat {
+        let values = normalizedProgresses
+        guard !values.isEmpty else { return 0 }
+        return values.reduce(0, +) / CGFloat(values.count)
+    }
+
+    private func progress(at index: Int) -> CGFloat {
+        guard memberProgresses.indices.contains(index) else { return 0 }
+        return memberProgresses[index].clampedToUnitInterval
+    }
+
+    private func color(at index: Int) -> Color {
+        guard orbitColors.indices.contains(index) else { return .gray }
+        return orbitColors[index]
     }
 }
 
-// MARK: - Preview
 #Preview {
-    // عرض تجريبي يثبت دقة المركز واختلاف قيم التقدم (Trim)
     TribeOrbitsView(
-        memberProgresses: [0.2, 0.4, 0.6, 0.8, 1.0],
-        orbitColors: [
-            .red,
-            .blue,
-            .green,
-            .orange,
-            .purple
-        ]
+        memberProgresses: [0.87, 0.72, 0.64, 0.81, 0.55]
     )
+    .padding()
+    .background(Color(red: 0.95, green: 0.98, blue: 0.97))
+}
+
+private extension CGFloat {
+    var clampedToUnitInterval: CGFloat {
+        Swift.min(Swift.max(self, 0), 1)
+    }
 }
