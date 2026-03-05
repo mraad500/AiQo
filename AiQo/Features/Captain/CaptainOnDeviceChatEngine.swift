@@ -40,14 +40,11 @@ actor CaptainOnDeviceChatEngine {
         category: "CaptainOnDeviceChat"
     )
     private let healthService: HealthKitService
-    private let healthManager: HealthKitManager
 
     init(
-        healthService: HealthKitService = .shared,
-        healthManager: HealthKitManager = .shared
+        healthService: HealthKitService = .shared
     ) {
         self.healthService = healthService
-        self.healthManager = healthManager
     }
 
     func respond(to userInput: String) async throws -> String {
@@ -192,13 +189,13 @@ actor CaptainOnDeviceChatEngine {
             return try await healthService.fetchTodaySummary()
         } catch {
             logger.error("captain_live_summary_failed error=\(error.localizedDescription, privacy: .public)")
-            return .zero
+            return await .zero
         }
     }
 
     private func fetchCurrentHeartRateBPM() async -> Int {
         do {
-            guard let sample = try await healthManager.fetchMostRecentQuantitySample(for: .heartRate) else {
+            guard let sample = try await healthService.fetchMostRecentQuantitySample(for: .heartRate) else {
                 return 0
             }
 

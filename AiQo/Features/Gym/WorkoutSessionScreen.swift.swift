@@ -24,6 +24,7 @@ struct WorkoutSessionScreen: View {
     @State private var activeRecoveryContext: ActiveRecoveryContext?
     @State private var pendingRecoveryResult: PendingRecoveryResult?
     @State private var pendingCoachingSummary: WorkoutCoachingSummary?
+    @State private var pendingEndWorkoutSnapshot: WorkoutCompletionSnapshot?
 
     var body: some View {
         ZStack {
@@ -170,6 +171,29 @@ struct WorkoutSessionScreen: View {
                 .padding(.top, 60)
                 .zIndex(100)
             }
+
+            if let recoveryPromptSnapshot = pendingEndWorkoutSnapshot {
+                Color.black.opacity(0.45)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(105)
+
+                OptionalRecoveryPromptCard(
+                    onConfirm: {
+                        beginActiveRecovery(using: recoveryPromptSnapshot)
+                    },
+                    onSkip: {
+                        let snapshot = recoveryPromptSnapshot
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                            pendingEndWorkoutSnapshot = nil
+                        }
+                        bypassRecoveryAndFinishWorkout(using: snapshot)
+                    }
+                )
+                .padding(.horizontal, 24)
+                .zIndex(110)
+                .transition(.scale(scale: 0.94).combined(with: .opacity))
+            }
         }
         .sheet(isPresented: $showSpotifyLibrary) {
             SpotifyVibesLibrarySheet(playlistID: "37i9dQZF1DX4sWSpwq3LiO")
@@ -252,12 +276,25 @@ struct WorkoutSessionScreen: View {
     }
     
     private func endWorkout() {
+        let snapshot = buildWorkoutCompletionSnapshot()
+
+        if isCaptainHamoudiCardioWorkout {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                pendingEndWorkoutSnapshot = snapshot
+            }
+            return
+        }
+
+        completeWorkout(snapshot: snapshot, recovery1: nil, recovery2: nil)
+    }
+
+    private func buildWorkoutCompletionSnapshot() -> WorkoutCompletionSnapshot {
         let finalDuration = TimeInterval(session.elapsedSeconds)
         let finalCalories = session.activeEnergy
         let finalAvgHR = session.heartRate
         let finalDistance = session.distanceMeters
         let estimatedSteps = max(Int((finalDistance / 1000.0) * 1300.0), 0)
-        let snapshot = WorkoutCompletionSnapshot(
+        return WorkoutCompletionSnapshot(
             duration: finalDuration,
             calories: finalCalories,
             avgHeartRate: finalAvgHR,
@@ -265,17 +302,40 @@ struct WorkoutSessionScreen: View {
             estimatedSteps: estimatedSteps,
             workoutTitle: session.title
         )
+    }
 
-        if isCaptainHamoudiCardioWorkout {
-            activeRecoveryContext = ActiveRecoveryContext(
-                snapshot: snapshot,
-                peakHeartRate: finalAvgHR
-            )
-            showActiveRecovery = true
-            return
+    private func beginActiveRecovery(using snapshot: WorkoutCompletionSnapshot) {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            pendingEndWorkoutSnapshot = nil
         }
 
-        completeWorkout(snapshot: snapshot, recovery1: nil, recovery2: nil)
+        activeRecoveryContext = ActiveRecoveryContext(
+            snapshot: snapshot,
+            peakHeartRate: snapshot.avgHeartRate
+        )
+        showActiveRecovery = true
+    }
+
+    private func bypassRecoveryAndFinishWorkout(using snapshot: WorkoutCompletionSnapshot) {
+        summaryData = (
+            duration: snapshot.duration,
+            calories: snapshot.calories,
+            avgHeartRate: snapshot.avgHeartRate,
+            recovery1: nil,
+            recovery2: nil
+        )
+
+        pendingCoachingSummary = WorkoutCoachingSummary(
+            duration: snapshot.duration,
+            calories: snapshot.calories,
+            averageHeartRate: snapshot.avgHeartRate,
+            distanceMeters: snapshot.distanceMeters,
+            estimatedSteps: snapshot.estimatedSteps,
+            workoutType: snapshot.workoutTitle
+        )
+
+        session.forceEndFromPhoneImmediately()
+        showSummary = true
     }
 
     private func completeWorkout(
@@ -351,6 +411,98 @@ private struct PendingRecoveryResult {
     let snapshot: WorkoutCompletionSnapshot
     let recovery1: Int
     let recovery2: Int
+}
+
+private struct OptionalRecoveryPromptCard: View {
+    let onConfirm: () -> Void
+    let onSkip: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                WorkoutTheme.pastelMint.opacity(0.45),
+                                WorkoutTheme.pastelBeige.opacity(0.18)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 72, height: 72)
+                    .blur(radius: 6)
+
+                Image(systemName: "heart.text.square.fill")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+
+            VStack(spacing: 10) {
+                Text("قياس تعافي النبض")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                Text("تعافي معدل ضربات القلب: هو سرعة نزول نبض القلب بعد التمرين. إذا نزل بسرعة خلال أول دقيقتين، فهذا دليل على صحة قلب ولياقة أفضل.")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.86))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+
+            HStack(spacing: 12) {
+                Button(action: onConfirm) {
+                    Text("نعم")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(WorkoutTheme.pastelMint)
+                        .clipShape(Capsule())
+                }
+
+                Button(action: onSkip) {
+                    Text("لا شكراً")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                        )
+                }
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 26)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(.ultraThinMaterial)
+
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.16),
+                                Color.white.opacity(0.06)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            }
+        )
+        .shadow(color: .black.opacity(0.35), radius: 28, x: 0, y: 18)
+    }
 }
 
 // MARK: - Components (Cards & Wheel)

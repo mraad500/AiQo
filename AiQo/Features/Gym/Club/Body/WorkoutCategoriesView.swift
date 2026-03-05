@@ -26,7 +26,8 @@ struct WorkoutCardItem: Identifiable, Hashable {
 struct WorkoutCategoriesView: View {
     let onSelectExercise: (GymExercise) -> Void
 
-    private let contentTrailingPadding: CGFloat = 90
+    private let contentLeadingPadding: CGFloat = 16
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
 
     @State private var selection = 0
     @State private var visibleCardIDs = Set<UUID>()
@@ -81,7 +82,7 @@ struct WorkoutCategoriesView: View {
                     }
                 }
                 .padding(.top, 12)
-                .padding(.horizontal, 20)
+                .padding(.leading, contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.bottom, 120)
             }

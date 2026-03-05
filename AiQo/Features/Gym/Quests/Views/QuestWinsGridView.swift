@@ -5,8 +5,7 @@ struct QuestWinsGridView: View {
     var onScrollOffsetChange: ((CGFloat) -> Void)? = nil
 
     private let columns = [
-        GridItem(.flexible(), spacing: 14),
-        GridItem(.flexible(), spacing: 14)
+        GridItem(.flexible(), spacing: 0)
     ]
     private let railScrollOffsetSpaceName = "QuestWinsRailScroll"
 
@@ -21,15 +20,15 @@ struct QuestWinsGridView: View {
                 if visibleWins.isEmpty {
                     emptyState
                 } else {
-                    LazyVGrid(columns: columns, spacing: 14) {
+                    LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(visibleWins) { win in
                             WinAwardCard(win: win)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 14)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
             .padding(.bottom, 32)
             .background(alignment: .top) {
                 RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)

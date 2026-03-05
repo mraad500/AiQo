@@ -283,6 +283,36 @@ actor HealthKitService {
 
     // MARK: - Public API (Workouts)
 
+    func fetchMostRecentQuantitySample(
+        for identifier: HKQuantityTypeIdentifier
+    ) async throws -> HKQuantitySample? {
+        guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return nil
+        }
+
+        let sortDescriptors = [
+            NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        ]
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: quantityType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: sortDescriptors
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                continuation.resume(returning: samples?.first as? HKQuantitySample)
+            }
+
+            store.execute(query)
+        }
+    }
+
     func fetchWorkouts(
         limit: Int = 60,
         startDate: Date? = nil,

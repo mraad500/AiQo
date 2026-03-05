@@ -5,8 +5,6 @@ internal import Combine
 struct QuestsView: View {
     @ObservedObject var engine: QuestEngine
 
-    @Environment(\.layoutDirection) private var layoutDirection
-
     @State private var selectedStageID = 1
     @State private var selectedQuest: QuestDefinition?
     @State private var questSheetDetent: PresentationDetent = .fraction(0.5)
@@ -15,12 +13,10 @@ struct QuestsView: View {
     @State private var hasCenterBaseline = false
     @State private var centerToastMessage: String?
     @State private var centerToastHideTask: Task<Void, Never>?
-    @State private var isRailCollapsed = true
-    @State private var isRailHidden = false
-    @State private var previousScrollOffset: CGFloat = 0
 
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    private let scrollOffsetSpaceName = "QuestsRailScroll"
+    private let contentLeadingPadding: CGFloat = 16
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
 
     var body: some View {
         ZStack {
@@ -66,25 +62,20 @@ struct QuestsView: View {
                                 )
                         }
                     }
+                    .padding(.top, 12)
                     .padding(.bottom, 120)
-                    .background(alignment: .top) {
-                        RailScrollOffsetReader(coordinateSpaceName: scrollOffsetSpaceName)
-                    }
                 }
-                .coordinateSpace(name: scrollOffsetSpaceName)
             }
-            .padding(.horizontal, 18)
+            .padding(.leading, contentLeadingPadding)
+            .padding(.trailing, contentTrailingPadding)
             .padding(.top, 18)
-            .clubPhysicalRightContentInset(layoutDirection: layoutDirection)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedStageID)
-        }
-        .clubRightRailOverlay {
-            RightSideVerticalRail(
+
+            SlimRightSideRail(
                 items: stageRailItems,
-                selection: stageRailSelection,
-                isCollapsed: $isRailCollapsed,
-                isHidden: $isRailHidden
+                selection: stageRailSelection
             )
+            .accessibilityLabel(Text("مراحل القمم"))
         }
         .overlay(alignment: .top) {
             if let centerToastMessage {
@@ -125,9 +116,6 @@ struct QuestsView: View {
         }
         .onChange(of: engine.progressByQuestId) { _, _ in
             handleStageOneCenterUpgrades()
-        }
-        .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
-            handleRailScroll(offset: offset)
         }
         .onDisappear {
             centerToastHideTask?.cancel()
@@ -179,28 +167,6 @@ struct QuestsView: View {
         default:
             return "crown"
         }
-    }
-
-    private func handleRailScroll(offset: CGFloat) {
-        let delta = offset - previousScrollOffset
-
-        if delta <= -15 {
-            withAnimation(.easeOut(duration: 0.25)) {
-                isRailHidden = true
-            }
-        } else if delta >= 15 || offset >= -8 {
-            withAnimation(.easeOut(duration: 0.25)) {
-                isRailHidden = false
-            }
-        }
-
-        if offset <= -180, !isRailCollapsed {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
-                isRailCollapsed = true
-            }
-        }
-
-        previousScrollOffset = offset
     }
 
     private func syncStageOneCenterBaseline() {

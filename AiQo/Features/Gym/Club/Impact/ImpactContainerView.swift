@@ -46,14 +46,11 @@ extension ClubTopTab: ClubSegmentedTabItem {}
 extension ImpactSubTab: ClubSegmentedTabItem {}
 
 struct ImpactContainerView: View {
-    @Environment(\.layoutDirection) private var layoutDirection
-
     @State private var selectedTab: ImpactSubTab = .summary
-    @State private var isRailCollapsed = true
-    @State private var isRailHidden = false
-    @State private var previousScrollOffset: CGFloat = 0
 
     let winsStore: WinsStore
+
+    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding
 
     private var railItems: [RailItem] {
         ImpactSubTab.allCases.map {
@@ -71,27 +68,21 @@ struct ImpactContainerView: View {
             ZStack {
                 switch selectedTab {
                 case .summary:
-                    ImpactSummaryView(onScrollOffsetChange: handleRailScroll)
+                    ImpactSummaryView()
                         .transition(.opacity)
 
                 case .achievements:
-                    ImpactAchievementsView(
-                        winsStore: winsStore,
-                        onScrollOffsetChange: handleRailScroll
-                    )
+                    ImpactAchievementsView(winsStore: winsStore)
                         .transition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .clubPhysicalRightContentInset(layoutDirection: layoutDirection)
+            .padding(.trailing, contentTrailingPadding)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
-        }
-        .clubRightRailOverlay {
-            RightSideVerticalRail(
+
+            SlimRightSideRail(
                 items: railItems,
-                selection: selectedTabIndex,
-                isCollapsed: $isRailCollapsed,
-                isHidden: $isRailHidden
+                selection: selectedTabIndex
             )
             .accessibilityLabel(Text(verbatim: L10n.t("club.impact_tabs.accessibility.label")))
         }
@@ -107,28 +98,6 @@ struct ImpactContainerView: View {
                 selectedTab = ImpactSubTab.allCases[newValue]
             }
         )
-    }
-
-    private func handleRailScroll(offset: CGFloat) {
-        let delta = offset - previousScrollOffset
-
-        if delta <= -15 {
-            withAnimation(.easeOut(duration: 0.25)) {
-                isRailHidden = true
-            }
-        } else if delta >= 15 || offset >= -8 {
-            withAnimation(.easeOut(duration: 0.25)) {
-                isRailHidden = false
-            }
-        }
-
-        if offset <= -180, !isRailCollapsed {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
-                isRailCollapsed = true
-            }
-        }
-
-        previousScrollOffset = offset
     }
 }
 

@@ -1,6 +1,11 @@
 import SwiftUI
 import HealthKit
 import Charts
+
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
 internal import Combine
 
 // ===============================
@@ -22,6 +27,7 @@ struct PhoneWorkoutSummaryView: View {
     @State private var appearAnimation: Bool = false
     @StateObject private var heartAnalytics = WorkoutHeartRateAnalyticsStore()
     @State private var showHeartDeepDive = false
+    @State private var hasQueuedCaptainSummary = false
 
     // Action
     var onDismiss: () -> Void
@@ -217,9 +223,18 @@ struct PhoneWorkoutSummaryView: View {
                 seedSamples: heartRateSamples
             )
             calculateStats()
+
+            guard !hasQueuedCaptainSummary else { return }
+            hasQueuedCaptainSummary = true
+
+            Task {
+                let summaryText = await generateCaptainSummaryText()
+                await CaptainVoiceService.shared.speak(text: summaryText)
+            }
         }
         .onDisappear {
             heartAnalytics.stopStreaming()
+            CaptainVoiceService.shared.stopSpeaking()
         }
         .onChange(of: heartAnalytics.samples.count) { _, _ in
             calculateStats()
@@ -300,6 +315,68 @@ struct PhoneWorkoutSummaryView: View {
     private func recoveryCardValue(_ value: Int?) -> String {
         guard let value else { return "--" }
         return "\(value)"
+    }
+
+    private func generateCaptainSummaryText() async -> String {
+        let durationMinutes = max(Int((duration / 60).rounded()), 1)
+        let caloriesBurned = max(Int(calories.rounded()), 0)
+        let recoveryLine: String
+        let recoveryPromptLine: String
+
+        if let recovery2 {
+            recoveryLine = " وقياس التعافي مالتك نزل \(recovery2) نبضة بدقيقتين."
+            recoveryPromptLine = "- معلومة التعافي: قياس التعافي نزل \(recovery2) نبضة بدقيقتين."
+        } else if let recovery1 {
+            recoveryLine = " ونبضك نزل \(recovery1) نبضة بأول دقيقة."
+            recoveryPromptLine = "- معلومة التعافي: النبض نزل \(recovery1) نبضة بأول دقيقة."
+        } else {
+            recoveryLine = ""
+            recoveryPromptLine = ""
+        }
+
+#if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            let model = SystemLanguageModel.default
+
+            if model.availability == .available {
+                let prompt = """
+                اكتب جملة قصيرة جدا بصوت كابتن حمودي، بالعراقي فقط.
+                هنّي المستخدم على إنهاء التمرين.
+                لازم تذكر:
+                - المدة: \(durationMinutes) دقيقة
+                - السعرات: \(caloriesBurned) سعرة
+                - متوسط النبض: \(Int(avgHeartRate.rounded())) نبضة
+                \(recoveryPromptLine)
+                خلي الرد جملة وحدة فقط، طبيعية ومسموعة.
+                """
+
+                do {
+                    let session = LanguageModelSession(
+                        instructions: "أنت كابتن حمودي. احچي لهجة عراقية صافية، دافئة، ومختصرة."
+                    )
+                    let response = try await session.respond(to: prompt)
+                    let generated = sanitizedCaptainSummary(response.content)
+
+                    if !generated.isEmpty {
+                        return generated
+                    }
+                } catch {
+                    // Fall back to a deterministic line below.
+                }
+            }
+        }
+#endif
+
+        return "يعطيك العافية يا بطل، خلصت \(durationMinutes) دقيقة وحرگت \(caloriesBurned) سعرة\(recoveryLine) شغل مرتب كلش."
+    }
+
+    private func sanitizedCaptainSummary(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\n", with: " ")
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var resolvedHeartRateSamples: [HKQuantitySample] {

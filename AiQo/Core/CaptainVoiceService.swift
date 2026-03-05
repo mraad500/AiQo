@@ -35,6 +35,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     private var audioPlayer: AVAudioPlayer?
     private var playContinuation: CheckedContinuation<Void, Never>?
     private var hasActiveSpeechSession = false
+    private var externalMixedPlaybackClients = 0
 
     private override init() {
         super.init()
@@ -102,6 +103,14 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         await speak(text: workoutPrompt)
     }
 
+    func beginExternalMixedPlayback() {
+        externalMixedPlaybackClients += 1
+    }
+
+    func endExternalMixedPlayback() {
+        externalMixedPlaybackClients = max(0, externalMixedPlaybackClients - 1)
+    }
+
     private func fetchSpeechAudio(for text: String) async throws -> Data {
         guard let url = URL(string: API.baseURL + API.voiceID) else {
             throw CaptainVoiceError.invalidEndpoint
@@ -167,6 +176,9 @@ final class CaptainVoiceService: NSObject, ObservableObject {
 
         if audioManager.isPlaying {
             audioManager.refreshAudioSessionConfiguration()
+        } else if externalMixedPlaybackClients > 0 {
+            try? audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try? audioSession.setActive(true)
         } else {
             try? audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
         }

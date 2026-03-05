@@ -89,7 +89,7 @@ struct ClubRootView: View {
         }
         .sheet(item: $selectedExercise) { exercise in
             ZStack(alignment: .topTrailing) {
-                if let session = sessionForExercise(exercise) {
+                if let session = resolvedSession(for: exercise) {
                     WorkoutSessionScreen(session: session)
                         .background(Color.clear)
                 }
@@ -115,7 +115,7 @@ struct ClubRootView: View {
             .presentationCornerRadius(30)
         }
         .fullScreenCover(item: $selectedCinematicExercise) { exercise in
-            if let session = sessionForExercise(exercise) {
+            if let session = resolvedSession(for: exercise) {
                 CinematicGrindFlowView(
                     exercise: exercise,
                     session: session,
@@ -133,17 +133,20 @@ struct ClubRootView: View {
     }
 
     private var topHeaderBar: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 0) {
             GlobalTopCapsuleTabsView(
                 tabs: displayedTabs.map { L10n.t($0.titleKey) },
+                selectedTints: displayedTabs.map(topTabTint(for:)),
                 selection: displayedSelectedTabIndex
             )
 
             footballToolbarButton
+                .frame(width: ClubChromeLayout.trailingLaneWidth, alignment: .center)
         }
-        .padding(.top, 10)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 6)
+        .padding(.top, ClubChromeLayout.headerTopPadding)
+        .padding(.leading, ClubChromeLayout.headerLeadingInset)
+        .padding(.trailing, ClubChromeLayout.headerTrailingInset)
+        .padding(.bottom, ClubChromeLayout.headerBottomPadding)
     }
 
     @ViewBuilder
@@ -168,51 +171,44 @@ struct ClubRootView: View {
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
-        if let session = activeSession, session.phase != .idle, let activeExercise {
-            presentExercise(activeExercise)
-            return
-        }
+        Task { @MainActor in
+            await Task.yield()
+            if let session = activeSession, session.phase != .idle, let activeExercise {
+                presentExercise(activeExercise)
+                return
+            }
 
-        if exercise.workoutKind == .cinematicGrind {
             activeExercise = exercise
-            activeSession = sessionForExercise(exercise)
-            selectedCinematicExercise = exercise
-            return
+            activeSession = makeSession(for: exercise)
+            presentExercise(exercise)
         }
-
-        activeExercise = exercise
-        activeSession = LiveWorkoutSession(
-            title: exercise.title,
-            activityType: exercise.type,
-            locationType: exercise.location,
-            currentWorkout: exercise.workoutKind,
-            coachingProfile: exercise.coachingProfile
-        )
-        selectedExercise = exercise
     }
 
-    private func sessionForExercise(_ exercise: GymExercise) -> LiveWorkoutSession? {
-        if let session = activeSession, let activeExercise, activeExercise == exercise {
-            return session
+    private func resolvedSession(for exercise: GymExercise) -> LiveWorkoutSession? {
+        guard let session = activeSession, let activeExercise, activeExercise == exercise else {
+            return nil
         }
-
-        activeExercise = exercise
-        let session = LiveWorkoutSession(
-            title: exercise.title,
-            activityType: exercise.type,
-            locationType: exercise.location,
-            currentWorkout: exercise.workoutKind,
-            coachingProfile: exercise.coachingProfile
-        )
-        activeSession = session
         return session
     }
 
+    private func makeSession(for exercise: GymExercise) -> LiveWorkoutSession {
+        LiveWorkoutSession(
+            title: exercise.title,
+            activityType: exercise.type,
+            locationType: exercise.location,
+            currentWorkout: exercise.workoutKind,
+            coachingProfile: exercise.coachingProfile
+        )
+    }
+
     private func presentExercise(_ exercise: GymExercise) {
-        if exercise.workoutKind == .cinematicGrind {
-            selectedCinematicExercise = exercise
-        } else {
-            selectedExercise = exercise
+        Task { @MainActor in
+            await Task.yield()
+            if exercise.workoutKind == .cinematicGrind {
+                selectedCinematicExercise = exercise
+            } else {
+                selectedExercise = exercise
+            }
         }
     }
 
@@ -223,9 +219,27 @@ struct ClubRootView: View {
             },
             set: { newValue in
                 guard displayedTabs.indices.contains(newValue) else { return }
-                selectedTab = displayedTabs[newValue]
+                let nextTab = displayedTabs[newValue]
+                guard selectedTab != nextTab else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    selectedTab = nextTab
+                }
             }
         )
+    }
+
+    private func topTabTint(for tab: ClubTopTab) -> Color {
+        switch tab {
+        case .plan:
+            return AiQoColors.beige
+        case .body:
+            return AiQoColors.mint
+        case .challenges:
+            return AiQoColors.mint
+        case .impact:
+            return AiQoColors.mint
+        }
     }
 
     private var footballToolbarButton: some View {

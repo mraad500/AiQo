@@ -727,43 +727,46 @@ struct ChatContainerView: View {
     private let thinkingIndicatorID = "captain-thinking-indicator"
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 10) {
-                    ForEach(messages) { message in
-                        ChatBubbleView(
-                            text: message.content,
-                            isUser: message.isUser
-                        )
-                        .id(message.id)
-                    }
-
-                    if isTyping {
-                        HStack {
-                            TypingIndicatorView(state: coachState)
-                            Spacer()
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 10) {
+                        ForEach(messages) { message in
+                            ChatBubbleView(
+                                text: message.content,
+                                isUser: message.isUser,
+                                maxBubbleWidth: geometry.size.width * 0.78
+                            )
+                            .id(message.id)
                         }
-                        .id(thinkingIndicatorID)
-                        .padding(.top, 6)
+
+                        if isTyping {
+                            HStack {
+                                TypingIndicatorView(state: coachState)
+                                Spacer()
+                            }
+                            .id(thinkingIndicatorID)
+                            .padding(.top, 6)
+                        }
                     }
+                    .padding(.top, 24)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 20)
                 }
-                .padding(.top, 24)
-                .padding(.horizontal, 4)
-                .padding(.bottom, 20)
-            }
-            .scrollDisabled(!scrollEnabled)
-            .scrollDismissesKeyboard(.interactively)
-            .onAppear {
-                scrollToBottom(using: proxy, animated: false)
-            }
-            .onChange(of: messages.count) {
-                scrollToBottom(using: proxy)
-            }
-            .onChange(of: messages.last?.content) {
-                scrollToBottom(using: proxy)
-            }
-            .onChange(of: isTyping) {
-                scrollToBottom(using: proxy)
+                .scrollDisabled(!scrollEnabled)
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    scrollToBottom(using: proxy, animated: false)
+                }
+                .onChange(of: messages.count) {
+                    scrollToBottom(using: proxy)
+                }
+                .onChange(of: messages.last?.content) {
+                    scrollToBottom(using: proxy)
+                }
+                .onChange(of: isTyping) {
+                    scrollToBottom(using: proxy)
+                }
             }
         }
     }
@@ -794,10 +797,10 @@ struct ChatContainerView: View {
 struct ChatBubbleView: View {
     let text: String
     let isUser: Bool
+    let maxBubbleWidth: CGFloat
 
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
-    private let maxBubbleWidth = UIScreen.main.bounds.width * 0.78
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }

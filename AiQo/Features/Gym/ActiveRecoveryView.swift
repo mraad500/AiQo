@@ -100,6 +100,7 @@ struct ActiveRecoveryView: View {
         .onDisappear {
             breathingTask?.cancel()
             breathingTask = nil
+            CaptainVoiceService.shared.stopSpeaking()
         }
         .onReceive(ticker) { _ in
             tickRecoveryTimer()
@@ -151,6 +152,7 @@ struct ActiveRecoveryView: View {
                 withAnimation(.easeInOut(duration: 4.0)) {
                     avatarScale = 1.15
                 }
+                cueCaptainBreathingPrompt("يا بطل، خذ شهيق عميق وخلي صدرك ينفتح.")
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 guard !Task.isCancelled else { break }
 
@@ -158,8 +160,17 @@ struct ActiveRecoveryView: View {
                 withAnimation(.easeInOut(duration: 6.0)) {
                     avatarScale = 1.0
                 }
+                cueCaptainBreathingPrompt("هسه طلّع الزفير شوي شوي، وخلي النبض ينزل براحة.")
                 try? await Task.sleep(nanoseconds: 6_000_000_000)
             }
+        }
+    }
+
+    private func cueCaptainBreathingPrompt(_ text: String) {
+        guard !CaptainVoiceService.shared.isSpeaking else { return }
+
+        Task {
+            await CaptainVoiceService.shared.speak(text: text)
         }
     }
 

@@ -3,6 +3,7 @@
 // Target: iOS
 // ===============================================
 
+import AVFoundation
 import Foundation
 import HealthKit
 import SwiftUI
@@ -77,8 +78,15 @@ final class LiveWorkoutSession: ObservableObject {
     private var smoothingTimer: Timer?
     private var liveActivityIsActive = false
     private var isCaptainWarmupAmbientActive = false
+    private var hasRegisteredCaptainWarmupAmbient = false
+    private var captainWarmupAmbientPlayer: AVAudioPlayer?
+    private var captainWarmupAmbientFadeTask: Task<Void, Never>?
+    private var shouldIgnoreIncomingSnapshots = false
 
     private static let captainWarmupAmbientTrackName = "SoundOfEnergy"
+    private static let captainWarmupAmbientLoopDurationSeconds = 360
+    private static let captainWarmupAmbientBaseVolume: Float = 0.62
+    private static let captainWarmupAmbientDuckedVolume: Float = 0.18
     
     // MARK: - Computed Properties
     
@@ -195,6 +203,14 @@ final class LiveWorkoutSession: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+
+        CaptainVoiceService.shared.$isSpeaking
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] isSpeaking in
+                self?.syncCaptainWarmupAmbientSpeechState(isSpeaking)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Milestone Detection (Haptic + Visual Alert)
@@ -269,6 +285,34 @@ final class LiveWorkoutSession: ObservableObject {
         lastError = nil
         connectivity.endWorkoutOnWatch()
     }
+
+    func forceEndFromPhoneImmediately() {
+        guard phase != .idle else { return }
+
+        shouldIgnoreIncomingSnapshots = true
+        lastError = nil
+
+        if canEnd {
+            connectivity.endWorkoutOnWatch()
+        }
+
+        if liveActivityIsActive {
+            liveActivity.end(
+                title: title,
+                elapsedSeconds: elapsedSeconds,
+                heartRate: heartRate,
+                activeCalories: activeEnergy,
+                distanceMeters: distanceMeters,
+                zone2State: liveActivityHeartRateState,
+                activeBuffs: activeLiveBuffs
+            )
+        }
+
+        resetWorkoutState()
+        withAnimation(.snappy) {
+            phase = .idle
+        }
+    }
     
     // MARK: - Private Helpers
 
@@ -332,6 +376,14 @@ final class LiveWorkoutSession: ObservableObject {
     }
 
     private func applyRemoteSnapshot(_ snapshot: WorkoutSessionStateDTO) {
+        if shouldIgnoreIncomingSnapshots {
+            if snapshot.currentState == .ended {
+                shouldIgnoreIncomingSnapshots = false
+                handleRemoteEnded()
+            }
+            return
+        }
+
         let previousConnectionState = remoteConnectionState
         let previousPhase = phase
 
@@ -526,11 +578,6 @@ final class LiveWorkoutSession: ObservableObject {
     private func syncCoachingState() {
         evaluateZone2Coaching()
         updateCaptainWarmupAmbientIfNeeded()
-        audioCoachManager.handleTimerTick(
-            elapsedTime: TimeInterval(elapsedSeconds),
-            heartRate: heartRate,
-            isRunning: phase == .running
-        )
         audioCoachManager.handleDynamicZone2Coaching(
             heartRate: heartRate,
             distanceMeters: distanceMeters,
@@ -591,6 +638,7 @@ final class LiveWorkoutSession: ObservableObject {
     }
 
     private func prepareForWorkoutStart() {
+        shouldIgnoreIncomingSnapshots = false
         refreshZone2Configuration()
         resetWorkoutState()
         if !liveActivityIsActive {
@@ -610,14 +658,35 @@ final class LiveWorkoutSession: ObservableObject {
 
     private func startCaptainWarmupAudioIfNeeded() {
         guard currentWorkout == .cardioWithCaptainHamoudi else { return }
+        guard captainWarmupAmbientPlayer == nil else {
+            isCaptainWarmupAmbientActive = true
+            configureCaptainWarmupAmbientAudioSession()
+            captainWarmupAmbientPlayer?.play()
+            syncCaptainWarmupAmbientSpeechState(CaptainVoiceService.shared.isSpeaking)
+            registerCaptainWarmupAmbientIfNeeded()
+            return
+        }
 
-        AiQoAudioManager.shared.playAmbient(trackName: Self.captainWarmupAmbientTrackName)
+        guard let nextPlayer = makeCaptainWarmupAmbientPlayer() else { return }
+
+        configureCaptainWarmupAmbientAudioSession()
+
+        nextPlayer.numberOfLoops = -1
+        nextPlayer.volume = CaptainVoiceService.shared.isSpeaking
+            ? Self.captainWarmupAmbientDuckedVolume
+            : Self.captainWarmupAmbientBaseVolume
+        nextPlayer.prepareToPlay()
+
+        guard nextPlayer.play() else { return }
+
+        captainWarmupAmbientPlayer = nextPlayer
         isCaptainWarmupAmbientActive = true
+        registerCaptainWarmupAmbientIfNeeded()
     }
 
     private func updateCaptainWarmupAmbientIfNeeded() {
         guard isCaptainWarmupAmbientActive else { return }
-        guard elapsedSeconds >= AudioCoachManager.warmUpDurationSeconds else { return }
+        guard elapsedSeconds >= Self.captainWarmupAmbientLoopDurationSeconds else { return }
 
         stopCaptainWarmupAmbientIfNeeded()
     }
@@ -629,9 +698,102 @@ final class LiveWorkoutSession: ObservableObject {
     private func stopCaptainWarmupAmbientIfNeeded() {
         guard isCaptainWarmupAmbientActive else { return }
         isCaptainWarmupAmbientActive = false
+        captainWarmupAmbientFadeTask?.cancel()
+        captainWarmupAmbientFadeTask = nil
+        captainWarmupAmbientPlayer?.stop()
+        captainWarmupAmbientPlayer = nil
+        unregisterCaptainWarmupAmbientIfNeeded()
 
-        guard AiQoAudioManager.shared.currentTrackName == Self.captainWarmupAmbientTrackName else { return }
-        AiQoAudioManager.shared.stopAmbient()
+        guard !CaptainVoiceService.shared.isSpeaking else { return }
+        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+
+    private func makeCaptainWarmupAmbientPlayer() -> AVAudioPlayer? {
+        if let asset = NSDataAsset(name: Self.captainWarmupAmbientTrackName, bundle: .main),
+           let player = try? AVAudioPlayer(data: asset.data) {
+            return player
+        }
+
+        for fileExtension in ["m4a", "mp3", "aac", "wav"] {
+            guard let url = Bundle.main.url(
+                forResource: Self.captainWarmupAmbientTrackName,
+                withExtension: fileExtension
+            ) else {
+                continue
+            }
+
+            if let player = try? AVAudioPlayer(contentsOf: url) {
+                return player
+            }
+        }
+
+        return nil
+    }
+
+    private func configureCaptainWarmupAmbientAudioSession() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    private func syncCaptainWarmupAmbientSpeechState(_ isSpeaking: Bool) {
+        guard let captainWarmupAmbientPlayer, isCaptainWarmupAmbientActive else { return }
+
+        if !captainWarmupAmbientPlayer.isPlaying {
+            configureCaptainWarmupAmbientAudioSession()
+            captainWarmupAmbientPlayer.play()
+        }
+
+        setCaptainWarmupAmbientVolume(
+            isSpeaking ? Self.captainWarmupAmbientDuckedVolume : Self.captainWarmupAmbientBaseVolume,
+            animated: true
+        )
+    }
+
+    private func setCaptainWarmupAmbientVolume(_ targetVolume: Float, animated: Bool) {
+        guard let captainWarmupAmbientPlayer else { return }
+
+        captainWarmupAmbientFadeTask?.cancel()
+
+        guard animated else {
+            captainWarmupAmbientPlayer.volume = targetVolume
+            return
+        }
+
+        let startVolume = captainWarmupAmbientPlayer.volume
+        let steps = 6
+        let stepDuration = UInt64(40_000_000)
+
+        captainWarmupAmbientFadeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            for step in 1...steps {
+                if Task.isCancelled { return }
+                guard let player = self.captainWarmupAmbientPlayer else { return }
+
+                let progress = Float(step) / Float(steps)
+                player.volume = startVolume + ((targetVolume - startVolume) * progress)
+                try? await Task.sleep(nanoseconds: stepDuration)
+            }
+
+            self.captainWarmupAmbientPlayer?.volume = targetVolume
+        }
+    }
+
+    private func registerCaptainWarmupAmbientIfNeeded() {
+        guard !hasRegisteredCaptainWarmupAmbient else { return }
+        hasRegisteredCaptainWarmupAmbient = true
+        CaptainVoiceService.shared.beginExternalMixedPlayback()
+    }
+
+    private func unregisterCaptainWarmupAmbientIfNeeded() {
+        guard hasRegisteredCaptainWarmupAmbient else { return }
+        hasRegisteredCaptainWarmupAmbient = false
+        CaptainVoiceService.shared.endExternalMixedPlayback()
     }
 }
 

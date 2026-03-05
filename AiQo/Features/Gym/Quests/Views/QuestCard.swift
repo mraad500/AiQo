@@ -75,16 +75,20 @@ struct QuestCard: View {
         .frame(maxWidth: .infinity, minHeight: 166)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+                .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color(uiColor: .separator).opacity(0.35), lineWidth: 1)
+                        .fill(cardTint.opacity(0.22))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.28), lineWidth: 0.9)
                 )
                 .shadow(
-                    color: colorScheme == .dark ? .clear : Color.black.opacity(0.08),
-                    radius: 8,
+                    color: colorScheme == .dark ? .clear : cardTint.opacity(0.14),
+                    radius: 10,
                     x: 0,
-                    y: 5
+                    y: 6
                 )
         )
         .overlay(alignment: .topTrailing) {
@@ -132,5 +136,9 @@ struct QuestCard: View {
     private var contextText: String? {
         guard quest.stageIndex == 1 else { return nil }
         return questStageOneContextText(for: quest, now: referenceDate)
+    }
+
+    private var cardTint: Color {
+        quest.stageIndex.isMultiple(of: 2) ? AiQoColors.beige : AiQoColors.mint
     }
 }
