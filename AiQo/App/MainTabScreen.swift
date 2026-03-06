@@ -108,4 +108,5 @@ struct MainTabScreen: View {
 
 #Preview {
     MainTabScreen()
+        .environmentObject(CaptainViewModel())
 }

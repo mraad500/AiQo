@@ -111,7 +111,7 @@ struct HomeView: View {
             VibeControlSheet(viewModel: vibeControlViewModel)
                 .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
+                .presentationBackground(.clear)
         }
         
         // MARK: - Other Destination Sheets

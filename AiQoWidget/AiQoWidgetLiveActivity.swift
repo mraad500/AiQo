@@ -5,6 +5,9 @@
 //  Created by Mohammed Raad on 07/02/2026.
 //
 
+#if canImport(ActivityKit)
+#if os(iOS)
+
 import ActivityKit
 import WidgetKit
 import SwiftUI
@@ -710,3 +713,6 @@ extension WorkoutActivityAttributes.ContentState {
     WorkoutActivityAttributes.ContentState.running
     WorkoutActivityAttributes.ContentState.paused
 }
+
+#endif
+#endif

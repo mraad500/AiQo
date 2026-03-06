@@ -1,6 +1,17 @@
 import SwiftUI
 import UIKit
+import AVKit
 internal import Combine
+
+struct RoutePickerView: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView()
+        picker.activeTintColor = .systemMint
+        picker.tintColor = .white
+        return picker
+    }
+    func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
+}
 
 enum VibeMode: String, CaseIterable, Identifiable, Codable {
     case awakening = "Awakening"
@@ -168,38 +179,45 @@ struct VibeControlSheet: View {
     @ObservedObject var vibeManager = SpotifyVibeManager.shared
     @ObservedObject var aiqoAudioManager = AiQoAudioManager.shared
     @ObservedObject var vibeAudioEngine = VibeAudioEngine.shared
+    @EnvironmentObject private var captainBrain: CaptainViewModel
+    @State private var isDetailsSheetPresented = false
+    @State private var showDJChat = false
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 22) {
-                header
-                vibeGrid
-                actionArea
-            }
-            .padding(.horizontal, 22)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
-        }
-        .background {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.28),
-                        Color(red: 0.82, green: 0.95, blue: 0.91).opacity(0.18),
-                        Color(red: 0.96, green: 0.88, blue: 0.97).opacity(0.14)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        GeometryReader { _ in
+            ZStack(alignment: .topLeading) {
+                backgroundArtwork
 
-                Circle()
-                    .fill(Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.15))
-                    .frame(width: 240, height: 240)
-                    .blur(radius: 50)
-                    .offset(x: 120, y: -80)
+                topContent
+
+                if viewModel.selectedSource == .aiqoSounds {
+                    aiqoSoundsContent
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    spotifyContent
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
-            .ignoresSafeArea()
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                compactControlCard
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                Color.black.opacity(0.12),
+                                Color.black.opacity(0.34)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
+                    )
+            }
         }
+        .environment(\.colorScheme, .dark)
         .animation(.spring(), value: viewModel.selectedMode)
         .animation(.spring(), value: viewModel.selectedSource)
         .animation(.spring(), value: vibeManager.isConnected)
@@ -215,61 +233,162 @@ struct VibeControlSheet: View {
         } message: {
             Text(activeAlertMessage ?? "Something went wrong while starting audio.")
         }
+        .sheet(isPresented: $isDetailsSheetPresented) {
+            detailsSheet
+                .presentationDetents([.fraction(0.46), .medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(isPresented: $showDJChat) {
+            DJCaptainChatView()
+                .environmentObject(captainBrain)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.clear)
+        }
+    }
+
+    private var bottomDockClearance: CGFloat {
+        88
+    }
+
+    private var bottomGridPadding: CGFloat {
+        136
+    }
+
+    private var aiqoSoundsContent: some View {
+        VStack {
+            Spacer(minLength: 0)
+            vibeGrid
+                .padding(.horizontal, 18)
+                .padding(.bottom, bottomGridPadding)
+        }
+    }
+
+    private var spotifyContent: some View {
+        VStack {
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 14) {
+                Button(action: handleSpotifyConnectTapped) {
+                    HStack(spacing: 12) {
+                        SpotifyGlyph()
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(vibeManager.isConnected ? "Spotify Connected" : "Connect to Spotify")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+
+                            Text(vibeManager.isConnected ? "Open DJ Hamoudi playlists" : "Tap to link Spotify playback")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.white.opacity(0.76))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: vibeManager.isConnected ? "waveform.circle.fill" : "link.circle.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.12, green: 0.85, blue: 0.38))
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity)
+                    .background(sectionBackground(cornerRadius: 26))
+                }
+                .buttonStyle(.plain)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("DJ Hamoudi's Playlists")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        ForEach(spotifyPlaylistPreviews) { playlist in
+                            spotifyPlaylistCard(playlist)
+                        }
+                    }
+                }
+                .frame(maxHeight: 260)
+            }
+            .padding(.horizontal, 18)
+            .padding(.bottom, 112)
+        }
+    }
+
+    private var backgroundArtwork: some View {
+        GeometryReader { proxy in
+            ZStack {
+                Image("Captain_Hamoudi_DJ")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.08),
+                        Color.black.opacity(0.16),
+                        Color.black.opacity(0.46)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color(red: 0.01, green: 0.05, blue: 0.08).opacity(0.22),
+                        Color(red: 0.01, green: 0.03, blue: 0.07).opacity(0.48)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.26, green: 0.82, blue: 0.74).opacity(0.10),
+                        Color.clear
+                    ],
+                    center: .center,
+                    startRadius: 30,
+                    endRadius: 320
+                )
+                .ignoresSafeArea()
+            }
+        }
+    }
+
+    private var topContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            sourceSection
+        }
+        .frame(maxWidth: 340, alignment: .leading)
+        .padding(.horizontal, 18)
+        .padding(.top, 22)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.title)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 29, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color.white)
 
             Text(viewModel.subtitle)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.82))
         }
+        .shadow(color: .black.opacity(0.26), radius: 16, x: 0, y: 8)
     }
 
-    private var vibeGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 14) {
-            ForEach(Array(vibeRows.enumerated()), id: \.offset) { _, row in
-                GridRow {
-                    if row.count == 1, let mode = row.first {
-                        vibeCard(for: mode)
-                            .gridCellColumns(2)
-                    } else {
-                        ForEach(row) { mode in
-                            vibeCard(for: mode)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var vibeRows: [[VibeMode]] {
-        let modes = VibeMode.allCases
-        return stride(from: 0, to: modes.count, by: 2).map { startIndex in
-            let endIndex = min(startIndex + 2, modes.count)
-            return Array(modes[startIndex..<endIndex])
-        }
-    }
-
-    @ViewBuilder
-    private func vibeCard(for mode: VibeMode) -> some View {
-        VibeModeCard(
-            mode: mode,
-            isSelected: viewModel.selectedMode == mode
-        ) {
-            withAnimation(.spring()) {
-                viewModel.select(mode)
-            }
-        }
-    }
-
-    private var actionArea: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var sourceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Audio Source")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.82))
 
             Picker("Audio Source", selection: $viewModel.selectedSource) {
                 ForEach(VibePlaybackSource.allCases) { source in
@@ -277,169 +396,150 @@ struct VibeControlSheet: View {
                 }
             }
             .pickerStyle(.segmented)
+            .tint(Color(red: 0.15, green: 0.70, blue: 0.64))
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(sectionBackground(cornerRadius: 18))
+    }
 
-            if viewModel.selectedSource == .aiqoSounds {
-                Toggle(isOn: $viewModel.mixWithOthers) {
+    private var vibeGrid: some View {
+        HStack(alignment: .bottom, spacing: 0) {
+            VStack(spacing: 8) {
+                vibeCard(for: .awakening, isWide: false)
+                vibeCard(for: .egoDeath, isWide: false)
+                vibeCard(for: .recovery, isWide: false)
+            }
+            .frame(width: deckCardWidth)
+
+            Spacer(minLength: deckCenterGap)
+
+            VStack(spacing: 8) {
+                vibeCard(for: .deepFocus, isWide: false)
+                vibeCard(for: .energy, isWide: false)
+            }
+            .frame(width: deckCardWidth)
+        }
+        .frame(maxWidth: .infinity, alignment: .bottom)
+    }
+
+    private var deckCardWidth: CGFloat { 132 }
+
+    private var deckCenterGap: CGFloat { 68 }
+
+    @ViewBuilder
+    private func vibeCard(for mode: VibeMode, isWide: Bool) -> some View {
+        VibeModeCard(
+            mode: mode,
+            isSelected: viewModel.selectedMode == mode,
+            isWide: isWide
+        ) {
+            withAnimation(.spring()) {
+                viewModel.select(mode)
+            }
+        }
+    }
+
+    private var compactControlCard: some View {
+        HStack(spacing: 10) {
+            Button {
+                isDetailsSheetPresented = true
+            } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.14))
+                            .frame(width: 34, height: 34)
+
+                        Image(systemName: compactCardSystemImage)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(primaryButtonTintColor)
+                    }
+
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Mix with other audio")
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        Text("Keep AiQo Sounds active while music or podcasts play.")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-                .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
-                .onChange(of: viewModel.mixWithOthers) { _, _ in
-                    aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
-
-                    if aiqoAudioManager.playbackState == .playing {
-                        restartNativeAudio()
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Intensity")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text("\(Int(viewModel.nativeIntensity * 100))%")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Slider(value: $viewModel.nativeIntensity, in: 0.1...1)
-                        .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
-                        .onChange(of: viewModel.nativeIntensity) { _, newValue in
-                            aiqoAudioManager.setVolume(Float(newValue))
-                        }
-                }
-            }
-
-            Text("Selected Mode")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(viewModel.selectedMode.rawValue)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-
-                HStack(spacing: 8) {
-                    StatusPill(label: sourceStatusLabel)
-                    StatusPill(label: "Playback: \(selectedSourcePlaybackState.rawValue)")
-
-                    if viewModel.selectedSource == .aiqoSounds {
-                        StatusPill(label: currentNativeDayPartTitle)
-                    }
-                }
-
-                Text("Current Vibe: \(displayedVibeTitle)")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-
-                if viewModel.selectedSource == .aiqoSounds {
-                    Text(aiqoAudioManager.detailText)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-
-                    if aiqoAudioManager.playbackState == .playing {
-                        StatusPill(label: "Running in background")
-                    }
-                } else if vibeManager.currentTrackName != "Not Playing" {
-                    Text("Track: \(vibeManager.currentTrackName)")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Button(action: handlePlayTapped) {
-                HStack(spacing: 12) {
-                    if viewModel.selectedSource == .spotify {
-                        SpotifyGlyph()
-                    } else {
-                        AiQoSoundGlyph()
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(primaryButtonTitle)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .contentTransition(.opacity)
-
-                        Text(playButtonDetail)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
+                        Text(displayedVibeTitle)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
-                            .contentTransition(.opacity)
+
+                        Text(compactCardSubtitle)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.74))
+                            .lineLimit(1)
                     }
 
                     Spacer(minLength: 0)
-
-                    Image(systemName: primaryButtonSystemImage)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(primaryButtonTintColor)
-                        .shadow(
-                            color: primaryButtonTintColor.opacity(buttonGlowOpacity),
-                            radius: 12,
-                            x: 0,
-                            y: 4
-                        )
                 }
-                .padding(.horizontal, 18)
-                .frame(maxWidth: .infinity, minHeight: 62)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: viewModel.selectedSource == .spotify && vibeManager.isConnected
-                                            ? [
-                                                Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.26),
-                                                Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.18)
-                                            ]
-                                            : viewModel.selectedSource == .aiqoSounds
-                                            ? [
-                                                Color(red: 0.10, green: 0.56, blue: 0.52).opacity(0.22),
-                                                Color(red: 0.30, green: 0.78, blue: 0.70).opacity(0.16)
-                                            ]
-                                            : [
-                                                Color.white.opacity(0.26),
-                                                Color.white.opacity(0.1)
-                                            ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(
-                            (viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds
-                                ? Color.white.opacity(0.42)
-                                : Color.white.opacity(0.32),
-                            lineWidth: ((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1.2 : 1
-                        )
-                }
-                .shadow(
-                    color: primaryButtonTintColor.opacity(buttonShadowOpacity),
-                    radius: buttonShadowRadius,
-                    x: 0,
-                    y: 10
-                )
-                .scaleEffect(((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1 : 0.985)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 52)
             }
             .buttonStyle(.plain)
-            .disabled(!isPlayActionAvailable)
-            .opacity(isPlayActionAvailable ? 1 : 0.58)
-            .animation(.spring(), value: viewModel.selectedSource)
 
-            HStack(spacing: 12) {
+            Button(action: handleCompactPlayPauseTapped) {
+                Image(systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(controlOrbBackground)
+            }
+            .buttonStyle(.plain)
+
+            RoutePickerView().frame(width: 32, height: 32)
+
+            Button {
+                showDJChat = true
+            } label: {
+                Image(systemName: "sparkles.tv")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(controlOrbBackground)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(sectionBackground(cornerRadius: 24))
+    }
+
+    private var detailsSheet: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sound Controls")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                        Text(displayedVibeTitle)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button("Done") {
+                        isDetailsSheetPresented = false
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                }
+
+                detailSheetContent
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 26)
+        }
+    }
+
+    private var detailSheetContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if viewModel.selectedSource == .aiqoSounds {
+                mixSection
+                intensitySection
+            }
+
+            modeSummarySection
+
+            HStack(spacing: 10) {
                 secondaryControlButton(
                     title: currentPlaybackState == .playing ? "Pause" : "Resume",
                     systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill",
@@ -457,19 +557,197 @@ struct VibeControlSheet: View {
                 }
             }
 
-            if viewModel.selectedSource == .spotify && !vibeManager.isPlaybackAvailable {
-                Button("Why unavailable?") {
-                    vibeManager.presentAvailabilityError()
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color(red: 0.10, green: 0.42, blue: 0.36))
-            } else if viewModel.selectedSource == .aiqoSounds {
-                Text("AiQo audio can keep playing in the background while active. Pause or stop it instantly at any time.")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+            playButton
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(sectionBackground(cornerRadius: 28))
+    }
+
+    private var mixSection: some View {
+        Toggle(isOn: $viewModel.mixWithOthers) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Mix with other audio")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+
+                Text("Keep AiQo Sounds active while music or podcasts play.")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.76))
+                    .lineLimit(1)
             }
         }
+        .toggleStyle(.switch)
+        .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
+        .onChange(of: viewModel.mixWithOthers) { _, _ in
+            aiqoAudioManager.setMixWithOthers(viewModel.mixWithOthers)
+
+            if aiqoAudioManager.playbackState == .playing {
+                restartNativeAudio()
+            }
+        }
+    }
+
+    private var intensitySection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Intensity")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.82))
+
+                Spacer()
+
+                Text("\(Int(viewModel.nativeIntensity * 100))%")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.82))
+            }
+
+            Slider(value: $viewModel.nativeIntensity, in: 0.1...1)
+                .tint(Color(red: 0.10, green: 0.56, blue: 0.52))
+                .onChange(of: viewModel.nativeIntensity) { _, newValue in
+                    aiqoAudioManager.setVolume(Float(newValue))
+                }
+        }
+    }
+
+    private var modeSummarySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Selected Mode")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.82))
+
+                    Text(displayedVibeTitle)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+
+                    Text(viewModel.selectedMode.subtitle)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.78))
+                }
+
+                Spacer(minLength: 0)
+
+                if viewModel.selectedSource == .spotify && !vibeManager.isPlaybackAvailable {
+                    Button("Why unavailable?") {
+                        vibeManager.presentAvailabilityError()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.46, green: 0.90, blue: 0.78))
+                }
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    StatusPill(label: sourceStatusLabel)
+                    StatusPill(label: selectedSourcePlaybackState.rawValue)
+
+                    if viewModel.selectedSource == .aiqoSounds {
+                        StatusPill(label: currentNativeDayPartTitle)
+                    }
+                }
+            }
+        }
+    }
+
+    private var playButton: some View {
+        Button(action: handlePlayTapped) {
+            HStack(spacing: 12) {
+                if viewModel.selectedSource == .spotify {
+                    SpotifyGlyph()
+                } else {
+                    AiQoSoundGlyph()
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(primaryButtonTitle)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .contentTransition(.opacity)
+
+                    Text(playButtonDetail)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.76))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .contentTransition(.opacity)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: primaryButtonSystemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(primaryButtonTintColor)
+                    .shadow(
+                        color: primaryButtonTintColor.opacity(buttonGlowOpacity),
+                        radius: 12,
+                        x: 0,
+                        y: 4
+                    )
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: viewModel.selectedSource == .spotify && vibeManager.isConnected
+                                        ? [
+                                            Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.26),
+                                            Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.18)
+                                        ]
+                                        : viewModel.selectedSource == .aiqoSounds
+                                        ? [
+                                            Color(red: 0.10, green: 0.56, blue: 0.52).opacity(0.22),
+                                            Color(red: 0.30, green: 0.78, blue: 0.70).opacity(0.16)
+                                        ]
+                                        : [
+                                            Color.white.opacity(0.26),
+                                            Color.white.opacity(0.1)
+                                        ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .strokeBorder(
+                        (viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds
+                            ? Color.white.opacity(0.42)
+                            : Color.white.opacity(0.32),
+                        lineWidth: ((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1.2 : 1
+                    )
+            }
+            .shadow(
+                color: primaryButtonTintColor.opacity(buttonShadowOpacity),
+                radius: buttonShadowRadius,
+                x: 0,
+                y: 10
+            )
+            .scaleEffect(((viewModel.selectedSource == .spotify && vibeManager.isConnected) || viewModel.selectedSource == .aiqoSounds) ? 1 : 0.985)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isPlayActionAvailable)
+        .opacity(isPlayActionAvailable ? 1 : 0.58)
+        .animation(.spring(), value: viewModel.selectedSource)
+    }
+
+    private func sectionBackground(cornerRadius: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.10))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 8)
     }
 
     private var activeAlertMessage: String? {
@@ -632,24 +910,77 @@ struct VibeControlSheet: View {
         viewModel.selectedMode.aiqoTrackName.replacingOccurrences(of: "_", with: " ")
     }
 
+    private var compactCardSystemImage: String {
+        viewModel.selectedSource == .spotify ? "music.note" : "waveform"
+    }
+
+    private var compactCardSubtitle: String {
+        switch currentPlaybackState {
+        case .playing:
+            return viewModel.selectedSource == .spotify ? "Spotify is live" : "Tap for volume and text"
+        case .paused:
+            return "Paused"
+        case .stopped:
+            return viewModel.selectedSource == .spotify ? "Tap to configure Spotify" : "Tap for volume and text"
+        }
+    }
+
+    private var controlOrbBackground: some View {
+        Circle()
+            .fill(Color.white.opacity(0.14))
+            .overlay {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.16), lineWidth: 1)
+            }
+    }
+
+    private var spotifyPlaylistPreviews: [SpotifyPlaylistPreview] {
+        [
+            SpotifyPlaylistPreview(
+                title: "Deep Work Beats",
+                subtitle: "Low-noise focus selection",
+                uri: VibeMode.deepFocus.spotifyURI
+            ),
+            SpotifyPlaylistPreview(
+                title: "Morning Wakeup",
+                subtitle: "Bright start with forward motion",
+                uri: VibeMode.awakening.spotifyURI
+            ),
+            SpotifyPlaylistPreview(
+                title: "Zen Mode",
+                subtitle: "Still, clean, and spacious",
+                uri: VibeMode.egoDeath.spotifyURI
+            )
+        ]
+    }
+
     private var playButtonDetail: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return "Loops \(selectedAiQoTrackDisplayName) in the background while active"
+            return "\(selectedAiQoTrackDisplayName) in background"
         case .spotify:
             if !vibeManager.isSpotifyAppInstalled {
-                return "Install Spotify to use playlist controls"
+                return "Install Spotify"
             }
 
             if !vibeManager.canAttemptAuthorization {
-                return "Spotify authentication is unavailable"
+                return "Spotify auth unavailable"
             }
 
             if vibeManager.isConnected {
-                return "Start the selected playlist in Spotify"
+                return "Start selected playlist"
             }
 
-            return "Open Spotify and approve playback control"
+            return "Open Spotify to connect"
+        }
+    }
+
+    private func handleSpotifyConnectTapped() {
+        let previousSource = viewModel.selectedSource
+        viewModel.selectedSource = .spotify
+        handlePlayTapped()
+        if previousSource != .spotify {
+            viewModel.selectedSource = .spotify
         }
     }
 
@@ -684,6 +1015,59 @@ struct VibeControlSheet: View {
                 vibeTitle: viewModel.selectedMode.rawValue
             )
         }
+    }
+
+    private func handleCompactPlayPauseTapped() {
+        if currentPlaybackState == .stopped {
+            handlePlayTapped()
+        } else {
+            handlePauseResumeTapped()
+        }
+    }
+
+    @ViewBuilder
+    private func spotifyPlaylistCard(_ playlist: SpotifyPlaylistPreview) -> some View {
+        Button {
+            guard vibeManager.isPlaybackAvailable else {
+                vibeManager.presentAvailabilityError()
+                return
+            }
+
+            viewModel.selectedSource = .spotify
+            vibeManager.playVibe(uri: playlist.uri, vibeTitle: playlist.title)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.22))
+                        .frame(width: 38, height: 38)
+
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color(red: 0.12, green: 0.85, blue: 0.38))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(playlist.title)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    Text(playlist.subtitle)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.74))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.7))
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity)
+            .background(sectionBackground(cornerRadius: 22))
+        }
+        .buttonStyle(.plain)
     }
 
     private func handlePauseResumeTapped() {
@@ -758,20 +1142,20 @@ struct VibeControlSheet: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: systemName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
 
                 Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
             }
-            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
-            .frame(maxWidth: .infinity, minHeight: 46)
+            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.55))
+            .frame(maxWidth: .infinity, minHeight: 40)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(isEnabled ? 0.28 : 0.18))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(isEnabled ? 0.16 : 0.08))
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.white.opacity(isEnabled ? 0.34 : 0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.white.opacity(isEnabled ? 0.26 : 0.14), lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
@@ -834,52 +1218,59 @@ struct VibeDashboardTriggerButton: View {
     }
 }
 
+private struct SpotifyPlaylistPreview: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let uri: String
+}
+
 private struct VibeModeCard: View {
     let mode: VibeMode
     let isSelected: Bool
+    let isWide: Bool
     let action: () -> Void
 
     @State private var animateGlow = false
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(isSelected ? 0.28 : 0.18))
-                        .frame(width: 42, height: 42)
+                        .fill(Color.white.opacity(isSelected ? 0.18 : 0.10))
+                        .frame(width: isWide ? 20 : 18, height: isWide ? 20 : 18)
 
                     Image(systemName: mode.systemIcon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: isWide ? 8 : 7, weight: .semibold))
                         .foregroundStyle(isSelected ? .white : .primary.opacity(0.78))
                 }
 
-                Spacer(minLength: 0)
-
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(mode.rawValue)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: isWide ? 9 : 8, weight: .bold, design: .rounded))
                         .foregroundStyle(isSelected ? .white : .primary)
+                        .lineLimit(2)
 
                     Text(mode.subtitle)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(isSelected ? Color.white.opacity(0.78) : .secondary)
+                        .font(.system(size: 6, weight: .medium, design: .rounded))
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.76) : .secondary)
                         .lineLimit(2)
                 }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 148, alignment: .topLeading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, minHeight: isWide ? 0 : 0, maxHeight: isWide ? 44 : 50, alignment: .topLeading)
             .background(cardBackground)
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.96))
-                        .padding(14)
+                        .padding(4)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .scaleEffect(isSelected ? 1.0 : 0.985)
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -891,34 +1282,38 @@ private struct VibeModeCard: View {
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
             .fill(.ultraThinMaterial)
             .overlay {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(isSelected ? 0.04 : 0.02))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: mode.accentColors.map { $0.opacity(isSelected ? 0.72 : 0.16) },
+                            colors: mode.accentColors.map { $0.opacity(isSelected ? 0.42 : 0.08) },
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .scaleEffect(isSelected ? (animateGlow ? 1.16 : 0.94) : 0.9)
-                    .rotationEffect(.degrees(animateGlow ? 8 : -8))
-                    .blur(radius: isSelected ? 0 : 8)
-                    .opacity(isSelected ? 1 : 0.48)
+                    .scaleEffect(isSelected ? (animateGlow ? 1.01 : 0.99) : 0.98)
+                    .rotationEffect(.degrees(animateGlow ? 1 : -1))
+                    .blur(radius: 4)
+                    .opacity(isSelected ? 0.86 : 0.34)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(
-                        Color.white.opacity(isSelected ? 0.42 : 0.24),
-                        lineWidth: isSelected ? 1.2 : 1
+                        Color.white.opacity(isSelected ? 0.18 : 0.08),
+                        lineWidth: 0.8
                     )
             }
             .shadow(
-                color: mode.accentColors.first?.opacity(isSelected ? 0.22 : 0.04) ?? .clear,
-                radius: isSelected ? 18 : 10,
+                color: mode.accentColors.first?.opacity(isSelected ? 0.10 : 0.02) ?? .clear,
+                radius: isSelected ? 4 : 2,
                 x: 0,
-                y: 10
+                y: 2
             )
     }
 }
@@ -929,16 +1324,16 @@ private struct StatusPill: View {
     var body: some View {
         Text(label)
             .font(.system(size: 10, weight: .bold, design: .rounded))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.white.opacity(0.82))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(Color.white.opacity(0.3))
+                    .fill(Color.white.opacity(0.16))
             )
             .overlay {
                 Capsule()
-                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
             }
     }
 }
@@ -995,5 +1390,6 @@ private struct SpotifyGlyph: View {
 
 #Preview {
     VibeControlSheet(viewModel: VibeControlViewModel())
+        .environmentObject(CaptainViewModel())
         .presentationBackground(.ultraThinMaterial)
 }

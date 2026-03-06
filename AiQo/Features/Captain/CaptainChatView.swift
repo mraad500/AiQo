@@ -1,0 +1,542 @@
+import SwiftUI
+import UIKit
+
+struct CaptainChatView: View {
+    @EnvironmentObject private var globalBrain: CaptainViewModel
+    @FocusState private var isInputFocused: Bool
+
+    private let bottomAnchorID = "captain-chat-bottom"
+
+    var body: some View {
+        ZStack {
+            CaptainChatBackground()
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 16) {
+                        headerCard
+
+                        ForEach(globalBrain.messages) { message in
+                            ChatMessageRow(message: message)
+                                .id(message.id)
+                        }
+
+                        if let plan = globalBrain.currentWorkoutPlan {
+                            WorkoutPlanReadyCard(plan: plan)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
+                        if globalBrain.isLoading {
+                            CaptainTypingRow()
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
+                        Color.clear
+                            .frame(height: 1)
+                            .id(bottomAnchorID)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 20)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    scrollToBottom(using: proxy, animated: false)
+                }
+                .onChange(of: globalBrain.messages.count) {
+                    scrollToBottom(using: proxy)
+                }
+                .onChange(of: globalBrain.isLoading) {
+                    scrollToBottom(using: proxy)
+                }
+                .onChange(of: globalBrain.currentWorkoutPlan != nil) {
+                    scrollToBottom(using: proxy)
+                }
+            }
+        }
+        .navigationTitle("Captain Hamoudi")
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            composerBar
+        }
+        .background(Color(UIColor.systemGroupedBackground))
+    }
+}
+
+private extension CaptainChatView {
+    var headerCard: some View {
+        HStack(spacing: 12) {
+            CaptainChatAvatarView(size: 48)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Captain Hamoudi")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+
+                Text("مدربك العراقي الذكي للتمارين اليومية")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            }
+
+            Spacer()
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.aiqoMint)
+                    .frame(width: 8, height: 8)
+                Text(globalBrain.isLoading ? "يفكر هسه" : "جاهز")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.35))
+            )
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.74),
+                                    Color.aiqoMint.opacity(0.28),
+                                    Color.aiqoBeige.opacity(0.22)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
+    }
+
+    var composerBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(height: 8)
+
+            HStack(alignment: .bottom, spacing: 12) {
+                TextField("اكتب رسالتك للكابتن...", text: $globalBrain.inputText, axis: .vertical)
+                    .focused($isInputFocused)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(false)
+                    .submitLabel(.send)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.56))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.white.opacity(0.68), lineWidth: 1)
+                    )
+                    .onSubmit {
+                        sendCurrentMessage()
+                    }
+
+                Button(action: sendCurrentMessage) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        AiQoTheme.Colors.ctaGradientLeading,
+                                        AiQoTheme.Colors.ctaGradientTrailing
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: "113238"))
+                            .rotationEffect(.degrees(12))
+                    }
+                    .frame(width: 50, height: 50)
+                    .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 7)
+                }
+                .buttonStyle(.plain)
+                .disabled(trimmedInput.isEmpty || globalBrain.isLoading)
+                .opacity(trimmedInput.isEmpty || globalBrain.isLoading ? 0.55 : 1)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: -6)
+            )
+            .padding(.horizontal, 14)
+            .padding(.bottom, 8)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.clear,
+                    Color(UIColor.systemGroupedBackground).opacity(0.78),
+                    Color(UIColor.systemGroupedBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    var trimmedInput: String {
+        globalBrain.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func sendCurrentMessage() {
+        let message = trimmedInput
+        guard !message.isEmpty else { return }
+
+        globalBrain.sendMessage(message)
+        isInputFocused = false
+    }
+
+    func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
+        guard animated else {
+            proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+            return
+        }
+
+        withAnimation(.easeOut(duration: 0.24)) {
+            proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+        }
+    }
+}
+
+private struct ChatMessageRow: View {
+    let message: ChatMessage
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            if message.isUser {
+                Spacer(minLength: 56)
+
+                Text(message.text)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color(hex: "103038"))
+                    .multilineTextAlignment(.trailing)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "CFF7EC"),
+                                        Color(hex: "DDF4FF")
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+            } else {
+                CaptainChatAvatarView(size: 34)
+
+                Text(message.text)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "FFF3E5").opacity(0.96),
+                                        Color(hex: "F8E7D1").opacity(0.92)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+
+                Spacer(minLength: 56)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: message.isUser ? .trailing : .leading)
+    }
+}
+
+private struct CaptainTypingRow: View {
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            CaptainChatAvatarView(size: 34)
+
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { index in
+                    TypingDot(delay: Double(index) * 0.18)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color(hex: "F7EAD7").opacity(0.94))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 6)
+
+            Spacer(minLength: 56)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct TypingDot: View {
+    let delay: Double
+
+    @State private var isAnimating = false
+
+    var body: some View {
+        Circle()
+            .fill(Color(hex: "B99973"))
+            .frame(width: 8, height: 8)
+            .scaleEffect(isAnimating ? 1 : 0.55)
+            .opacity(isAnimating ? 1 : 0.35)
+            .offset(y: isAnimating ? -3 : 3)
+            .animation(
+                .easeInOut(duration: 0.7)
+                    .repeatForever()
+                    .delay(delay),
+                value: isAnimating
+            )
+            .onAppear {
+                isAnimating = true
+            }
+    }
+}
+
+private struct WorkoutPlanReadyCard: View {
+    let plan: WorkoutPlan
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "FFF2B5"),
+                                    Color(hex: "CFF7EC")
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: "57411D"))
+                }
+                .frame(width: 38, height: 38)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("🎯 خطة التمرين جاهزة")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(AiQoTheme.Colors.textPrimary)
+
+                    Text(plan.displayTitle)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            if !plan.exercisePreview.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(Array(plan.exercisePreview.enumerated()), id: \.offset) { _, exercise in
+                        Text(exercise)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.white.opacity(0.48))
+                            )
+                    }
+                }
+            }
+
+            Text(plan.displayOverview)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                .lineSpacing(3)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.8),
+                                    Color.aiqoMint.opacity(0.34),
+                                    Color.aiqoLemon.opacity(0.28)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 8)
+    }
+}
+
+private struct CaptainChatAvatarView: View {
+    let size: CGFloat
+
+    private var captainImage: UIImage? {
+        UIImage(named: "imageKitchenHamoudi")
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "FFF0D8"),
+                            Color(hex: "D8F8ED")
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            if let captainImage {
+                Image(uiImage: captainImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: size * 0.42, weight: .bold))
+                    .foregroundStyle(Color(hex: "4D3B28"))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(
+            Circle()
+                .stroke(Color.white.opacity(0.78), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+    }
+}
+
+private struct CaptainChatBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    AiQoTheme.Colors.primaryBackground,
+                    Color(hex: "EFF8F5"),
+                    Color(hex: "FFF6EC")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            Circle()
+                .fill(Color.aiqoMint.opacity(colorScheme == .dark ? 0.16 : 0.28))
+                .frame(width: 260, height: 260)
+                .blur(radius: 70)
+                .offset(x: -120, y: -240)
+
+            Circle()
+                .fill(Color.aiqoBeige.opacity(colorScheme == .dark ? 0.14 : 0.22))
+                .frame(width: 220, height: 220)
+                .blur(radius: 60)
+                .offset(x: 150, y: -180)
+
+            Circle()
+                .fill(Color(hex: "DCEBFF").opacity(colorScheme == .dark ? 0.12 : 0.24))
+                .frame(width: 240, height: 240)
+                .blur(radius: 72)
+                .offset(x: 120, y: 220)
+        }
+    }
+}
+
+private extension WorkoutPlan {
+    var displayTitle: String {
+        title.isEmpty ? "خطة مخصصة من الكابتن" : title
+    }
+
+    var displayOverview: String {
+        if exercises.isEmpty {
+            return "رتبلك الكابتن خطة بداية. افتح شاشة الخطة وابدأ أول تمرين."
+        }
+
+        return exercises
+            .prefix(3)
+            .map(\.displaySummary)
+            .joined(separator: " • ")
+    }
+
+    var exercisePreview: [String] {
+        Array(exercises.prefix(4).map(\.displaySummary))
+    }
+}
+
+private extension Exercise {
+    var displaySummary: String {
+        "\(name) • \(sets)x\(repsOrDuration)"
+    }
+}
+
+#Preview {
+    NavigationStack {
+        CaptainChatView()
+    }
+    .environmentObject(CaptainViewModel())
+}

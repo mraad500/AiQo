@@ -149,9 +149,7 @@ struct WorkoutPlanDashboard: View {
 struct CaptainPlanChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-
-    @StateObject private var viewModel = CaptainPlanChat.CaptainChatViewModel()
-    @State private var inputText = ""
+    @EnvironmentObject private var globalBrain: CaptainViewModel
     @State private var isSavingPlan = false
     @State private var showSuccessState = false
     @State private var errorMessage: String?
@@ -179,8 +177,8 @@ struct CaptainPlanChatView: View {
             VStack(spacing: 12) {
                 messagesSection
 
-                if viewModel.shouldShowPinPlanButton {
-                    pinPlanButton
+                if let workoutPlan = globalBrain.currentWorkoutPlan {
+                    pinPlanButton(for: workoutPlan)
                 }
 
                 if showSuccessState {
@@ -204,18 +202,26 @@ struct CaptainPlanChatView: View {
                 .padding(.bottom, 10)
                 .background(Color.clear)
         }
+        .task {
+            bootstrapPlanChatIfNeeded()
+        }
     }
 
     private var messagesSection: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
-                    ForEach(viewModel.messages) { message in
+                    ForEach(globalBrain.messages) { message in
                         messageRow(message)
                             .id(message.id)
                     }
 
-                    if viewModel.isCaptainTyping {
+                    if let workoutPlan = globalBrain.currentWorkoutPlan {
+                        pendingPlanPreviewRow(for: workoutPlan)
+                            .id("captain-plan-preview")
+                    }
+
+                    if globalBrain.isLoading {
                         typingIndicatorRow
                     }
 
@@ -237,16 +243,19 @@ struct CaptainPlanChatView: View {
             .onAppear {
                 scrollToBottom(proxy: proxy, animated: false)
             }
-            .onChange(of: viewModel.messages.count) { _, _ in
+            .onChange(of: globalBrain.messages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
-            .onChange(of: viewModel.isCaptainTyping) { _, _ in
+            .onChange(of: globalBrain.isLoading) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: globalBrain.currentWorkoutPlan != nil) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
         }
     }
 
-    private func messageRow(_ message: CaptainPlanChat.ChatMessage) -> some View {
+    private func messageRow(_ message: ChatMessage) -> some View {
         HStack {
             if message.isUser { Spacer(minLength: 36) }
 
@@ -270,6 +279,13 @@ struct CaptainPlanChatView: View {
                 )
 
             if !message.isUser { Spacer(minLength: 36) }
+        }
+    }
+
+    private func pendingPlanPreviewRow(for workoutPlan: WorkoutPlan) -> some View {
+        HStack {
+            CaptainPendingWorkoutPreviewCard(plan: workoutPlan)
+            Spacer(minLength: 36)
         }
     }
 
@@ -304,7 +320,7 @@ struct CaptainPlanChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField("اكتب رسالتك للكابتن...", text: $inputText)
+            TextField("اكتب رسالتك للكابتن...", text: $globalBrain.inputText)
                 .textInputAutocapitalization(.sentences)
                 .autocorrectionDisabled(false)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -337,7 +353,7 @@ struct CaptainPlanChatView: View {
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(.plain)
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSavingPlan)
+            .disabled(trimmedInput.isEmpty || isSavingPlan || globalBrain.isLoading)
         }
         .padding(8)
         .background(
@@ -356,9 +372,9 @@ struct CaptainPlanChatView: View {
         .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 6)
     }
 
-    private var pinPlanButton: some View {
+    private func pinPlanButton(for workoutPlan: WorkoutPlan) -> some View {
         Button {
-            pinPlan()
+            pinPlan(workoutPlan)
         } label: {
             Text("موافق، ثبّت الخطة بالجدول")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -371,11 +387,7 @@ struct CaptainPlanChatView: View {
                 )
         }
         .buttonStyle(.plain)
-        .disabled(
-            isSavingPlan ||
-            viewModel.detectedGoal == nil ||
-            viewModel.detectedWeight == nil
-        )
+        .disabled(isSavingPlan)
         .opacity(isSavingPlan ? 0.6 : 1)
     }
 
@@ -406,13 +418,12 @@ struct CaptainPlanChatView: View {
     }
 
     private func sendCurrentMessage() {
-        let message = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = trimmedInput
         guard !message.isEmpty else { return }
 
         showSuccessState = false
         errorMessage = nil
-        viewModel.sendMessage(message)
-        inputText = ""
+        globalBrain.sendMessage(message)
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
@@ -429,26 +440,26 @@ struct CaptainPlanChatView: View {
         }
     }
 
-    private func pinPlan() {
-        guard !isSavingPlan,
-              let selectedGoal = viewModel.detectedGoal,
-              let parsedWeight = viewModel.detectedWeight
-        else { return }
-
+    private func pinPlan(_ workoutPlan: WorkoutPlan) {
+        guard !isSavingPlan else { return }
         isSavingPlan = true
         errorMessage = nil
 
         do {
             try WorkoutPlanMemoryStore.savePlan(
-                weightKG: parsedWeight,
-                goal: selectedGoal,
+                workoutPlan: workoutPlan,
                 modelContext: modelContext
             )
 
             NotificationCenter.default.post(name: .aiqoWorkoutPlanSaved, object: nil)
             showSuccessState = true
             inputFieldFocused = false
-            viewModel.markPlanPinned()
+            globalBrain.messages.append(
+                ChatMessage(
+                    text: "تمام بطل، ثبتتلك خطة \(workoutPlan.title) بالجدول اليومي.",
+                    isUser: false
+                )
+            )
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.15) {
                 dismiss()
@@ -459,58 +470,135 @@ struct CaptainPlanChatView: View {
 
         isSavingPlan = false
     }
+
+
+    private var trimmedInput: String {
+        globalBrain.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func bootstrapPlanChatIfNeeded() {
+        guard globalBrain.currentWorkoutPlan == nil else { return }
+        guard !globalBrain.isLoading else { return }
+
+        let kickoffPrompt = "حتى أبني خطة تمرين شخصية، اكتب وزنك الحالي وهدفك مثل: 95 كيلو وتنشيف."
+        guard !globalBrain.messages.contains(where: { $0.text == kickoffPrompt }) else { return }
+
+        let hasUserMessages = globalBrain.messages.contains(where: \.isUser)
+        guard !hasUserMessages else { return }
+
+        globalBrain.messages.append(
+            ChatMessage(
+                text: kickoffPrompt,
+                isUser: false
+            )
+        )
+    }
 }
 
-enum CaptainWorkoutGoal: String, CaseIterable, Identifiable {
-    case loseWeight
-    case buildMuscle
-    case fitness
+private struct CaptainPendingWorkoutPreviewCard: View {
+    let plan: WorkoutPlan
 
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .loseWeight:
-            return "تنزيل وزن وتنشيف"
-        case .buildMuscle:
-            return "تصعيد عضل"
-        case .fitness:
-            return "لياقة عامة"
-        }
+    private var previewHeight: CGFloat {
+        let rowHeight: CGFloat = 52
+        return min(max(CGFloat(plan.exercises.count) * rowHeight, 92), 220)
     }
 
-    var suggestedWorkouts: [String] {
-        switch self {
-        case .loseWeight:
-            return [
-                "كارديو متدرج - 25 دقيقة",
-                "HIIT خفيف - 12 دقيقة",
-                "تمارين كور وثبات - 15 دقيقة"
-            ]
-        case .buildMuscle:
-            return [
-                "سكوات + لانج (3 جولات)",
-                "ضغط + دمبل كتف (4 جولات)",
-                "بلانك مقاومة - 3 مرات"
-            ]
-        case .fitness:
-            return [
-                "مشي سريع - 20 دقيقة",
-                "تمارين مرونة ومفاصل - 12 دقيقة",
-                "تمارين جسم كامل - 18 دقيقة"
-            ]
-        }
-    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.98, green: 0.90, blue: 0.78),
+                                    Color(red: 0.82, green: 0.95, blue: 0.87)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
 
-    var suggestionPrefix: String {
-        switch self {
-        case .loseWeight:
-            return "التركيز على حرق دهون وتحسين اللياقة."
-        case .buildMuscle:
-            return "التركيز على تضخيم عضلي تدريجي."
-        case .fitness:
-            return "التركيز على نشاط عام وتوازن."
+                    Image(systemName: "list.bullet.clipboard")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black.opacity(0.72))
+                }
+                .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Preview")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    Text(plan.title)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+            }
+
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 8) {
+                    ForEach(plan.exercises) { exercise in
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(exercise.name)
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(2)
+
+                                Text(exercise.repsOrDuration)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            Text("\(exercise.sets) جولات")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color.white.opacity(0.52))
+                                )
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.white.opacity(0.20))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(Color.white.opacity(0.34), lineWidth: 1)
+                                )
+                        )
+                    }
+                }
+                .padding(.trailing, 4)
+            }
+            .frame(height: previewHeight)
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                )
+        )
+    }
+}
+
+private extension Exercise {
+    var workoutTaskTitle: String {
+        "\(name) - \(sets) جولات - \(repsOrDuration)"
     }
 }
 
@@ -543,8 +631,7 @@ private enum WorkoutPlanMemoryStore {
     }()
 
     static func savePlan(
-        weightKG: Double,
-        goal: CaptainWorkoutGoal,
+        workoutPlan: WorkoutPlan,
         modelContext: ModelContext
     ) throws {
         let now = Date()
@@ -570,19 +657,15 @@ private enum WorkoutPlanMemoryStore {
         }
         record.workouts = []
 
-        let workouts = goal.suggestedWorkouts.map { title in
-            let workout = WorkoutTask(title: title, isCompleted: false)
+        let workouts = workoutPlan.exercises.map { exercise in
+            let workout = WorkoutTask(title: exercise.workoutTaskTitle, isCompleted: false)
             workout.dailyRecord = record
             modelContext.insert(workout)
             return workout
         }
 
         record.workouts = workouts
-        record.captainDailySuggestion = String(
-            format: "وزنك الحالي %.1f كغم. %@",
-            weightKG,
-            goal.suggestionPrefix
-        )
+        record.captainDailySuggestion = workoutPlan.title
 
         try modelContext.save()
     }

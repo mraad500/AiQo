@@ -673,6 +673,7 @@
 			packageReferences = (
 				8025C5252EC26574004DECAA /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+				80DC1D9D2F5ACF1C00013A46 /* XCRemoteSwiftPackageReference "swift-system" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8025C4B22EC25EB7004DECAA /* Products */;
@@ -1687,6 +1688,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.5.1;
+			};
+		};
+		80DC1D9D2F5ACF1C00013A46 /* XCRemoteSwiftPackageReference "swift-system" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-system.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.4;
 			};
 		};
 		80E88B6C2F3BE66400EA7B74 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {

@@ -12,10 +12,12 @@ import WidgetKit
 @main
 struct AiQoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @StateObject private var globalBrain = CaptainViewModel()
 
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                .environmentObject(globalBrain)
                 .onOpenURL { url in
                     _ = SpotifyVibeManager.shared.handleURL(url)
                 }

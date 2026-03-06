@@ -11,19 +11,31 @@ struct AiQoWidget: Widget {
         }
         .configurationDisplayName("AiQo Daily Progress")
         .description("Steps, calories, and goal progress.")
-        .supportedFamilies([
-            .systemSmall,
-            .systemMedium,
-            .accessoryInline,
-            .accessoryCircular,
-            .accessoryRectangular
-        ])
+        .supportedFamilies(supportedFamilies)
 
         if #available(iOS 17.0, *) {
             return config.contentMarginsDisabled()
         } else {
             return config
         }
+    }
+
+    private var supportedFamilies: [WidgetFamily] {
+#if os(iOS)
+        [
+            .systemSmall,
+            .systemMedium,
+            .systemLarge
+        ]
+#elseif os(watchOS)
+        [
+            .accessoryInline,
+            .accessoryCircular,
+            .accessoryRectangular
+        ]
+#else
+        []
+#endif
     }
 }
 

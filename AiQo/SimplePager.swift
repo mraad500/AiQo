@@ -48,7 +48,7 @@ struct SimplePager<Content: View>: View {
             .onAppear {
                 progress = CGFloat(selection)
             }
-            .onChange(of: selection) { newValue in
+            .onChange(of: selection) { _, newValue in
                 // If selection changed by tap, snap pages
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                     progress = CGFloat(newValue)

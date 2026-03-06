@@ -236,20 +236,7 @@ final class WorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        if #available(watchOS 10.0, *), !hasStartedMirroring {
-            hasStartedMirroring = true
-            logEvent("starting mirroring")
-
-            do {
-                try await workoutSession.startMirroringToCompanionDevice()
-                connectionState = .mirrored
-                logEvent("mirroring started")
-            } catch {
-                hasStartedMirroring = false
-                connectionState = .reconnecting
-                logEvent("mirroring prestart failed: \(error.localizedDescription)")
-            }
-        }
+        await startMirroringBeforeWorkoutIfNeeded(using: workoutSession)
 
         let startDate = Date()
         workoutSession.prepare()
@@ -490,37 +477,55 @@ final class WorkoutManager: NSObject, ObservableObject {
     }
 
     private func startMirroringIfNeeded() {
-        guard #available(watchOS 10.0, *) else { return }
         guard let session else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            await self.startMirroringIfNeeded(using: session, reconnecting: true)
+        }
+    }
+
+    private func startMirroringBeforeWorkoutIfNeeded(using session: HKWorkoutSession) async {
+        await startMirroringIfNeeded(using: session, reconnecting: false)
+    }
+
+    private func startMirroringIfNeeded(
+        using session: HKWorkoutSession,
+        reconnecting: Bool
+    ) async {
+#if os(watchOS)
+        guard #available(watchOS 10.0, *) else { return }
         guard !hasStartedMirroring else { return }
 
+        let previousState = connectionState
         hasStartedMirroring = true
         logEvent("starting mirroring")
 
-        session.startMirroringToCompanionDevice { [weak self] success, error in
-            Self.runOnMain { [weak self] in
-                guard let self else { return }
+        do {
+            try await session.startMirroringToCompanionDevice()
+            connectionState = .mirrored
+            logEvent("mirroring started")
 
-                if let error {
-                    self.hasStartedMirroring = false
-                    self.connectionState = .disconnected
-                    self.logEvent("mirroring failed: \(error.localizedDescription)")
-                    return
-                }
+            if reconnecting || previousState == .disconnected || previousState == .reconnecting {
+                lastEventLabel = "reconnect"
+            } else {
+                lastEventLabel = "mirroring_started"
+            }
 
-                if success {
-                    let previousState = self.connectionState
-                    self.connectionState = .mirrored
-                    self.logEvent("mirroring started")
-                    if previousState == .disconnected || previousState == .reconnecting {
-                        self.lastEventLabel = "reconnect"
-                    } else {
-                        self.lastEventLabel = "mirroring_started"
-                    }
-                    self.sendImmediateSnapshot(reason: self.lastEventLabel)
-                }
+            sendImmediateSnapshot(reason: lastEventLabel)
+        } catch {
+            hasStartedMirroring = false
+            connectionState = reconnecting ? .disconnected : .reconnecting
+
+            if reconnecting {
+                logEvent("mirroring failed: \(error.localizedDescription)")
+            } else {
+                logEvent("mirroring prestart failed: \(error.localizedDescription)")
             }
         }
+#else
+        _ = session
+        _ = reconnecting
+#endif
     }
 
     private func startLivePushTimer() {
