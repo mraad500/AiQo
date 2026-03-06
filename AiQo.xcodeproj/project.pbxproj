@@ -398,6 +398,7 @@
 				80234F602EEF4F7B00F21DCF /* Sources */,
 				80B1F6512EEFDB41009A810C /* Embed Watch Content */,
 				807341352F192F050006BE82 /* Embed Frameworks */,
+				A1F0000C0000000000000001 /* Generate SpotifyiOS dSYM */,
 			);
 			buildRules = (
 			);
@@ -767,6 +768,30 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		A1F0000C0000000000000001 /* Generate SpotifyiOS dSYM */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/AiQo/Frameworks/SpotifyiOS.framework/SpotifyiOS",
+			);
+			name = "Generate SpotifyiOS dSYM";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(ARCHIVE_DSYMS_PATH)/SpotifyiOS.framework.dSYM",
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n\nif [ \"${DEPLOYMENT_POSTPROCESSING:-NO}\" != \"YES\" ]; then\n  exit 0\nfi\n\nif [ -z \"${ARCHIVE_DSYMS_PATH:-}\" ]; then\n  exit 0\nfi\n\nif [ \"${PLATFORM_NAME:-}\" != \"iphoneos\" ]; then\n  exit 0\nfi\n\nSPOTIFY_BINARY=\"${SRCROOT}/AiQo/Frameworks/SpotifyiOS.framework/SpotifyiOS\"\n\nif [ ! -f \"${SPOTIFY_BINARY}\" ]; then\n  echo \"warning: SpotifyiOS binary not found at ${SPOTIFY_BINARY}\"\n  exit 0\nfi\n\nDESTINATION_DSYM_DIR=\"${ARCHIVE_DSYMS_PATH}\"\nTEMP_DSYM_DIR=\"${TEMP_DIR:-/tmp}/SpotifyiOS.framework.dSYM\"\nOUTPUT_DSYM=\"${DESTINATION_DSYM_DIR}/SpotifyiOS.framework.dSYM\"\n\nrm -rf \"${TEMP_DSYM_DIR}\" \"${OUTPUT_DSYM}\"\n\nxcrun dsymutil \"${SPOTIFY_BINARY}\" -o \"${TEMP_DSYM_DIR}\" >/dev/null 2>&1\nmkdir -p \"${DESTINATION_DSYM_DIR}\"\nditto \"${TEMP_DSYM_DIR}\" \"${OUTPUT_DSYM}\"\n\necho \"Generated SpotifyiOS.framework.dSYM at ${OUTPUT_DSYM}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		80234F602EEF4F7B00F21DCF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -918,7 +943,7 @@
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				EXTRACT_APP_INTENTS_METADATA = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -987,7 +1012,7 @@
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				EXTRACT_APP_INTENTS_METADATA = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
