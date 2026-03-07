@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 
 struct SmartWakeCalculatorView: View {
     @ObservedObject var viewModel: SmartWakeViewModel
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -127,6 +129,13 @@ struct SmartWakeCalculatorView: View {
                     Task {
                         await viewModel.saveSelectedAlarm()
                     }
+                },
+                onOpenSettings: {
+                    guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+                        return
+                    }
+
+                    openURL(settingsURL)
                 }
             )
 

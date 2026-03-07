@@ -4,6 +4,7 @@ struct AlarmSetupCardView: View {
     let recommendation: SmartWakeRecommendation
     let saveState: AlarmSaveState
     let onSave: () -> Void
+    let onOpenSettings: (() -> Void)?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -54,9 +55,9 @@ struct AlarmSetupCardView: View {
                     .foregroundStyle(helperForeground)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Button(action: onSave) {
+                Button(action: primaryAction) {
                     HStack(spacing: 8) {
-                        if saveState.isSaving {
+                        if saveState.isBusy {
                             ProgressView()
                                 .tint(buttonForeground)
                         } else {
@@ -73,7 +74,7 @@ struct AlarmSetupCardView: View {
                     .background(buttonBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(saveState.isSaving || saveState.isSaved)
+                .disabled(saveState.isBusy || saveState.isSaved)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,9 +88,13 @@ struct AlarmSetupCardView: View {
         switch saveState {
         case .idle:
             return "اضبط هذا الوقت كمنبه للاستيقاظ"
+        case .requestingPermission:
+            return "جاري طلب إذن المنبه..."
         case .saving:
-            return "راح ينحفظ الوقت المحدد كمنبه"
-        case .saved(let message):
+            return "جاري حفظ المنبه..."
+        case .saved:
+            return "هذا الوقت صار منبهك القادم"
+        case .denied(let message):
             return message
         case .failed(let message):
             return message
@@ -100,17 +105,23 @@ struct AlarmSetupCardView: View {
         switch saveState {
         case .idle:
             return "حفظ"
+        case .requestingPermission:
+            return "جاري طلب الإذن..."
         case .saving:
-            return "جارٍ الحفظ"
+            return "جاري حفظ المنبه..."
         case .saved:
             return "تم الحفظ"
+        case .denied:
+            return "الإعدادات"
         case .failed:
-            return "إعادة المحاولة"
+            return "حاول مرة ثانية"
         }
     }
 
     private var buttonIconName: String {
         switch saveState {
+        case .denied:
+            return "gearshape.fill"
         case .saved:
             return "checkmark.circle.fill"
         default:
@@ -122,12 +133,31 @@ struct AlarmSetupCardView: View {
         switch saveState {
         case .saved:
             return "المنبه مضبوط"
+        case .requestingPermission:
+            return "طلب الإذن"
         case .saving:
             return "جارٍ الحفظ"
+        case .denied:
+            return "إذن مطلوب"
         case .failed:
             return "تعذر الحفظ"
         case .idle:
             return nil
+        }
+    }
+
+    private var primaryAction: () -> Void {
+        switch saveState {
+        case .denied:
+            return {
+                if let onOpenSettings {
+                    onOpenSettings()
+                } else {
+                    onSave()
+                }
+            }
+        default:
+            return onSave
         }
     }
 
@@ -138,6 +168,10 @@ struct AlarmSetupCardView: View {
     private var helperForeground: Color {
         if saveState.isSaved {
             return Color(hex: "2C5A4B")
+        }
+
+        if saveState.isDenied {
+            return Color(hex: "7A5A22")
         }
 
         if saveState.isFailed {
@@ -152,6 +186,10 @@ struct AlarmSetupCardView: View {
             return Color(hex: "2F8C70")
         }
 
+        if saveState.isDenied {
+            return Color(hex: "B47A1E")
+        }
+
         if saveState.isFailed {
             return Color(hex: "C27A43")
         }
@@ -162,6 +200,10 @@ struct AlarmSetupCardView: View {
     private var iconBackground: Color {
         if saveState.isSaved {
             return Color(hex: "E7FFF4")
+        }
+
+        if saveState.isDenied {
+            return Color(hex: "FFF5DE")
         }
 
         if saveState.isFailed {
@@ -176,6 +218,10 @@ struct AlarmSetupCardView: View {
             return Color(hex: "235945")
         }
 
+        if saveState.isDenied {
+            return Color(hex: "74561A")
+        }
+
         if saveState.isFailed {
             return Color(hex: "8A5629")
         }
@@ -188,6 +234,10 @@ struct AlarmSetupCardView: View {
             return Color.white.opacity(0.62)
         }
 
+        if saveState.isDenied {
+            return Color(hex: "FFF0CC").opacity(0.96)
+        }
+
         if saveState.isFailed {
             return Color(hex: "FFF0E2").opacity(0.92)
         }
@@ -196,7 +246,15 @@ struct AlarmSetupCardView: View {
     }
 
     private var buttonForeground: Color {
-        saveState.isSaved ? Color(hex: "245341") : Color(hex: "123042")
+        if saveState.isSaved {
+            return Color(hex: "245341")
+        }
+
+        if saveState.isDenied {
+            return Color(hex: "6A4C12")
+        }
+
+        return Color(hex: "123042")
     }
 
     private var buttonBackground: LinearGradient {
@@ -205,6 +263,17 @@ struct AlarmSetupCardView: View {
                 colors: [
                     Color(hex: "DFF7EF"),
                     Color(hex: "CFF4E5")
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
+
+        if saveState.isDenied {
+            return LinearGradient(
+                colors: [
+                    Color(hex: "FFF0C8"),
+                    Color(hex: "FFF7E5")
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -260,6 +329,18 @@ struct AlarmSetupCardView: View {
             )
         }
 
+        if saveState.isDenied {
+            return LinearGradient(
+                colors: [
+                    Color(hex: "FFF8E8"),
+                    Color(hex: "FFF4DB"),
+                    Color(hex: "FFFCF4")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
         if saveState.isFailed {
             return LinearGradient(
                 colors: [
@@ -293,6 +374,17 @@ struct AlarmSetupCardView: View {
             )
         }
 
+        if saveState.isDenied {
+            return LinearGradient(
+                colors: [
+                    Color.white.opacity(0.78),
+                    Color(hex: "F4D28F").opacity(0.94)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
         if saveState.isFailed {
             return LinearGradient(
                 colors: [
@@ -319,6 +411,10 @@ struct AlarmSetupCardView: View {
             return Color(hex: "9FDCC2").opacity(0.26)
         }
 
+        if saveState.isDenied {
+            return Color(hex: "F2D084").opacity(0.22)
+        }
+
         if saveState.isFailed {
             return Color(hex: "FFDFC3").opacity(0.24)
         }
@@ -331,7 +427,28 @@ struct AlarmSetupCardView: View {
     AlarmSetupCardView(
         recommendation: .previewBest,
         saveState: .idle,
-        onSave: {}
+        onSave: {},
+        onOpenSettings: nil
+    )
+    .padding()
+    .background(
+        LinearGradient(
+            colors: [
+                Color(hex: "EEF3FA"),
+                Color(hex: "DCE6F3")
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    )
+}
+
+#Preview("Alarm Setup - Saving") {
+    AlarmSetupCardView(
+        recommendation: .previewBest,
+        saveState: .saving,
+        onSave: {},
+        onOpenSettings: nil
     )
     .padding()
     .background(
@@ -349,8 +466,9 @@ struct AlarmSetupCardView: View {
 #Preview("Alarm Setup - Saved") {
     AlarmSetupCardView(
         recommendation: .previewBest,
-        saveState: .saved(message: "هذا الوقت صار منبهك القادم"),
-        onSave: {}
+        saveState: .saved,
+        onSave: {},
+        onOpenSettings: nil
     )
     .padding()
     .background(
@@ -365,11 +483,32 @@ struct AlarmSetupCardView: View {
     )
 }
 
-#Preview("Alarm Setup - Alternate Selection") {
+#Preview("Alarm Setup - Denied") {
+    AlarmSetupCardView(
+        recommendation: .previewBest,
+        saveState: .denied(message: "تحتاج تسمح للتطبيق بإنشاء منبه. فعّل إذن المنبه حتى ينحفظ الوقت."),
+        onSave: {},
+        onOpenSettings: {}
+    )
+    .padding()
+    .background(
+        LinearGradient(
+            colors: [
+                Color(hex: "EEF3FA"),
+                Color(hex: "DCE6F3")
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    )
+}
+
+#Preview("Alarm Setup - Failed") {
     AlarmSetupCardView(
         recommendation: .previewAlternate,
-        saveState: .idle,
-        onSave: {}
+        saveState: .failed(message: "صار خطأ أثناء حفظ المنبه. حاول مرة ثانية."),
+        onSave: {},
+        onOpenSettings: nil
     )
     .padding()
     .background(

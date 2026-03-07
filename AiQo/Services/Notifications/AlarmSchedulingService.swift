@@ -1,45 +1,55 @@
 import Foundation
 import SwiftUI
-import UserNotifications
 import ActivityKit
-import AppIntents
 import AlarmKit
 
-enum AlarmProviderKind: String, Equatable, Sendable {
-    case alarmKit
-    case notificationFallback
+enum AlarmAuthorizationStatus: Equatable, Sendable {
+    case notDetermined
+    case denied
+    case authorized
+    case unsupported
 }
 
 struct ScheduledAlarm: Equatable, Sendable {
     let id: String
     let fireDate: Date
-    let provider: AlarmProviderKind
 }
 
 enum AlarmSaveState: Equatable, Sendable {
     case idle
+    case requestingPermission
     case saving
-    case saved(message: String)
+    case saved
+    case denied(message: String)
     case failed(message: String)
 
     var message: String? {
         switch self {
-        case .idle, .saving:
+        case .idle, .requestingPermission, .saving, .saved:
             return nil
-        case .saved(let message), .failed(let message):
+        case .denied(let message), .failed(let message):
             return message
         }
     }
 
-    var isSaving: Bool {
-        if case .saving = self {
+    var isBusy: Bool {
+        switch self {
+        case .requestingPermission, .saving:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var isSaved: Bool {
+        if case .saved = self {
             return true
         }
         return false
     }
 
-    var isSaved: Bool {
-        if case .saved = self {
+    var isDenied: Bool {
+        if case .denied = self {
             return true
         }
         return false
@@ -56,14 +66,17 @@ enum AlarmSaveState: Equatable, Sendable {
 enum AlarmSchedulingError: LocalizedError, Equatable {
     case permissionDenied
     case unsupported
+    case invalidWakeDate
     case schedulingFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return "تعذر حفظ المنبه لأن الصلاحية غير مفعلة."
+            return "تحتاج تسمح للتطبيق بإنشاء منبه. فعّل إذن المنبه حتى ينحفظ الوقت."
         case .unsupported:
-            return "حفظ المنبه غير متاح على هذا الإصدار."
+            return "حفظ المنبه عبر AlarmKit غير متاح على هذا الجهاز حالياً."
+        case .invalidWakeDate:
+            return "تعذر تحويل الوقت المحدد إلى منبه صالح."
         case .schedulingFailed(let message):
             return message
         }
@@ -72,137 +85,156 @@ enum AlarmSchedulingError: LocalizedError, Equatable {
 
 @MainActor
 protocol AlarmSchedulingService {
+    func authorizationStatus() async -> AlarmAuthorizationStatus
+    func requestAuthorizationIfNeeded() async throws -> AlarmAuthorizationStatus
     func scheduleWakeAlarm(at wakeDate: Date) async throws -> ScheduledAlarm
 }
 
 @MainActor
-final class SystemAlarmSchedulingService: AlarmSchedulingService {
-    static let shared = SystemAlarmSchedulingService()
+enum AlarmSchedulingServiceFactory {
+    static func makeDefault() -> any AlarmSchedulingService {
+        if #available(iOS 26.1, *) {
+            return AlarmKitSchedulingService.shared
+        }
 
-    private let defaults: UserDefaults
-    private let calendar: Calendar
-    private let managedAlarmIdentifierKey = "aiqo.smartwake.managedAlarm.identifier"
-    private let managedAlarmProviderKey = "aiqo.smartwake.managedAlarm.provider"
+        return UnsupportedAlarmSchedulingService.shared
+    }
+}
 
-    init(
-        defaults: UserDefaults = .standard,
-        calendar: Calendar = .current
-    ) {
-        self.defaults = defaults
-        self.calendar = calendar
+@MainActor
+final class UnsupportedAlarmSchedulingService: AlarmSchedulingService {
+    static let shared = UnsupportedAlarmSchedulingService()
+
+    func authorizationStatus() async -> AlarmAuthorizationStatus {
+        .unsupported
+    }
+
+    func requestAuthorizationIfNeeded() async throws -> AlarmAuthorizationStatus {
+        .unsupported
     }
 
     func scheduleWakeAlarm(at wakeDate: Date) async throws -> ScheduledAlarm {
-        let fireDate = normalizedUpcomingDate(from: wakeDate)
+        throw AlarmSchedulingError.unsupported
+    }
+}
 
-        if #available(iOS 26.1, *) {
-            return try await scheduleAlarmKitAlarm(at: fireDate)
-        } else {
-            return try await scheduleNotificationAlarm(at: fireDate)
+@MainActor
+@available(iOS 26.1, *)
+final class AlarmKitSchedulingService: AlarmSchedulingService {
+    static let shared = AlarmKitSchedulingService()
+
+    private let calendar: Calendar
+    private static let managedAlarmID = UUID(uuidString: "B8B502C3-4F52-4C18-B4E6-7E718F00A1F4")!
+
+    init(calendar: Calendar = .current) {
+        self.calendar = calendar
+    }
+
+    func authorizationStatus() async -> AlarmAuthorizationStatus {
+        switch AlarmManager.shared.authorizationState {
+        case .notDetermined:
+            return .notDetermined
+        case .denied:
+            return .denied
+        case .authorized:
+            return .authorized
+        @unknown default:
+            return .denied
         }
     }
 
-    private func normalizedUpcomingDate(from wakeDate: Date) -> Date {
-        let now = Date()
-        guard wakeDate <= now.addingTimeInterval(30) else { return wakeDate }
-
-        let components = calendar.dateComponents([.hour, .minute], from: wakeDate)
-        let nextDate = calendar.nextDate(
-            after: now,
-            matching: DateComponents(
-                hour: components.hour,
-                minute: components.minute,
-                second: 0
-            ),
-            matchingPolicy: .nextTime,
-            direction: .forward
-        )
-
-        return nextDate ?? wakeDate.addingTimeInterval(86_400)
-    }
-
-    private func persist(_ scheduledAlarm: ScheduledAlarm) {
-        defaults.set(scheduledAlarm.id, forKey: managedAlarmIdentifierKey)
-        defaults.set(scheduledAlarm.provider.rawValue, forKey: managedAlarmProviderKey)
-    }
-
-    private func clearPersistedAlarmRecord() {
-        defaults.removeObject(forKey: managedAlarmIdentifierKey)
-        defaults.removeObject(forKey: managedAlarmProviderKey)
-    }
-
-    private func cancelManagedAlarmIfNeeded() async {
-        guard let identifier = defaults.string(forKey: managedAlarmIdentifierKey),
-              let providerRawValue = defaults.string(forKey: managedAlarmProviderKey),
-              let provider = AlarmProviderKind(rawValue: providerRawValue) else {
-            return
-        }
-
-        switch provider {
-        case .alarmKit:
-            if #available(iOS 26.1, *) {
-                let alarmID = UUID(uuidString: identifier) ?? UUID()
-                try? AlarmManager.shared.cancel(id: alarmID)
+    func requestAuthorizationIfNeeded() async throws -> AlarmAuthorizationStatus {
+        let currentStatus = await authorizationStatus()
+        switch currentStatus {
+        case .authorized, .denied, .unsupported:
+            return currentStatus
+        case .notDetermined:
+            let updatedStatus = try await AlarmManager.shared.requestAuthorization()
+            switch updatedStatus {
+            case .authorized:
+                return .authorized
+            case .denied:
+                return .denied
+            case .notDetermined:
+                return .notDetermined
+            @unknown default:
+                return .denied
             }
-        case .notificationFallback:
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
         }
-
-        clearPersistedAlarmRecord()
     }
 
-    @available(iOS 26.1, *)
-    private func scheduleAlarmKitAlarm(at fireDate: Date) async throws -> ScheduledAlarm {
-        await cancelManagedAlarmIfNeeded()
+    func scheduleWakeAlarm(at wakeDate: Date) async throws -> ScheduledAlarm {
+        guard let fireDate = nextFutureOccurrence(from: wakeDate) else {
+            throw AlarmSchedulingError.invalidWakeDate
+        }
 
-        let manager = AlarmManager.shared
-        let authorizationState = try await authorizedAlarmState(using: manager)
-        guard authorizationState == .authorized else {
+        guard await authorizationStatus() == .authorized else {
             throw AlarmSchedulingError.permissionDenied
         }
 
-        let id = UUID()
-        let configuration = AlarmManager.AlarmConfiguration<AiQoWakeAlarmMetadata>.alarm(
+        try? AlarmManager.shared.cancel(id: Self.managedAlarmID)
+
+        let configuration = AlarmManager.AlarmConfiguration<AiQoSmartWakeAlarmMetadata>.alarm(
             schedule: .fixed(fireDate),
             attributes: makeAlarmAttributes(for: fireDate),
             sound: .default
         )
 
         do {
-            let alarm = try await manager.schedule(id: id, configuration: configuration)
-            let scheduledAlarm = ScheduledAlarm(
-                id: alarm.id.uuidString,
-                fireDate: fireDate,
-                provider: .alarmKit
+            let alarm = try await AlarmManager.shared.schedule(
+                id: Self.managedAlarmID,
+                configuration: configuration
             )
-            persist(scheduledAlarm)
-            return scheduledAlarm
-        } catch let alarmError as AlarmManager.AlarmError {
-            throw AlarmSchedulingError.schedulingFailed(message(for: alarmError))
+
+            return ScheduledAlarm(
+                id: alarm.id.uuidString,
+                fireDate: fireDate
+            )
+        } catch let error as AlarmManager.AlarmError {
+            throw AlarmSchedulingError.schedulingFailed(message(for: error))
         } catch {
-            throw AlarmSchedulingError.schedulingFailed(error.localizedDescription)
+            throw AlarmSchedulingError.schedulingFailed("صار خطأ أثناء حفظ المنبه. حاول مرة ثانية.")
         }
     }
 
-    @available(iOS 26.1, *)
-    private func authorizedAlarmState(using manager: AlarmManager) async throws -> AlarmManager.AuthorizationState {
-        switch manager.authorizationState {
-        case .authorized:
-            return .authorized
-        case .denied:
-            return .denied
-        case .notDetermined:
-            return try await manager.requestAuthorization()
-        @unknown default:
-            return .denied
+    private func nextFutureOccurrence(from wakeDate: Date) -> Date? {
+        let now = Date()
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: wakeDate)
+
+        guard let hour = timeComponents.hour,
+              let minute = timeComponents.minute else {
+            return nil
+        }
+
+        let todayCandidate = calendar.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: now
+        )
+
+        if let todayCandidate, todayCandidate > now.addingTimeInterval(30) {
+            return todayCandidate
+        }
+
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now)
+        return tomorrow.flatMap {
+            calendar.date(
+                bySettingHour: hour,
+                minute: minute,
+                second: 0,
+                of: $0
+            )
         }
     }
 
-    @available(iOS 26.1, *)
-    private func makeAlarmAttributes(for fireDate: Date) -> AlarmAttributes<AiQoWakeAlarmMetadata> {
-        let alert = makeAlarmAlert()
+    private func makeAlarmAttributes(for fireDate: Date) -> AlarmAttributes<AiQoSmartWakeAlarmMetadata> {
+        let alert = AlarmPresentation.Alert(title: "AiQo Smart Wake")
         let presentation = AlarmPresentation(alert: alert)
-        let metadata = AiQoWakeAlarmMetadata(source: "smart_wake", wakeTimestamp: fireDate.timeIntervalSince1970)
+        let metadata = AiQoSmartWakeAlarmMetadata(
+            source: "smart_wake",
+            scheduledTimestamp: fireDate.timeIntervalSince1970
+        )
 
         return AlarmAttributes(
             presentation: presentation,
@@ -211,75 +243,18 @@ final class SystemAlarmSchedulingService: AlarmSchedulingService {
         )
     }
 
-    @available(iOS 26.1, *)
-    private func makeAlarmAlert() -> AlarmPresentation.Alert {
-        AlarmPresentation.Alert(title: "وقت الاستيقاظ")
-    }
-
-    private func scheduleNotificationAlarm(at fireDate: Date) async throws -> ScheduledAlarm {
-        await cancelManagedAlarmIfNeeded()
-
-        let granted = await NotificationService.shared.ensureAuthorizationIfNeeded()
-        guard granted else {
-            throw AlarmSchedulingError.permissionDenied
-        }
-
-        let content = UNMutableNotificationContent()
-        content.title = "AiQo Smart Wake"
-        content.body = "هذا تذكير الاستيقاظ المحفوظ من الحاسبة الذكية."
-        content.sound = .default
-
-        let dateComponents = calendar.dateComponents(
-            [.year, .month, .day, .hour, .minute],
-            from: fireDate
-        )
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
-        let identifier = "aiqo.smartwake.notification.\(UUID().uuidString)"
-        let request = UNNotificationRequest(
-            identifier: identifier,
-            content: content,
-            trigger: trigger
-        )
-
-        do {
-            try await addNotificationRequest(request)
-            let scheduledAlarm = ScheduledAlarm(
-                id: identifier,
-                fireDate: fireDate,
-                provider: .notificationFallback
-            )
-            persist(scheduledAlarm)
-            return scheduledAlarm
-        } catch {
-            throw AlarmSchedulingError.schedulingFailed("تعذر حفظ تذكير الاستيقاظ حالياً.")
-        }
-    }
-
-    private func addNotificationRequest(_ request: UNNotificationRequest) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        }
-    }
-
-    @available(iOS 26.1, *)
     private func message(for error: AlarmManager.AlarmError) -> String {
         switch error {
         case .maximumLimitReached:
-            return "وصلت إلى الحد الأقصى من المنبهات المحفوظة حالياً."
+            return "وصلت للحد الأقصى من المنبهات المحفوظة. احذف منبهًا ثم حاول مرة ثانية."
         @unknown default:
-            return "تعذر حفظ المنبه حالياً."
+            return "صار خطأ أثناء حفظ المنبه. حاول مرة ثانية."
         }
     }
 }
 
 @available(iOS 26.1, *)
-private struct AiQoWakeAlarmMetadata: AlarmMetadata {
+private struct AiQoSmartWakeAlarmMetadata: AlarmMetadata {
     let source: String
-    let wakeTimestamp: TimeInterval
+    let scheduledTimestamp: TimeInterval
 }

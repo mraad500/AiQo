@@ -28,7 +28,7 @@ final class SmartWakeViewModel: ObservableObject {
         alarmSchedulingService: (any AlarmSchedulingService)? = nil
     ) {
         self.engine = engine ?? SmartWakeEngine()
-        self.alarmSchedulingService = alarmSchedulingService ?? SystemAlarmSchedulingService.shared
+        self.alarmSchedulingService = alarmSchedulingService ?? AlarmSchedulingServiceFactory.makeDefault()
         self.mode = initialMode
         self.bedtime = initialBedtime
         self.latestWakeTime = initialLatestWakeTime ?? self.engine.defaultLatestWakeTime(from: initialBedtime)
@@ -106,16 +106,39 @@ final class SmartWakeViewModel: ObservableObject {
             return
         }
 
-        alarmSaveState = .saving
-
         do {
-            let scheduledAlarm = try await alarmSchedulingService.scheduleWakeAlarm(at: recommendation.wakeDate)
+            let authorizationStatus = await alarmSchedulingService.authorizationStatus()
+
+            if authorizationStatus == .unsupported {
+                alarmSaveState = .failed(message: "حفظ المنبه عبر AlarmKit غير متاح على هذا الجهاز حالياً.")
+                return
+            }
+
+            if authorizationStatus == .notDetermined {
+                alarmSaveState = .requestingPermission
+            }
+
+            let resolvedAuthorizationStatus = try await alarmSchedulingService.requestAuthorizationIfNeeded()
+            guard resolvedAuthorizationStatus == .authorized else {
+                savedRecommendationID = nil
+                alarmSaveState = .denied(message: "تحتاج تسمح للتطبيق بإنشاء منبه. فعّل إذن المنبه حتى ينحفظ الوقت.")
+                return
+            }
+
+            alarmSaveState = .saving
+
+            _ = try await alarmSchedulingService.scheduleWakeAlarm(at: recommendation.wakeDate)
             savedRecommendationID = recommendation.id
-            alarmSaveState = .saved(message: savedStateMessage(for: scheduledAlarm.provider))
+            alarmSaveState = .saved
         } catch {
             savedRecommendationID = nil
             let message = (error as? LocalizedError)?.errorDescription ?? "تعذر حفظ المنبه حالياً."
-            alarmSaveState = .failed(message: message)
+            if let alarmError = error as? AlarmSchedulingError,
+               alarmError == .permissionDenied {
+                alarmSaveState = .denied(message: message)
+            } else {
+                alarmSaveState = .failed(message: message)
+            }
         }
     }
 
@@ -158,7 +181,7 @@ final class SmartWakeViewModel: ObservableObject {
     }
 
     private func synchronizeAlarmStateWithSelection() {
-        guard alarmSaveState != .saving else { return }
+        guard alarmSaveState.isBusy == false else { return }
         guard let savedRecommendationID else {
             alarmSaveState = .idle
             return
@@ -170,14 +193,5 @@ final class SmartWakeViewModel: ObservableObject {
 
         self.savedRecommendationID = nil
         alarmSaveState = .idle
-    }
-
-    private func savedStateMessage(for provider: AlarmProviderKind) -> String {
-        switch provider {
-        case .alarmKit:
-            return "هذا الوقت صار منبهك القادم"
-        case .notificationFallback:
-            return "تم حفظ الوقت كتذكير للاستيقاظ"
-        }
     }
 }
