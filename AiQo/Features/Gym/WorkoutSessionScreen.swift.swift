@@ -85,6 +85,14 @@ struct WorkoutSessionScreen: View {
                                 )
                             }
                             .padding(.horizontal, 20)
+
+                            if let error = session.lastError, !error.isEmpty {
+                                Text(error)
+                                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+                                    .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.72))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 28)
+                            }
                             
                             // --- Music / Spotify Section ---
                             SpotifyWorkoutPlayerView {
@@ -101,17 +109,7 @@ struct WorkoutSessionScreen: View {
                     // 2. منطقة التحكم (مثبتة بالأسفل)
                     VStack {
                         HStack(spacing: 15) {
-                            Button(action: {
-                                withAnimation {
-                                    if session.phase == .running {
-                                        session.pauseFromPhone()
-                                    } else if session.phase == .paused {
-                                        session.resumeFromPhone()
-                                    } else if session.phase == .idle {
-                                        session.startFromPhone()
-                                    }
-                                }
-                            }) {
+                            Button(action: handlePrimaryControlTap) {
                                 HStack {
                                     Image(systemName: primaryControlIcon)
                                     Text(primaryControlTitle)
@@ -127,7 +125,7 @@ struct WorkoutSessionScreen: View {
                             .disabled(session.phase == .starting || session.phase == .ending || session.isControlPending)
                             
                             if session.canEnd {
-                                Button(action: { endWorkout() }) {
+                                Button(action: handleStopTap) {
                                     Image(systemName: "stop.fill")
                                         .font(.title2)
                                         .foregroundStyle(.white)
@@ -273,6 +271,25 @@ struct WorkoutSessionScreen: View {
     private func formatDist(_ m: Double) -> (val: String, unit: String) {
         if m >= 1000 { return (String(format: "%.2f", m/1000), "KM") }
         return ("\(Int(m))", "M")
+    }
+
+    private func handlePrimaryControlTap() {
+        withAnimation {
+            switch session.phase {
+            case .running:
+                session.pauseFromPhone()
+            case .paused:
+                session.resumeFromPhone()
+            case .idle:
+                session.startFromPhone()
+            case .starting, .ending:
+                break
+            }
+        }
+    }
+
+    private func handleStopTap() {
+        endWorkout()
     }
     
     private func endWorkout() {

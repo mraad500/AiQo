@@ -117,6 +117,10 @@ struct FridgeItem: Identifiable, Codable, Equatable {
         guard let alchemyNoteKey else { return nil }
         return alchemyNoteKey.localized
     }
+
+    var emoji: String {
+        IngredientEmojiResolver.emoji(for: name, fallback: "🧺")
+    }
 }
 
 struct KitchenIngredient: Identifiable, Codable, Equatable {
@@ -130,6 +134,10 @@ struct KitchenIngredient: Identifiable, Codable, Equatable {
         self.name = name
         self.amount = amount
         self.unit = unit
+    }
+
+    var emoji: String {
+        IngredientEmojiResolver.emoji(for: name)
     }
 }
 
@@ -218,5 +226,9 @@ struct ShoppingListItem: Identifiable, Codable, Equatable {
         self.unit = unit
         self.isChecked = isChecked
         self.createdAt = createdAt
+    }
+
+    var emoji: String {
+        IngredientEmojiResolver.emoji(for: name, fallback: "🛒")
     }
 }

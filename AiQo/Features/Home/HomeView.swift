@@ -50,9 +50,6 @@ struct HomeView: View {
                 }
                 .padding(.top, 6)
                 .padding(.bottom, 4)
-                .task {
-                    await HealthKitService.shared.refreshWidgetFromToday()
-                }
 
                 Spacer(minLength: 0)
             }

@@ -251,7 +251,6 @@ private extension MealPlanView {
 
     func ingredientRow(_ ingredient: KitchenIngredient, meal: KitchenPlannedMeal) -> some View {
         let state = kitchenStore.availability(for: ingredient)
-        let ingredientKey = IngredientCatalog.match(from: ingredient.name)
         let markedNeedsPurchase = kitchenStore.isMarkedAsNeedsPurchase(
             mealID: meal.id,
             ingredientName: ingredient.name
@@ -266,11 +265,10 @@ private extension MealPlanView {
             Text(state.icon)
 
             IngredientIconView(
-                ingredientKey: ingredientKey,
+                emoji: ingredient.emoji,
                 size: 28,
                 cornerRadius: 9,
-                fallbackSystemName: "leaf.circle.fill",
-                fallbackTint: .green
+                backgroundColor: Color(.secondarySystemBackground)
             )
 
             VStack(alignment: .leading, spacing: 4) {

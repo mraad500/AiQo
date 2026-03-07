@@ -151,32 +151,31 @@ actor HealthKitService {
 
     /// نداء جاهز: يحدث الويدجت من Today Summary (أفضل مكان للبيانات الصحيحة)
     func refreshWidgetFromToday(goal: Int? = nil, caloriesGoal: Int? = nil) async {
+        do {
+            let summary = try await fetchTodaySummary()
+            refreshWidget(using: summary, goal: goal, caloriesGoal: caloriesGoal)
+        } catch {
+            refreshWidget(using: .zero, goal: goal, caloriesGoal: caloriesGoal)
+        }
+    }
+
+    func refreshWidget(
+        using summary: TodaySummary,
+        goal: Int? = nil,
+        caloriesGoal: Int? = nil
+    ) {
         let resolvedGoals = currentWidgetGoals(
             stepsGoalOverride: goal,
             caloriesGoalOverride: caloriesGoal
         )
-        do {
-            let summary = try await fetchTodaySummary()
-            let steps = Int(summary.steps)
-            let cal = Int(summary.activeKcal)
-            let stand = Int(summary.standPercent)
-            updateWidget(
-                steps: steps,
-                calories: cal,
-                standPercent: stand,
-                stepsGoal: resolvedGoals.stepsGoal,
-                caloriesGoal: resolvedGoals.caloriesGoal
-            )
-        } catch {
-            // إذا فشلنا بالقراءة، لا نكتب أرقام وهمية
-            updateWidget(
-                steps: 0,
-                calories: 0,
-                standPercent: 0,
-                stepsGoal: resolvedGoals.stepsGoal,
-                caloriesGoal: resolvedGoals.caloriesGoal
-            )
-        }
+
+        updateWidget(
+            steps: Int(summary.steps),
+            calories: Int(summary.activeKcal),
+            standPercent: Int(summary.standPercent),
+            stepsGoal: resolvedGoals.stepsGoal,
+            caloriesGoal: resolvedGoals.caloriesGoal
+        )
     }
 
     // MARK: - Public API (Today Summary)

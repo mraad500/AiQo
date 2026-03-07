@@ -152,7 +152,7 @@ private extension KitchenScreen {
                     title: "kitchen.fridge.title".localized,
                     icon: "refrigerator.fill"
                 ) {
-                    FridgeInventoryView()
+                    InteractiveFridgeView()
                         .environmentObject(kitchenStore)
                 }
 
@@ -297,7 +297,7 @@ struct MealDetailSheet: View {
                         ForEach(presentation.ingredientItems) { ingredient in
                             HStack(spacing: 12) {
                                 IngredientIconView(
-                                    ingredientKey: ingredient.ingredientKey,
+                                    emoji: ingredient.emoji,
                                     size: 36,
                                     cornerRadius: 12
                                 )

@@ -28,6 +28,8 @@ struct GalaxyScreen: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            GalaxyProjectImageCard(height: 220, contentMode: .fill)
+
             GalaxyExperienceCard(viewModel: viewModel)
 
             Text("كل روح مرتبطة بالمصدر")

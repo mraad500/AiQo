@@ -3,15 +3,22 @@ import Foundation
 struct CaptainStructuredResponse: Codable, Sendable {
     let message: String
     let workoutPlan: WorkoutPlan?
+    let mealPlan: MealPlan?
 
     private enum CodingKeys: String, CodingKey {
         case message
         case workoutPlan
+        case mealPlan
     }
 
-    init(message: String, workoutPlan: WorkoutPlan? = nil) {
+    init(
+        message: String,
+        workoutPlan: WorkoutPlan? = nil,
+        mealPlan: MealPlan? = nil
+    ) {
         self.message = message.trimmingCharacters(in: .whitespacesAndNewlines)
         self.workoutPlan = workoutPlan?.isMeaningful == true ? workoutPlan : nil
+        self.mealPlan = mealPlan?.isMeaningful == true ? mealPlan : nil
     }
 
     init(from decoder: Decoder) throws {
@@ -29,6 +36,102 @@ struct CaptainStructuredResponse: Codable, Sendable {
 
         message = normalizedMessage
         workoutPlan = try container.decodeIfPresent(WorkoutPlan.self, forKey: .workoutPlan)
+        let decodedMealPlan = try container.decodeIfPresent(MealPlan.self, forKey: .mealPlan)
+        mealPlan = decodedMealPlan?.isMeaningful == true ? decodedMealPlan : nil
+    }
+}
+
+struct MealPlan: Codable, Equatable, Sendable {
+    let meals: [Meal]
+
+    private enum CodingKeys: String, CodingKey {
+        case meals
+    }
+
+    init(meals: [Meal]) {
+        self.meals = meals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedMeals = try container.decode([Meal].self, forKey: .meals)
+
+        guard !decodedMeals.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .meals,
+                in: container,
+                debugDescription: "MealPlan.meals must contain at least one meal."
+            )
+        }
+
+        meals = decodedMeals
+    }
+
+    var isMeaningful: Bool {
+        !meals.isEmpty
+    }
+
+    struct Meal: Codable, Equatable, Identifiable, Sendable {
+        var id = UUID()
+        let type: String
+        let description: String
+        let calories: Int
+
+        private enum CodingKeys: String, CodingKey {
+            case type
+            case description
+            case calories
+        }
+
+        init(
+            id: UUID = UUID(),
+            type: String,
+            description: String,
+            calories: Int
+        ) {
+            self.id = id
+            self.type = type.trimmingCharacters(in: .whitespacesAndNewlines)
+            self.description = description.trimmingCharacters(in: .whitespacesAndNewlines)
+            self.calories = calories
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+
+            let rawType = try container.decode(String.self, forKey: .type)
+            let normalizedType = rawType.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedType.isEmpty else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Meal.type must not be empty."
+                )
+            }
+
+            let rawDescription = try container.decode(String.self, forKey: .description)
+            let normalizedDescription = rawDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedDescription.isEmpty else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .description,
+                    in: container,
+                    debugDescription: "Meal.description must not be empty."
+                )
+            }
+
+            let decodedCalories = try container.decode(Int.self, forKey: .calories)
+            guard decodedCalories > 0 else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .calories,
+                    in: container,
+                    debugDescription: "Meal.calories must be greater than zero."
+                )
+            }
+
+            id = UUID()
+            type = normalizedType
+            description = normalizedDescription
+            calories = decodedCalories
+        }
     }
 }
 

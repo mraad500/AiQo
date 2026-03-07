@@ -107,6 +107,131 @@ enum IngredientKey: String, CaseIterable, Identifiable {
 
     var assetName: String { rawValue }
 
+    var emoji: String {
+        switch self {
+        case .ing_apple:
+            return "🍎"
+        case .ing_almonds:
+            return "🥜"
+        case .ing_avocado:
+            return "🥑"
+        case .ing_banana:
+            return "🍌"
+        case .ing_beef_lean:
+            return "🥩"
+        case .ing_bell_pepper:
+            return "🫑"
+        case .ing_berries:
+            return "🫐"
+        case .ing_black_beans:
+            return "🫘"
+        case .ing_bread_whole_wheat:
+            return "🍞"
+        case .ing_broccoli:
+            return "🥦"
+        case .ing_carrot:
+            return "🥕"
+        case .ing_cauliflower:
+            return "🥦"
+        case .ing_cheese_low_fat:
+            return "🧀"
+        case .ing_chia_seeds:
+            return "🌱"
+        case .ing_chicken_breast, .ing_chicken_thigh:
+            return "🍗"
+        case .ing_chickpeas, .ing_kidney_beans, .ing_lentils:
+            return "🫘"
+        case .ing_corn:
+            return "🌽"
+        case .ing_cottage_cheese:
+            return "🧀"
+        case .ing_cucumber, .ing_zucchini:
+            return "🥒"
+        case .ing_dates:
+            return "🌰"
+        case .ing_egg_whites, .ing_egg_whole:
+            return "🥚"
+        case .ing_eggplant:
+            return "🍆"
+        case .ing_flax_seeds:
+            return "🌱"
+        case .ing_garlic:
+            return "🧄"
+        case .ing_ginger:
+            return "🌿"
+        case .ing_greek_yogurt, .ing_yogurt:
+            return "🥣"
+        case .ing_honey:
+            return "🍯"
+        case .ing_juice_glass:
+            return "🧃"
+        case .ing_lamb_lean:
+            return "🥩"
+        case .ing_lemon:
+            return "🍋"
+        case .ing_lettuce, .ing_spinach:
+            return "🥬"
+        case .ing_mango:
+            return "🥭"
+        case .ing_milk:
+            return "🥛"
+        case .ing_mixed_veg:
+            return "🥗"
+        case .ing_mushrooms:
+            return "🍄"
+        case .ing_nuts_mixed:
+            return "🥜"
+        case .ing_oats:
+            return "🥣"
+        case .ing_olive_oil:
+            return "🫒"
+        case .ing_onion:
+            return "🧅"
+        case .ing_orange:
+            return "🍊"
+        case .ing_pasta:
+            return "🍝"
+        case .ing_peanut_butter:
+            return "🥜"
+        case .ing_peas:
+            return "🫘"
+        case .ing_pineapple:
+            return "🍍"
+        case .ing_potato:
+            return "🥔"
+        case .ing_quinoa:
+            return "🥣"
+        case .ing_rice_brown, .ing_rice_white:
+            return "🍚"
+        case .ing_salmon, .ing_white_fish:
+            return "🐟"
+        case .ing_shrimp:
+            return "🍤"
+        case .ing_soy_sauce:
+            return "🧂"
+        case .ing_sweet_potato:
+            return "🍠"
+        case .ing_tahini:
+            return "🥣"
+        case .ing_tofu:
+            return "🌱"
+        case .ing_tomato:
+            return "🍅"
+        case .ing_tuna_can:
+            return "🐟"
+        case .ing_turkey_breast:
+            return "🦃"
+        case .ing_walnuts:
+            return "🌰"
+        case .ing_water_bottle:
+            return "💧"
+        case .ing_watermelon:
+            return "🍉"
+        case .ing_whey_scoop:
+            return "🥤"
+        }
+    }
+
     var localizedTitle: String {
         switch self {
         case .ing_apple:
@@ -489,5 +614,11 @@ enum IngredientKey: String, CaseIterable, Identifiable {
 private extension IngredientKey {
     func localized(_ english: String, _ arabic: String) -> String {
         AppSettingsStore.shared.appLanguage == .english ? english : arabic
+    }
+}
+
+enum IngredientEmojiResolver {
+    static func emoji(for ingredientName: String, fallback: String = "🍽️") -> String {
+        IngredientCatalog.match(from: ingredientName)?.emoji ?? fallback
     }
 }

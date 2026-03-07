@@ -29,30 +29,20 @@ enum IngredientAssetCatalog {
 private final class BundleMarker: NSObject {}
 
 struct IngredientIconView: View {
-    let ingredientKey: IngredientKey?
+    let emoji: String
     var size: CGFloat = 28
     var cornerRadius: CGFloat = 10
-    var fallbackSystemName: String = "fork.knife.circle.fill"
-    var fallbackTint: Color = .yellow
+    var backgroundColor: Color = Color(.secondarySystemBackground)
 
     var body: some View {
-        Group {
-            if let ingredientKey, let image = IngredientAssetCatalog.uiImage(for: ingredientKey) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-            } else {
-                Image(systemName: fallbackSystemName)
-                    .font(.system(size: size * 0.62, weight: .semibold, design: .rounded))
-                    .foregroundStyle(fallbackTint)
-                    .frame(width: size, height: size)
-            }
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(backgroundColor)
+
+            Text(emoji)
+                .font(.system(size: size * 0.62))
         }
         .frame(width: size, height: size)
-        .background(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }

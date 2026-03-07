@@ -1,6 +1,7 @@
 // Supabase hook: keep the shared styling in this file and feed it with remote colors
 // or theme flags once the Tribe payload becomes server-driven.
 import SwiftUI
+import UIKit
 
 enum TribePalette {
     static let backgroundTop = Color(red: 0.95, green: 0.98, blue: 0.96)
@@ -181,5 +182,79 @@ struct TribeSegmentedPill<Option: Identifiable & Hashable>: View {
                         .stroke(borderColor, lineWidth: 1)
                 )
         )
+    }
+}
+
+private enum GalaxyProjectImageAsset {
+    static let candidateNames: [String] = [
+        "galaxyـscreen",
+        "galaxy-screen",
+        "galaxy_screen",
+        "Galaxyـscreen",
+        "Galaxy-screen",
+        "Galaxy_screen",
+        "GalaxyScreen",
+        "Galaxy_iconh",
+        "Galaxy_icon"
+    ]
+
+    static var image: UIImage? {
+        candidateNames.lazy.compactMap { UIImage(named: $0) }.first
+    }
+}
+
+struct GalaxyProjectImageCard: View {
+    var cornerRadius: CGFloat = 28
+    var height: CGFloat? = nil
+    var contentMode: ContentMode = .fit
+
+    var body: some View {
+        TribeGlassCard(
+            cornerRadius: cornerRadius,
+            padding: 12,
+            tint: TribePalette.surfaceStrong.opacity(0.08)
+        ) {
+            ZStack {
+                RoundedRectangle(cornerRadius: cornerRadius - 8, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.22),
+                                Color.aiqoMint.opacity(0.10),
+                                Color.aiqoSand.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                if let image = GalaxyProjectImageAsset.image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: contentMode)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius - 8, style: .continuous))
+                } else {
+                    VStack(spacing: 8) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.72))
+
+                        Text("galaxyـscreen")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.92))
+
+                        Text("أضف الصورة إلى Assets.xcassets لعرضها هنا.")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.58))
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(20)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius - 8, style: .continuous))
+        }
     }
 }

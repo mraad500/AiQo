@@ -68,6 +68,10 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>AiQo uses HealthKit on iPhone to coordinate Apple Watch workouts and show live heart rate, calories, distance, and elapsed time.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>AiQo uses HealthKit on iPhone to launch and manage Apple Watch workout sessions that are saved to Apple Health.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>

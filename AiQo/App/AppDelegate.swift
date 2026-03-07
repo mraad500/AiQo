@@ -85,7 +85,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        _ = PhoneConnectivityManager.shared
+        PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
         WidgetCenter.shared.reloadAllTimelines()
         clearAppBadge()
 
@@ -102,7 +102,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        _ = PhoneConnectivityManager.shared
+        PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {

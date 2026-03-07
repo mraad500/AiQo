@@ -525,20 +525,6 @@
 "time.year" = "السنة";
 "time.all" = "الكل";
 
-/* Football */
-"football.title" = "أهم المباريات";
-"football.tab.latest" = "أحدث المباريات";
-"football.tab.bigGames" = "مباريات الأسبوع الكبيرة";
-"football.upcoming" = "المباريات القادمة";
-"football.label.scheduled" = "مجدولة";
-"football.label.result" = "النتيجة";
-"football.status.ft" = "نهاية";
-"football.status.today_800" = "اليوم 8:00";
-"football.status.tomorrow_1000" = "غداً 10:00";
-"football.status.sat_730" = "السبت 7:30";
-"football.status.sun_600" = "الأحد 6:00";
-"football.status.sun_930" = "الأحد 9:30 م";
-
 /* Plan */
 "plan.title" = "خطة اليوم";
 "plan.overview" = "نظرة عامة";
@@ -1268,8 +1254,6 @@
 "club.impact.summary.accessibility.hint" = "يعرض سجل ملخص التمارين.";
 "club.impact.achievements.accessibility.label" = "تبويب الإنجازات";
 "club.impact.achievements.accessibility.hint" = "يعرض الإنجازات المجمعة.";
-"club.header.football.accessibility.label" = "تحديثات كرة القدم";
-"club.header.football.accessibility.hint" = "يفتح تحديثات كرة القدم.";
 "club_title" = "النادي";
 "tab_body" = "الجسم";
 "tab_plan" = "الخطة";
@@ -1278,14 +1262,3 @@
 "impact_summary" = "الملخص";
 "impact_achievements" = "الإنجازات";
 "club_top_tabs_accessibility" = "تبويبات النادي العلوية";
-"matches_button" = "المباريات والنتائج";
-"football.subtitle" = "محمّلة بهدوء وجاهزة فورًا.";
-"football.results" = "النتائج";
-"football.empty.results" = "لا توجد مباريات منتهية أو مباشرة.";
-"football.empty.upcoming" = "لا توجد مباريات قادمة.";
-"football.error.refresh" = "تعذر تحديث المباريات الآن. %@";
-"football.status.live" = "مباشر";
-"football.status.final" = "النهائي";
-"football.vs" = "ضد";
-"football.date.today" = "اليوم";
-"football.date.tomorrow" = "غدًا";

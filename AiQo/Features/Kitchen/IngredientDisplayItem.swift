@@ -3,9 +3,9 @@ import Foundation
 struct IngredientDisplayItem: Identifiable, Equatable {
     let id: String
     let name: String
+    let emoji: String
     let count: Int
     let quantityText: String?
-    let ingredientKey: IngredientKey?
 }
 
 enum IngredientDisplayBuilder {
@@ -21,21 +21,18 @@ enum IngredientDisplayBuilder {
                 order.append(normalizedName)
                 buckets[normalizedName] = Bucket(
                     displayName: ingredient.name,
+                    emoji: ingredient.emoji,
                     count: 0,
                     totalAmount: 0,
                     unit: cleanedUnit(ingredient.unit),
                     canSumAmounts: ingredient.amount != nil,
                     firstQuantityText: quantityText(amount: ingredient.amount, unit: ingredient.unit),
-                    hasQuantity: ingredient.amount != nil,
-                    ingredientKey: IngredientCatalog.match(from: ingredient.name)
+                    hasQuantity: ingredient.amount != nil
                 )
             }
 
             guard var bucket = buckets[normalizedName] else { continue }
             bucket.count += 1
-            if bucket.ingredientKey == nil {
-                bucket.ingredientKey = IngredientCatalog.match(from: ingredient.name)
-            }
 
             if let amount = ingredient.amount {
                 let unit = cleanedUnit(ingredient.unit)
@@ -60,9 +57,9 @@ enum IngredientDisplayBuilder {
             return IngredientDisplayItem(
                 id: key,
                 name: bucket.displayName,
+                emoji: bucket.emoji,
                 count: bucket.count,
-                quantityText: bucket.quantityDisplayText,
-                ingredientKey: bucket.ingredientKey
+                quantityText: bucket.quantityDisplayText
             )
         }
     }
@@ -88,9 +85,9 @@ enum IngredientDisplayBuilder {
             return IngredientDisplayItem(
                 id: key,
                 name: bucket.displayName,
+                emoji: IngredientEmojiResolver.emoji(for: bucket.displayName),
                 count: bucket.count,
-                quantityText: nil,
-                ingredientKey: IngredientCatalog.match(from: bucket.displayName)
+                quantityText: nil
             )
         }
     }
@@ -124,13 +121,13 @@ enum IngredientDisplayBuilder {
 
 private struct Bucket {
     var displayName: String
+    var emoji: String
     var count: Int
     var totalAmount: Double
     var unit: String?
     var canSumAmounts: Bool
     var firstQuantityText: String?
     var hasQuantity: Bool
-    var ingredientKey: IngredientKey?
 
     var quantityDisplayText: String? {
         guard hasQuantity else { return nil }

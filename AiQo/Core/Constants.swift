@@ -13,13 +13,3 @@ enum K {
         }()
     }
 }
-
-// MARK: - Football API
-
-enum APIConstants {
-    static let footballBaseURL = URL(string: "https://api.football-data.org/v4")!
-
-    static let footballAPIKey: String = {
-        Bundle.main.object(forInfoDictionaryKey: "FOOTBALL_DATA_API_KEY") as? String ?? ""
-    }()
-}

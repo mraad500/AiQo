@@ -31,7 +31,6 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private var latestCommandSequenceNumber = 0
     private var lastLegacyPacketSequence = -1
     private var pendingCommandID: String?
-    private var pendingCommandType: WorkoutControlCommandType?
 
     @Published var isReachable = false
     @Published var isPaired = false
@@ -48,6 +47,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     @Published private(set) var currentWorkoutPhase: WorkoutSessionPhase = .idle
     @Published private(set) var workoutConnectionState: WorkoutConnectionState = .idle
     @Published private(set) var latestSnapshot: WorkoutSessionStateDTO?
+    @Published private(set) var latestSnapshotContext: WorkoutSyncSnapshot?
     @Published private(set) var lastAcknowledgement: WorkoutSyncAcknowledgement?
     @Published private(set) var eventLog: [String] = []
     @Published private(set) var hasMirroredSession = false
@@ -90,11 +90,20 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         mirroredSessionID
     }
 
+    var pendingQueueCount: Int {
+        isCommandInFlight ? 1 : 0
+    }
+
     private override init() {
         super.init()
         restorePersistedSnapshot()
         configureWCSession()
         configureWorkoutMirroring()
+    }
+
+    func refreshFromCompanionApplicationContext() {
+        guard WCSession.isSupported() else { return }
+        applyApplicationContextIfAvailable(WCSession.default.receivedApplicationContext, source: "refresh")
     }
 
     func launchWatchAppForWorkout(
@@ -103,6 +112,13 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     ) {
         guard HKHealthStore.isHealthDataAvailable() else {
             lastError = "HealthKit not available"
+            return
+        }
+
+        if let availabilityError = watchAvailabilityError() {
+            lastError = availabilityError
+            workoutConnectionState = .failed
+            logEvent("launch skipped: \(availabilityError)")
             return
         }
 
@@ -117,6 +133,12 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         let config = HKWorkoutConfiguration()
         config.activityType = activityType
         config.locationType = locationType
+        let startRequest = WorkoutCompanionStartRequest(
+            companionCommand: .startWorkout,
+            requestedAt: Date(),
+            activityTypeRaw: activityType.rawValue,
+            locationTypeRaw: locationType.rawValue
+        )
 
         workoutConnectionState = .launching
         logEvent("authorization requested")
@@ -134,6 +156,9 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
                     self.lastError = "None"
                     self.workoutConnectionState = .awaitingMirror
                     self.logEvent("watch app launched, awaiting mirrored session")
+                    if self.sendStartRequestToWatch(startRequest) {
+                        self.lastSent = "start=\(activityType.rawValue)"
+                    }
                 } else {
                     self.lastError = "startWatchApp returned false"
                     self.workoutConnectionState = .failed
@@ -185,6 +210,60 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
+    private func watchAvailabilityError() -> String? {
+        guard WCSession.isSupported() else {
+            return "WatchConnectivity is not supported on this iPhone."
+        }
+
+        let session = WCSession.default
+        applyWatchSessionStatus(from: session)
+
+        if session.activationState != .activated {
+            session.activate()
+            logEvent("WCSession activation refreshed before launch")
+        }
+
+        if !session.isPaired {
+            return "Apple Watch is not paired with this iPhone."
+        }
+
+        if !session.isWatchAppInstalled {
+            return "AiQo Watch app is not installed on the paired Apple Watch."
+        }
+
+        return nil
+    }
+
+    private func sendStartRequestToWatch(_ request: WorkoutCompanionStartRequest) -> Bool {
+        guard WCSession.isSupported() else {
+            logEvent("start request skipped: WCSession unsupported")
+            return false
+        }
+
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            session.activate()
+            logEvent("start request queued after WCSession activation")
+            return false
+        }
+
+        let payload = request.dictionaryRepresentation
+        session.transferUserInfo(payload)
+        logEvent("start request queued via transferUserInfo")
+
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { [weak self] error in
+                Task { @MainActor [weak self] in
+                    self?.lastError = error.localizedDescription
+                    self?.logEvent("start request sendMessage failed: \(error.localizedDescription)")
+                }
+            }
+            logEvent("start request sent via sendMessage")
+        }
+
+        return true
+    }
+
     private func configureWCSession() {
         guard WCSession.isSupported() else {
             logEvent("WCSession not supported")
@@ -193,8 +272,16 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
         let session = WCSession.default
         session.delegate = self
+        applyWatchSessionStatus(from: session)
         session.activate()
         logEvent("WCSession activation requested")
+    }
+
+    private func applyWatchSessionStatus(from session: WCSession) {
+        activationState = session.activationState
+        isReachable = session.isReachable
+        isPaired = session.isPaired
+        isWatchAppInstalled = session.isWatchAppInstalled
     }
 
     private func configureWorkoutMirroring() {
@@ -233,7 +320,6 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         hasMirroredSession = false
         isCommandInFlight = false
         pendingCommandID = nil
-        pendingCommandType = nil
 
         if markDisconnected, !currentWorkoutPhase.isTerminal {
             workoutConnectionState = .disconnected
@@ -244,24 +330,12 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         _ type: WorkoutControlCommandType,
         explicitSessionID: String? = nil
     ) {
-        guard #available(iOS 17.0, *), let mirroredSession else {
-            lastError = "Mirrored workout session unavailable"
-            logEvent("command \(type.rawValue) skipped: no mirrored session")
-            return
-        }
-
         if isCommandInFlight, type != .requestSnapshot {
             lastError = "A workout command is still pending"
             return
         }
 
         let sessionID = explicitSessionID ?? mirroredSessionID
-        guard let sessionID else {
-            lastError = "Missing workout session identifier"
-            logEvent("command \(type.rawValue) skipped: missing session id")
-            return
-        }
-
         if type == .pause && currentWorkoutPhase == .paused {
             logEvent("pause command ignored locally because session is already paused")
             return
@@ -280,54 +354,128 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         let command = WorkoutControlCommand(
             commandId: UUID().uuidString,
             commandType: type,
-            sessionId: sessionID,
+            sessionId: sessionID ?? "",
             issuedAt: Date()
         )
-
-        latestCommandSequenceNumber += 1
-        let payload = WorkoutSyncPayload(
-            version: WorkoutSyncPayload.currentVersion,
-            sessionId: sessionID,
-            sequenceNumber: latestCommandSequenceNumber,
-            timestamp: Date(),
-            sourceDevice: .phone,
-            kind: .command,
-            state: nil,
-            command: command,
-            acknowledgement: nil
+        let companionMessage = WorkoutCompanionMessage.controlCommand(
+            id: command.commandId,
+            commandType: type,
+            sessionId: sessionID
         )
 
-        do {
-            let data = try WorkoutSyncCodec.encode(payload)
-            lastSent = "command=\(type.rawValue) seq=\(payload.sequenceNumber)"
-            logEvent("command sent: \(type.rawValue)")
+        let sentOverWCSession = sendCompanionMessage(companionMessage, guaranteed: true)
+        var sentOverMirroring = false
 
-            if type != .requestSnapshot {
-                pendingCommandID = command.commandId
-                pendingCommandType = type
-                isCommandInFlight = true
-            }
+        if type != .requestSnapshot {
+            pendingCommandID = command.commandId
+            isCommandInFlight = true
+        }
 
-            Task { [weak self] in
-                do {
-                    try await Self.sendToRemoteSession(data, via: mirroredSession)
-                } catch {
-                    await MainActor.run {
-                        guard let self else { return }
-                        if self.pendingCommandID == command.commandId {
-                            self.pendingCommandID = nil
-                            self.pendingCommandType = nil
-                            self.isCommandInFlight = false
+        if let sessionID,
+           #available(iOS 17.0, *),
+           let mirroredSession {
+            latestCommandSequenceNumber += 1
+            let payload = WorkoutSyncPayload(
+                version: WorkoutSyncPayload.currentVersion,
+                sessionId: sessionID,
+                sequenceNumber: latestCommandSequenceNumber,
+                timestamp: Date(),
+                sourceDevice: .phone,
+                kind: .command,
+                state: nil,
+                command: command,
+                acknowledgement: nil
+            )
+
+            do {
+                let data = try WorkoutSyncCodec.encode(payload)
+                sentOverMirroring = true
+
+                Task { [weak self] in
+                    do {
+                        try await Self.sendToRemoteSession(data, via: mirroredSession)
+                    } catch {
+                        await MainActor.run {
+                            guard let self else { return }
+                            self.workoutConnectionState = .disconnected
+                            if !sentOverWCSession {
+                                if self.pendingCommandID == command.commandId {
+                                    self.pendingCommandID = nil
+                                    self.isCommandInFlight = false
+                                }
+                                self.lastError = error.localizedDescription
+                            }
+                            self.logEvent("mirrored command send failed: \(error.localizedDescription)")
                         }
-                        self.lastError = error.localizedDescription
-                        self.workoutConnectionState = .disconnected
-                        self.logEvent("command send failed: \(error.localizedDescription)")
                     }
                 }
+            } catch {
+                if !sentOverWCSession {
+                    if pendingCommandID == command.commandId {
+                        pendingCommandID = nil
+                        isCommandInFlight = false
+                    }
+                    lastError = error.localizedDescription
+                }
+                logEvent("command encoding failed: \(error.localizedDescription)")
             }
+        }
+
+        guard sentOverMirroring || sentOverWCSession else {
+            if pendingCommandID == command.commandId {
+                pendingCommandID = nil
+                isCommandInFlight = false
+            }
+            lastError = "Unable to reach the watch workout session"
+            logEvent("command \(type.rawValue) skipped: no remote transport available")
+            return
+        }
+
+        let transports = [sentOverMirroring ? "mirror" : nil, sentOverWCSession ? "wc" : nil]
+            .compactMap { $0 }
+            .joined(separator: "+")
+        lastSent = "command=\(type.rawValue) via=\(transports)"
+        logEvent("command dispatched: \(type.rawValue) via \(transports)")
+    }
+
+    private func sendCompanionMessage(_ message: WorkoutCompanionMessage, guaranteed: Bool) -> Bool {
+        guard WCSession.isSupported() else {
+            logEvent("WC companion send skipped: unsupported")
+            return false
+        }
+
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            logEvent("WC companion send skipped: session not activated")
+            return false
+        }
+
+        do {
+            let data = try WorkoutSyncCodec.encodeCompanionMessage(message)
+            let packet: [String: Any] = [WorkoutSyncDictionaryKey.workoutCompanionMessage: data]
+
+            if session.isReachable {
+                session.sendMessage(packet, replyHandler: nil) { [weak self] error in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.logEvent("WC companion send failed: \(error.localizedDescription)")
+
+                        guard guaranteed else { return }
+                        session.transferUserInfo(packet)
+                        self.logEvent("WC companion fallback queued")
+                    }
+                }
+            } else if guaranteed {
+                session.transferUserInfo(packet)
+            } else {
+                try session.updateApplicationContext(packet)
+            }
+
+            return true
         } catch {
             lastError = error.localizedDescription
-            logEvent("command encoding failed: \(error.localizedDescription)")
+            logEvent("WC companion encoding failed: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -359,21 +507,17 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         guard let data = defaults.data(forKey: Constants.snapshotStoreKey) else { return }
 
         do {
-            let snapshot = try JSONDecoder().decode(WorkoutSessionStateDTO.self, from: data)
-            latestSnapshot = snapshot
-            currentWorkoutPhase = snapshot.currentState
-            currentHeartRate = snapshot.heartRate ?? 0
-            currentAverageHeartRate = snapshot.averageHeartRate ?? 0
-            activeEnergy = snapshot.activeEnergy ?? 0
-            currentDistance = snapshot.distance ?? 0
-            currentDuration = snapshot.elapsedTime
-            if snapshot.currentState.isTerminal {
-                mirroredSessionID = nil
-                workoutConnectionState = .ended
-                clearPersistedSnapshot()
+            if let snapshotContext = try? JSONDecoder().decode(WorkoutSyncSnapshot.self, from: data) {
+                applySnapshotContext(snapshotContext, source: "persisted")
             } else {
-                mirroredSessionID = defaults.string(forKey: Constants.sessionIDStoreKey)
-                workoutConnectionState = .awaitingMirror
+                let snapshot = try JSONDecoder().decode(WorkoutSessionStateDTO.self, from: data)
+                let sessionID = defaults.string(forKey: Constants.sessionIDStoreKey)
+                let snapshotContext = WorkoutSyncSnapshot(
+                    state: snapshot,
+                    sessionId: sessionID,
+                    workoutName: Self.workoutName(for: snapshot.workoutType)
+                )
+                applySnapshotContext(snapshotContext, source: "persisted-legacy")
             }
             logEvent("recovered persisted snapshot")
         } catch {
@@ -399,11 +543,11 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         detachMirroredSession(markDisconnected: false)
         latestWatchSequenceNumber = 0
         pendingCommandID = nil
-        pendingCommandType = nil
         mirroredSessionID = nil
         currentWorkoutPhase = .idle
         workoutConnectionState = .idle
         latestSnapshot = nil
+        latestSnapshotContext = nil
         lastAcknowledgement = nil
         clearPersistedSnapshot()
 
@@ -416,7 +560,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
-    private func persist(snapshot: WorkoutSessionStateDTO, sessionID: String) {
+    private func persist(snapshot: WorkoutSyncSnapshot, sessionID: String) {
         if let data = try? JSONEncoder().encode(snapshot) {
             defaults.set(data, forKey: Constants.snapshotStoreKey)
             defaults.set(sessionID, forKey: Constants.sessionIDStoreKey)
@@ -426,6 +570,51 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private func clearPersistedSnapshot() {
         defaults.removeObject(forKey: Constants.snapshotStoreKey)
         defaults.removeObject(forKey: Constants.sessionIDStoreKey)
+    }
+
+    private func applyApplicationContextIfAvailable(_ applicationContext: [String: Any], source: String) {
+        guard let snapshotDictionary = applicationContext[WorkoutSyncDictionaryKey.snapshotContext] as? [String: Any],
+              let snapshot = WorkoutSyncSnapshot(dictionary: snapshotDictionary) else {
+            return
+        }
+
+        lastReceived = "applicationContext"
+        applySnapshotContext(snapshot, source: source)
+        logEvent("snapshot recovered from applicationContext (\(source))")
+    }
+
+    private func applySnapshotContext(_ snapshot: WorkoutSyncSnapshot, source: String) {
+        if let existingSnapshot = latestSnapshotContext,
+           existingSnapshot.lastUpdated > snapshot.lastUpdated {
+            logEvent("stale snapshot context ignored from \(source)")
+            return
+        }
+
+        latestSnapshotContext = snapshot
+        latestSnapshot = snapshot.asStateDTO()
+        currentWorkoutPhase = snapshot.currentState
+        currentHeartRate = snapshot.heartRate
+        currentAverageHeartRate = snapshot.averageHeartRate ?? 0
+        activeEnergy = snapshot.activeEnergy
+        currentDistance = snapshot.distance
+        currentDuration = snapshot.elapsedTime
+        mirroredSessionID = snapshot.sessionId
+        hasMirroredSession = snapshot.hasActiveWorkout
+        workoutConnectionState = snapshot.currentState.isTerminal ? .ended : snapshot.connectionState
+        lastError = "None"
+
+        if let sessionID = snapshot.sessionId, !snapshot.currentState.isTerminal {
+            persist(snapshot: snapshot, sessionID: sessionID)
+        } else {
+            clearPersistedSnapshot()
+        }
+
+        if snapshot.currentState.isTerminal {
+            isCommandInFlight = false
+            pendingCommandID = nil
+            mirroredSessionID = nil
+            detachMirroredSession(markDisconnected: false)
+        }
     }
 
     private func applySnapshot(_ snapshot: WorkoutSessionStateDTO, sessionID: String, sequenceNumber: Int) {
@@ -445,28 +634,12 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
 
         latestWatchSequenceNumber = sequenceNumber
-        mirroredSessionID = sessionID
-        latestSnapshot = snapshot
-        currentWorkoutPhase = snapshot.currentState
-        currentHeartRate = snapshot.heartRate ?? 0
-        currentAverageHeartRate = snapshot.averageHeartRate ?? 0
-        activeEnergy = snapshot.activeEnergy ?? 0
-        currentDistance = snapshot.distance ?? 0
-        currentDuration = snapshot.elapsedTime
-        hasMirroredSession = true
-        workoutConnectionState = snapshot.connectionState == .disconnected ? .disconnected : .mirrored
-        lastError = "None"
-        persist(snapshot: snapshot, sessionID: sessionID)
-
-        if snapshot.currentState.isTerminal {
-            isCommandInFlight = false
-            pendingCommandID = nil
-            pendingCommandType = nil
-            mirroredSessionID = nil
-            workoutConnectionState = .ended
-            detachMirroredSession(markDisconnected: false)
-            clearPersistedSnapshot()
-        }
+        let snapshotContext = WorkoutSyncSnapshot(
+            state: snapshot,
+            sessionId: sessionID,
+            workoutName: Self.workoutName(for: snapshot.workoutType)
+        )
+        applySnapshotContext(snapshotContext, source: "payload")
 
         logEvent("payload received: snapshot seq=\(sequenceNumber)")
     }
@@ -478,7 +651,6 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
         if acknowledgement.commandId == pendingCommandID {
             pendingCommandID = nil
-            pendingCommandType = nil
             isCommandInFlight = false
         }
 
@@ -514,7 +686,42 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
-    private func handleLegacyIncomingData(_ message: [String: Any]) {
+    private func handleCompanionMessage(_ message: WorkoutCompanionMessage) {
+        lastReceived = "kind=\(message.kind.rawValue)"
+
+        switch message.kind {
+        case .syncPayload:
+            guard let payload = message.payload else {
+                logEvent("companion payload missing workout payload")
+                return
+            }
+            handleWorkoutPayload(payload)
+
+        case .launchConfiguration, .controlCommand:
+            logEvent("unexpected companion message received on phone")
+        }
+    }
+
+    private func handleIncomingWCData(_ message: [String: Any]) {
+        if let payloadData = message[WorkoutSyncDictionaryKey.workoutCompanionMessage] as? Data {
+            do {
+                let companionMessage = try WorkoutSyncCodec.decodeCompanionMessage(payloadData)
+                handleCompanionMessage(companionMessage)
+            } catch {
+                lastError = error.localizedDescription
+                logEvent("companion message decode failure: \(error.localizedDescription)")
+            }
+            return
+        }
+
+        if let snapshotDictionary = message[WorkoutSyncDictionaryKey.snapshotContext] as? [String: Any],
+           let snapshot = WorkoutSyncSnapshot(dictionary: snapshotDictionary) {
+            lastReceived = "snapshotContext"
+            applySnapshotContext(snapshot, source: "wc")
+            logEvent("snapshot context received over WCSession")
+            return
+        }
+
         if let sequence = Self.intValue(for: "packetSeq", in: message) {
             if sequence < lastLegacyPacketSequence {
                 return
@@ -577,36 +784,72 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         return nil
     }
 
+    private static func workoutName(for workoutTypeRaw: UInt?) -> String {
+        guard let workoutTypeRaw else { return "Workout" }
+
+        let workoutType = HKWorkoutActivityType(rawValue: workoutTypeRaw) ?? .other
+
+        switch workoutType {
+        case .running:
+            return "Running"
+        case .walking:
+            return "Walking"
+        case .cycling:
+            return "Cycling"
+        case .hiking:
+            return "Hiking"
+        case .swimming:
+            return "Swimming"
+        case .yoga:
+            return "Yoga"
+        case .functionalStrengthTraining:
+            return "Functional Strength"
+        case .traditionalStrengthTraining:
+            return "Strength Training"
+        case .coreTraining:
+            return "Core Training"
+        case .dance:
+            return "Dance"
+        case .rowing:
+            return "Rowing"
+        case .elliptical:
+            return "Elliptical"
+        case .stairClimbing:
+            return "Stair Climbing"
+        default:
+            return "Workout"
+        }
+    }
+
     func session(
         _ session: WCSession,
         activationDidCompleteWith state: WCSessionActivationState,
         error: Error?
     ) {
+        applyWatchSessionStatus(from: session)
         activationState = state
-        isReachable = session.isReachable
-        isPaired = session.isPaired
-        isWatchAppInstalled = session.isWatchAppInstalled
 
         if let error {
             logEvent("WCSession activation error: \(error.localizedDescription)")
         } else {
             logEvent("WCSession activated")
         }
+
+        applyApplicationContextIfAvailable(session.receivedApplicationContext, source: "activation")
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
-        isReachable = session.isReachable
+        applyWatchSessionStatus(from: session)
         logEvent("WCSession reachability changed: \(session.isReachable)")
     }
 
     func sessionWatchStateDidChange(_ session: WCSession) {
-        isPaired = session.isPaired
-        isWatchAppInstalled = session.isWatchAppInstalled
+        applyWatchSessionStatus(from: session)
         logEvent("watch state changed")
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        handleLegacyIncomingData(message)
+        handleIncomingWCData(message)
     }
 
     func session(
@@ -614,16 +857,20 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        handleLegacyIncomingData(message)
+        handleIncomingWCData(message)
         replyHandler(["status": "received"])
     }
 
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        handleLegacyIncomingData(userInfo)
+        handleIncomingWCData(userInfo)
     }
 
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        handleLegacyIncomingData(applicationContext)
+        if applicationContext[WorkoutSyncDictionaryKey.snapshotContext] != nil {
+            applyApplicationContextIfAvailable(applicationContext, source: "delegate")
+            return
+        }
+        handleIncomingWCData(applicationContext)
     }
 
     func sessionDidBecomeInactive(_ session: WCSession) {

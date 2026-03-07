@@ -41,6 +41,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     private var lastSnapshotSentAt: Date = .distantPast
     private var nextOutgoingSequenceNumber = 0
     private var highestProcessedCommandSequence = 0
+    private var lastProcessedStartRequestAt: TimeInterval = 0
     private var handledCommandIDs = Set<String>()
     private var queuedRemotePayloads: [WorkoutSyncPayload] = []
     private var pendingSnapshotSend = false
@@ -83,7 +84,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     }
 
     var displayWorkoutTitle: String {
-        selectedWorkout?.displayName ?? "Workout"
+        resolvedWorkoutName(for: selectedWorkout)
     }
 
     override init() {
@@ -257,6 +258,30 @@ final class WorkoutManager: NSObject, ObservableObject {
         startWorkout(workoutType: .running, locationType: .indoor)
     }
 
+    func handleCompanionMessage(_ message: WorkoutCompanionMessage) {
+        guard !isStaleCompanionMessage(message) else {
+            logEvent("stale companion message ignored: \(message.kind.rawValue)")
+            return
+        }
+
+        switch message.kind {
+        case .launchConfiguration:
+            logEvent("legacy launch configuration ignored")
+        case .controlCommand:
+            handleCompanionControlMessage(message)
+        case .syncPayload:
+            guard let payload = message.payload else {
+                logEvent("companion sync payload missing body")
+                return
+            }
+            handleRemoteCommandPayload(payload)
+        }
+    }
+
+    func handleCompanionStartRequest(_ request: WorkoutCompanionStartRequest) {
+        processCompanionStartRequest(request)
+    }
+
     nonisolated func togglePause() {
         Self.runOnMain { [weak self] in
             self?.togglePauseOnMain()
@@ -381,6 +406,7 @@ final class WorkoutManager: NSObject, ObservableObject {
         connectionState = .idle
         nextOutgoingSequenceNumber = 0
         highestProcessedCommandSequence = 0
+        lastProcessedStartRequestAt = 0
         handledCommandIDs.removeAll()
         queuedRemotePayloads.removeAll()
         pendingSnapshotSend = false
@@ -558,6 +584,7 @@ final class WorkoutManager: NSObject, ObservableObject {
         }
 
         lastSnapshotSentAt = Date()
+        publishSnapshotContext(reason: reason)
         sendRemotePayload(payload)
     }
 
@@ -565,6 +592,7 @@ final class WorkoutManager: NSObject, ObservableObject {
         guard let payload = makeSnapshotPayload(reason: reason) else { return }
         lastSnapshotSentAt = Date()
         pendingSnapshotSend = false
+        publishSnapshotContext(reason: reason)
         sendRemotePayload(payload)
     }
 
@@ -573,19 +601,7 @@ final class WorkoutManager: NSObject, ObservableObject {
 
         nextOutgoingSequenceNumber += 1
 
-        let state = WorkoutSessionStateDTO(
-            workoutType: selectedWorkout?.rawValue,
-            currentState: workoutPhase,
-            isRunning: running,
-            startedAt: builder?.startDate,
-            elapsedTime: displayElapsedTime,
-            heartRate: heartRate,
-            averageHeartRate: averageHeartRate,
-            activeEnergy: activeEnergy,
-            distance: distance,
-            lastEvent: reason,
-            connectionState: connectionState
-        )
+        let state = makeCurrentWorkoutState(reason: reason)
 
         return WorkoutSyncPayload(
             version: WorkoutSyncPayload.currentVersion,
@@ -598,6 +614,33 @@ final class WorkoutManager: NSObject, ObservableObject {
             command: nil,
             acknowledgement: nil
         )
+    }
+
+    private func makeCurrentWorkoutState(reason: String) -> WorkoutSessionStateDTO {
+        WorkoutSessionStateDTO(
+            workoutType: selectedWorkout?.rawValue,
+            currentState: workoutPhase,
+            isRunning: running,
+            startedAt: builder?.startDate,
+            elapsedTime: displayElapsedTime,
+            heartRate: heartRate,
+            averageHeartRate: averageHeartRate,
+            activeEnergy: activeEnergy,
+            distance: distance,
+            lastEvent: reason,
+            connectionState: connectionState
+        )
+    }
+
+    private func publishSnapshotContext(reason: String) {
+        guard let activeSessionID else { return }
+
+        let snapshot = WorkoutSyncSnapshot(
+            state: makeCurrentWorkoutState(reason: reason),
+            sessionId: activeSessionID,
+            workoutName: resolvedWorkoutName(for: selectedWorkout)
+        )
+        WatchConnectivityManager.shared.updateWorkoutSnapshotContext(snapshot)
     }
 
     private func sendAcknowledgement(
@@ -634,9 +677,7 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     private func sendRemotePayload(_ payload: WorkoutSyncPayload) {
         guard #available(watchOS 10.0, *), let session else {
-            if payload.kind == .snapshot {
-                pendingSnapshotSend = true
-            }
+            sendPayloadViaWCSession(payload)
             return
         }
 
@@ -679,6 +720,7 @@ final class WorkoutManager: NSObject, ObservableObject {
                 connectionState = .disconnected
             }
             logEvent("payload send failed: \(error.localizedDescription)")
+            sendPayloadViaWCSession(payload)
         } else if connectionState == .disconnected || connectionState == .reconnecting {
             connectionState = .mirrored
             lastEventLabel = "reconnect"
@@ -737,22 +779,6 @@ final class WorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        guard let activeSessionID else { return }
-
-        if command.sessionId != activeSessionID || payload.sessionId != activeSessionID {
-            sendAcknowledgement(
-                commandID: command.commandId,
-                appliedState: workoutPhase,
-                failureReason: "Session mismatch"
-            )
-            return
-        }
-
-        if handledCommandIDs.contains(command.commandId) {
-            sendAcknowledgement(commandID: command.commandId, appliedState: workoutPhase)
-            return
-        }
-
         if payload.sequenceNumber <= highestProcessedCommandSequence {
             sendAcknowledgement(
                 commandID: command.commandId,
@@ -763,59 +789,11 @@ final class WorkoutManager: NSObject, ObservableObject {
         }
 
         highestProcessedCommandSequence = payload.sequenceNumber
-        handledCommandIDs.insert(command.commandId)
-
-        logEvent("command received: \(command.commandType.rawValue)")
-
-        switch command.commandType {
-        case .pause:
-            if workoutPhase == .paused {
-                sendAcknowledgement(commandID: command.commandId, appliedState: .paused)
-                return
-            }
-
-            guard workoutPhase == .running else {
-                sendAcknowledgement(
-                    commandID: command.commandId,
-                    appliedState: workoutPhase,
-                    failureReason: "Session is not running"
-                )
-                return
-            }
-
-            performPause()
-            sendAcknowledgement(commandID: command.commandId, appliedState: .paused)
-
-        case .resume:
-            if workoutPhase == .running {
-                sendAcknowledgement(commandID: command.commandId, appliedState: .running)
-                return
-            }
-
-            guard workoutPhase == .paused else {
-                sendAcknowledgement(
-                    commandID: command.commandId,
-                    appliedState: workoutPhase,
-                    failureReason: "Session is not paused"
-                )
-                return
-            }
-
-            performResume()
-            sendAcknowledgement(commandID: command.commandId, appliedState: .running)
-
-        case .stop, .end:
-            if workoutPhase.isTerminal || workoutPhase == .stopping {
-                sendAcknowledgement(commandID: command.commandId, appliedState: workoutPhase)
-                return
-            }
-
-            finishWorkout(trigger: command.commandType.rawValue)
-            sendAcknowledgement(commandID: command.commandId, appliedState: .stopping)
-
-        case .requestSnapshot:
-            sendImmediateSnapshot(reason: "snapshot_requested")
-        }
+        applyControlCommand(
+            commandID: command.commandId,
+            commandType: command.commandType,
+            requestedSessionID: command.sessionId
+        )
     }
 
     private func persistActiveSession(
@@ -1169,6 +1147,174 @@ private extension WorkoutManager {
         lastEventLabel = "event"
         sendImmediateSnapshot(reason: "event")
         logEvent("workout event collected")
+    }
+
+    func resolvedWorkoutName(for activityType: HKWorkoutActivityType?) -> String {
+        guard let activityType else { return "Workout" }
+
+        switch activityType {
+        case .running:
+            return "Running"
+        case .walking:
+            return "Walking"
+        case .cycling:
+            return "Cycling"
+        case .hiking:
+            return "Hiking"
+        case .swimming:
+            return "Swimming"
+        case .yoga:
+            return "Yoga"
+        case .functionalStrengthTraining:
+            return "Functional Strength"
+        case .traditionalStrengthTraining:
+            return "Strength Training"
+        case .coreTraining:
+            return "Core Training"
+        case .dance:
+            return "Dance"
+        case .rowing:
+            return "Rowing"
+        case .elliptical:
+            return "Elliptical"
+        case .stairClimbing:
+            return "Stair Climbing"
+        default:
+            return "Workout"
+        }
+    }
+
+    func processCompanionStartRequest(_ request: WorkoutCompanionStartRequest) {
+        let requestedAt = request.requestedAt.timeIntervalSince1970
+        guard requestedAt > lastProcessedStartRequestAt else {
+            logEvent("duplicate start request ignored")
+            sendImmediateSnapshot(reason: "duplicate_start_request")
+            return
+        }
+
+        lastProcessedStartRequestAt = requestedAt
+
+        let activityType = HKWorkoutActivityType(rawValue: request.activityTypeRaw) ?? .walking
+        let locationType = HKWorkoutSessionLocationType(rawValue: request.locationTypeRaw) ?? .unknown
+
+        if hasActiveSession {
+            logEvent("start request ignored because workout is already active")
+            sendImmediateSnapshot(reason: "start_request_ignored_active")
+            return
+        }
+
+        logEvent("start request received via WCSession")
+        startWorkout(workoutType: activityType, locationType: locationType)
+    }
+
+    func handleCompanionControlMessage(_ message: WorkoutCompanionMessage) {
+        guard let commandType = message.commandType else {
+            logEvent("control command missing command type")
+            return
+        }
+
+        applyControlCommand(
+            commandID: message.id,
+            commandType: commandType,
+            requestedSessionID: message.sessionId
+        )
+    }
+
+    func applyControlCommand(
+        commandID: String,
+        commandType: WorkoutControlCommandType,
+        requestedSessionID: String?
+    ) {
+        guard let activeSessionID else {
+            logEvent("command \(commandType.rawValue) ignored: no active session")
+            return
+        }
+
+        if let requestedSessionID,
+           !requestedSessionID.isEmpty,
+           requestedSessionID != activeSessionID {
+            sendAcknowledgement(
+                commandID: commandID,
+                appliedState: workoutPhase,
+                failureReason: "Session mismatch"
+            )
+            return
+        }
+
+        if handledCommandIDs.contains(commandID) {
+            if commandType == .requestSnapshot {
+                sendImmediateSnapshot(reason: "snapshot_requested_duplicate")
+            } else {
+                sendAcknowledgement(commandID: commandID, appliedState: workoutPhase)
+            }
+            return
+        }
+
+        handledCommandIDs.insert(commandID)
+        logEvent("command received: \(commandType.rawValue)")
+
+        switch commandType {
+        case .pause:
+            if workoutPhase == .paused {
+                sendAcknowledgement(commandID: commandID, appliedState: .paused)
+                return
+            }
+
+            guard workoutPhase == .running else {
+                sendAcknowledgement(
+                    commandID: commandID,
+                    appliedState: workoutPhase,
+                    failureReason: "Session is not running"
+                )
+                return
+            }
+
+            performPause()
+            sendAcknowledgement(commandID: commandID, appliedState: .paused)
+
+        case .resume:
+            if workoutPhase == .running {
+                sendAcknowledgement(commandID: commandID, appliedState: .running)
+                return
+            }
+
+            guard workoutPhase == .paused else {
+                sendAcknowledgement(
+                    commandID: commandID,
+                    appliedState: workoutPhase,
+                    failureReason: "Session is not paused"
+                )
+                return
+            }
+
+            performResume()
+            sendAcknowledgement(commandID: commandID, appliedState: .running)
+
+        case .stop, .end:
+            if workoutPhase.isTerminal || workoutPhase == .stopping {
+                sendAcknowledgement(commandID: commandID, appliedState: workoutPhase)
+                return
+            }
+
+            finishWorkout(trigger: commandType.rawValue)
+            sendAcknowledgement(commandID: commandID, appliedState: .stopping)
+
+        case .requestSnapshot:
+            sendImmediateSnapshot(reason: "snapshot_requested")
+        }
+    }
+
+    func sendPayloadViaWCSession(_ payload: WorkoutSyncPayload) {
+        let guaranteed = payload.kind != .snapshot
+        WatchConnectivityManager.shared.sendWorkoutCompanionMessage(
+            .syncPayload(payload),
+            guaranteed: guaranteed
+        )
+        logEvent("payload bridged over WCSession")
+    }
+
+    func isStaleCompanionMessage(_ message: WorkoutCompanionMessage) -> Bool {
+        Date().timeIntervalSince(message.timestamp) > 30
     }
 
     func phase(for state: HKWorkoutSessionState) -> WorkoutSessionPhase {

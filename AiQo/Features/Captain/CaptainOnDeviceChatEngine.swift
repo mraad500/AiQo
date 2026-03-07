@@ -109,7 +109,7 @@ actor CaptainOnDeviceChatEngine {
 
         AiQo UNIVERSE (ACTUAL CAPABILITIES - ONLY CLAIM THESE):
         - General: AiQo is a Bio-Digital OS. Core philosophy is "Ego-Reset" and shifting from "I" to "We".
-        - The Gym (النادي): Focuses on Zone 2 cardio, live pacing, hands-free coaching, and football matches.
+        - The Gym (النادي): Focuses on Zone 2 cardio, live pacing, hands-free coaching, and structured training sessions.
         - My Vibe (الصوتيات/الترددات): The audio state-management layer (Awakening, Ego-Death/Zen, Focus) using AiQo sounds or Spotify.
         - The Kitchen (المطبخ): Meal planning, tracking fridge inventory locally, and organizing clean eating (Do NOT claim autonomous AI camera vision yet).
         - The Tribe (القبيلة): Shared energy, sparks, and galaxy metaphors. No toxic leaderboards.

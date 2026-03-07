@@ -20,4 +20,12 @@ nonisolated enum WorkoutSyncCodec {
     nonisolated static func decode(_ data: Data) throws -> WorkoutSyncPayload {
         try makeDecoder().decode(WorkoutSyncPayload.self, from: data)
     }
+
+    nonisolated static func encodeCompanionMessage(_ message: WorkoutCompanionMessage) throws -> Data {
+        try makeEncoder().encode(message)
+    }
+
+    nonisolated static func decodeCompanionMessage(_ data: Data) throws -> WorkoutCompanionMessage {
+        try makeDecoder().decode(WorkoutCompanionMessage.self, from: data)
+    }
 }

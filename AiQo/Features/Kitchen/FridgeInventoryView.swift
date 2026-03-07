@@ -68,6 +68,12 @@ private extension FridgeInventoryView {
             } else {
                 ForEach(kitchenStore.fridgeItems) { item in
                     HStack(spacing: 12) {
+                        IngredientIconView(
+                            emoji: item.emoji,
+                            size: 40,
+                            cornerRadius: 12
+                        )
+
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))

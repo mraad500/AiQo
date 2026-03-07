@@ -238,7 +238,7 @@ extension TribeScreen {
                             .frame(width: 42, height: 42)
                     }
 
-                    GalaxyNetworkPlaceholder()
+                    GalaxyProjectImageCard(height: 420, contentMode: .fit)
 
                     Spacer(minLength: 0)
                 }

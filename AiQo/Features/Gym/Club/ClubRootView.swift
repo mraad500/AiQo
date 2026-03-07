@@ -51,17 +51,13 @@ struct ClubRootView: View {
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
-    @State private var showMatchesSheet = false
-    @State private var matchesSheetDetent: PresentationDetent = .fraction(0.5)
 
     @StateObject private var winsStore: WinsStore
     @StateObject private var questEngine: QuestEngine
 
     private let displayedTabs: [ClubTopTab] = [.impact, .challenges, .plan, .body]
-    private var topTabsHorizontalOffset: CGFloat {
-        (
-            ClubChromeLayout.trailingLaneWidth - (ClubChromeLayout.headerLeadingInset - ClubChromeLayout.headerTrailingInset)
-        ) / 2
+    private var topHeaderHorizontalInset: CGFloat {
+        max(ClubChromeLayout.headerLeadingInset, ClubChromeLayout.headerTrailingInset)
     }
 
     init() {
@@ -92,13 +88,6 @@ struct ClubRootView: View {
             topHeaderBar
         }
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(isPresented: $showMatchesSheet) {
-            FootballSheetView()
-                .presentationDetents([.fraction(0.5), .large], selection: $matchesSheetDetent)
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(30)
-                .presentationBackground(.ultraThinMaterial)
-        }
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionScreen(session: presented.session)
@@ -141,20 +130,20 @@ struct ClubRootView: View {
     }
 
     private var topHeaderBar: some View {
-        HStack(alignment: .center, spacing: 0) {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+
             GlobalTopCapsuleTabsView(
                 tabs: displayedTabs.map { L10n.t($0.titleKey) },
                 selectedTints: displayedTabs.map(topTabTint(for:)),
                 selection: displayedSelectedTabIndex
             )
-            .offset(x: topTabsHorizontalOffset)
+            .frame(maxWidth: 640)
 
-            footballToolbarButton
-                .frame(width: ClubChromeLayout.trailingLaneWidth, alignment: .center)
+            Spacer(minLength: 0)
         }
         .padding(.top, ClubChromeLayout.headerTopPadding)
-        .padding(.leading, ClubChromeLayout.headerLeadingInset)
-        .padding(.trailing, ClubChromeLayout.headerTrailingInset)
+        .padding(.horizontal, topHeaderHorizontalInset)
         .padding(.bottom, ClubChromeLayout.headerBottomPadding)
     }
 
@@ -240,32 +229,6 @@ struct ClubRootView: View {
         case .impact:
             return AiQoColors.mint
         }
-    }
-
-    private var footballToolbarButton: some View {
-        Button {
-            matchesSheetDetent = .fraction(0.5)
-            showMatchesSheet = true
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-
-                Circle()
-                    .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
-
-                Image("football")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 36, height: 36)
-            }
-            .frame(width: 50, height: 50)
-            .frame(width: 56, height: 56)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: L10n.t("matches_button")))
-        .accessibilityHint(Text(verbatim: L10n.t("club.header.football.accessibility.hint")))
     }
 }
 

@@ -198,9 +198,7 @@ final class LiveWorkoutSession: ObservableObject {
         connectivity.$lastError
             .receive(on: RunLoop.main)
             .sink { [weak self] error in
-                if error != "None" {
-                    self?.lastError = error
-                }
+                self?.lastError = error == "None" ? nil : error
             }
             .store(in: &cancellables)
 

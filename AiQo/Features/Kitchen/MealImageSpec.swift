@@ -1,8 +1,20 @@
 import Foundation
 
+struct PlateIngredient: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let emoji: String
+
+    init(key: IngredientKey) {
+        self.id = key.rawValue
+        self.name = key.localizedTitle
+        self.emoji = key.emoji
+    }
+}
+
 struct MealImageSpec {
     let template: PlateTemplate
-    let ingredients: [IngredientKey]
+    let ingredients: [PlateIngredient]
 }
 
 struct MealDetailPresentation {
@@ -11,14 +23,16 @@ struct MealDetailPresentation {
     let proteinGrams: Int
 }
 
+@MainActor
 enum MealImageSpecFactory {
     static func make(for meal: Meal) -> MealImageSpec {
         let title = meal.localizedName
         let template = template(forTitle: title, mealType: meal.mealType)
         let extracted = IngredientCatalog.extractAll(from: [meal.name_ar, meal.localizedName])
+
         return MealImageSpec(
             template: template,
-            ingredients: composedIngredients(from: extracted, template: template)
+            ingredients: plateIngredients(from: composedIngredientKeys(from: extracted, template: template))
         )
     }
 
@@ -31,7 +45,7 @@ enum MealImageSpecFactory {
 
         return MealImageSpec(
             template: template,
-            ingredients: composedIngredients(from: merged, template: template)
+            ingredients: plateIngredients(from: composedIngredientKeys(from: merged, template: template))
         )
     }
 
@@ -44,10 +58,12 @@ enum MealImageSpecFactory {
         let extracted = IngredientCatalog.extractAll(from: [meal.name_ar, meal.localizedName])
         let imageSpec = MealImageSpec(
             template: template,
-            ingredients: composedIngredients(from: extracted, template: template)
+            ingredients: plateIngredients(from: composedIngredientKeys(from: extracted, template: template))
         )
 
-        let contentKeys = extracted.isEmpty ? Array(imageSpec.ingredients.prefix(4)) : extracted
+        let contentKeys = extracted.isEmpty
+            ? imageSpec.ingredients.prefix(4).compactMap { IngredientCatalog.match(from: $0.name) }
+            : extracted
 
         return MealDetailPresentation(
             imageSpec: imageSpec,
@@ -63,9 +79,12 @@ enum MealImageSpecFactory {
         return MealDetailPresentation(
             imageSpec: imageSpec,
             ingredientItems: meal.ingredients.isEmpty
-                ? IngredientDisplayBuilder.mergedItems(from: imageSpec.ingredients.prefix(4).map(\.localizedTitle))
+                ? IngredientDisplayBuilder.mergedItems(from: imageSpec.ingredients.prefix(4).map(\.name))
                 : IngredientDisplayBuilder.mergedItems(from: meal.ingredients),
-            proteinGrams: Int(meal.protein?.rounded() ?? Double(estimateProteinGrams(from: contentKeys, fallback: fallbackProtein(for: meal.type))))
+            proteinGrams: Int(
+                meal.protein?.rounded()
+                    ?? Double(estimateProteinGrams(from: contentKeys, fallback: fallbackProtein(for: meal.type)))
+            )
         )
     }
 
@@ -111,7 +130,11 @@ enum MealImageSpecFactory {
         }
     }
 
-    private static func composedIngredients(from extracted: [IngredientKey], template: PlateTemplate) -> [IngredientKey] {
+    private static func plateIngredients(from keys: [IngredientKey]) -> [PlateIngredient] {
+        keys.map(PlateIngredient.init(key:))
+    }
+
+    private static func composedIngredientKeys(from extracted: [IngredientKey], template: PlateTemplate) -> [IngredientKey] {
         var result = unique(extracted)
         let defaults = defaultIngredients(for: template)
         let minimumCount = 3

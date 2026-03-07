@@ -160,7 +160,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AiQoCore/AiQoCore.docc,
-				Core/Utilities/ConnectivityDebugProviding.swift,
 				Frameworks/SpotifyiOS.framework,
 				Info.plist,
 			);
@@ -777,17 +776,17 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/AiQo/Frameworks/SpotifyiOS.framework/SpotifyiOS",
+				"$(SRCROOT)/Configuration/ExternalSymbols/SpotifyiOS.framework.dSYM",
 			);
 			name = "Generate SpotifyiOS dSYM";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(ARCHIVE_DSYMS_PATH)/SpotifyiOS.framework.dSYM",
+				"$(DWARF_DSYM_FOLDER_PATH)/SpotifyiOS.framework.dSYM",
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\n\nif [ \"${DEPLOYMENT_POSTPROCESSING:-NO}\" != \"YES\" ]; then\n  exit 0\nfi\n\nif [ -z \"${ARCHIVE_DSYMS_PATH:-}\" ]; then\n  exit 0\nfi\n\nif [ \"${PLATFORM_NAME:-}\" != \"iphoneos\" ]; then\n  exit 0\nfi\n\nSPOTIFY_BINARY=\"${SRCROOT}/AiQo/Frameworks/SpotifyiOS.framework/SpotifyiOS\"\n\nif [ ! -f \"${SPOTIFY_BINARY}\" ]; then\n  echo \"warning: SpotifyiOS binary not found at ${SPOTIFY_BINARY}\"\n  exit 0\nfi\n\nDESTINATION_DSYM_DIR=\"${ARCHIVE_DSYMS_PATH}\"\nTEMP_DSYM_DIR=\"${TEMP_DIR:-/tmp}/SpotifyiOS.framework.dSYM\"\nOUTPUT_DSYM=\"${DESTINATION_DSYM_DIR}/SpotifyiOS.framework.dSYM\"\n\nrm -rf \"${TEMP_DSYM_DIR}\" \"${OUTPUT_DSYM}\"\n\nxcrun dsymutil \"${SPOTIFY_BINARY}\" -o \"${TEMP_DSYM_DIR}\" >/dev/null 2>&1\nmkdir -p \"${DESTINATION_DSYM_DIR}\"\nditto \"${TEMP_DSYM_DIR}\" \"${OUTPUT_DSYM}\"\n\necho \"Generated SpotifyiOS.framework.dSYM at ${OUTPUT_DSYM}\"\n";
+			shellScript = "set -eu\n\nif [ \"${ACTION:-}\" != \"install\" ]; then\n  exit 0\nfi\n\nif [ -z \"${DWARF_DSYM_FOLDER_PATH:-}\" ]; then\n  exit 0\nfi\n\nif [ \"${PLATFORM_NAME:-}\" != \"iphoneos\" ]; then\n  exit 0\nfi\n\nSOURCE_DSYM=\"${SRCROOT}/Configuration/ExternalSymbols/SpotifyiOS.framework.dSYM\"\nOUTPUT_DSYM=\"${DWARF_DSYM_FOLDER_PATH}/SpotifyiOS.framework.dSYM\"\n\nif [ ! -d \"${SOURCE_DSYM}\" ]; then\n  echo \"warning: Prebuilt SpotifyiOS.framework.dSYM not found at ${SOURCE_DSYM}\"\n  exit 0\nfi\n\nrm -rf \"${OUTPUT_DSYM}\"\nmkdir -p \"${DWARF_DSYM_FOLDER_PATH}\"\nditto \"${SOURCE_DSYM}\" \"${OUTPUT_DSYM}\"\n\necho \"Copied SpotifyiOS.framework.dSYM to ${OUTPUT_DSYM}\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */

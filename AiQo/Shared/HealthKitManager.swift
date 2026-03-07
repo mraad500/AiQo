@@ -7,7 +7,7 @@ import Foundation
 import HealthKit
 internal import Combine
 
-final class HealthKitManager {
+final class HealthKitManager: ObservableObject {
 
     struct BioMetrics {
         let weight: String?
@@ -32,6 +32,8 @@ final class HealthKitManager {
     @Published var todayCalories: Double = 0
     @Published var todayDistanceKm: Double = 0
     private var lastObservedSteps: Int = 0
+    private var hasStartedBackgroundObserver = false
+    private var stepObserverQuery: HKObserverQuery?
     
     private init() {}
 
@@ -145,6 +147,7 @@ final class HealthKitManager {
     
     func startBackgroundObserver() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
+        guard !hasStartedBackgroundObserver else { return }
         
         guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
         
@@ -159,6 +162,7 @@ final class HealthKitManager {
         let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completionHandler, error in
             if let error = error {
                 print("❌ [AiQo HK] Observer Error: \(error)")
+                completionHandler()
                 return
             }
             
@@ -169,7 +173,14 @@ final class HealthKitManager {
             }
         }
         
+        stepObserverQuery = query
+        hasStartedBackgroundObserver = true
         store.execute(query)
+    }
+
+    func beginLiveUpdates() {
+        startBackgroundObserver()
+        fetchSteps()
     }
     
     /// Public method to trigger a manual fetch (used by ProfileViewController, etc.)
@@ -235,6 +246,8 @@ final class HealthKitManager {
         let summary = try? await service.fetchTodaySummary()
         guard let data = summary else { return }
         let stepCount = Int(data.steps)
+
+        await service.refreshWidget(using: data)
 
         await MainActor.run {
             self.todaySteps = stepCount

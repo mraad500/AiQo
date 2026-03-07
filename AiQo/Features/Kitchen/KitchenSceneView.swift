@@ -38,7 +38,7 @@ struct KitchenSceneView: View {
                 }
             }
             .navigationDestination(isPresented: $openFridge) {
-                FridgeInventoryView()
+                InteractiveFridgeView()
                     .environmentObject(kitchenStore)
             }
             .navigationDestination(isPresented: $openMealPlan) {
@@ -46,8 +46,7 @@ struct KitchenSceneView: View {
                     .environmentObject(kitchenStore)
             }
             .navigationDestination(isPresented: $openCaptainChat) {
-                CaptainKitchenChatView()
-                    .environmentObject(kitchenStore)
+                KitchenView()
             }
         }
         .navigationTitle("screen.kitchen.title".localized)

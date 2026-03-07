@@ -524,20 +524,6 @@
 "time.year" = "Year";
 "time.all" = "All";
 
-/* Football */
-"football.title" = "Top Matches";
-"football.tab.latest" = "Latest matches";
-"football.tab.bigGames" = "Big Games This Week";
-"football.upcoming" = "Upcoming Matches";
-"football.label.scheduled" = "Scheduled";
-"football.label.result" = "Result";
-"football.status.ft" = "FT";
-"football.status.today_800" = "Today 8:00";
-"football.status.tomorrow_1000" = "Tomorrow 10:00";
-"football.status.sat_730" = "Sat 7:30";
-"football.status.sun_600" = "Sun 6:00";
-"football.status.sun_930" = "Sun 9:30 PM";
-
 /* Plan */
 "plan.title" = "Today's Plan";
 "plan.overview" = "Overview";
@@ -1269,8 +1255,6 @@
 "club.impact.summary.accessibility.hint" = "Shows the workout summary history.";
 "club.impact.achievements.accessibility.label" = "Achievements tab";
 "club.impact.achievements.accessibility.hint" = "Shows collected achievements.";
-"club.header.football.accessibility.label" = "Football updates";
-"club.header.football.accessibility.hint" = "Opens football updates.";
 "club_title" = "Gym";
 "tab_body" = "Body";
 "tab_plan" = "Plan";
@@ -1279,14 +1263,3 @@
 "impact_summary" = "Summary";
 "impact_achievements" = "Achievements";
 "club_top_tabs_accessibility" = "Club top tabs";
-"matches_button" = "Matches and results";
-"football.subtitle" = "Quietly preloaded, ready instantly.";
-"football.results" = "Results";
-"football.empty.results" = "No finished or live matches.";
-"football.empty.upcoming" = "No upcoming matches.";
-"football.error.refresh" = "Could not refresh matches right now. %@";
-"football.status.live" = "LIVE";
-"football.status.final" = "Final";
-"football.vs" = "VS";
-"football.date.today" = "Today";
-"football.date.tomorrow" = "Tomorrow";

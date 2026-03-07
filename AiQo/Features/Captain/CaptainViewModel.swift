@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 internal import Combine
 
 /// Single chat bubble model used by the Captain conversation UI.
@@ -52,6 +53,7 @@ final class CaptainViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var isLoading = false
     @Published var currentWorkoutPlan: WorkoutPlan?
+    @Published var currentMealPlan: MealPlan?
     @Published var inputText: String = ""
     @Published var coachState: CoachCognitiveState = .idle
     @Published var showCustomization: Bool = false
@@ -141,10 +143,14 @@ final class CaptainViewModel: ObservableObject {
     }
 
     func sendMessage() {
-        sendMessage(inputText)
+        sendMessage(text: inputText)
     }
 
     func sendMessage(_ rawText: String) {
+        sendMessage(text: rawText)
+    }
+
+    func sendMessage(text rawText: String, image: UIImage? = nil) {
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
 
@@ -157,10 +163,14 @@ final class CaptainViewModel: ObservableObject {
 
         let requestID = UUID()
         activeRequestID = requestID
+        let imageBox = CaptainRequestImageBox(image: image)
 
-        responseTask = Task { [weak self] in
+        responseTask = Task { [weak self, imageBox] in
             guard let self else { return }
-            await self.processMessage(requestID: requestID)
+            await self.processMessage(
+                requestID: requestID,
+                imageBox: imageBox
+            )
         }
     }
 
@@ -211,7 +221,10 @@ final class CaptainViewModel: ObservableObject {
         )
     }
 
-    private func processMessage(requestID: UUID) async {
+    private func processMessage(
+        requestID: UUID,
+        imageBox: CaptainRequestImageBox
+    ) async {
         defer {
             if activeRequestID == requestID {
                 isLoading = false
@@ -224,10 +237,11 @@ final class CaptainViewModel: ObservableObject {
 
         do {
             let startedAt = Date()
-            let responseTask = Task<CaptainServiceReply, Error> { [service] in
+            let responseTask = Task<CaptainServiceReply, Error> { [service, imageBox] in
                 try await service.generateReply(
                     conversation: conversation,
-                    context: promptContext
+                    context: promptContext,
+                    image: imageBox.image
                 )
             }
 
@@ -244,6 +258,7 @@ final class CaptainViewModel: ObservableObject {
             try ensureActiveRequest(requestID)
 
             currentWorkoutPlan = reply.workoutPlan
+            currentMealPlan = reply.mealPlan
             messages.append(
                 ChatMessage(
                     text: prependUserNameIfNeeded(to: reply.message),
@@ -349,6 +364,8 @@ final class CaptainViewModel: ObservableObject {
                 return "ثبت OPENAI_API_KEY بخطة التشغيل حتى يشتغل الكابتن مباشرة."
             case .invalidStructuredResponse:
                 return "رد الكابتن وصل بصيغة غير متوقعة. جرّب مرة ثانية وبعدها أرتبها إلك."
+            case .invalidImageData, .imageResizingFailed, .imageEncodingFailed:
+                return "ما كدرت أقرأ صورة الثلاجة بشكل صحيح. جرّب صورة أوضح."
             case .httpError:
                 return "خادم الكابتن ما رد بشكل صحيح هسه. جرّب بعد شوي."
             default:
@@ -416,5 +433,14 @@ final class CaptainViewModel: ObservableObject {
                 return false
             }
         }
+    }
+
+}
+
+private final class CaptainRequestImageBox: @unchecked Sendable {
+    let image: UIImage?
+
+    init(image: UIImage?) {
+        self.image = image
     }
 }

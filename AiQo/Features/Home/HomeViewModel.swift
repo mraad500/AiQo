@@ -178,6 +178,9 @@ final class HomeViewModel: ObservableObject {
     
     /// HealthKit service reference
     private let healthService: HealthKitService
+
+    /// Live HealthKit manager for observer-driven updates
+    private let healthManager: HealthKitManager
     
     /// Timer for live refresh
     private var refreshTimer: Timer?
@@ -202,14 +205,17 @@ final class HomeViewModel: ObservableObject {
     
     init(
         healthService: HealthKitService = .shared,
+        healthManager: HealthKitManager = .shared,
         demoMode: Bool = false,
         demoConfig: DemoConfiguration? = nil
     ) {
         self.healthService = healthService
+        self.healthManager = healthManager
         self.demoMode = demoMode
         self.demoConfig = demoConfig ?? .default
         
         setupInitialCards()
+        bindLiveHealthUpdates()
     }
     
     // MARK: - Setup
@@ -241,6 +247,7 @@ final class HomeViewModel: ObservableObject {
         guard !demoMode else { return }
         Task { [weak self] in
             await self?.loadTodayFromHealth()
+            self?.healthManager.fetchSteps()
         }
     }
     
@@ -258,6 +265,7 @@ final class HomeViewModel: ObservableObject {
         }
         
         await loadTodayFromHealth()
+        healthManager.beginLiveUpdates()
         startLiveTimer()
     }
     
@@ -268,9 +276,11 @@ final class HomeViewModel: ObservableObject {
         do {
             let summary = try await healthService.fetchTodaySummary()
             applySummary(summary)
+            await healthService.refreshWidget(using: summary)
         } catch {
             self.error = error
             applySummary(nil)
+            await healthService.refreshWidget(using: .zero)
         }
     }
     
@@ -281,6 +291,7 @@ final class HomeViewModel: ObservableObject {
             return
         }
         await loadTodayFromHealth()
+        healthManager.fetchSteps()
     }
     
     // MARK: - Timer Management
@@ -321,6 +332,23 @@ final class HomeViewModel: ObservableObject {
         updateMetricCard(.sleep, displayValue: String(format: "%.1f", summary.sleepHours))
         updateMetricCard(.distance, displayValue: String(format: "%.2f", summary.distanceMeters / 1000.0))
     }
+
+    private func applyLiveMetrics(steps: Int, calories: Double, distanceKm: Double) {
+        guard !demoMode else { return }
+        guard currentSummary != nil || steps > 0 || calories > 0 || distanceKm > 0 else { return }
+
+        let baseline = currentSummary ?? .zero
+        applySummary(
+            TodaySummary(
+                steps: Double(steps),
+                activeKcal: calories,
+                standPercent: baseline.standPercent,
+                waterML: baseline.waterML,
+                sleepHours: baseline.sleepHours,
+                distanceMeters: distanceKm * 1000.0
+            )
+        )
+    }
     
     private func clearAllMetrics() {
         updateMetricCard(.steps, displayValue: format(0))
@@ -339,6 +367,23 @@ final class HomeViewModel: ObservableObject {
                 tintColorName: cardTints[kind] ?? "mint"
             )
         }
+    }
+
+    private func bindLiveHealthUpdates() {
+        healthManager.$todaySteps
+            .combineLatest(healthManager.$todayCalories, healthManager.$todayDistanceKm)
+            .removeDuplicates { lhs, rhs in
+                lhs.0 == rhs.0 && lhs.1 == rhs.1 && lhs.2 == rhs.2
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] steps, calories, distanceKm in
+                self?.applyLiveMetrics(
+                    steps: steps,
+                    calories: calories,
+                    distanceKm: distanceKm
+                )
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Demo Mode
