@@ -10,6 +10,7 @@ import HealthKit
 struct WorkoutSessionScreen: View {
     
     @ObservedObject var session: LiveWorkoutSession
+    @ObservedObject var viewModel: WorkoutSessionViewModel
     
     @State private var showSummary = false
     @State private var showActiveRecovery = false
@@ -107,22 +108,26 @@ struct WorkoutSessionScreen: View {
                     }
                     
                     // 2. منطقة التحكم (مثبتة بالأسفل)
-                    VStack {
+                    VStack(spacing: AiQoSpacing.md) {
+                        WatchConnectionStatusButton(status: viewModel.watchConnectionStatus) {
+                            viewModel.refreshWatchConnectionStatus()
+                        }
+
                         HStack(spacing: 15) {
-                            Button(action: handlePrimaryControlTap) {
+                            Button(action: viewModel.handlePrimaryControlTap) {
                                 HStack {
-                                    Image(systemName: primaryControlIcon)
-                                    Text(primaryControlTitle)
+                                    Image(systemName: viewModel.primaryControl.icon)
+                                    Text(viewModel.primaryControl.title)
                                 }
                                 .font(.system(.title3, design: .rounded).weight(.bold))
-                                .foregroundStyle(.black)
+                                .foregroundStyle(viewModel.primaryControl.foregroundColor)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 65)
-                                .background(WorkoutTheme.pastelMint)
+                                .background(viewModel.primaryControl.backgroundColor)
                                 .clipShape(Capsule())
-                                .shadow(color: WorkoutTheme.pastelMint.opacity(0.3), radius: 10)
+                                .shadow(color: viewModel.primaryControl.shadowColor, radius: 10, x: 0, y: 6)
                             }
-                            .disabled(session.phase == .starting || session.phase == .ending || session.isControlPending)
+                            .disabled(!viewModel.primaryControl.isEnabled)
                             
                             if session.canEnd {
                                 Button(action: handleStopTap) {
@@ -137,10 +142,12 @@ struct WorkoutSessionScreen: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
                         }
-                        .padding(.horizontal, 30)
-                        .padding(.bottom, 30) // مسافة من حافة الشاشة
-                        .padding(.top, 15)
                     }
+                    .padding(.horizontal, 30)
+                    .padding(.bottom, 30) // مسافة من حافة الشاشة
+                    .padding(.top, 15)
+                    .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.watchConnectionStatus)
+                    .animation(.spring(response: 0.32, dampingFraction: 0.88), value: session.phase)
                     .background(
                         // تدرج لوني خلف الأزرار لدمجها مع الخلفية
                         LinearGradient(
@@ -273,21 +280,6 @@ struct WorkoutSessionScreen: View {
         return ("\(Int(m))", "M")
     }
 
-    private func handlePrimaryControlTap() {
-        withAnimation {
-            switch session.phase {
-            case .running:
-                session.pauseFromPhone()
-            case .paused:
-                session.resumeFromPhone()
-            case .idle:
-                session.startFromPhone()
-            case .starting, .ending:
-                break
-            }
-        }
-    }
-
     private func handleStopTap() {
         endWorkout()
     }
@@ -383,31 +375,6 @@ struct WorkoutSessionScreen: View {
         session.currentWorkout == .cardioWithCaptainHamoudi
     }
 
-    private var primaryControlIcon: String {
-        switch session.phase {
-        case .running:
-            return "pause.fill"
-        case .paused, .idle:
-            return "play.fill"
-        case .starting, .ending:
-            return "hourglass"
-        }
-    }
-
-    private var primaryControlTitle: String {
-        switch session.phase {
-        case .running:
-            return "Pause Workout"
-        case .paused:
-            return "Resume"
-        case .idle:
-            return "Start Workout"
-        case .starting:
-            return "Connecting..."
-        case .ending:
-            return "Ending..."
-        }
-    }
 }
 
 private struct WorkoutCompletionSnapshot {

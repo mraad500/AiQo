@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SpinWheelView: View {
-    @ObservedObject var viewModel: WorkoutSessionViewModel
+    @ObservedObject var viewModel: WorkoutWheelSessionViewModel
     
     // Animation states
     @State private var pulseScale: CGFloat = 1.0

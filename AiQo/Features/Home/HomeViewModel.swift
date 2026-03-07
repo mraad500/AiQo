@@ -204,13 +204,13 @@ final class HomeViewModel: ObservableObject {
     // MARK: - Initialization
     
     init(
-        healthService: HealthKitService = .shared,
-        healthManager: HealthKitManager = .shared,
+        healthService: HealthKitService? = nil,
+        healthManager: HealthKitManager? = nil,
         demoMode: Bool = false,
         demoConfig: DemoConfiguration? = nil
     ) {
-        self.healthService = healthService
-        self.healthManager = healthManager
+        self.healthService = healthService ?? .shared
+        self.healthManager = healthManager ?? .shared
         self.demoMode = demoMode
         self.demoConfig = demoConfig ?? .default
         

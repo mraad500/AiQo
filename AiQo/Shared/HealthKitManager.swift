@@ -62,6 +62,7 @@ final class HealthKitManager: ObservableObject {
             HKQuantityType.quantityType(forIdentifier: .bodyMass)!,
             HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!,
             HKQuantityType.quantityType(forIdentifier: .leanBodyMass)!,
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
             HKObjectType.activitySummaryType()
         ]
         

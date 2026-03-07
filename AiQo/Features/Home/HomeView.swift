@@ -339,38 +339,51 @@ struct MetricDetailSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(kind.title)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary.opacity(0.7))
-                    
-                    Text(chartData.headerText.isEmpty ? headerValue : chartData.headerText)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
-                    
-                    Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {
-                        ForEach(TimeScope.allCases) { scope in
-                            Text(scope.title).tag(scope)
+                if kind == .sleep {
+                    SleepDetailCardView(
+                        historicalChartData: chartData,
+                        initialTimeframe: selectedScope,
+                        onTimeframeChange: { scope in
+                            selectedScope = scope
+                            onScopeChange?(scope)
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedScope) { _, newScope in
-                        onScopeChange?(newScope)
-                    }
-                    
-                    SimpleBarChart(
-                        values: chartData.values,
-                        barColor: Color.metricTint(for: kind.tintColorName).opacity(0.7)
                     )
-                    .frame(height: 140)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(kind.title)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary.opacity(0.7))
+
+                        Text(chartData.headerText.isEmpty ? headerValue : chartData.headerText)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .contentTransition(.numericText())
+
+                        Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {
+                            ForEach(TimeScope.allCases) { scope in
+                                Text(scope.title).tag(scope)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: selectedScope) { _, newScope in
+                            onScopeChange?(newScope)
+                        }
+
+                        SimpleBarChart(
+                            values: chartData.values,
+                            barColor: Color.metricTint(for: kind.tintColorName).opacity(0.7)
+                        )
+                        .frame(height: 140)
+                    }
+                    .padding(20)
+                    .background {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 }
-                .padding(20)
-                .background {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
                 
                 Spacer()
             }

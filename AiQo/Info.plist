@@ -2,47 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key></key>
-	<dict>
-		<key>CFBundlePrimaryIcon</key>
-		<dict>
-			<key>CFBundleIconFiles</key>
-			<array>
-				<string></string>
-			</array>
-			<key>CFBundleIconName</key>
-			<string></string>
-			<key>UIPrerenderedIcon</key>
-			<false/>
-		</dict>
-		<key>UINewsstandIcon</key>
-		<dict>
-			<key>CFBundleIconFiles</key>
-			<array>
-				<string></string>
-			</array>
-			<key>UINewsstandBindingEdge</key>
-			<string>UINewsstandBindingEdgeLeft</string>
-			<key>UINewsstandBindingType</key>
-			<string>UINewsstandBindingTypeMagazine</string>
-		</dict>
-	</dict>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
 	<key>COACH_BRAIN_LLM_API_URL</key>
 	<string>$(COACH_BRAIN_LLM_API_URL)</string>
-	<key>CFBundleGetInfoString</key>
-	<string></string>
-	<key>CFBundleIconFile</key>
-	<string></string>
-	<key>CFBundleIconFiles</key>
-	<array>
-		<string></string>
-	</array>
-	<key>CFBundleSignature</key>
-	<string></string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

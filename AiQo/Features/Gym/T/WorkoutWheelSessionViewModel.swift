@@ -10,7 +10,7 @@ struct WorkoutVideo: Identifiable {
 }
 
 // MARK: - View Model
-class WorkoutSessionViewModel: ObservableObject {
+final class WorkoutWheelSessionViewModel: ObservableObject {
     
     // MARK: - Workout Metrics
     @Published var elapsedSeconds: Int = 0

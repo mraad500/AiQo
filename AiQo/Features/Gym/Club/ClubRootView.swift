@@ -90,7 +90,7 @@ struct ClubRootView: View {
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
-                WorkoutSessionScreen(session: presented.session)
+                WorkoutSessionSheetView(session: presented.session)
                     .background(Color.clear)
 
                 Button {

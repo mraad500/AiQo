@@ -86,6 +86,34 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         currentWorkoutPhase.rawValue
     }
 
+    var watchStartConnectionStatus: WatchConnectionStatus {
+        guard WCSession.isSupported() else {
+            return .disconnected
+        }
+
+        let session = WCSession.default
+        if hasMirroredSession || session.isReachable || isReachable {
+            return .connected
+        }
+
+        guard session.isPaired, session.isWatchAppInstalled else {
+            return .disconnected
+        }
+
+        switch session.activationState {
+        case .activated:
+            return .connected
+        case .inactive, .notActivated:
+            return .checking
+        @unknown default:
+            return .checking
+        }
+    }
+
+    var canStartWorkoutFromPhone: Bool {
+        watchStartConnectionStatus == .connected
+    }
+
     var currentWorkoutId: String? {
         mirroredSessionID
     }
@@ -104,6 +132,18 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     func refreshFromCompanionApplicationContext() {
         guard WCSession.isSupported() else { return }
         applyApplicationContextIfAvailable(WCSession.default.receivedApplicationContext, source: "refresh")
+    }
+
+    func refreshWatchConnectivityState() {
+        guard WCSession.isSupported() else { return }
+
+        let session = WCSession.default
+        applyWatchSessionStatus(from: session)
+
+        if session.activationState != .activated {
+            session.activate()
+            logEvent("WCSession activation refreshed")
+        }
     }
 
     func launchWatchAppForWorkout(

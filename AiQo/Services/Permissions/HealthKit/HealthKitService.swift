@@ -155,7 +155,7 @@ actor HealthKitService {
             let summary = try await fetchTodaySummary()
             refreshWidget(using: summary, goal: goal, caloriesGoal: caloriesGoal)
         } catch {
-            refreshWidget(using: .zero, goal: goal, caloriesGoal: caloriesGoal)
+            await refreshWidget(using: .zero, goal: goal, caloriesGoal: caloriesGoal)
         }
     }
 

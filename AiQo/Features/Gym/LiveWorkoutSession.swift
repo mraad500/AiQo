@@ -246,6 +246,11 @@ final class LiveWorkoutSession: ObservableObject {
 
     func startFromPhone() {
         guard canStart else { return }
+        connectivity.refreshWatchConnectivityState()
+        guard connectivity.canStartWorkoutFromPhone else {
+            lastError = "Connect your Apple Watch to start this workout."
+            return
+        }
 
         prepareForWorkoutStart()
 
@@ -257,6 +262,11 @@ final class LiveWorkoutSession: ObservableObject {
 
     func startFromPhone(with configuration: HKWorkoutConfiguration) {
         guard canStart else { return }
+        connectivity.refreshWatchConnectivityState()
+        guard connectivity.canStartWorkoutFromPhone else {
+            lastError = "Connect your Apple Watch to start this workout."
+            return
+        }
 
         prepareForWorkoutStart()
 
