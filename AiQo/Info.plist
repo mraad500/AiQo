@@ -4,6 +4,14 @@
 <dict>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
+	<key>CAPTAIN_VOICE_API_KEY</key>
+	<string>$(CAPTAIN_VOICE_API_KEY)</string>
+	<key>CAPTAIN_VOICE_API_URL</key>
+	<string>$(CAPTAIN_VOICE_API_URL)</string>
+	<key>CAPTAIN_VOICE_MODEL_ID</key>
+	<string>$(CAPTAIN_VOICE_MODEL_ID)</string>
+	<key>CAPTAIN_VOICE_VOICE_ID</key>
+	<string>$(CAPTAIN_VOICE_VOICE_ID)</string>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
 	<key>COACH_BRAIN_LLM_API_URL</key>

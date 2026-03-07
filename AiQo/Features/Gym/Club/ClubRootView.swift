@@ -38,6 +38,8 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
 
 @MainActor
 struct ClubRootView: View {
+    private static let gratitudeExerciseKey = "gym.exercise.gratitude"
+
     private struct PresentedExercise: Identifiable {
         let exercise: GymExercise
         let session: LiveWorkoutSession
@@ -48,6 +50,7 @@ struct ClubRootView: View {
     @State private var selectedTab: ClubTopTab = .body
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
+    @State private var isGratitudeSessionPresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
@@ -127,6 +130,9 @@ struct ClubRootView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $isGratitudeSessionPresented) {
+            GratitudeSessionView()
+        }
     }
 
     private var topHeaderBar: some View {
@@ -171,6 +177,13 @@ struct ClubRootView: View {
     private func handleExerciseSelection(_ exercise: GymExercise) {
         if let activeSession, activeSession.phase != .idle, let activeExercise {
             presentExercise(activeExercise, session: activeSession)
+            return
+        }
+
+        if exercise.titleKey == Self.gratitudeExerciseKey {
+            presentedExercise = nil
+            presentedCinematicExercise = nil
+            isGratitudeSessionPresented = true
             return
         }
 

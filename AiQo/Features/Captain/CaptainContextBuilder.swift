@@ -1,7 +1,15 @@
 import Foundation
 
+struct CaptainContextData: Sendable {
+    let steps: Int
+    let calories: Int
+    let vibe: String
+    let level: Int
+}
+
 struct CaptainSystemContextSnapshot: Sendable {
     let systemPrefix: String
+    let level: Int
     let stageNumber: Int
     let stageTitle: String
     let timeOfDay: String
@@ -39,7 +47,8 @@ final class CaptainContextBuilder {
 
     func buildSystemContext() async -> CaptainSystemContextSnapshot {
         let metrics = await loadMetrics()
-        let stage = stageDescriptor(for: levelStore.level)
+        let level = max(levelStore.level, 1)
+        let stage = stageDescriptor(for: level)
         let dayPart = VibeDayPart.current(for: Date(), calendar: calendar)
         let vibeTitle = currentVibeTitle(for: dayPart)
         let toneHint = toneHint(
@@ -57,6 +66,7 @@ final class CaptainContextBuilder {
 
         return CaptainSystemContextSnapshot(
             systemPrefix: prefix,
+            level: level,
             stageNumber: stage.number,
             stageTitle: stage.title,
             timeOfDay: dayPart.title,
@@ -66,6 +76,17 @@ final class CaptainContextBuilder {
             sleepHours: max(0, metrics.sleepHours),
             calories: max(0, metrics.activeEnergyKilocalories),
             heartRate: metrics.averageOrCurrentHeartRateBPM
+        )
+    }
+
+    func buildContextData() async -> CaptainContextData {
+        let snapshot = await buildSystemContext()
+
+        return CaptainContextData(
+            steps: snapshot.steps,
+            calories: snapshot.calories,
+            vibe: snapshot.vibeTitle,
+            level: snapshot.level
         )
     }
 

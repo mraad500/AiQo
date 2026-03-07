@@ -80,11 +80,7 @@ struct HomeView: View {
                 headerValue: viewModel.formattedHeader(for: kind),
                 chartData: viewModel.chartData,
                 selectedScope: $viewModel.selectedScope,
-                onScopeChange: { scope in
-                    Task {
-                        await viewModel.loadChartSeries(for: kind, scope: scope)
-                    }
-                },
+                onScopeChange: nil,
                 onDismiss: {
                     viewModel.closeMetricDetail()
                 }
@@ -335,6 +331,18 @@ struct MetricDetailSheet: View {
     @Binding var selectedScope: TimeScope
     var onScopeChange: ((TimeScope) -> Void)?
     var onDismiss: (() -> Void)?
+
+    private var resolvedHeaderValue: String {
+        if !chartData.headerText.isEmpty, chartData.headerText != "—" {
+            return chartData.headerText
+        }
+
+        if selectedScope == .day {
+            return headerValue
+        }
+
+        return "—"
+    }
     
     var body: some View {
         NavigationStack {
@@ -356,7 +364,7 @@ struct MetricDetailSheet: View {
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(.primary.opacity(0.7))
 
-                        Text(chartData.headerText.isEmpty ? headerValue : chartData.headerText)
+                        Text(resolvedHeaderValue)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .contentTransition(.numericText())
 

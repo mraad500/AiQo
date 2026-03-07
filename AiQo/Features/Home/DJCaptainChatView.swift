@@ -202,7 +202,7 @@ private extension DJCaptainChatView {
         let text = trimmedDraft
         guard !text.isEmpty else { return }
 
-        captainBrain.sendMessage(text)
+        captainBrain.sendMessage(text, context: .myVibe)
         draftText = ""
         isComposerFocused = false
     }

@@ -13,32 +13,23 @@ final class CaptainVoiceService: NSObject, ObservableObject {
 
     @Published private(set) var isSpeaking = false
 
-    private enum API {
-        static let voiceID = "UgBBYS2sOqTuMpoF3BR0"
-        static let apiKey = "sk_71d34e347f0d6efec6c82ccbaeb918251babfddbec9669e7"
-        static let modelID = "eleven_multilingual_v2"
-        static let baseURL = "https://api.elevenlabs.io/v1/text-to-speech/"
-    }
-
-    private struct TTSRequestBody: Encodable {
-        let text: String
-        let model_id: String
-    }
-
     private let audioSession = AVAudioSession.sharedInstance()
     private let audioManager = AiQoAudioManager.shared
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CaptainVoiceService"
     )
+    private let speechSynthesizer = AVSpeechSynthesizer()
 
     private var audioPlayer: AVAudioPlayer?
     private var playContinuation: CheckedContinuation<Void, Never>?
     private var hasActiveSpeechSession = false
     private var externalMixedPlaybackClients = 0
+    private var activeSpeechSequence = 0
 
     private override init() {
         super.init()
+        speechSynthesizer.delegate = self
     }
 
     func speak(text: String) async {
@@ -46,29 +37,29 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         guard !sanitizedText.isEmpty else { return }
 
         stopSpeaking()
+        let speechSequence = nextSpeechSequence()
 
         do {
-            let audioData = try await fetchSpeechAudio(for: sanitizedText)
             try beginSpeechSession()
+            isSpeaking = true
 
-            let nextPlayer = try AVAudioPlayer(data: audioData)
-            nextPlayer.delegate = self
-            nextPlayer.prepareToPlay()
-
-            guard nextPlayer.play() else {
-                throw CaptainVoiceError.playbackStartFailed
+            if await playRemoteSpeechIfAvailable(for: sanitizedText, sequence: speechSequence) {
+                return
             }
 
-            audioPlayer = nextPlayer
-            isSpeaking = true
+            guard speechSequence == activeSpeechSequence else { return }
+
+            speechSynthesizer.speak(makeUtterance(for: sanitizedText))
 
             await withCheckedContinuation { continuation in
                 playContinuation = continuation
             }
         } catch {
-            logger.error("captain_voice_failed error=\(error.localizedDescription, privacy: .public)")
-            completeCurrentPlayback()
-            endSpeechSession()
+            if speechSequence == activeSpeechSequence {
+                logger.error("captain_voice_failed error=\(error.localizedDescription, privacy: .public)")
+                completeCurrentPlayback()
+                endSpeechSession()
+            }
         }
     }
 
@@ -77,15 +68,18 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     }
 
     func stopSpeaking() {
+        invalidateActiveSpeech()
         completeCurrentPlayback()
 
-        guard let audioPlayer else {
-            endSpeechSession()
-            return
+        if speechSynthesizer.isSpeaking || speechSynthesizer.isPaused {
+            speechSynthesizer.stopSpeaking(at: .immediate)
         }
 
-        audioPlayer.stop()
-        self.audioPlayer = nil
+        if audioPlayer?.isPlaying == true {
+            audioPlayer?.stop()
+        }
+        audioPlayer = nil
+
         endSpeechSession()
     }
 
@@ -111,36 +105,6 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         externalMixedPlaybackClients = max(0, externalMixedPlaybackClients - 1)
     }
 
-    private func fetchSpeechAudio(for text: String) async throws -> Data {
-        guard let url = URL(string: API.baseURL + API.voiceID) else {
-            throw CaptainVoiceError.invalidEndpoint
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(API.apiKey, forHTTPHeaderField: "xi-api-key")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(
-            TTSRequestBody(text: text, model_id: API.modelID)
-        )
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw CaptainVoiceError.invalidResponse
-        }
-
-        guard (200..<300).contains(httpResponse.statusCode) else {
-            let responseText = String(data: data, encoding: .utf8) ?? "No response body"
-            throw CaptainVoiceError.requestFailed(
-                statusCode: httpResponse.statusCode,
-                message: responseText
-            )
-        }
-
-        return data
-    }
-
     private func sanitizedSpeechText(_ text: String) -> String {
         text
             .replacingOccurrences(of: "*", with: "")
@@ -150,6 +114,40 @@ final class CaptainVoiceService: NSObject, ObservableObject {
             .filter { !$0.isEmpty }
             .joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func makeUtterance(for text: String) -> AVSpeechUtterance {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = preferredVoice(for: text)
+        utterance.rate = containsArabicCharacters(in: text) ? 0.44 : 0.48
+        utterance.pitchMultiplier = 0.96
+        utterance.postUtteranceDelay = 0.05
+        return utterance
+    }
+
+    private func preferredVoice(for text: String) -> AVSpeechSynthesisVoice? {
+        let languageCandidates = containsArabicCharacters(in: text)
+            ? ["ar-SA", "ar-AE", "ar"]
+            : ["en-US", "en-GB"]
+
+        for language in languageCandidates {
+            if let voice = AVSpeechSynthesisVoice(language: language) {
+                return voice
+            }
+        }
+
+        return AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
+    }
+
+    private func containsArabicCharacters(in text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF:
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     private func beginSpeechSession() throws {
@@ -187,6 +185,55 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     private func completeCurrentPlayback() {
         playContinuation?.resume()
         playContinuation = nil
+    }
+
+    private func nextSpeechSequence() -> Int {
+        activeSpeechSequence += 1
+        return activeSpeechSequence
+    }
+
+    private func invalidateActiveSpeech() {
+        activeSpeechSequence += 1
+    }
+
+    private func playRemoteSpeechIfAvailable(for text: String, sequence: Int) async -> Bool {
+        guard CaptainVoiceAPI.isConfigured else { return false }
+
+        do {
+            let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: text)
+            guard sequence == activeSpeechSequence else { return true }
+
+            try playRemoteAudio(data: audioData)
+
+            await withCheckedContinuation { continuation in
+                playContinuation = continuation
+            }
+
+            return true
+        } catch {
+            guard sequence == activeSpeechSequence else { return true }
+
+            logger.error("captain_voice_remote_failed error=\(error.localizedDescription, privacy: .public)")
+            audioPlayer = nil
+            return false
+        }
+    }
+
+    private func playRemoteAudio(data: Data) throws {
+        let player = try AVAudioPlayer(data: data)
+        player.delegate = self
+        player.volume = 1
+        player.prepareToPlay()
+
+        guard player.play() else {
+            throw NSError(
+                domain: "CaptainVoiceService",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Unable to play Captain voice audio."]
+            )
+        }
+
+        audioPlayer = player
     }
 
     private func generatedWorkoutPrompt(
@@ -242,7 +289,27 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     }
 }
 
-extension CaptainVoiceService: AVAudioPlayerDelegate {
+extension CaptainVoiceService: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didFinish utterance: AVSpeechUtterance
+    ) {
+        Task { @MainActor in
+            completeCurrentPlayback()
+            endSpeechSession()
+        }
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didCancel utterance: AVSpeechUtterance
+    ) {
+        Task { @MainActor in
+            completeCurrentPlayback()
+            endSpeechSession()
+        }
+    }
+
     nonisolated func audioPlayerDidFinishPlaying(
         _ player: AVAudioPlayer,
         successfully flag: Bool
@@ -260,31 +327,11 @@ extension CaptainVoiceService: AVAudioPlayerDelegate {
     ) {
         Task { @MainActor in
             if let error {
-                logger.error("captain_voice_decode_failed error=\(error.localizedDescription, privacy: .public)")
+                logger.error("captain_voice_audio_decode_failed error=\(error.localizedDescription, privacy: .public)")
             }
             audioPlayer = nil
             completeCurrentPlayback()
             endSpeechSession()
-        }
-    }
-}
-
-private enum CaptainVoiceError: LocalizedError {
-    case invalidEndpoint
-    case invalidResponse
-    case requestFailed(statusCode: Int, message: String)
-    case playbackStartFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidEndpoint:
-            return "Captain voice endpoint is invalid."
-        case .invalidResponse:
-            return "Captain voice returned an invalid response."
-        case let .requestFailed(statusCode, message):
-            return "Captain voice request failed with status \(statusCode): \(message)"
-        case .playbackStartFailed:
-            return "Captain voice audio could not start playing."
         }
     }
 }

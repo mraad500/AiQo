@@ -154,6 +154,7 @@ final class HomeViewModel: ObservableObject {
         didSet {
             if let metric = activeDetailMetric {
                 let scope = selectedScope
+                chartData = placeholderChartData(for: metric, scope: scope)
                 Task { [weak self] in
                     await self?.loadChartSeries(for: metric, scope: scope)
                 }
@@ -444,13 +445,9 @@ final class HomeViewModel: ObservableObject {
     }
     
     func openMetricDetail(for kind: MetricKind) {
+        chartData = placeholderChartData(for: kind, scope: .day)
         activeDetailMetric = kind
         selectedScope = .day
-        
-        // Load initial chart data
-        Task { [weak self] in
-            await self?.loadChartSeries(for: kind, scope: .day)
-        }
     }
     
     func closeMetricDetail() {
@@ -491,142 +488,84 @@ final class HomeViewModel: ObservableObject {
     
     /// Load chart series data for a metric and time scope
     func loadChartSeries(for kind: MetricKind, scope: TimeScope) async {
-        // Handle all-time scope separately
-        if scope == .allTime {
-            await loadAllTimeSeries(for: kind)
-            return
-        }
-        
-        // Handle regular time scopes
+        chartData = placeholderChartData(for: kind, scope: scope)
+
         switch kind {
         case .steps:
-            await loadQuantitySeries(.stepCount, unit: .count(), scope: scope) { [weak self] values, total in
+            await loadHealthServiceQuantitySeries(kind: .steps, .stepCount, unit: .count(), scope: scope) { [weak self] values, total in
                 ChartSeriesData(values: values, headerText: self?.format(total) ?? "—")
             }
             
         case .calories:
-            await loadQuantitySeries(.activeEnergyBurned, unit: .kilocalorie(), scope: scope) { [weak self] values, total in
-                ChartSeriesData(values: values, headerText: self?.format(total) ?? "—")
-            }
+            let series = await healthService.fetchActiveEnergySeries(scope: scope)
+            guard shouldApplyChartResult(for: kind, scope: scope) else { return }
+            chartData = ChartSeriesData(
+                values: series.values,
+                headerText: format(series.total)
+            )
             
         case .distance:
-            await loadQuantitySeries(.distanceWalkingRunning, unit: .meter(), scope: scope) { [weak self] values, total in
+            await loadHealthServiceQuantitySeries(kind: .distance, .distanceWalkingRunning, unit: .meter(), scope: scope) { [weak self] values, total in
                 let km = total / 1000.0
                 let kmValues = values.map { $0 / 1000.0 }
                 return ChartSeriesData(values: kmValues, headerText: self?.format(km, digits: 2) ?? "—")
             }
             
         case .water:
-            await loadQuantitySeries(.dietaryWater, unit: .literUnit(with: .milli), scope: scope) { values, total in
+            await loadHealthServiceQuantitySeries(kind: .water, .dietaryWater, unit: .literUnit(with: .milli), scope: scope) { values, total in
                 let liters = total / 1000.0
                 let literValues = values.map { $0 / 1000.0 }
                 return ChartSeriesData(values: literValues, headerText: String(format: "%.1f L", liters))
             }
             
         case .sleep:
-            await loadSleepSeries(scope: scope)
+            if scope == .allTime {
+                await loadAllTimeSleepSeries()
+            } else {
+                await loadSleepSeries(scope: scope)
+            }
             
         case .stand:
-            await loadStandSeries(scope: scope)
-        }
-    }
-    
-    // MARK: - Series Loading Helpers
-    
-    private func loadAllTimeSeries(for kind: MetricKind) async {
-        do {
-            let allTime = try await healthService.fetchAllTimeSummary()
-            switch kind {
-            case .steps:
-                await loadAllTimeQuantitySeries(
-                    .stepCount,
-                    unit: .count(),
-                    headerText: format(allTime.steps)
-                )
-            case .calories:
-                await loadAllTimeQuantitySeries(
-                    .activeEnergyBurned,
-                    unit: .kilocalorie(),
-                    headerText: format(allTime.activeKcal)
-                )
-            case .distance:
-                let km = allTime.distanceMeters / 1000.0
-                await loadAllTimeQuantitySeries(
-                    .distanceWalkingRunning,
-                    unit: .meter(),
-                    headerText: format(km, digits: 2),
-                    valueTransform: { $0 / 1000.0 }
-                )
-            case .water:
-                let liters = allTime.waterML / 1000.0
-                await loadAllTimeQuantitySeries(
-                    .dietaryWater,
-                    unit: .literUnit(with: .milli),
-                    headerText: String(format: "%.1f L", liters),
-                    valueTransform: { $0 / 1000.0 }
-                )
-            case .sleep:
-                await loadAllTimeSleepSeries()
-            case .stand:
+            if scope == .allTime {
                 await loadAllTimeStandSeries()
+            } else {
+                await loadStandSeries(scope: scope)
             }
-        } catch {
-            chartData = .empty
         }
     }
-    
-    private func loadQuantitySeries(
+
+    // MARK: - Series Loading Helpers
+
+    private func placeholderChartData(for kind: MetricKind, scope: TimeScope) -> ChartSeriesData {
+        if scope == .day {
+            return ChartSeriesData(values: [], headerText: formattedHeader(for: kind))
+        }
+
+        return ChartSeriesData(values: [], headerText: "")
+    }
+
+    private func loadHealthServiceQuantitySeries(
+        kind: MetricKind,
         _ identifier: HKQuantityTypeIdentifier,
         unit: HKUnit,
         scope: TimeScope,
         transform: @escaping @Sendable ([Double], Double) -> ChartSeriesData
     ) async {
-        let store = HKHealthStore()
-        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
-            chartData = .empty
-            return
+        let series = await healthService.fetchQuantitySeries(identifier, unit: unit, scope: scope)
+        guard shouldApplyChartResult(for: kind, scope: scope) else { return }
+        chartData = transform(series.values, series.total)
+    }
+
+    private func shouldApplyChartResult(for kind: MetricKind, scope: TimeScope) -> Bool {
+        if activeDetailMetric == kind {
+            return selectedScope == scope
         }
-        
-        let (start, end, interval, anchor) = dateRangeAndInterval(for: scope)
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
-        
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum,
-                anchorDate: anchor,
-                intervalComponents: interval
-            )
-            
-            query.initialResultsHandler = { [weak self] _, results, _ in
-                guard self != nil else {
-                    continuation.resume()
-                    return
-                }
-                
-                var values: [Double] = []
-                var total: Double = 0
-                
-                results?.enumerateStatistics(from: start, to: end) { stat, _ in
-                    let v = stat.sumQuantity()?.doubleValue(for: unit) ?? 0
-                    values.append(v)
-                    total += v
-                }
-                
-                // Capture values before Task to avoid concurrency issues
-                let finalValues = values
-                let finalTotal = total
-                let resultData = transform(finalValues, finalTotal)
-                
-                DispatchQueue.main.async { [weak self] in
-                    self?.chartData = resultData
-                    continuation.resume()
-                }
-            }
-            
-            store.execute(query)
+
+        if expandedMetric == kind {
+            return selectedScope == scope
         }
+
+        return false
     }
     
     private func loadSleepSeries(scope: TimeScope) async {
@@ -753,56 +692,6 @@ final class HomeViewModel: ObservableObject {
     }
 
     // MARK: - All Time Series
-
-    private func loadAllTimeQuantitySeries(
-        _ identifier: HKQuantityTypeIdentifier,
-        unit: HKUnit,
-        headerText: String,
-        valueTransform: @escaping @Sendable (Double) -> Double = { $0 }
-    ) async {
-        let store = HKHealthStore()
-        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
-            chartData = ChartSeriesData(values: [], headerText: headerText)
-            return
-        }
-
-        let start = await earliestSampleDate(for: type) ?? Calendar.current.date(byAdding: .month, value: -11, to: Date())!
-        let end = Date()
-        let interval = DateComponents(month: 1)
-        let anchor = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: start))!
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
-
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum,
-                anchorDate: anchor,
-                intervalComponents: interval
-            )
-
-            query.initialResultsHandler = { [weak self] _, results, _ in
-                guard self != nil else {
-                    continuation.resume()
-                    return
-                }
-
-                var values: [Double] = []
-                results?.enumerateStatistics(from: start, to: end) { stat, _ in
-                    let v = stat.sumQuantity()?.doubleValue(for: unit) ?? 0
-                    values.append(valueTransform(v))
-                }
-
-                let finalValues = values
-                Task { @MainActor [weak self] in
-                    self?.chartData = ChartSeriesData(values: finalValues, headerText: headerText)
-                    continuation.resume()
-                }
-            }
-
-            store.execute(query)
-        }
-    }
 
     private func loadAllTimeSleepSeries() async {
         let store = HKHealthStore()
@@ -938,43 +827,47 @@ final class HomeViewModel: ObservableObject {
     // MARK: - Date Range Helpers
     
     private nonisolated func dateRangeAndInterval(for scope: TimeScope) -> (start: Date, end: Date, interval: DateComponents, anchor: Date) {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = .autoupdatingCurrent
         let now = Date()
-        let end = now
         
         let interval: DateComponents
         let start: Date
-        var anchor: Date
+        let end: Date
+        let anchor: Date
         
         switch scope {
         case .day:
             interval = DateComponents(hour: 1)
             start = calendar.startOfDay(for: now)
+            end = calendar.date(byAdding: .day, value: 1, to: start) ?? now
             anchor = start
             
         case .week:
             interval = DateComponents(day: 1)
-            var weekCalendar = calendar
-            // Week starts on Sunday and ends on Saturday
-            weekCalendar.firstWeekday = 1
-            weekCalendar.minimumDaysInFirstWeek = 1
-            start = weekCalendar.dateInterval(of: .weekOfYear, for: now)?.start ?? weekCalendar.startOfDay(for: now)
+            let range = calendar.dateInterval(of: .weekOfYear, for: now)
+            start = range?.start ?? calendar.startOfDay(for: now)
+            end = range?.end ?? (calendar.date(byAdding: .day, value: 7, to: start) ?? now)
             anchor = start
             
         case .month:
             interval = DateComponents(day: 1)
-            start = calendar.dateInterval(of: .month, for: now)?.start ?? calendar.startOfDay(for: now)
+            let range = calendar.dateInterval(of: .month, for: now)
+            start = range?.start ?? calendar.startOfDay(for: now)
+            end = range?.end ?? (calendar.date(byAdding: .month, value: 1, to: start) ?? now)
             anchor = start
             
         case .year:
             interval = DateComponents(month: 1)
-            let components = calendar.dateComponents([.year], from: now)
-            start = calendar.date(from: DateComponents(year: components.year, month: 1, day: 1))!
+            let range = calendar.dateInterval(of: .year, for: now)
+            start = range?.start ?? calendar.startOfDay(for: now)
+            end = range?.end ?? (calendar.date(byAdding: .year, value: 1, to: start) ?? now)
             anchor = start
             
         case .allTime:
             interval = DateComponents(day: 1)
             start = calendar.startOfDay(for: now)
+            end = calendar.date(byAdding: .day, value: 1, to: start) ?? now
             anchor = start
         }
         
@@ -1004,7 +897,9 @@ final class HomeViewModel: ObservableObject {
     private nonisolated func daysBetween(start: Date, end: Date) -> Int {
         let calendar = Calendar.current
         let startDay = calendar.startOfDay(for: start)
-        let endDay = calendar.startOfDay(for: end)
+        let endStart = calendar.startOfDay(for: end)
+        let effectiveEnd = abs(end.timeIntervalSince(endStart)) < 0.5 ? end.addingTimeInterval(-1) : end
+        let endDay = calendar.startOfDay(for: effectiveEnd)
         let components = calendar.dateComponents([.day], from: startDay, to: endDay)
         return max(1, (components.day ?? 0) + 1)
     }

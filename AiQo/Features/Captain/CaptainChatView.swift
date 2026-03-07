@@ -17,7 +17,17 @@ struct CaptainChatView: View {
                         headerCard
 
                         ForEach(globalBrain.messages) { message in
-                            ChatMessageRow(message: message)
+                            ChatMessageRow(
+                                message: message,
+                                onSpeak: message.isUser ? nil : {
+                                    Task {
+                                        await CaptainVoiceService.shared.speak(text: message.text)
+                                    }
+                                },
+                                onAccessoryTap: message.accessory == .morningGratitude ? {
+                                    globalBrain.startMorningGratitudeSession()
+                                } : nil
+                            )
                                 .id(message.id)
                         }
 
@@ -60,6 +70,13 @@ struct CaptainChatView: View {
             composerBar
         }
         .background(Color(UIColor.systemGroupedBackground))
+        .onAppear {
+            globalBrain.generateMorningSleepAnalysis()
+        }
+        .onDisappear {
+            globalBrain.removeEphemeralMessages()
+            AppRootManager.shared.dismissCaptainChat()
+        }
     }
 }
 
@@ -209,7 +226,7 @@ private extension CaptainChatView {
         let message = trimmedInput
         guard !message.isEmpty else { return }
 
-        globalBrain.sendMessage(message)
+        globalBrain.sendMessage(message, context: .mainChat)
         isInputFocused = false
     }
 
@@ -227,6 +244,8 @@ private extension CaptainChatView {
 
 private struct ChatMessageRow: View {
     let message: ChatMessage
+    var onSpeak: (() -> Void)?
+    var onAccessoryTap: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
@@ -260,30 +279,75 @@ private struct ChatMessageRow: View {
             } else {
                 CaptainChatAvatarView(size: 34)
 
-                Text(message.text)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    .multilineTextAlignment(.leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(hex: "FFF3E5").opacity(0.96),
-                                        Color(hex: "F8E7D1").opacity(0.92)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(message.text)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                        .multilineTextAlignment(.leading)
+
+                    if let accessory = message.accessory,
+                       let onAccessoryTap {
+                        Button(action: onAccessoryTap) {
+                            Text(accessory.buttonTitle)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color(hex: "12313A"))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color(hex: "EAF8D6"),
+                                                    Color(hex: "D7F3FF")
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
                                 )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if let onSpeak, !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        HStack {
+                            Spacer(minLength: 0)
+
+                            Button(action: onSpeak) {
+                                Image(systemName: "speaker.wave.2")
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(0.52))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "FFF3E5").opacity(0.96),
+                                    Color(hex: "F8E7D1").opacity(0.92)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                    .stroke(Color.white.opacity(0.72), lineWidth: 1)
-                            )
-                    )
-                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
 
                 Spacer(minLength: 56)
             }

@@ -48,6 +48,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         ActivityNotificationEngine.shared.registerNotificationCategories()
         CaptainSmartNotificationService.shared.registerNotificationCategories()
+        MorningRoutineManager.shared.start()
 
         Task {
             await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
@@ -88,9 +89,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
         WidgetCenter.shared.reloadAllTimelines()
         clearAppBadge()
+        MorningRoutineManager.shared.start()
 
         Task {
             await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+            await MorningRoutineManager.shared.refreshMonitoringState()
             await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
         }
 
@@ -171,6 +174,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             CaptainNotificationHandler.shared.handleIncomingNotification(userInfo: userInfo)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 CaptainNavigationHelper.shared.navigateToCaptainScreen()
+            }
+        } else if let source = userInfo["source"] as? String, source == MorningRoutineManager.notificationSource {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                AppRootManager.shared.openCaptainChat()
             }
         } else {
             NotificationService.shared.handle(response: response)

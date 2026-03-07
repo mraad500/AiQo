@@ -4,6 +4,13 @@ import WidgetKit
 
 // MARK: - Unified HealthKit service (Today + All Time + Write + Workouts)
 
+struct HealthKitQuantitySeries: Sendable {
+    let values: [Double]
+    let total: Double
+
+    static let zero = HealthKitQuantitySeries(values: [], total: 0)
+}
+
 actor HealthKitService {
 
     // Singleton
@@ -243,6 +250,74 @@ actor HealthKitService {
         } catch {
             return 0
         }
+    }
+
+    func fetchQuantitySeries(
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        scope: TimeScope
+    ) async -> HealthKitQuantitySeries {
+        guard await ensureAuthorization(),
+              let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return await .zero
+        }
+
+        let calendar = resolvedCalendar()
+        guard let configuration = await statisticsConfiguration(
+            for: scope,
+            sampleType: type,
+            calendar: calendar
+        ) else {
+            return await .zero
+        }
+
+        let bucketStartDates = makeBucketStartDates(
+            start: configuration.start,
+            end: configuration.end,
+            interval: configuration.interval,
+            calendar: calendar
+        )
+
+        guard !bucketStartDates.isEmpty else {
+            return await .zero
+        }
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: configuration.start,
+            end: configuration.end,
+            options: .strictStartDate
+        )
+
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: configuration.anchor,
+                intervalComponents: configuration.interval
+            )
+
+            query.initialResultsHandler = { _, results, _ in
+                let values = bucketStartDates.map { bucketStart in
+                    results?.statistics(for: bucketStart)?
+                        .sumQuantity()?
+                        .doubleValue(for: unit) ?? 0
+                }
+
+                continuation.resume(
+                    returning: HealthKitQuantitySeries(
+                        values: values,
+                        total: values.reduce(0, +)
+                    )
+                )
+            }
+
+            self.store.execute(query)
+        }
+    }
+
+    func fetchActiveEnergySeries(scope: TimeScope) async -> HealthKitQuantitySeries {
+        await fetchQuantitySeries(.activeEnergyBurned, unit: .kilocalorie(), scope: scope)
     }
 
     // MARK: - Public API (All-time / Lifetime Summary)
@@ -727,5 +802,158 @@ actor HealthKitService {
         let start = cal.startOfDay(for: now)
         let end = cal.date(byAdding: .day, value: 1, to: start)!
         return (start, end)
+    }
+
+    private struct StatisticsConfiguration {
+        let start: Date
+        let end: Date
+        let anchor: Date
+        let interval: DateComponents
+    }
+
+    private func statisticsConfiguration(
+        for scope: TimeScope,
+        sampleType: HKSampleType,
+        calendar: Calendar
+    ) async -> StatisticsConfiguration? {
+        let now = Date()
+
+        switch scope {
+        case .day:
+            let start = calendar.startOfDay(for: now)
+            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? now
+            return StatisticsConfiguration(
+                start: start,
+                end: end,
+                anchor: start,
+                interval: DateComponents(hour: 1)
+            )
+
+        case .week:
+            guard let interval = calendar.dateInterval(of: .weekOfYear, for: now) else {
+                return nil
+            }
+
+            return StatisticsConfiguration(
+                start: interval.start,
+                end: interval.end,
+                anchor: interval.start,
+                interval: DateComponents(day: 1)
+            )
+
+        case .month:
+            guard let interval = calendar.dateInterval(of: .month, for: now) else {
+                return nil
+            }
+
+            return StatisticsConfiguration(
+                start: interval.start,
+                end: interval.end,
+                anchor: interval.start,
+                interval: DateComponents(day: 1)
+            )
+
+        case .year:
+            guard let interval = calendar.dateInterval(of: .year, for: now) else {
+                return nil
+            }
+
+            return StatisticsConfiguration(
+                start: interval.start,
+                end: interval.end,
+                anchor: interval.start,
+                interval: DateComponents(month: 1)
+            )
+
+        case .allTime:
+            return await allTimeStatisticsConfiguration(
+                for: sampleType,
+                now: now,
+                calendar: calendar
+            )
+        }
+    }
+
+    private func allTimeStatisticsConfiguration(
+        for sampleType: HKSampleType,
+        now: Date,
+        calendar: Calendar
+    ) async -> StatisticsConfiguration? {
+        guard let earliestSample = await earliestSampleDate(for: sampleType) else {
+            return nil
+        }
+
+        let currentMonthStart = calendar.dateInterval(of: .month, for: now)?.start
+            ?? calendar.startOfDay(for: now)
+        let earliestMonthStart = calendar.dateInterval(of: .month, for: earliestSample)?.start
+            ?? calendar.startOfDay(for: earliestSample)
+        let monthsSpan = max(
+            1,
+            (calendar.dateComponents([.month], from: earliestMonthStart, to: currentMonthStart).month ?? 0) + 1
+        )
+
+        if monthsSpan <= 24 {
+            let end = calendar.dateInterval(of: .month, for: now)?.end ?? now
+            return StatisticsConfiguration(
+                start: earliestMonthStart,
+                end: end,
+                anchor: earliestMonthStart,
+                interval: DateComponents(month: 1)
+            )
+        }
+
+        let start = calendar.dateInterval(of: .year, for: earliestSample)?.start ?? earliestMonthStart
+        let end = calendar.dateInterval(of: .year, for: now)?.end ?? now
+        return StatisticsConfiguration(
+            start: start,
+            end: end,
+            anchor: start,
+            interval: DateComponents(year: 1)
+        )
+    }
+
+    private func makeBucketStartDates(
+        start: Date,
+        end: Date,
+        interval: DateComponents,
+        calendar: Calendar
+    ) -> [Date] {
+        guard start < end else { return [] }
+
+        var dates: [Date] = []
+        var cursor = start
+
+        while cursor < end {
+            dates.append(cursor)
+            guard let next = calendar.date(byAdding: interval, to: cursor), next > cursor else {
+                break
+            }
+            cursor = next
+        }
+
+        return dates
+    }
+
+    private func earliestSampleDate(for type: HKSampleType) async -> Date? {
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [sortDescriptor]
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.first?.startDate)
+            }
+
+            store.execute(query)
+        }
+    }
+
+    private func resolvedCalendar() -> Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
     }
 }

@@ -4,6 +4,7 @@ internal import Combine
 
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
+    @ObservedObject private var appRootManager = AppRootManager.shared
     private let appTint = Color.aiqoAccent
 
     var body: some View {
@@ -58,6 +59,9 @@ struct MainTabScreen: View {
 
             NavigationStack {
                 CaptainScreen()
+                    .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
+                        CaptainChatView()
+                    }
             }
             .tag(MainTabRouter.Tab.captain)
             .tabItem {

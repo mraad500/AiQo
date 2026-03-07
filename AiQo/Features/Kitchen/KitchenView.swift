@@ -36,7 +36,8 @@ struct KitchenView: View {
                     isCameraPresented = false
                     globalBrain.sendMessage(
                         text: "شنو تكدر تسويلي أكل من هاي الثلاجة؟",
-                        image: image
+                        image: image,
+                        context: .kitchen
                     )
                 },
                 onCancel: {

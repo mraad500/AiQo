@@ -423,7 +423,7 @@ struct CaptainPlanChatView: View {
 
         showSuccessState = false
         errorMessage = nil
-        globalBrain.sendMessage(message)
+        globalBrain.sendMessage(message, context: .gym)
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {

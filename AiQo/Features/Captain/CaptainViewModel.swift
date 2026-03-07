@@ -3,6 +3,17 @@ import SwiftUI
 import UIKit
 internal import Combine
 
+enum ChatMessageAccessory: Equatable, Sendable {
+    case morningGratitude
+
+    var buttonTitle: String {
+        switch self {
+        case .morningGratitude:
+            return "ابدأ جلسة الامتنان ✨"
+        }
+    }
+}
+
 /// Single chat bubble model used by the Captain conversation UI.
 struct ChatMessage: Identifiable, Equatable, Sendable {
     let id: UUID
@@ -10,19 +21,25 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     let isUser: Bool
     let timestamp: Date
     var isAnimating: Bool
+    var isEphemeral: Bool
+    var accessory: ChatMessageAccessory?
 
     init(
         id: UUID = UUID(),
         text: String,
         isUser: Bool,
         timestamp: Date = Date(),
-        isAnimating: Bool = false
+        isAnimating: Bool = false,
+        isEphemeral: Bool = false,
+        accessory: ChatMessageAccessory? = nil
     ) {
         self.id = id
         self.text = text
         self.isUser = isUser
         self.timestamp = timestamp
         self.isAnimating = isAnimating
+        self.isEphemeral = isEphemeral
+        self.accessory = accessory
     }
 
     init(
@@ -30,14 +47,18 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         content: String,
         isUser: Bool,
         timestamp: Date = Date(),
-        isAnimating: Bool = false
+        isAnimating: Bool = false,
+        isEphemeral: Bool = false,
+        accessory: ChatMessageAccessory? = nil
     ) {
         self.init(
             id: id,
             text: content,
             isUser: isUser,
             timestamp: timestamp,
-            isAnimating: isAnimating
+            isAnimating: isAnimating,
+            isEphemeral: isEphemeral,
+            accessory: accessory
         )
     }
 
@@ -65,12 +86,15 @@ final class CaptainViewModel: ObservableObject {
     var isTyping: Bool { isLoading }
 
     private let userDefaults = UserDefaults.standard
-    private let service: CaptainService
+    private let service: LocalBrainService
     private let contextBuilder: CaptainContextBuilder
+    private let morningRoutineManager: MorningRoutineManager
+    private let healthManager = HealthKitManager.shared
     private let minimumLoadingStateDuration: TimeInterval = 0.8
 
     private var responseTask: Task<Void, Never>?
     private var activeRequestID: UUID?
+    private var isGeneratingMorningAnalysis = false
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -82,11 +106,13 @@ final class CaptainViewModel: ObservableObject {
     }
 
     init(
-        service: CaptainService? = nil,
-        contextBuilder: CaptainContextBuilder? = nil
+        service: LocalBrainService? = nil,
+        contextBuilder: CaptainContextBuilder? = nil,
+        morningRoutineManager: MorningRoutineManager? = nil
     ) {
-        self.service = service ?? CaptainService()
+        self.service = service ?? LocalBrainService()
         self.contextBuilder = contextBuilder ?? .shared
+        self.morningRoutineManager = morningRoutineManager ?? .shared
         loadCustomization()
         addWelcomeMessage()
     }
@@ -146,11 +172,15 @@ final class CaptainViewModel: ObservableObject {
         sendMessage(text: inputText)
     }
 
-    func sendMessage(_ rawText: String) {
-        sendMessage(text: rawText)
+    func sendMessage(_ rawText: String, context: ScreenContext = .mainChat) {
+        sendMessage(text: rawText, context: context)
     }
 
-    func sendMessage(text rawText: String, image: UIImage? = nil) {
+    func sendMessage(
+        text rawText: String,
+        image: UIImage? = nil,
+        context: ScreenContext = .mainChat
+    ) {
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
 
@@ -163,13 +193,14 @@ final class CaptainViewModel: ObservableObject {
 
         let requestID = UUID()
         activeRequestID = requestID
-        let imageBox = CaptainRequestImageBox(image: image)
+        let hasAttachedImage = image != nil
 
-        responseTask = Task { [weak self, imageBox] in
+        responseTask = Task { [weak self] in
             guard let self else { return }
             await self.processMessage(
                 requestID: requestID,
-                imageBox: imageBox
+                screenContext: context,
+                hasAttachedImage: hasAttachedImage
             )
         }
     }
@@ -212,6 +243,34 @@ final class CaptainViewModel: ObservableObject {
         handler.clearPendingMessage()
     }
 
+    func generateMorningSleepAnalysis() {
+        guard !isGeneratingMorningAnalysis else { return }
+        guard !messages.contains(where: { $0.isEphemeral }) else { return }
+        guard morningRoutineManager.prepareMorningAnalysisIfNeeded() != nil else { return }
+
+        responseTask?.cancel()
+        isGeneratingMorningAnalysis = true
+        isLoading = true
+        coachState = .readingMessage
+        feedbackTrigger += 1
+
+        let requestID = UUID()
+        activeRequestID = requestID
+
+        responseTask = Task { [weak self] in
+            guard let self else { return }
+            await self.processMorningSleepAnalysis(requestID: requestID)
+        }
+    }
+
+    func removeEphemeralMessages() {
+        messages.removeAll { $0.isEphemeral }
+    }
+
+    func startMorningGratitudeSession() {
+        feedbackTrigger += 1
+    }
+
     private func addWelcomeMessage() {
         messages.append(
             ChatMessage(
@@ -223,7 +282,8 @@ final class CaptainViewModel: ObservableObject {
 
     private func processMessage(
         requestID: UUID,
-        imageBox: CaptainRequestImageBox
+        screenContext: ScreenContext,
+        hasAttachedImage: Bool
     ) async {
         defer {
             if activeRequestID == requestID {
@@ -233,16 +293,16 @@ final class CaptainViewModel: ObservableObject {
         }
 
         let conversation = buildConversationHistory()
-        let promptContext = await buildPromptContext()
+        let promptRequest = await buildPromptRequest(
+            conversation: conversation,
+            screenContext: screenContext,
+            hasAttachedImage: hasAttachedImage
+        )
 
         do {
             let startedAt = Date()
-            let responseTask = Task<CaptainServiceReply, Error> { [service, imageBox] in
-                try await service.generateReply(
-                    conversation: conversation,
-                    context: promptContext,
-                    image: imageBox.image
-                )
+            let responseTask = Task<LocalBrainServiceReply, Error> { [service] in
+                try await service.generateReply(request: promptRequest)
             }
 
             try await runCognitiveTimeline(requestID: requestID)
@@ -269,13 +329,74 @@ final class CaptainViewModel: ObservableObject {
             return
         } catch {
             guard activeRequestID == requestID else { return }
-            print("CaptainViewModel network error:", error)
+            print("CaptainViewModel local brain error:", error)
             messages.append(
                 ChatMessage(
                     text: prependUserNameIfNeeded(to: fallbackMessage(for: error)),
                     isUser: false
                 )
             )
+        }
+    }
+
+    private func processMorningSleepAnalysis(requestID: UUID) async {
+        defer {
+            if activeRequestID == requestID {
+                isLoading = false
+                coachState = .idle
+            }
+            isGeneratingMorningAnalysis = false
+        }
+
+        do {
+            let promptRequest = try await buildMorningSleepRequest()
+            let startedAt = Date()
+            let localReplyTask = Task<LocalBrainServiceReply, Error> { [service] in
+                try await service.generateReply(request: promptRequest)
+            }
+
+            try await runCognitiveTimeline(requestID: requestID)
+            let reply = try await localReplyTask.value
+
+            let elapsed = Date().timeIntervalSince(startedAt)
+            if elapsed < minimumLoadingStateDuration {
+                let remaining = minimumLoadingStateDuration - elapsed
+                try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+            }
+
+            try await transitionCoachState(to: .typing, hold: 0.18, requestID: requestID)
+            try ensureActiveRequest(requestID)
+
+            currentWorkoutPlan = reply.workoutPlan
+            currentMealPlan = reply.mealPlan
+            messages.removeAll { $0.isEphemeral }
+            messages.append(
+                ChatMessage(
+                    text: prependUserNameIfNeeded(to: reply.message),
+                    isUser: false,
+                    isEphemeral: true,
+                    accessory: .morningGratitude
+                )
+            )
+            morningRoutineManager.markMorningMessageRead()
+        } catch is CancellationError {
+            return
+        } catch {
+            guard activeRequestID == requestID else { return }
+            print("CaptainViewModel morning sleep analysis error:", error)
+
+            currentWorkoutPlan = nil
+            currentMealPlan = nil
+            messages.removeAll { $0.isEphemeral }
+            messages.append(
+                ChatMessage(
+                    text: morningSleepFallbackMessage(),
+                    isUser: false,
+                    isEphemeral: true,
+                    accessory: .morningGratitude
+                )
+            )
+            morningRoutineManager.markMorningMessageRead()
         }
     }
 
@@ -291,12 +412,45 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
-    private func buildPromptContext() async -> CaptainPromptContext {
-        let runtime = await contextBuilder.buildSystemContext()
+    private func buildPromptRequest(
+        conversation: [CaptainConversationMessage],
+        screenContext: ScreenContext,
+        hasAttachedImage: Bool
+    ) async -> LocalBrainRequest {
+        let contextData = await contextBuilder.buildContextData()
+        let language = AppSettingsStore.shared.appLanguage
+        let profileSummary = buildUserProfileSummary()
+        let router = PromptRouter(language: language)
+        let systemPrompt = router.generateSystemPrompt(for: screenContext, data: contextData)
 
-        return CaptainPromptContext(
-            runtime: runtime,
-            userProfileSummary: buildUserProfileSummary()
+        return LocalBrainRequest(
+            conversation: conversation,
+            screenContext: screenContext,
+            language: language,
+            systemPrompt: systemPrompt,
+            contextData: contextData,
+            userProfileSummary: profileSummary,
+            hasAttachedImage: hasAttachedImage
+        )
+    }
+
+    private func buildMorningSleepRequest() async throws -> LocalBrainRequest {
+        let contextData = await contextBuilder.buildContextData()
+        let language = AppSettingsStore.shared.appLanguage
+        let router = PromptRouter(language: language)
+        let systemPrompt = router.generateSystemPrompt(for: .sleepAnalysis, data: contextData)
+        let summaryPrompt = try await buildMorningSleepSummaryPrompt(language: language)
+
+        return LocalBrainRequest(
+            conversation: [
+                CaptainConversationMessage(role: .user, content: summaryPrompt)
+            ],
+            screenContext: .sleepAnalysis,
+            language: language,
+            systemPrompt: systemPrompt,
+            contextData: contextData,
+            userProfileSummary: buildUserProfileSummary(),
+            hasAttachedImage: false
         )
     }
 
@@ -320,6 +474,41 @@ final class CaptainViewModel: ObservableObject {
 
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "not provided" : trimmed
+    }
+
+    private func buildMorningSleepSummaryPrompt(language: AppLanguage) async throws -> String {
+        let authorized = try await healthManager.requestSleepAuthorizationIfNeeded()
+        guard authorized else {
+            throw SleepStageFetchError.authorizationDenied
+        }
+
+        let stages = try await healthManager.fetchSleepStagesForLastNight()
+        guard let sleepStart = stages.first?.startDate,
+              let sleepEnd = stages.last?.endDate,
+              !stages.isEmpty else {
+            throw MorningSleepAnalysisError.noSleepData
+        }
+
+        let totalSleep = stages
+            .filter { $0.stage != .awake }
+            .reduce(0) { $0 + $1.duration }
+        let deepSleep = totalDuration(for: .deep, in: stages)
+        let remSleep = totalDuration(for: .rem, in: stages)
+        let coreSleep = totalDuration(for: .core, in: stages)
+        let awakeTime = totalDuration(for: .awake, in: stages)
+
+        return """
+        MORNING_SLEEP_ANALYSIS
+        SleepStart: \(formattedClockTime(sleepStart))
+        SleepEnd: \(formattedClockTime(sleepEnd))
+        TotalSleepHours: \(formattedHours(totalSleep))
+        DeepSleepHours: \(formattedHours(deepSleep))
+        REMSleepHours: \(formattedHours(remSleep))
+        CoreSleepHours: \(formattedHours(coreSleep))
+        AwakeMinutes: \(Int((awakeTime / 60).rounded()))
+        OutputLanguage: \(language == .english ? "English" : "Arabic (Iraqi dialect)")
+        Instruction: Give one brief, friendly morning sleep analysis and one gentle suggestion.
+        """
     }
 
     private func runCognitiveTimeline(requestID: UUID) async throws {
@@ -354,26 +543,29 @@ final class CaptainViewModel: ObservableObject {
     }
 
     private func fallbackMessage(for error: Error) -> String {
-        if error is CaptainSecretsError {
-            return "ثبت OPENAI_API_KEY بخطة التشغيل حتى يشتغل الكابتن مباشرة."
-        }
-
-        if let serviceError = error as? CaptainServiceError {
+        if let serviceError = error as? LocalBrainServiceError {
             switch serviceError {
-            case .missingAPIKey:
-                return "ثبت OPENAI_API_KEY بخطة التشغيل حتى يشتغل الكابتن مباشرة."
             case .invalidStructuredResponse:
-                return "رد الكابتن وصل بصيغة غير متوقعة. جرّب مرة ثانية وبعدها أرتبها إلك."
-            case .invalidImageData, .imageResizingFailed, .imageEncodingFailed:
-                return "ما كدرت أقرأ صورة الثلاجة بشكل صحيح. جرّب صورة أوضح."
-            case .httpError:
-                return "خادم الكابتن ما رد بشكل صحيح هسه. جرّب بعد شوي."
-            default:
-                break
+                return localizedFallbackMessage(
+                    arabic: "الرد المحلي طلع بصيغة غير متوقعة. جرّب مرة ثانية.",
+                    english: "The on-device reply came back in an unexpected format. Try again."
+                )
+            case .missingUserMessage, .emptyConversation:
+                return localizedFallbackMessage(
+                    arabic: "أرسللي رسالة أوضح حتى أرتبلك الرد صح.",
+                    english: "Send a clearer message so I can shape the local reply correctly."
+                )
             }
         }
 
-        return "صار خلل بالشبكة يا بطل. جرّب مرة ثانية."
+        return localizedFallbackMessage(
+            arabic: "صار خلل بسيط بالمخ المحلي يا بطل. جرّب مرة ثانية.",
+            english: "Captain's local brain hit a small issue. Try again."
+        )
+    }
+
+    private func localizedFallbackMessage(arabic: String, english: String) -> String {
+        AppSettingsStore.shared.appLanguage == .english ? english : arabic
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {
@@ -435,12 +627,42 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
+    private func totalDuration(
+        for stage: SleepStageData.Stage,
+        in stages: [SleepStageData]
+    ) -> TimeInterval {
+        stages
+            .filter { $0.stage == stage }
+            .reduce(0) { $0 + $1.duration }
+    }
+
+    private func formattedHours(_ duration: TimeInterval) -> String {
+        String(format: "%.1f", duration / 3_600)
+    }
+
+    private func formattedClockTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    private func morningSleepFallbackMessage() -> String {
+        localizedFallbackMessage(
+            arabic: "صباح الخير. ما قدرت أقرأ تفاصيل نوم البارحة بالكامل، بس خذ بداية هادئة اليوم: مي، ضوء طبيعي، ومشي خفيف.",
+            english: "Good morning. I could not fully read last night's sleep details, so start gently today with water, natural light, and an easy walk."
+        )
+    }
+
 }
 
-private final class CaptainRequestImageBox: @unchecked Sendable {
-    let image: UIImage?
+private enum MorningSleepAnalysisError: LocalizedError {
+    case noSleepData
 
-    init(image: UIImage?) {
-        self.image = image
+    var errorDescription: String? {
+        switch self {
+        case .noSleepData:
+            return "No sleep data was available for the previous night."
+        }
     }
 }
