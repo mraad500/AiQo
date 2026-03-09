@@ -186,7 +186,7 @@ final class AlarmKitSchedulingService: AlarmSchedulingService {
                 configuration: configuration
             )
 
-            MorningRoutineManager.shared.configureScheduledWake(at: fireDate)
+            MorningHabitOrchestrator.shared.configureScheduledWake(at: fireDate)
 
             return ScheduledAlarm(
                 id: alarm.id.uuidString,

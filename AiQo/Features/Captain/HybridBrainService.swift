@@ -1,109 +1,305 @@
 import Foundation
+import os.log
 
-enum LocalConversationRole: String, Sendable {
+enum HybridBrainPromptMarkers {
+    nonisolated static let fallbackJSONStart = "<captain_fallback_json>"
+    nonisolated static let fallbackJSONEnd = "</captain_fallback_json>"
+}
+
+enum CaptainConversationRole: String, Sendable {
     case system
     case user
     case assistant
 }
 
-struct LocalConversationMessage: Sendable {
-    let role: LocalConversationRole
+struct CaptainConversationMessage: Sendable {
+    let role: CaptainConversationRole
     let content: String
 
-    init(role: LocalConversationRole, content: String) {
+    init(role: CaptainConversationRole, content: String) {
         self.role = role
         self.content = content
     }
 }
 
-struct LocalBrainRequest: Sendable {
-    let conversation: [LocalConversationMessage]
+struct HybridBrainRequest: Sendable {
+    let conversation: [CaptainConversationMessage]
     let screenContext: ScreenContext
     let language: AppLanguage
-    let systemPrompt: String
     let contextData: CaptainContextData
     let userProfileSummary: String
     let hasAttachedImage: Bool
 }
 
-struct LocalBrainServiceReply: Sendable {
+struct HybridBrainServiceReply: Sendable {
     let message: String
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let rawText: String
 }
 
-enum LocalBrainServiceError: LocalizedError {
+struct HybridBrainStreamingSession: Sendable {
+    let tokens: AsyncStream<String>
+    let fallbackResponse: CaptainStructuredResponse
+}
+
+enum HybridBrainServiceError: LocalizedError {
     case emptyConversation
     case missingUserMessage
     case invalidStructuredResponse
+    case invalidResponse
+    case emptyResponse
+    case badStatusCode(Int)
+    case networkUnavailable
+    case requestFailed
 
     var errorDescription: String? {
         switch self {
         case .emptyConversation:
-            return "Captain local generation cannot run with an empty conversation."
+            return "Captain hybrid generation cannot run with an empty conversation."
         case .missingUserMessage:
-            return "Captain local generation requires a user message."
+            return "Captain hybrid generation requires a user message."
         case .invalidStructuredResponse:
-            return "Captain local generation produced invalid structured JSON."
+            return "Captain hybrid generation produced invalid structured JSON."
+        case .invalidResponse:
+            return "Captain hybrid generation returned an invalid response."
+        case .emptyResponse:
+            return "Captain hybrid generation returned an empty response."
+        case .badStatusCode(let statusCode):
+            return "Captain hybrid generation returned status code \(statusCode)."
+        case .networkUnavailable:
+            return "Captain hybrid generation is temporarily unavailable."
+        case .requestFailed:
+            return "Captain hybrid generation request failed."
         }
     }
 }
 
-struct LocalBrainService: Sendable {
-    private let sleepAgent: AppleIntelligenceSleepAgent
+enum HybridBrainServiceConfigurationError: LocalizedError {
+    case invalidEndpoint
+    case missingAPIKey
 
-    init(sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent()) {
-        self.sleepAgent = sleepAgent
+    var errorDescription: String? {
+        switch self {
+        case .invalidEndpoint:
+            return "Captain hybrid endpoint is invalid."
+        case .missingAPIKey:
+            return "Captain hybrid API key is missing."
+        }
+    }
+}
+
+private struct HybridBrainServiceConfiguration: Sendable {
+    let endpointURL: URL
+    let apiKey: String
+    let promptID: String
+    let promptVersion: String
+}
+
+private enum HybridBrainServiceConfig {
+    static let apiKeyName = "CAPTAIN_HYBRID_BRAIN_API_KEY"
+    static let endpointName = "CAPTAIN_HYBRID_BRAIN_API_URL"
+    static let legacyOpenAIKeyName = "OPENAI_API_KEY"
+    static let defaultEndpoint = "https://api.openai.com/v1/responses"
+    static let promptID = "pmpt_6989314757d48190b10842e9b852048d0f4dbc957002f486"
+    static let promptVersion = "8"
+
+    static func resolve(
+        bundle: Bundle = .main,
+        processInfo: ProcessInfo = .processInfo
+    ) throws -> HybridBrainServiceConfiguration {
+        let info = bundle.infoDictionary ?? [:]
+        let endpointString = normalized(processInfo.environment[endpointName])
+            ?? normalized(info[endpointName] as? String)
+            ?? defaultEndpoint
+        let apiKey = normalized(processInfo.environment[apiKeyName])
+            ?? normalized(info[apiKeyName] as? String)
+            ?? normalized(processInfo.environment[legacyOpenAIKeyName])
+
+        guard let endpointURL = URL(string: endpointString) else {
+            throw HybridBrainServiceConfigurationError.invalidEndpoint
+        }
+
+        guard let apiKey else {
+            throw HybridBrainServiceConfigurationError.missingAPIKey
+        }
+
+        return HybridBrainServiceConfiguration(
+            endpointURL: endpointURL,
+            apiKey: apiKey,
+            promptID: promptID,
+            promptVersion: promptVersion
+        )
     }
 
-    func generateReply(request: LocalBrainRequest) async throws -> LocalBrainServiceReply {
-        let normalizedConversation = request.conversation.compactMap { message -> LocalConversationMessage? in
-            let trimmedContent = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedContent.isEmpty else { return nil }
-            return LocalConversationMessage(role: message.role, content: trimmedContent)
+    private static func normalized(_ value: String?) -> String? {
+        guard let value else { return nil }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
+
+        return trimmed
+    }
+}
+
+private struct HybridBrainResponsesRequest: Encodable {
+    struct StoredPrompt: Encodable {
+        let id: String
+        let version: String
+    }
+
+    struct Message: Encodable {
+        let role: String
+        let content: String
+    }
+
+    struct TextConfiguration: Encodable {
+        struct Format: Encodable {
+            let type: String
         }
 
-        guard !normalizedConversation.isEmpty else {
-            throw LocalBrainServiceError.emptyConversation
+        let format: Format
+    }
+
+    let prompt: StoredPrompt
+    let input: [Message]
+    let text: TextConfiguration
+    let maxOutputTokens: Int
+    let store: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case prompt
+        case input
+        case text
+        case store
+        case maxOutputTokens = "max_output_tokens"
+    }
+}
+
+private struct HybridBrainResponsesResponse: Decodable {
+    struct Output: Decodable {
+        struct Content: Decodable {
+            let type: String?
+            let text: String?
         }
 
-        let payload = LocalAppIntentPayload(
-            systemPrompt: request.systemPrompt,
-            transcript: normalizedConversation,
-            screenContext: request.screenContext,
-            language: request.language,
-            contextData: request.contextData,
-            userProfileSummary: request.userProfileSummary,
-            hasAttachedImage: request.hasAttachedImage
-        )
+        let type: String?
+        let content: [Content]?
+    }
 
-        guard let latestUserMessage = payload.latestUserMessage else {
-            throw LocalBrainServiceError.missingUserMessage
+    let output: [Output]?
+    let outputTextValue: String?
+
+    enum CodingKeys: String, CodingKey {
+        case output
+        case outputTextValue = "output_text"
+    }
+
+    var outputText: String {
+        if let outputTextValue {
+            let trimmed = outputTextValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
         }
 
-        let intent = classifyIntent(for: latestUserMessage, in: payload)
-        let structuredResponse = CaptainStructuredResponse(
-            message: try await buildMessage(for: payload, intent: intent),
-            workoutPlan: intent.wantsWorkoutPlan ? buildWorkoutPlan(for: payload, intent: intent) : nil,
-            mealPlan: intent.wantsMealPlan ? buildMealPlan(for: payload) : nil
-        )
+        return output?
+            .flatMap { $0.content ?? [] }
+            .compactMap(\.text)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+}
 
-        let rawText = try encodeStructuredResponse(structuredResponse)
-        let validatedResponse = try decodeStructuredResponse(from: rawText)
+private struct HybridBrainAPIErrorEnvelope: Decodable {
+    struct APIError: Decodable {
+        let message: String?
+    }
 
-        return LocalBrainServiceReply(
-            message: validatedResponse.message,
-            workoutPlan: validatedResponse.workoutPlan?.isMeaningful == true ? validatedResponse.workoutPlan : nil,
-            mealPlan: validatedResponse.mealPlan?.isMeaningful == true ? validatedResponse.mealPlan : nil,
+    let error: APIError?
+}
+
+struct HybridBrainService: Sendable {
+    private let session: URLSession
+    private let parser: LLMJSONParser
+    private let bundle: Bundle
+    private let processInfo: ProcessInfo
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "HybridBrainService"
+    )
+
+    init(
+        session: URLSession = .shared,
+        parser: LLMJSONParser = LLMJSONParser(),
+        bundle: Bundle = .main,
+        processInfo: ProcessInfo = .processInfo
+    ) {
+        self.session = session
+        self.parser = parser
+        self.bundle = bundle
+        self.processInfo = processInfo
+    }
+
+    func generateReply(request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
+        let session = try await startStreamingReply(request: request)
+        var rawText = ""
+        for await token in session.tokens {
+            rawText.append(token)
+        }
+
+        let response = parser.decode(rawText: rawText, fallback: session.fallbackResponse)
+
+        return makeReply(
+            from: response,
             rawText: rawText
         )
+    }
+
+    func startStreamingReply(request: HybridBrainRequest) async throws -> HybridBrainStreamingSession {
+        let prepared = try prepareInference(request: request)
+
+        do {
+            let configuration = try HybridBrainServiceConfig.resolve(
+                bundle: bundle,
+                processInfo: processInfo
+            )
+            let outputText = try await requestCloudResponse(
+                configuration: configuration,
+                systemPrompt: prepared.systemPrompt,
+                userMessage: prepared.userMessage
+            )
+            let structuredResponse = parser.decode(
+                rawText: outputText,
+                fallback: prepared.fallbackResponse
+            )
+            let normalizedRawText = try encodeStructuredResponse(structuredResponse)
+
+            return HybridBrainStreamingSession(
+                tokens: tokenStream(for: normalizedRawText),
+                fallbackResponse: structuredResponse
+            )
+        } catch {
+            logger.error(
+                "hybrid_brain_request_failed reason=\(sanitizedErrorDescription(from: error), privacy: .public)"
+            )
+
+            let fallbackRawText = (try? encodeStructuredResponse(prepared.fallbackResponse))
+                ?? """
+                {"message":"Captain fallback engaged.","workoutPlan":null,"mealPlan":null}
+                """
+
+            return HybridBrainStreamingSession(
+                tokens: tokenStream(for: fallbackRawText),
+                fallbackResponse: prepared.fallbackResponse
+            )
+        }
     }
 }
 
 private struct LocalAppIntentPayload: Sendable {
-    let systemPrompt: String
-    let transcript: [LocalConversationMessage]
+    let transcript: [CaptainConversationMessage]
     let screenContext: ScreenContext
     let language: AppLanguage
     let contextData: CaptainContextData
@@ -115,6 +311,12 @@ private struct LocalAppIntentPayload: Sendable {
     }
 }
 
+private struct PreparedLocalBrainInference: Sendable {
+    let systemPrompt: String
+    let userMessage: String
+    let fallbackResponse: CaptainStructuredResponse
+}
+
 private struct LocalIntentClassification: Sendable {
     let wantsWorkoutPlan: Bool
     let wantsMealPlan: Bool
@@ -124,6 +326,8 @@ private struct LocalIntentClassification: Sendable {
 }
 
 private struct LocalSleepSnapshot: Sendable {
+    let sleepStart: String
+    let sleepEnd: String
     let totalHours: Double
     let deepHours: Double
     let remHours: Double
@@ -145,7 +349,189 @@ private enum LocalMealStyle {
     case highProtein
 }
 
-private extension LocalBrainService {
+private extension HybridBrainService {
+    func prepareInference(request: HybridBrainRequest) throws -> PreparedLocalBrainInference {
+        let normalizedConversation = request.conversation.compactMap { message -> CaptainConversationMessage? in
+            let trimmedContent = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedContent.isEmpty else { return nil }
+            return CaptainConversationMessage(role: message.role, content: trimmedContent)
+        }
+
+        guard !normalizedConversation.isEmpty else {
+            throw HybridBrainServiceError.emptyConversation
+        }
+
+        let payload = LocalAppIntentPayload(
+            transcript: normalizedConversation,
+            screenContext: request.screenContext,
+            language: request.language,
+            contextData: request.contextData,
+            userProfileSummary: request.userProfileSummary,
+            hasAttachedImage: request.hasAttachedImage
+        )
+
+        guard let latestUserMessage = payload.latestUserMessage else {
+            throw HybridBrainServiceError.missingUserMessage
+        }
+
+        let intent = classifyIntent(for: latestUserMessage, in: payload)
+        let fallbackResponse = buildStructuredFallback(for: payload, intent: intent)
+        let promptRouter = PromptRouter(language: payload.language)
+        let routedSystemPrompt = promptRouter.generateSystemPrompt(
+            for: payload.screenContext,
+            data: payload.contextData
+        )
+        let conversationHistory = transcriptExcludingLatestUserMessage(payload.transcript)
+        let systemPrompt = try buildSystemPrompt(
+            basePrompt: routedSystemPrompt,
+            for: payload,
+            conversationHistory: conversationHistory,
+            baselineResponse: fallbackResponse
+        )
+
+        return PreparedLocalBrainInference(
+            systemPrompt: systemPrompt,
+            userMessage: latestUserMessage,
+            fallbackResponse: fallbackResponse
+        )
+    }
+
+    func makeReply(
+        from response: CaptainStructuredResponse,
+        rawText: String
+    ) -> HybridBrainServiceReply {
+        HybridBrainServiceReply(
+            message: response.message,
+            workoutPlan: response.workoutPlan?.isMeaningful == true ? response.workoutPlan : nil,
+            mealPlan: response.mealPlan?.isMeaningful == true ? response.mealPlan : nil,
+            rawText: rawText
+        )
+    }
+
+    func tokenStream(for rawText: String) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            let task = Task.detached(priority: .utility) {
+                for chunk in Self.chunked(rawText, size: 24) {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(chunk)
+                    try? await Task.sleep(nanoseconds: 18_000_000)
+                }
+                continuation.finish()
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
+    func requestCloudResponse(
+        configuration: HybridBrainServiceConfiguration,
+        systemPrompt: String,
+        userMessage: String
+    ) async throws -> String {
+        var request = URLRequest(url: configuration.endpointURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 35
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
+
+        let requestBody = HybridBrainResponsesRequest(
+            prompt: .init(
+                id: configuration.promptID,
+                version: configuration.promptVersion
+            ),
+            input: [
+                .init(role: "developer", content: systemPrompt),
+                .init(role: "user", content: userMessage)
+            ],
+            text: .init(format: .init(type: "json_object")),
+            maxOutputTokens: 900,
+            store: false
+        )
+
+        request.httpBody = try JSONEncoder().encode(requestBody)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw isNetworkUnavailable(error)
+                ? HybridBrainServiceError.networkUnavailable
+                : HybridBrainServiceError.requestFailed
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw HybridBrainServiceError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let envelope = try? JSONDecoder().decode(HybridBrainAPIErrorEnvelope.self, from: data),
+               let message = envelope.error?.message?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !message.isEmpty {
+                logger.error(
+                    "hybrid_brain_bad_status status=\(httpResponse.statusCode) message=\(message, privacy: .public)"
+                )
+            }
+            throw HybridBrainServiceError.badStatusCode(httpResponse.statusCode)
+        }
+
+        let decoded: HybridBrainResponsesResponse
+        do {
+            decoded = try JSONDecoder().decode(HybridBrainResponsesResponse.self, from: data)
+        } catch {
+            throw HybridBrainServiceError.invalidResponse
+        }
+
+        let outputText = decoded.outputText
+        guard !outputText.isEmpty else {
+            throw HybridBrainServiceError.emptyResponse
+        }
+
+        return outputText
+    }
+
+    nonisolated static func chunked(_ text: String, size: Int) -> [String] {
+        guard size > 0, !text.isEmpty else { return [text] }
+
+        var chunks: [String] = []
+        var startIndex = text.startIndex
+
+        while startIndex < text.endIndex {
+            let endIndex = text.index(startIndex, offsetBy: size, limitedBy: text.endIndex) ?? text.endIndex
+            chunks.append(String(text[startIndex..<endIndex]))
+            startIndex = endIndex
+        }
+
+        return chunks
+    }
+
+    func isNetworkUnavailable(_ error: Error) -> Bool {
+        let nsError = error as NSError
+
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorTimedOut,
+                 NSURLErrorNetworkConnectionLost:
+                return true
+            default:
+                break
+            }
+        }
+
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isNetworkUnavailable(underlying)
+        }
+
+        return false
+    }
+
     func classifyIntent(
         for userMessage: String,
         in payload: LocalAppIntentPayload
@@ -181,10 +567,112 @@ private extension LocalBrainService {
         )
     }
 
+    func buildStructuredFallback(
+        for payload: LocalAppIntentPayload,
+        intent: LocalIntentClassification
+    ) -> CaptainStructuredResponse {
+        CaptainStructuredResponse(
+            message: buildMessage(for: payload, intent: intent),
+            workoutPlan: intent.wantsWorkoutPlan ? buildWorkoutPlan(for: payload, intent: intent) : nil,
+            mealPlan: intent.wantsMealPlan ? buildMealPlan(for: payload) : nil
+        )
+    }
+
+    func buildSystemPrompt(
+        basePrompt: String,
+        for payload: LocalAppIntentPayload,
+        conversationHistory: [CaptainConversationMessage],
+        baselineResponse: CaptainStructuredResponse
+    ) throws -> String {
+        let baselineJSON = try encodeStructuredResponse(baselineResponse)
+        let profileSummary = payload.userProfileSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let profileBlock = profileSummary.isEmpty ? "Unavailable" : profileSummary
+        let historyBlock = conversationHistory.isEmpty
+            ? "No prior transcript."
+            : formattedTranscript(from: conversationHistory)
+
+        return """
+        \(basePrompt)
+
+        Runtime context:
+        - Screen: \(payload.screenContext.promptTitle)
+        - Focus: \(payload.screenContext.focusSummary)
+        - HasAttachedImage: \(payload.hasAttachedImage ? "true" : "false")
+        - UserProfileSummary: \(profileBlock)
+        - Steps: \(payload.contextData.steps)
+        - Calories: \(payload.contextData.calories)
+        - Vibe: \(payload.contextData.vibe)
+        - Level: \(payload.contextData.level)
+
+        Prior transcript:
+        \(historyBlock)
+
+        Response contract:
+        - The active user request will be sent as the final user turn after this system prompt.
+        - Return one JSON object only.
+        - Do not add markdown, comments, or prose before the JSON.
+        - Use null for any plan that does not apply.
+        - If decoding confidence drops, repair toward the valid baseline JSON below instead of changing the schema.
+
+        \(HybridBrainPromptMarkers.fallbackJSONStart)
+        \(baselineJSON)
+        \(HybridBrainPromptMarkers.fallbackJSONEnd)
+        """
+    }
+
+    func transcriptExcludingLatestUserMessage(
+        _ transcript: [CaptainConversationMessage]
+    ) -> [CaptainConversationMessage] {
+        var removedLatestUser = false
+
+        return transcript.reversed().compactMap { message in
+            if !removedLatestUser && message.role == .user {
+                removedLatestUser = true
+                return nil
+            }
+
+            return message
+        }
+        .reversed()
+    }
+
+    func formattedTranscript(from transcript: [CaptainConversationMessage]) -> String {
+        transcript
+            .map { message in
+                "[\(message.role.rawValue.uppercased())] \(message.content)"
+            }
+            .joined(separator: "\n")
+    }
+
+    func fallbackRawOutput(
+        for response: CaptainStructuredResponse,
+        error: Error
+    ) -> String {
+        let fallbackJSON = (try? encodeStructuredResponse(response))
+            ?? """
+            {"message":"Captain hybrid fallback engaged.","workoutPlan":null,"mealPlan":null}
+            """
+
+        return """
+        [hybrid fallback]
+        reason=\(sanitizedErrorDescription(from: error))
+
+        \(fallbackJSON)
+
+        [/hybrid fallback]
+        """
+    }
+
+    func sanitizedErrorDescription(from error: Error) -> String {
+        error.localizedDescription
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func buildMessage(
         for payload: LocalAppIntentPayload,
         intent: LocalIntentClassification
-    ) async throws -> String {
+    ) -> String {
         let userMessage = payload.latestUserMessage ?? ""
         let sleepSnapshot = sleepSnapshot(from: userMessage)
         let steps = payload.contextData.steps
@@ -212,7 +700,7 @@ private extension LocalBrainService {
 
             if intent.wantsSleepGuidance {
                 if let sleepSnapshot {
-                    return try await sleepAgent.analyze(session: sleepSession(from: sleepSnapshot))
+                    return buildArabicSleepMessage(from: sleepSnapshot, vibe: vibe)
                 }
 
                 return "جسمك يحتاج هدوء منظم الليلة. خفف التحفيز، ثبّت النفس، وخلي آخر ساعة قبل النوم أخف حتى يهدأ مود \(vibe)."
@@ -247,7 +735,7 @@ private extension LocalBrainService {
 
             if intent.wantsSleepGuidance {
                 if let sleepSnapshot {
-                    return try await sleepAgent.analyze(session: sleepSession(from: sleepSnapshot))
+                    return buildEnglishSleepMessage(from: sleepSnapshot, vibe: vibe)
                 }
 
                 return "Tonight should be about downshifting the system. Lower stimulation, slow the breathing, and give your \(vibe) state a softer landing."
@@ -466,7 +954,9 @@ private extension LocalBrainService {
     }
 
     func sleepSnapshot(from text: String) -> LocalSleepSnapshot? {
-        guard let totalHours = doubleValue(after: "TotalSleepHours:", in: text),
+        guard let sleepStart = value(after: "SleepStart:", in: text),
+              let sleepEnd = value(after: "SleepEnd:", in: text),
+              let totalHours = doubleValue(after: "TotalSleepHours:", in: text),
               let deepHours = doubleValue(after: "DeepSleepHours:", in: text),
               let remHours = doubleValue(after: "REMSleepHours:", in: text),
               let coreHours = doubleValue(after: "CoreSleepHours:", in: text),
@@ -475,6 +965,8 @@ private extension LocalBrainService {
         }
 
         return LocalSleepSnapshot(
+            sleepStart: sleepStart,
+            sleepEnd: sleepEnd,
             totalHours: totalHours,
             deepHours: deepHours,
             remHours: remHours,
@@ -483,14 +975,42 @@ private extension LocalBrainService {
         )
     }
 
-    func sleepSession(from snapshot: LocalSleepSnapshot) -> SleepSession {
-        SleepSession(
-            totalSleep: snapshot.totalHours * 3_600,
-            deepSleep: snapshot.deepHours * 3_600,
-            remSleep: snapshot.remHours * 3_600,
-            coreSleep: snapshot.coreHours * 3_600,
-            awake: Double(snapshot.awakeMinutes * 60)
-        )
+    func buildArabicSleepMessage(from snapshot: LocalSleepSnapshot, vibe: String) -> String {
+        let total = formattedMetric(snapshot.totalHours)
+        let deep = formattedMetric(snapshot.deepHours)
+
+        if snapshot.totalHours < 6 {
+            return "نومك من \(snapshot.sleepStart) إلى \(snapshot.sleepEnd) طلع تقريباً \(total) ساعات فقط، وهاي أقل من احتياجك. ابدأ يومك بهدوء، مي وضوء طبيعي، وخلي مود \(vibe) يمشي على خفيف بالبداية."
+        }
+
+        if snapshot.awakeMinutes >= 40 {
+            return "نوم البارحة كان بحدود \(total) ساعات، بس أكو تقطّع واضح حوالي \(snapshot.awakeMinutes) دقيقة صحوة. اليوم خلك على إيقاع أهدأ، وكافيينك خلّه بعد الفطور مو قبله."
+        }
+
+        if snapshot.deepHours < 1 {
+            return "أخذت تقريباً \(total) ساعات نوم، بس النوم العميق كان \(deep) ساعة فقط. هذا يعني الاستشفاء مو كامل، فخل بداية اليوم أخف ومشيك الصباحي يكون مريح."
+        }
+
+        return "نومك من \(snapshot.sleepStart) إلى \(snapshot.sleepEnd) كان مرتب: حوالي \(total) ساعات ونوم عميق \(deep) ساعة. هذا مؤشر زين، فابدأ يومك بثبات وخلي مود \(vibe) يصعد شوي شوي."
+    }
+
+    func buildEnglishSleepMessage(from snapshot: LocalSleepSnapshot, vibe: String) -> String {
+        let total = formattedMetric(snapshot.totalHours)
+        let deep = formattedMetric(snapshot.deepHours)
+
+        if snapshot.totalHours < 6 {
+            return "You slept from \(snapshot.sleepStart) to \(snapshot.sleepEnd) for about \(total) hours, which is short for solid recovery. Start the morning gently with water, daylight, and a softer \(vibe) pace."
+        }
+
+        if snapshot.awakeMinutes >= 40 {
+            return "Last night added up to about \(total) hours, but it was fragmented with roughly \(snapshot.awakeMinutes) minutes awake. Keep the morning steadier and delay caffeine until after breakfast."
+        }
+
+        if snapshot.deepHours < 1 {
+            return "You got about \(total) hours of sleep, but only \(deep) hour of deep sleep. Recovery is decent but not fully restored, so keep the first part of the day lighter."
+        }
+
+        return "Your sleep from \(snapshot.sleepStart) to \(snapshot.sleepEnd) looked solid: about \(total) hours with \(deep) hour of deep sleep. Recovery is in a good place, so build your \(vibe) rhythm gradually."
     }
 
     func value(after key: String, in text: String) -> String? {
@@ -514,6 +1034,10 @@ private extension LocalBrainService {
     func intValue(after key: String, in text: String) -> Int? {
         guard let rawValue = value(after: key, in: text) else { return nil }
         return Int(rawValue)
+    }
+
+    func formattedMetric(_ value: Double) -> String {
+        String(format: "%.1f", value)
     }
 
     func breakfastTextArabic(
@@ -565,26 +1089,14 @@ private extension LocalBrainService {
 
     func encodeStructuredResponse(_ response: CaptainStructuredResponse) throws -> String {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.withoutEscapingSlashes]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(response)
 
         guard let rawText = String(data: data, encoding: .utf8) else {
-            throw LocalBrainServiceError.invalidStructuredResponse
+            throw HybridBrainServiceError.invalidStructuredResponse
         }
 
         return rawText
-    }
-
-    func decodeStructuredResponse(from rawText: String) throws -> CaptainStructuredResponse {
-        guard let data = rawText.data(using: .utf8) else {
-            throw LocalBrainServiceError.invalidStructuredResponse
-        }
-
-        do {
-            return try JSONDecoder().decode(CaptainStructuredResponse.self, from: data)
-        } catch {
-            throw LocalBrainServiceError.invalidStructuredResponse
-        }
     }
 
     static let workoutKeywords = [

@@ -119,6 +119,8 @@ final class AppFlowController: ObservableObject {
 
 struct AppRootView: View {
     @StateObject private var flow = AppFlowController.shared
+    @EnvironmentObject private var globalBrain: CaptainViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -128,6 +130,9 @@ struct AppRootView: View {
         .modelContainer(QuestPersistenceController.shared.container)
         .onReceive(NotificationCenter.default.publisher(for: .appLanguageDidChange)) { _ in
             flow.reloadCurrentScreen()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            globalBrain.handleScenePhaseTransition(newPhase)
         }
     }
 

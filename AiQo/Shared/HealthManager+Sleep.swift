@@ -85,7 +85,78 @@ extension HealthKitManager {
             throw SleepStageFetchError.sleepAnalysisUnavailable
         }
 
-        let queryWindow = lastNightQueryWindow(now: now, calendar: calendar)
+        let queryWindow = sleepQueryWindow(
+            forMorningOf: now,
+            effectiveEnd: now,
+            calendar: calendar
+        )
+        return try await fetchSleepStages(in: queryWindow, sleepType: sleepType)
+    }
+
+    func fetchHistoricalSleepBedtimes(
+        before now: Date = Date(),
+        nights: Int = 7,
+        calendar: Calendar = .current
+    ) async throws -> [Date] {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            throw SleepStageFetchError.healthDataUnavailable
+        }
+
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            throw SleepStageFetchError.sleepAnalysisUnavailable
+        }
+
+        let referenceMorning = calendar.startOfDay(for: now)
+        guard nights > 0 else { return [] }
+
+        var bedtimes: [Date] = []
+        bedtimes.reserveCapacity(nights)
+
+        for offset in 1...nights {
+            guard let historicalMorning = calendar.date(
+                byAdding: .day,
+                value: -offset,
+                to: referenceMorning
+            ) else {
+                continue
+            }
+
+            let queryWindow = sleepQueryWindow(
+                forMorningOf: historicalMorning,
+                effectiveEnd: nil,
+                calendar: calendar
+            )
+            let stages = try await fetchSleepStages(in: queryWindow, sleepType: sleepType)
+
+            if let bedtime = stages.first?.startDate {
+                bedtimes.append(bedtime)
+            }
+        }
+
+        return bedtimes
+    }
+
+    private func sleepQueryWindow(
+        forMorningOf morningDate: Date,
+        effectiveEnd: Date?,
+        calendar: Calendar
+    ) -> DateInterval {
+        let morningStart = calendar.startOfDay(for: morningDate)
+        let eveningStart = calendar.date(byAdding: .hour, value: -6, to: morningStart)
+            ?? morningStart.addingTimeInterval(-21_600)
+        let morningCap = calendar.date(byAdding: .hour, value: 14, to: morningStart)
+            ?? morningStart.addingTimeInterval(50_400)
+        let resolvedEnd = effectiveEnd.map { min($0, morningCap) } ?? morningCap
+        return DateInterval(
+            start: eveningStart,
+            end: max(resolvedEnd, eveningStart.addingTimeInterval(1))
+        )
+    }
+
+    private func fetchSleepStages(
+        in queryWindow: DateInterval,
+        sleepType: HKCategoryType
+    ) async throws -> [SleepStageData] {
         let predicate = HKQuery.predicateForSamples(
             withStart: queryWindow.start,
             end: queryWindow.end,
@@ -121,16 +192,6 @@ extension HealthKitManager {
         return mergedSegments.map {
             SleepStageData(stage: $0.stage, startDate: $0.startDate, endDate: $0.endDate)
         }
-    }
-
-    private func lastNightQueryWindow(now: Date, calendar: Calendar) -> DateInterval {
-        let dayStart = calendar.startOfDay(for: now)
-        let eveningStart = calendar.date(byAdding: .hour, value: -6, to: dayStart)
-            ?? dayStart.addingTimeInterval(-21_600)
-        let morningCap = calendar.date(byAdding: .hour, value: 14, to: dayStart)
-            ?? dayStart.addingTimeInterval(50_400)
-        let effectiveEnd = min(morningCap, now)
-        return DateInterval(start: eveningStart, end: max(effectiveEnd, eveningStart.addingTimeInterval(1)))
     }
 
     private func parseSleepSample(

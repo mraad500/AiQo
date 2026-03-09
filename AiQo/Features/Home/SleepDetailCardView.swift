@@ -14,6 +14,7 @@ struct SleepDetailCardView: View {
     @State private var selectedTimeframe: TimeScope
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var sleepScoreBreakdown: SleepScoreBreakdown?
     @StateObject private var smartWakeViewModel: SmartWakeViewModel
 
     init(
@@ -33,6 +34,12 @@ struct SleepDetailCardView: View {
         let resolvedBedtime = previewStages.first?.startDate ?? Self.defaultBedtimeReference
         _sleepStages = State(initialValue: previewStages)
         _selectedTimeframe = State(initialValue: initialTimeframe)
+        _sleepScoreBreakdown = State(
+            initialValue: Self.makeSleepScoreBreakdown(
+                from: previewStages,
+                historicalBedtimes: []
+            )
+        )
         _smartWakeViewModel = StateObject(
             wrappedValue: SmartWakeViewModel(
                 initialBedtime: resolvedBedtime,
@@ -259,10 +266,16 @@ struct SleepDetailCardView: View {
     }
 
     private var legendSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("Sleep Stages")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
+
+            SleepScoreRingView(
+                score: sleepScoreValue,
+                hasData: stageSessionDuration > 0
+            )
+            .frame(maxWidth: .infinity)
 
             LazyVGrid(columns: [
                 GridItem(.flexible(), spacing: 10),
@@ -375,10 +388,25 @@ struct SleepDetailCardView: View {
         }
     }
 
+    private var stageSessionDuration: TimeInterval {
+        sleepStages.reduce(0) { $0 + $1.duration }
+    }
+
     private var totalSleepDuration: TimeInterval {
         sleepStages
             .filter { $0.stage != .awake }
             .reduce(0) { $0 + $1.duration }
+    }
+
+    private var resolvedSleepScoreBreakdown: SleepScoreBreakdown? {
+        sleepScoreBreakdown ?? Self.makeSleepScoreBreakdown(
+            from: sleepStages,
+            historicalBedtimes: []
+        )
+    }
+
+    private var sleepScoreValue: Int? {
+        resolvedSleepScoreBreakdown?.totalScore
     }
 
     private var totalSleepDurationText: String {
@@ -443,10 +471,17 @@ struct SleepDetailCardView: View {
                 throw SleepStageFetchError.authorizationDenied
             }
 
-            let stages = try await healthManager.fetchSleepStagesForLastNight()
+            let referenceDate = Date()
+            let stages = try await healthManager.fetchSleepStagesForLastNight(now: referenceDate)
+            let historicalBedtimes = (try? await healthManager.fetchHistoricalSleepBedtimes(before: referenceDate)) ?? []
+            let scoreBreakdown = Self.makeSleepScoreBreakdown(
+                from: stages,
+                historicalBedtimes: historicalBedtimes
+            )
 
             await MainActor.run {
                 sleepStages = stages
+                sleepScoreBreakdown = scoreBreakdown
                 isLoading = false
 
                 if let detectedBedtime = stages.first?.startDate {
@@ -457,6 +492,10 @@ struct SleepDetailCardView: View {
             await MainActor.run {
                 isLoading = false
                 errorMessage = error.localizedDescription
+                sleepScoreBreakdown = Self.makeSleepScoreBreakdown(
+                    from: sleepStages,
+                    historicalBedtimes: []
+                )
             }
         }
     }
@@ -521,6 +560,160 @@ struct SleepDetailCardView: View {
             )
     }
 
+    private static func makeSleepScoreBreakdown(
+        from stages: [SleepStageData],
+        historicalBedtimes: [Date],
+        calendar: Calendar = .current
+    ) -> SleepScoreBreakdown? {
+        let totalSleepDuration = stages
+            .filter { $0.stage != .awake }
+            .reduce(0) { $0 + $1.duration }
+        guard totalSleepDuration > 0 else { return nil }
+
+        let bedtime = stages.first?.startDate ?? defaultBedtimeReference
+
+        return SleepScoreBreakdown(
+            durationScore: durationSleepScore(for: totalSleepDuration),
+            bedtimeScore: bedtimeSleepScore(
+                for: bedtime,
+                historicalBedtimes: historicalBedtimes,
+                calendar: calendar
+            ),
+            interruptionScore: interruptionSleepScore(from: stages)
+        )
+    }
+
+    private static func durationSleepScore(for totalSleepDuration: TimeInterval) -> Int {
+        let durationTarget = 7.75 * 3_600.0
+        let normalizedScore = min(max(totalSleepDuration / durationTarget, 0), 1)
+        return max(0, min(Int((normalizedScore * 50).rounded()), 50))
+    }
+
+    private static func bedtimeSleepScore(
+        for bedtime: Date,
+        historicalBedtimes: [Date],
+        calendar: Calendar
+    ) -> Int {
+        let bedtimeMinutes = clockMinutes(for: bedtime, calendar: calendar)
+
+        guard let averageBedtimeMinutes = anchoredAverageClockMinutes(
+            around: bedtimeMinutes,
+            from: historicalBedtimes,
+            calendar: calendar
+        ) else {
+            return 30
+        }
+
+        let deviation = circularMinuteDistance(
+            between: bedtimeMinutes,
+            and: averageBedtimeMinutes
+        )
+
+        let score: Double
+        switch deviation {
+        case ...90:
+            score = 30
+        case ...150:
+            score = 30 - ((deviation - 90) / 60) * 10
+        case ...240:
+            score = 20 - ((deviation - 150) / 90) * 20
+        default:
+            score = 0
+        }
+
+        return max(0, min(Int(score.rounded()), 30))
+    }
+
+    private static func interruptionSleepScore(from stages: [SleepStageData]) -> Int {
+        let interruptions = groupedAwakeInterruptions(from: stages)
+        let wakeupCount = interruptions.count
+        let awakeMinutes = interruptions.reduce(0) { $0 + $1.duration } / 60
+
+        if awakeMinutes <= 5 {
+            return 20
+        }
+
+        let wakeupPenalty = max(Double(wakeupCount - 3), 0) * 1.75
+        let durationPenalty = max(awakeMinutes - 5, 0) * 0.55
+        let totalPenalty = min(wakeupPenalty + durationPenalty, 20)
+
+        return max(0, min(Int((20 - totalPenalty).rounded()), 20))
+    }
+
+    private static func anchoredAverageClockMinutes(
+        around anchorMinutes: Double,
+        from dates: [Date],
+        calendar: Calendar
+    ) -> Double? {
+        guard !dates.isEmpty else { return nil }
+
+        let anchoredMinutes = dates.map {
+            unwrappedClockMinutes(clockMinutes(for: $0, calendar: calendar), around: anchorMinutes)
+        }
+        let comparableMinutes = anchoredMinutes.filter { abs($0 - anchorMinutes) <= 240 }
+        let resolvedMinutes = comparableMinutes.isEmpty ? anchoredMinutes : comparableMinutes
+        guard !resolvedMinutes.isEmpty else { return nil }
+
+        let averageMinutes = resolvedMinutes.reduce(0, +) / Double(resolvedMinutes.count)
+        return normalizedClockMinutes(averageMinutes)
+    }
+
+    private static func groupedAwakeInterruptions(from stages: [SleepStageData]) -> [DateInterval] {
+        let awakeStages = stages
+            .filter { $0.stage == .awake && $0.duration > 0 }
+            .sorted { $0.startDate < $1.startDate }
+        guard !awakeStages.isEmpty else { return [] }
+
+        var interruptions: [DateInterval] = []
+
+        for awakeStage in awakeStages {
+            let interval = DateInterval(start: awakeStage.startDate, end: awakeStage.endDate)
+
+            if let last = interruptions.last,
+               interval.start.timeIntervalSince(last.end) <= 8 * 60 {
+                interruptions[interruptions.count - 1] = DateInterval(
+                    start: last.start,
+                    end: max(last.end, interval.end)
+                )
+            } else {
+                interruptions.append(interval)
+            }
+        }
+
+        return interruptions
+    }
+
+    private static func unwrappedClockMinutes(_ minutes: Double, around anchor: Double) -> Double {
+        var resolvedMinutes = minutes
+
+        while resolvedMinutes - anchor > 720 {
+            resolvedMinutes -= 1_440
+        }
+
+        while anchor - resolvedMinutes > 720 {
+            resolvedMinutes += 1_440
+        }
+
+        return resolvedMinutes
+    }
+
+    private static func normalizedClockMinutes(_ minutes: Double) -> Double {
+        let normalized = minutes.truncatingRemainder(dividingBy: 1_440)
+        return normalized >= 0 ? normalized : normalized + 1_440
+    }
+
+    private static func clockMinutes(for date: Date, calendar: Calendar) -> Double {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        return Double((hour * 60) + minute)
+    }
+
+    private static func circularMinuteDistance(between lhs: Double, and rhs: Double) -> Double {
+        let directDistance = abs(lhs - rhs)
+        return min(directDistance, 1_440.0 - directDistance)
+    }
+
     private static var defaultBedtimeReference: Date {
         let calendar = Calendar.current
         let now = Date()
@@ -533,6 +726,16 @@ private struct HistoricalSleepPoint: Identifiable {
     let value: Double
 
     var id: Int { index }
+}
+
+private struct SleepScoreBreakdown: Equatable {
+    let durationScore: Int
+    let bedtimeScore: Int
+    let interruptionScore: Int
+
+    var totalScore: Int {
+        max(0, min(durationScore + bedtimeScore + interruptionScore, 100))
+    }
 }
 
 private struct SleepStageLegendPill: View {

@@ -8,17 +8,18 @@ struct CaptainChatView: View {
     private let bottomAnchorID = "captain-chat-bottom"
 
     var body: some View {
-        ZStack {
-            CaptainChatBackground()
-
+        VStack(spacing: 0) {
             ScrollViewReader { proxy in
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 16) {
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 14) {
                         headerCard
 
                         ForEach(globalBrain.messages) { message in
                             ChatMessageRow(
                                 message: message,
+                                onAppearRead: message.isEphemeral && !message.isRead ? {
+                                    globalBrain.markEphemeralMessageRead(messageID: message.id)
+                                } : nil,
                                 onSpeak: message.isUser ? nil : {
                                     Task {
                                         await CaptainVoiceService.shared.speak(text: message.text)
@@ -28,7 +29,7 @@ struct CaptainChatView: View {
                                     globalBrain.startMorningGratitudeSession()
                                 } : nil
                             )
-                                .id(message.id)
+                            .id(message.id)
                         }
 
                         if let plan = globalBrain.currentWorkoutPlan {
@@ -45,11 +46,12 @@ struct CaptainChatView: View {
                             .frame(height: 1)
                             .id(bottomAnchorID)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
                     .padding(.bottom, 20)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .safeAreaPadding(.bottom, 8)
                 .onAppear {
                     scrollToBottom(using: proxy, animated: false)
                 }
@@ -62,6 +64,10 @@ struct CaptainChatView: View {
                 .onChange(of: globalBrain.currentWorkoutPlan != nil) {
                     scrollToBottom(using: proxy)
                 }
+                .onChange(of: isInputFocused) {
+                    guard isInputFocused else { return }
+                    scrollToBottom(using: proxy)
+                }
             }
         }
         .navigationTitle("Captain Hamoudi")
@@ -69,12 +75,14 @@ struct CaptainChatView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             composerBar
         }
-        .background(Color(UIColor.systemGroupedBackground))
+        .background(CaptainChatBackground())
+        .fullScreenCover(isPresented: $globalBrain.showGratitudeSession) {
+            GratitudeSessionView()
+        }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
         }
         .onDisappear {
-            globalBrain.removeEphemeralMessages()
             AppRootManager.shared.dismissCaptainChat()
         }
     }
@@ -83,7 +91,7 @@ struct CaptainChatView: View {
 private extension CaptainChatView {
     var headerCard: some View {
         HStack(spacing: 12) {
-            CaptainChatAvatarView(size: 48)
+            CaptainChatAvatarView(size: 40)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Captain Hamoudi")
@@ -109,30 +117,11 @@ private extension CaptainChatView {
             .padding(.vertical, 8)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.white.opacity(0.35))
+                    .fill(Color.white.opacity(0.22))
             )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.74),
-                                    Color.aiqoMint.opacity(0.28),
-                                    Color.aiqoBeige.opacity(0.22)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 8)
     }
 
     var composerBar: some View {
@@ -231,135 +220,99 @@ private extension CaptainChatView {
     }
 
     func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
-        guard animated else {
+        let scrollAction = {
+            if let lastMessageID = globalBrain.messages.last?.id {
+                proxy.scrollTo(lastMessageID, anchor: .bottom)
+            }
             proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+        }
+
+        guard animated else {
+            scrollAction()
             return
         }
 
-        withAnimation(.easeOut(duration: 0.24)) {
-            proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            scrollAction()
         }
     }
 }
 
 private struct ChatMessageRow: View {
     let message: ChatMessage
+    var onAppearRead: (() -> Void)?
     var onSpeak: (() -> Void)?
     var onAccessoryTap: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             if message.isUser {
-                Spacer(minLength: 56)
+                Spacer(minLength: 26)
 
-                Text(message.text)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(hex: "103038"))
-                    .multilineTextAlignment(.trailing)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(hex: "CFF7EC"),
-                                        Color(hex: "DDF4FF")
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                    .stroke(Color.white.opacity(0.72), lineWidth: 1)
-                            )
-                    )
-                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
-            } else {
-                CaptainChatAvatarView(size: 34)
-
-                VStack(alignment: .leading, spacing: 12) {
+                MessageBubble(isUser: true) {
                     Text(message.text)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                        .multilineTextAlignment(.leading)
+                        .multilineTextAlignment(.trailing)
+                }
+            } else {
+                CaptainChatAvatarView(size: 28)
 
-                    if let accessory = message.accessory,
-                       let onAccessoryTap {
-                        Button(action: onAccessoryTap) {
-                            Text(accessory.buttonTitle)
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color(hex: "12313A"))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color(hex: "EAF8D6"),
-                                                    Color(hex: "D7F3FF")
-                                                ],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
+                MessageBubble(isUser: false) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(message.text)
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .multilineTextAlignment(.leading)
 
-                    if let onSpeak, !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        HStack {
-                            Spacer(minLength: 0)
-
-                            Button(action: onSpeak) {
-                                Image(systemName: "speaker.wave.2")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                                    .padding(8)
+                        if let accessory = message.accessory,
+                           let onAccessoryTap {
+                            Button(action: onAccessoryTap) {
+                                Text(accessory.buttonTitle)
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.black.opacity(0.82))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
                                     .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.52))
+                                        Capsule(style: .continuous)
+                                            .fill(Color.white.opacity(0.34))
                                     )
                             }
                             .buttonStyle(.plain)
                         }
+
+                        if let onSpeak, !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            HStack {
+                                Spacer(minLength: 0)
+
+                                Button(action: onSpeak) {
+                                    Image(systemName: "speaker.wave.2")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color.black.opacity(0.68))
+                                        .padding(8)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white.opacity(0.34))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "FFF3E5").opacity(0.96),
-                                    Color(hex: "F8E7D1").opacity(0.92)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(Color.white.opacity(0.72), lineWidth: 1)
-                        )
-                )
-                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
 
-                Spacer(minLength: 56)
+                Spacer(minLength: 26)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.isUser ? .trailing : .leading)
+        .onAppear {
+            onAppearRead?()
+        }
     }
 }
 
 private struct CaptainTypingRow: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            CaptainChatAvatarView(size: 34)
+            CaptainChatAvatarView(size: 28)
 
             HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { index in
@@ -378,7 +331,7 @@ private struct CaptainTypingRow: View {
             )
             .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 6)
 
-            Spacer(minLength: 56)
+            Spacer(minLength: 26)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

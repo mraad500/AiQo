@@ -17,6 +17,7 @@ struct QuestsView: View {
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     private let contentLeadingPadding: CGFloat = 8
     private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
+    private let questCardWidthReduction: CGFloat = 1.5
 
     var body: some View {
         ZStack {
@@ -28,19 +29,20 @@ struct QuestsView: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
 
+                stageSelector
+
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 16) {
                         ForEach(selectedStage.quests) { quest in
-                            let stageLocked = !engine.isStageUnlocked(quest.stageIndex)
                             QuestCard(
                                 quest: quest,
                                 progress: engine.cardProgress(for: quest),
-                                isLocked: stageLocked,
+                                isLocked: false,
                                 referenceDate: currentTime
                             )
+                            .padding(.horizontal, questCardWidthReduction)
                             .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                             .onTapGesture {
-                                guard !stageLocked else { return }
                                 questSheetDetent = .fraction(0.5)
                                 selectedQuest = quest
                             }
@@ -70,13 +72,6 @@ struct QuestsView: View {
             .padding(.trailing, contentTrailingPadding)
             .padding(.top, 18)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedStageID)
-
-            SlimRightSideRail(
-                items: stageRailItems,
-                selection: stageRailSelection
-            )
-            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
-            .accessibilityLabel(Text("مراحل القمم"))
         }
         .overlay(alignment: .top) {
             if let centerToastMessage {
@@ -128,46 +123,7 @@ struct QuestsView: View {
     }
 
     private var visibleStages: [QuestStageViewModel] {
-        Array(engine.stages.prefix(4))
-    }
-
-    private var stageRailItems: [RailItem] {
-        visibleStages.enumerated().map { index, stage in
-            RailItem(
-                id: "\(stage.id)",
-                title: questLocalizedText(stage.tabTitleKey),
-                icon: stageRailIcon(for: stage),
-                tint: index.isMultiple(of: 2) ? AiQoColors.mint : AiQoColors.beige,
-                isLocked: !engine.isStageUnlocked(stage.id)
-            )
-        }
-    }
-
-    private var stageRailSelection: Binding<Int> {
-        Binding(
-            get: {
-                visibleStages.firstIndex(where: { $0.id == selectedStageID }) ?? 0
-            },
-            set: { newValue in
-                guard visibleStages.indices.contains(newValue) else { return }
-                let nextStage = visibleStages[newValue]
-                guard engine.isStageUnlocked(nextStage.id) else { return }
-                selectedStageID = nextStage.id
-            }
-        )
-    }
-
-    private func stageRailIcon(for stage: QuestStageViewModel) -> String {
-        switch stage.id {
-        case 1:
-            return "flag"
-        case 2:
-            return "flag.fill"
-        case 3:
-            return engine.isStageUnlocked(stage.id) ? "flag.checkered" : "lock.fill"
-        default:
-            return "crown"
-        }
+        engine.stages
     }
 
     private func syncStageOneCenterBaseline() {
@@ -223,5 +179,52 @@ struct QuestsView: View {
                 centerToastMessage = nil
             }
         }
+    }
+
+    private var stageSelector: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(visibleStages) { stage in
+                        let isSelected = stage.id == selectedStageID
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                selectedStageID = stage.id
+                                proxy.scrollTo(stage.id, anchor: .center)
+                            }
+                        } label: {
+                            Text(questLocalizedText(stage.tabTitleKey))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.72))
+                                .lineLimit(1)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(
+                                    Capsule()
+                                        .fill(isSelected ? AiQoColors.mint.opacity(0.42) : Color.white.opacity(0.58))
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(isSelected ? 0.46 : 0.28), lineWidth: 0.8)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .id(stage.id)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .padding(.vertical, 4)
+            }
+            .onAppear {
+                proxy.scrollTo(selectedStageID, anchor: .center)
+            }
+            .onChange(of: selectedStageID) { _, newValue in
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+        .accessibilityLabel(Text("مراحل القمم"))
     }
 }

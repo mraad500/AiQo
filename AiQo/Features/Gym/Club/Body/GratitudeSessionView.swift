@@ -2,7 +2,7 @@ import SwiftUI
 
 struct GratitudeSessionView: View {
     private enum SessionTiming {
-        static let duration: TimeInterval = 120
+        static let duration: TimeInterval = 150
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -15,8 +15,6 @@ struct GratitudeSessionView: View {
     @State private var hasStartedSession = false
     @State private var hasCompletedSession = false
 
-    private let isTesting = true
-
     private var sessionLanguage: GratitudeSessionLanguage {
         GratitudeSessionLanguage(
             coachLanguageRaw: coachLanguageRaw,
@@ -24,33 +22,20 @@ struct GratitudeSessionView: View {
         )
     }
 
-    private var activeSentences: [String] {
-        switch sessionLanguage {
-        case .arabic:
-            return [
-                "خذ نفسًا عميقًا... واحمد الله على نعمة الصحة.",
-                "تذكر نعم الله التي تحيط بك اليوم.",
-                "كل خطوة تمشيها هي نعمة من الخالق.",
-                "في هذا الصباح لديك فرصة جديدة لتبدأ بقلب أخف.",
-                "اشكر جسدك لأنه حملك حتى هذه اللحظة.",
-                "دع الامتنان يسبق كل فكرة، ودع الهدوء يقودك.",
-                "ابدأ يومك برضا، وثقة، وحمد صادق."
-            ]
-        case .english:
-            return [
-                "Take a deep breath, and thank God for the gift of health.",
-                "Notice the blessings surrounding you today.",
-                "Every step you take is a gift from your Creator.",
-                "This morning gives you a fresh chance to begin with a lighter heart.",
-                "Thank your body for carrying you to this moment.",
-                "Let gratitude move before every thought, and let calm lead you.",
-                "Start your day with contentment, trust, and honest thanks."
-            ]
-        }
+    private var isLocked: Bool {
+        let calendar = Calendar.current
+        let noon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: Date()) ?? Date()
+        return Date() >= noon
+    }
+
+    private var dailySentences: [String] {
+        let bundles = gratitudeBundles(for: sessionLanguage)
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        return bundles[dayIndex % bundles.count]
     }
 
     private var sentenceInterval: TimeInterval {
-        let count = max(activeSentences.count, 1)
+        let count = max(dailySentences.count, 1)
         return SessionTiming.duration / Double(count)
     }
 
@@ -65,23 +50,16 @@ struct GratitudeSessionView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    private var isPastNoon: Bool {
-        let calendar = Calendar.current
-        let noon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: Date()) ?? Date()
-        return Date() >= noon
-    }
-
-    private var isLocked: Bool {
-        isPastNoon && !isTesting
-    }
-
-    private var isShowingTestingBypass: Bool {
-        isPastNoon && isTesting
-    }
-
     private var currentSentence: String {
-        let safeIndex = min(max(currentSentenceIndex, 0), max(activeSentences.count - 1, 0))
-        return activeSentences[safeIndex]
+        guard hasStartedSession else {
+            return localized(
+                ar: "خل هالدقيقتين هاديات، واشكر ربك على يوم جديد وجسم بعده شايلك.",
+                en: "Give these two minutes some stillness, and thank God for a new day and a body still carrying you."
+            )
+        }
+
+        let safeIndex = min(max(currentSentenceIndex, 0), max(dailySentences.count - 1, 0))
+        return dailySentences[safeIndex]
     }
 
     var body: some View {
@@ -91,24 +69,19 @@ struct GratitudeSessionView: View {
             VStack(spacing: 24) {
                 topBar
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 10)
 
                 progressOrb
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 10)
 
-                footerStatus
+                footerPanel
             }
             .padding(.horizontal, 24)
             .padding(.top, 18)
             .padding(.bottom, 28)
-
-            if isLocked {
-                lockedOverlay
-            }
         }
         .statusBarHidden()
-        .onAppear(perform: handleOnAppear)
         .onDisappear(perform: stopSession)
     }
 
@@ -116,9 +89,9 @@ struct GratitudeSessionView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.07, green: 0.11, blue: 0.16),
-                    Color(red: 0.18, green: 0.33, blue: 0.34),
-                    Color(red: 0.84, green: 0.78, blue: 0.67)
+                    Color(red: 0.05, green: 0.10, blue: 0.14),
+                    Color(red: 0.17, green: 0.29, blue: 0.32),
+                    Color(red: 0.91, green: 0.83, blue: 0.69)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -126,21 +99,21 @@ struct GratitudeSessionView: View {
             .ignoresSafeArea()
 
             Circle()
-                .fill(Color.white.opacity(0.2))
-                .frame(width: 260, height: 260)
-                .blur(radius: 80)
-                .offset(x: -120, y: -220)
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 280, height: 280)
+                .blur(radius: 84)
+                .offset(x: -110, y: -240)
 
             Circle()
-                .fill(Color(red: 0.79, green: 0.91, blue: 0.84).opacity(0.2))
+                .fill(Color(red: 0.78, green: 0.91, blue: 0.84).opacity(0.24))
                 .frame(width: 320, height: 320)
-                .blur(radius: 96)
-                .offset(x: 140, y: 240)
+                .blur(radius: 110)
+                .offset(x: 130, y: 250)
 
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea()
-                .opacity(0.35)
+                .opacity(0.28)
         }
     }
 
@@ -161,7 +134,7 @@ struct GratitudeSessionView: View {
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
 
-                Text(localized(ar: "إعادة ضبط الأنا", en: "Reset the ego"))
+                Text(localized(ar: "مسار صباحي يهدّي النفس", en: "A calm morning ritual"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.72))
             }
@@ -170,7 +143,7 @@ struct GratitudeSessionView: View {
 
             Text(remainingTimeText)
                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.92))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -188,7 +161,7 @@ struct GratitudeSessionView: View {
                 .stroke(
                     AngularGradient(
                         colors: [
-                            Color.white.opacity(0.32),
+                            Color.white.opacity(0.30),
                             Color(red: 0.79, green: 0.91, blue: 0.84),
                             Color(red: 0.94, green: 0.89, blue: 0.78)
                         ],
@@ -197,7 +170,7 @@ struct GratitudeSessionView: View {
                     style: StrokeStyle(lineWidth: 16, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.25), value: progress)
+                .animation(.easeInOut(duration: 0.28), value: progress)
 
             Circle()
                 .fill(.ultraThinMaterial.opacity(0.88))
@@ -208,132 +181,171 @@ struct GratitudeSessionView: View {
                 .padding(26)
 
             VStack(spacing: 16) {
-                Text(hasCompletedSession ? localized(ar: "اكتملت الجلسة", en: "Session Complete") : localized(ar: "صفاء", en: "Serenity"))
+                Text(statusTitle)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.74))
 
                 Text(currentSentence)
-                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .font(.system(size: 29, weight: .semibold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
                     .lineSpacing(8)
                     .padding(.horizontal, 10)
                     .id(currentSentenceIndex)
                     .contentTransition(.opacity)
-                    .animation(.easeInOut(duration: 0.8), value: currentSentenceIndex)
+                    .animation(.easeInOut(duration: 0.9), value: currentSentenceIndex)
 
-                if hasCompletedSession {
-                    Text(localized(ar: "احمل هذا الهدوء معك لبداية يومك.", en: "Carry this calm with you into the rest of your day."))
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.68))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 14)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
+                Text(subtitleText)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 14)
             }
-            .padding(.horizontal, 38)
-            .padding(.vertical, 42)
+            .padding(.horizontal, 36)
+            .padding(.vertical, 40)
         }
         .frame(maxWidth: 430, maxHeight: 430)
         .aspectRatio(1, contentMode: .fit)
         .shadow(color: .black.opacity(0.14), radius: 30, y: 16)
     }
 
-    private var footerStatus: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: isPastNoon ? "lock.circle" : "sun.haze.circle")
-                    .font(.system(size: 16, weight: .semibold))
+    private var footerPanel: some View {
+        VStack(spacing: 14) {
+            if isLocked {
+                lockedCard
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: hasCompletedSession ? "checkmark.circle.fill" : "sun.haze.circle")
+                        .font(.system(size: 16, weight: .semibold))
 
-                Text(lockStatusText)
+                    Text(
+                        localized(
+                            ar: hasCompletedSession ? "تمام بطل.. خذ هالهدوء وكمل يومك." : "الجلسة مفتوحة لحد 12:00 ظهرًا.",
+                            en: hasCompletedSession ? "Good. Carry this calm into the rest of your day." : "This session stays open until 12:00 PM."
+                        )
+                    )
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-            }
-            .foregroundStyle(.white.opacity(0.84))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial, in: Capsule())
-
-            if isShowingTestingBypass {
-                Text(localized(ar: "وضع الاختبار مفعّل حاليًا، لذلك الجلسة تعمل بعد 12:00 ظهرًا رغم ظهور القفل.", en: "Testing bypass is enabled, so the session still runs after 12:00 PM even though the lock is visible."))
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 18)
-                    .transition(.opacity)
-            }
-        }
-    }
-
-    private var lockedOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.2)
-                .ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundStyle(.white)
-
-                Text(localized(ar: "جلسة الامتنان تُقفل بعد 12:00 ظهرًا", en: "Gratitude Session locks after 12:00 PM"))
-                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-
-                Text(localized(ar: "أوقف وضع الاختبار لتفعيل هذا القفل منطقيًا.", en: "Disable testing mode when you want this lock to be enforced."))
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.72))
-
-                Button(action: dismiss.callAsFunction) {
-                    Text(localized(ar: "إغلاق", en: "Close"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(.ultraThinMaterial, in: Capsule())
                 }
+                .foregroundStyle(.white.opacity(0.84))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial, in: Capsule())
             }
-            .padding(28)
-            .frame(maxWidth: 380)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-            .padding(.horizontal, 24)
+
+            Button(action: startSession) {
+                Text(startButtonTitle)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.82))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "F4E6C3"),
+                                        Color(hex: "CFECDD")
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 10)
+            }
+            .buttonStyle(.plain)
+            .disabled(isLocked || hasStartedSession)
+            .opacity(isLocked || hasStartedSession ? 0.45 : 1)
         }
     }
 
-    private var lockStatusText: String {
-        if isShowingTestingBypass {
-            return localized(ar: "القفل ظاهر بعد 12:00 ظهرًا، لكن تجاوزه مفعّل للاختبار.", en: "The noon lock is visible, but bypassed for testing.")
-        }
+    private var lockedCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
 
-        if isPastNoon {
-            return localized(ar: "الجلسة مغلقة بعد 12:00 ظهرًا.", en: "The session is locked after 12:00 PM.")
+            Text("جلسة الامتنان الصباحية انتهى وقتها. نلتقي باجر الصبح يا ذيب حتى نبدأ يومنا صح")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+                .lineSpacing(5)
         }
-
-        return localized(ar: "الجلسة متاحة حتى 12:00 ظهرًا.", en: "The session stays open until 12:00 PM.")
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
-    private func handleOnAppear() {
-        guard !hasStartedSession else { return }
-        hasStartedSession = true
-
+    private var statusTitle: String {
         if isLocked {
-            return
+            return localized(ar: "مقفلة اليوم", en: "Locked Today")
         }
 
-        startSession()
+        if hasCompletedSession {
+            return localized(ar: "اكتملت الجلسة", en: "Session Complete")
+        }
+
+        if hasStartedSession {
+            return localized(ar: "صفاء", en: "Serenity")
+        }
+
+        return localized(ar: "جاهزة إلك", en: "Ready For You")
+    }
+
+    private var subtitleText: String {
+        if isLocked {
+            return localized(
+                ar: "هذا المسار الصباحي ينتهي ظهرًا حتى يبقى مرتبط ببداية اليوم.",
+                en: "This ritual closes at noon so it stays anchored to the morning."
+            )
+        }
+
+        if hasCompletedSession {
+            return localized(
+                ar: "خذ نفسك الأخير بهدوء، وامشِ على يومك بخفة.",
+                en: "Take one final slow breath and carry that softness into the day."
+            )
+        }
+
+        if hasStartedSession {
+            return localized(
+                ar: "خلك ويّا الصوت والجملة، والباقي يهدأ وحده.",
+                en: "Stay with the sound and the sentence, and let the rest settle."
+            )
+        }
+
+        return localized(
+            ar: "ابدأ الجلسة حتى يشتغل الصوت والموسيقى وتتحرك جُمل الامتنان بهدوء.",
+            en: "Start the session to fade through today's gratitude lines with voice and ambient sound."
+        )
+    }
+
+    private var startButtonTitle: String {
+        if hasCompletedSession {
+            return localized(ar: "تمت الجلسة", en: "Session Complete")
+        }
+
+        if hasStartedSession {
+            return localized(ar: "الجلسة شغالة", en: "Session In Progress")
+        }
+
+        return localized(ar: "ابدأ جلسة الامتنان", en: "Start Gratitude Session")
     }
 
     private func startSession() {
-        let sentences = activeSentences
-        guard !sentences.isEmpty else { return }
+        guard !isLocked else { return }
+        guard !hasStartedSession else { return }
+        guard !dailySentences.isEmpty else { return }
 
         sessionTask?.cancel()
         elapsedTime = 0
         currentSentenceIndex = 0
+        hasStartedSession = true
         hasCompletedSession = false
 
         audioManager.startSessionAudio()
-        audioManager.speak(sentences[0], language: sessionLanguage)
+        audioManager.speak(dailySentences[0], language: sessionLanguage)
 
         sessionTask = Task { @MainActor in
             let startDate = Date()
@@ -344,14 +356,14 @@ struct GratitudeSessionView: View {
 
                 let nextIndex = min(
                     Int(elapsed / sentenceInterval),
-                    max(sentences.count - 1, 0)
+                    max(dailySentences.count - 1, 0)
                 )
 
                 if nextIndex != currentSentenceIndex {
                     withAnimation(.easeInOut(duration: 0.9)) {
                         currentSentenceIndex = nextIndex
                     }
-                    audioManager.speak(sentences[nextIndex], language: sessionLanguage)
+                    audioManager.speak(dailySentences[nextIndex], language: sessionLanguage)
                 }
 
                 if elapsed >= SessionTiming.duration {
@@ -375,6 +387,65 @@ struct GratitudeSessionView: View {
 
     private func localized(ar: String, en: String) -> String {
         sessionLanguage == .english ? en : ar
+    }
+
+    private func gratitudeBundles(for language: GratitudeSessionLanguage) -> [[String]] {
+        switch language {
+        case .arabic:
+            return [
+                [
+                    "أشكر ربك على هالبدن اللي بعده يشيلك من أول خطوة.",
+                    "أشكر الصبح لأن رجعلك فرصة جديدة حتى ترتب يومك بهدوء.",
+                    "أشكر النفس اللي دا يدخل ويطلع بدون ما تطلب منه شي.",
+                    "أشكر قلبك لأن بعدها يدق ويذكرك إنك حاضر بهاللحظة.",
+                    "أشكر الطريق البسيط اللي قدامك، لأن مو كل يوم لازم يكون صاخب حتى يكون مهم.",
+                    "أشكر الناس الزينين اللي يمرون بخاطرك حتى لو مو يمك هسه."
+                ],
+                [
+                    "احمد الله على الراحة اللي وصلتلك ولو بشكل بسيط هالليلة.",
+                    "اذكر نعمة الوعي، لأنك دا تبدي يومك وأنت منتبه لنفسك.",
+                    "أشكر عيونك اللي شايفة الصبح، ويدك اللي تكدر تبني بيها يوم جديد.",
+                    "أشكر كل تعب علّمك شلون ترجع أهدأ وأوضح.",
+                    "أشكر جسمك على كل إشارة ديعطيها إلك حتى تتعامل وياه بلطف.",
+                    "أشكر اللحظة لأن بيها مجال ترجع ترتب نيتك من جديد."
+                ],
+                [
+                    "أشكر الله على السعة حتى لو يومك مزدحم، لأن بداخلك بعده مكان للهدوء.",
+                    "أشكر الخطوات الصغيرة، لأن هي اللي تشيلك للنهاية مو القفزات.",
+                    "أشكر كل شيء بسيط يثبتك: المي، الهواء، الضوء، والسكينة.",
+                    "أشكر عقلك لأن دا يتعلم يخفف الضجيج شوي شوي.",
+                    "أشكر رزقك الموجود هسه، حتى لو بعدك دا تبني أكثر.",
+                    "أشكر هالدقيقتين لأنهن رجعن جسمك وروحك لنفس الخط."
+                ]
+            ]
+        case .english:
+            return [
+                [
+                    "Thank God for the body still carrying you through the first steps of the day.",
+                    "Thank the morning for handing you another chance to begin with more softness.",
+                    "Thank your breath for returning again and again without asking anything back.",
+                    "Thank your heart for still keeping rhythm while you learn to slow down.",
+                    "Thank the simple road ahead, because a quiet day can still be a meaningful one.",
+                    "Thank the good people who cross your mind, even if they are not beside you right now."
+                ],
+                [
+                    "Be grateful for whatever rest reached you last night, even if it came in fragments.",
+                    "Be grateful for awareness, because you are starting this day awake to yourself.",
+                    "Thank your eyes for seeing this morning, and your hands for shaping a new day.",
+                    "Thank every hard season that taught you how to return with more calm.",
+                    "Thank your body for every signal it sends when you choose to listen gently.",
+                    "Thank this moment because it gives you room to reset your intention."
+                ],
+                [
+                    "Thank God for the space inside you, even when the outside world feels crowded.",
+                    "Thank the small steps, because they carry the day more honestly than big bursts.",
+                    "Thank the basics that steady you: water, air, light, and stillness.",
+                    "Thank your mind for learning, little by little, how to loosen its noise.",
+                    "Thank what is already in your hands before asking for what comes next.",
+                    "Thank these two quiet minutes for bringing your body and spirit back into one line."
+                ]
+            ]
+        }
     }
 }
 
