@@ -8,12 +8,19 @@ struct SleepScoreRingView: View {
     let size: CGFloat
 
     @State private var animatedScore: Double = 0
+    @State private var animatedSegmentProgress: [String: Double]
+    @State private var segmentAnimationTask: Task<Void, Never>?
     @State private var hasAppeared = false
 
     init(score: Int?, hasData: Bool, size: CGFloat = 236) {
         self.score = score
         self.hasData = hasData
         self.size = size
+        _animatedSegmentProgress = State(
+            initialValue: Dictionary(
+                uniqueKeysWithValues: Self.segments.map { ($0.assetName, 0) }
+            )
+        )
     }
 
     private enum Layout {
@@ -29,10 +36,6 @@ struct SleepScoreRingView: View {
 
     private var targetScore: Double {
         hasData ? Double(clampedScore) : 0
-    }
-
-    private var totalProgress: Double {
-        min(max(animatedScore / 100, 0), 1)
     }
 
     private var centerInset: CGFloat {
@@ -76,13 +79,18 @@ struct SleepScoreRingView: View {
             guard !hasAppeared else { return }
             hasAppeared = true
             animatedScore = 0
-            animateToTarget()
+            resetSegmentProgress()
+            animateToTarget(initialAppearance: true)
         }
         .onChange(of: score) { _, _ in
             animateToTarget()
         }
         .onChange(of: hasData) { _, _ in
             animateToTarget()
+        }
+        .onDisappear {
+            segmentAnimationTask?.cancel()
+            segmentAnimationTask = nil
         }
     }
 
@@ -94,10 +102,11 @@ struct SleepScoreRingView: View {
                 ForEach(Self.segments) { segment in
                     SleepRingAssetLayer(
                         assetName: segment.assetName,
-                        progress: localProgress(for: segment),
+                        progress: animatedSegmentProgress[segment.assetName] ?? 0,
                         startAngle: segment.revealStartAngle,
                         endAngle: segment.revealEndAngle,
-                        inactiveOpacity: inactiveOpacity
+                        inactiveOpacity: inactiveOpacity * segment.inactiveOpacityMultiplier,
+                        revealEdgeSoftness: segment.revealEdgeSoftness
                     )
                     .frame(width: side, height: side)
                 }
@@ -107,22 +116,65 @@ struct SleepScoreRingView: View {
         }
     }
 
-    private func animateToTarget() {
+    private func animateToTarget(initialAppearance: Bool = false) {
+        segmentAnimationTask?.cancel()
+        segmentAnimationTask = nil
+
         withAnimation(.easeInOut(duration: 1.0)) {
             animatedScore = targetScore
         }
+
+        let delays = initialAppearance && hasData ? [0.0, 0.06, 0.12] : [0.0, 0.0, 0.0]
+
+        segmentAnimationTask = Task { @MainActor in
+            var previousDelay = 0.0
+
+            for (index, segment) in Self.segments.enumerated() {
+                if Task.isCancelled { return }
+
+                let delay = delays[index]
+                let incrementalDelay = max(delay - previousDelay, 0)
+                if incrementalDelay > 0 {
+                    try? await Task.sleep(
+                        nanoseconds: UInt64(incrementalDelay * 1_000_000_000)
+                    )
+                }
+
+                withAnimation(.easeInOut(duration: 0.92)) {
+                    animatedSegmentProgress[segment.assetName] = targetProgress(for: segment)
+                }
+
+                previousDelay = delay
+            }
+        }
     }
 
-    private func localProgress(for segment: SleepRingAssetSegment) -> Double {
+    private func resetSegmentProgress() {
+        animatedSegmentProgress = Dictionary(
+            uniqueKeysWithValues: Self.segments.map { ($0.assetName, 0) }
+        )
+    }
+
+    private func targetProgress(for segment: SleepRingAssetSegment) -> Double {
+        let totalProgress = min(max(targetScore / 100, 0), 1)
         let filledWeight = min(max(totalProgress - segment.leadingWeight, 0), segment.weight)
         return segment.weight == 0 ? 0 : filledWeight / segment.weight
     }
 
     private static func makeSegments() -> [SleepRingAssetSegment] {
-        let definitions: [(assetName: String, weight: Double, startAngle: Double, endAngle: Double)] = [
-            ("SleepRing_Mint", 0.30, 200.79, 91.10),
-            ("SleepRing_Orange", 0.20, 88.99, 14.24),
-            ("SleepRing_Purple", 0.50, 13.75, 201.59)
+        let definitions: [
+            (
+                assetName: String,
+                weight: Double,
+                startAngle: Double,
+                endAngle: Double,
+                inactiveOpacityMultiplier: Double,
+                revealEdgeSoftness: CGFloat
+            )
+        ] = [
+            ("SleepRing_Mint", 0.30, 200.79, 91.10, 1.0, 0),
+            ("SleepRing_Orange", 0.20, 88.99, 14.24, 1.0, 0),
+            ("SleepRing_Purple", 0.50, 13.75, 201.59, 0.82, 1.2)
         ]
 
         var leadingWeight = 0.0
@@ -134,7 +186,9 @@ struct SleepScoreRingView: View {
                 weight: definition.weight,
                 leadingWeight: leadingWeight,
                 revealStartAngle: definition.startAngle,
-                revealEndAngle: definition.endAngle
+                revealEndAngle: definition.endAngle,
+                inactiveOpacityMultiplier: definition.inactiveOpacityMultiplier,
+                revealEdgeSoftness: definition.revealEdgeSoftness
             )
         }
     }
@@ -146,6 +200,7 @@ private struct SleepRingAssetLayer: View {
     let startAngle: Double
     let endAngle: Double
     let inactiveOpacity: Double
+    let revealEdgeSoftness: CGFloat
 
     var body: some View {
         ZStack {
@@ -160,6 +215,7 @@ private struct SleepRingAssetLayer: View {
                         endAngle: endAngle
                     )
                     .fill(Color.white)
+                    .blur(radius: revealEdgeSoftness)
                 }
         }
         .compositingGroup()
@@ -242,6 +298,8 @@ private struct SleepRingAssetSegment: Identifiable {
     let leadingWeight: Double
     let revealStartAngle: Double
     let revealEndAngle: Double
+    let inactiveOpacityMultiplier: Double
+    let revealEdgeSoftness: CGFloat
 
     var id: String { assetName }
 }

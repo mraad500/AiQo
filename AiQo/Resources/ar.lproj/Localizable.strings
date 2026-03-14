@@ -553,6 +553,8 @@
 "recap.section.tracking" = "التتبع";
 "recap.section.notes" = "الملاحظات";
 "recap.info.date" = "التاريخ";
+"recap.info.start_time" = "وقت البدء";
+"recap.info.end_time" = "وقت الانتهاء";
 "recap.info.time" = "الوقت";
 "recap.info.location" = "الموقع";
 "recap.info.intensity" = "الشدة";

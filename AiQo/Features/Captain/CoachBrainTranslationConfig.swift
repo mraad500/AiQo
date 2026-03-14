@@ -57,9 +57,7 @@ enum CoachBrainTranslationConfig {
             "translation_config key=\(keyPresence, privacy: .public) endpoint_source=\(endpointSource, privacy: .public)"
         )
 
-        guard let endpointURL = URL(string: endpointString) else {
-            throw CoachBrainTranslationConfigurationError.invalidEndpoint
-        }
+        let endpointURL = resolvedEndpointURL(from: endpointString)
 
         guard let apiKey else {
             throw CoachBrainTranslationConfigurationError.missingAPIKey
@@ -79,5 +77,15 @@ enum CoachBrainTranslationConfig {
         guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
 
         return trimmed
+    }
+
+    private static func resolvedEndpointURL(from configuredValue: String) -> URL {
+        if let configuredURL = URL(string: configuredValue),
+           let host = configuredURL.host,
+           !host.isEmpty {
+            return configuredURL
+        }
+
+        return URL(string: defaultEndpoint)!
     }
 }

@@ -7,17 +7,9 @@ public final class SupabaseService {
     public let client: SupabaseClient
 
     private init() {
-        // ⚠️ المفاتيح الخاصة بك
-        let mySupabaseURL = "https://zidbsrepqpbucqzxnwgk.supabase.co"
-        let mySupabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M"
-
-        guard let url = URL(string: mySupabaseURL), !mySupabaseKey.isEmpty else {
-            fatalError("❌ تأكد من نسخ الرابط والمفتاح بشكل صحيح!")
-        }
-
         client = SupabaseClient(
-            supabaseURL: url,
-            supabaseKey: mySupabaseKey
+            supabaseURL: URL(string: K.Supabase.url) ?? URL(string: "https://zidbsrepqpbucqzxnwgk.supabase.co")!,
+            supabaseKey: K.Supabase.anonKey
         )
     }
 

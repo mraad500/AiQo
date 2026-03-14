@@ -552,6 +552,8 @@
 "recap.section.tracking" = "Tracking";
 "recap.section.notes" = "Notes";
 "recap.info.date" = "Date";
+"recap.info.start_time" = "Start time";
+"recap.info.end_time" = "End time";
 "recap.info.time" = "Time";
 "recap.info.location" = "Location";
 "recap.info.intensity" = "Intensity";

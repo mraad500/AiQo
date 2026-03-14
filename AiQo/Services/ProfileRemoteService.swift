@@ -17,16 +17,8 @@ final class ProfileRemoteService {
     private let anonKey: String
     
     private init() {
-        guard
-            let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
-            let anonKey = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
-            let url = URL(string: urlString)
-        else {
-            fatalError("Missing Supabase config in Info.plist")
-        }
-        
-        self.baseURL = url
-        self.anonKey = anonKey
+        self.baseURL = URL(string: K.Supabase.url) ?? URL(string: "https://zidbsrepqpbucqzxnwgk.supabase.co")!
+        self.anonKey = K.Supabase.anonKey
     }
     
     // رفع البروفايل الى Supabase عبر REST API

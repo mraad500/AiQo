@@ -20,6 +20,11 @@ struct WorkoutMetric: Identifiable {
     let value: String
     let icon: String
     let tint: Color
+
+    var isDisplayable: Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != "--"
+    }
 }
 
 struct WorkoutHistoryItem: Identifiable {
@@ -33,12 +38,13 @@ struct WorkoutHistoryItem: Identifiable {
 
     // Detail fields
     let date: String
-    let timeRange: String
-    let location: String
-    let intensity: String
-    let device: String
+    let startTime: String?
+    let endTime: String?
+    let timeRange: String?
+    let location: String?
+    let device: String?
     let workoutId: String
-    let notes: String
+    let notes: String?
     let metrics: [WorkoutMetric]
 }
 
@@ -47,85 +53,58 @@ struct RecapView: View {
     @StateObject private var viewModel = RecapViewModel()
 
     @State private var selectedItem: WorkoutHistoryItem?
-    @State private var showSheet = false
+    @State private var selectedDetent: PresentationDetent = .fraction(0.5)
     var onScrollOffsetChange: ((CGFloat) -> Void)? = nil
 
     private let railScrollOffsetSpaceName = "RecapRailScroll"
     
     var body: some View {
-        ZStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 14) {
-                    headerSection
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 14) {
+                headerSection
 
-                    if viewModel.isLoading && viewModel.sections.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 24)
-                    }
+                if viewModel.isLoading && viewModel.sections.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 24)
+                }
 
-                    if !viewModel.sections.isEmpty {
-                        ForEach(viewModel.sections) { section in
-                            DatePillView(text: section.dateTitle)
+                if !viewModel.sections.isEmpty {
+                    ForEach(viewModel.sections) { section in
+                        DatePillView(text: section.dateTitle)
 
-                            ForEach(section.items) { item in
-                                HistoryCardView(item: item) {
-                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                                        selectedItem = item
-                                        showSheet = true
-                                    }
-                                }
+                        ForEach(section.items) { item in
+                            HistoryCardView(item: item) {
+                                selectedDetent = .fraction(0.5)
+                                selectedItem = item
                             }
                         }
-                    } else if !viewModel.isLoading {
-                        Text(L10n.t("gym.recap.empty"))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .padding(.top, 16)
                     }
+                } else if !viewModel.isLoading {
+                    Text(L10n.t("gym.recap.empty"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 40)
-                .background(alignment: .top) {
-                    RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)
-                }
             }
-            .coordinateSpace(name: railScrollOffsetSpaceName)
-            .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
-                onScrollOffsetChange?(offset)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 40)
+            .background(alignment: .top) {
+                RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)
             }
-            .blur(radius: showSheet ? 6 : 0)
-            .animation(.easeOut(duration: 0.18), value: showSheet)
-
-            if showSheet {
-                Color.black
-                    .opacity(0.30)
-                    .ignoresSafeArea()
-                    .onTapGesture { closeSheet() }
-                    .transition(.opacity)
-            }
-
-            if let item = selectedItem, showSheet {
-                WorkoutDetailBottomSheet(
-                    item: item,
-                    initialRatio: 0.50,     // يبدأ 50%
-                    autoExpandToFull: true, // وبعدين يكمل 100%
-                    onClose: { closeSheet() }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(5)
-            }
+        }
+        .coordinateSpace(name: railScrollOffsetSpaceName)
+        .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
+            onScrollOffsetChange?(offset)
         }
         .fontDesign(.rounded)
         .task { await viewModel.loadIfNeeded() }
-    }
-
-    private func closeSheet() {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-            showSheet = false
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            if !showSheet { selectedItem = nil }
+        .sheet(item: $selectedItem) { item in
+            WorkoutDetailSheetView(item: item)
+                .presentationDetents([.fraction(0.5), .large], selection: $selectedDetent)
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.clear)
+                .presentationCornerRadius(34)
         }
     }
 
@@ -266,295 +245,168 @@ struct SoftGlassBackground: View {
     }
 }
 
-// MARK: - Workout Detail Bottom Sheet (50% -> 100% "paper expand")
-struct WorkoutDetailBottomSheet: View {
+// MARK: - Native Workout Detail Sheet
+struct WorkoutDetailSheetView: View {
     let item: WorkoutHistoryItem
-    let initialRatio: CGFloat
-    let autoExpandToFull: Bool
-    let onClose: () -> Void
-
-    @State private var dragOffset: CGFloat = 0
-    @State private var currentRatio: CGFloat
-    @State private var isExpanded: Bool = false
-
-    init(item: WorkoutHistoryItem, initialRatio: CGFloat, autoExpandToFull: Bool, onClose: @escaping () -> Void) {
-        self.item = item
-        self.initialRatio = initialRatio
-        self.autoExpandToFull = autoExpandToFull
-        self.onClose = onClose
-        _currentRatio = State(initialValue: initialRatio)
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            let fullH = geo.size.height
-            let minH = max(320, fullH * initialRatio)
-            let maxH = fullH * 0.98
-            let sheetH = clamp(fullH * currentRatio, minH, maxH)
-            let bottomSafe = geo.safeAreaInsets.bottom
-
-            VStack(spacing: 0) {
-                // Handle + Close
-                HStack(spacing: 10) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.55))
-                        .frame(width: 46, height: 5)
-                        .padding(.leading, 12)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                                toggleExpand(fullHeight: maxH, minHeight: minH, fullH: fullH)
-                            }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        }
-
-                    Spacer()
-
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .padding(10)
-                            .background(Circle().fill(Color.white.opacity(0.35)))
-                    }
-                    .padding(.trailing, 12)
-                }
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-
-                WorkoutDetailContent(item: item, expanded: isExpanded)
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 14)
-
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: sheetH)
-            .background(
-                PaperGlassBackground(tint: item.tint, expanded: isExpanded)
-            )
-            .padding(.horizontal, 12)
-            .padding(.bottom, max(10, bottomSafe))
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .offset(y: max(0, dragOffset))
-            .gesture(
-                DragGesture(minimumDistance: 6, coordinateSpace: .global)
-                    .onChanged { value in
-                        let dy = value.translation.height
-
-                        // سحب للأسفل = close feeling
-                        if dy > 0 {
-                            dragOffset = dy
-                        } else {
-                            // سحب للأعلى = expand feeling
-                            dragOffset = 0
-                            let pullUp = abs(dy)
-                            let ratioBoost = (pullUp / fullH) * 0.8
-                            currentRatio = clamp(currentRatio + ratioBoost, initialRatio, 0.98)
-                        }
-                    }
-                    .onEnded { value in
-                        let dy = value.translation.height
-                        let vel = value.velocity.height
-
-                        // close
-                        let shouldClose = dy > 140 || vel > 950
-                        if shouldClose {
-                            onClose()
-                            return
-                        }
-
-                        // settle expand/collapse
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                            dragOffset = 0
-
-                            let threshold: CGFloat = 0.78
-                            if currentRatio >= threshold {
-                                currentRatio = 0.98
-                                isExpanded = true
-                            } else {
-                                currentRatio = initialRatio
-                                isExpanded = false
-                            }
-                        }
-                    }
-            )
-            .onAppear {
-                guard autoExpandToFull else { return }
-                // يبدأ 50% ثم يتمدّد 100% مثل ورقة
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    withAnimation(.spring(response: 0.46, dampingFraction: 0.92)) {
-                        currentRatio = 0.98
-                        isExpanded = true
-                    }
-                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                }
-            }
-            .onChange(of: item.id) {
-                dragOffset = 0
-                currentRatio = initialRatio
-                isExpanded = false
-                if autoExpandToFull {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        withAnimation(.spring(response: 0.46, dampingFraction: 0.92)) {
-                            currentRatio = 0.98
-                            isExpanded = true
-                        }
-                    }
-                }
-            }
-        }
-        .ignoresSafeArea()
-    }
-
-    private func toggleExpand(fullHeight: CGFloat, minHeight: CGFloat, fullH: CGFloat) {
-        if isExpanded {
-            currentRatio = initialRatio
-            isExpanded = false
-        } else {
-            currentRatio = 0.98
-            isExpanded = true
-        }
-    }
-
-    private func clamp(_ v: CGFloat, _ a: CGFloat, _ b: CGFloat) -> CGFloat { min(max(v, a), b) }
-}
-
-
-
-
-// MARK: - Paper Glass Background (Professional)
-struct PaperGlassBackground: View {
-    let tint: Color
-    let expanded: Bool
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: expanded ? 40 : 34, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .overlay(
-                // نظافة الكونتراست: خلي البياض خفيف جدًا
-                RoundedRectangle(cornerRadius: expanded ? 40 : 34, style: .continuous)
-                    .fill(Color.white.opacity(expanded ? 0.10 : 0.08))
-            )
-            .overlay(
-                // Tint بسيط جدًا (مو مثل الصورة)
-                RoundedRectangle(cornerRadius: expanded ? 40 : 34, style: .continuous)
-                    .fill(tint.opacity(expanded ? 0.06 : 0.045))
-                    .allowsHitTesting(false)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: expanded ? 40 : 34, style: .continuous)
-                    .stroke(Color.white.opacity(expanded ? 0.22 : 0.18), lineWidth: 0.9)
-            )
-            .shadow(color: .black.opacity(expanded ? 0.22 : 0.16), radius: expanded ? 32 : 22, x: 0, y: -8)
-    }
-}
-
-// MARK: - Workout Detail Content (Global layout)
-struct WorkoutDetailContent: View {
-    let item: WorkoutHistoryItem
-    let expanded: Bool
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
 
-    var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 14) {
+    private var orderedMetrics: [WorkoutMetric] {
+        let preferredTitles = [
+            L10n.t("gym.metric.duration"),
+            L10n.t("gym.metric.calories"),
+            L10n.t("gym.metric.distance"),
+            L10n.t("gym.metric.avg_hr"),
+            L10n.t("gym.metric.max_hr"),
+            L10n.t("gym.metric.pace"),
+            L10n.t("gym.metric.steps")
+        ]
 
-                header
-
-                chips
-
-                kpiRow
-
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(filteredMetrics(item.metrics)) { metric in
-                        WorkoutMetricCard(metric: metric)
-                    }
-                }
-
-                SectionCard(title: L10n.t("recap.section.session")) {
-                    KeyValueRow(title: L10n.t("recap.info.date"), value: item.date)
-                    KeyValueRow(title: L10n.t("recap.info.time"), value: item.timeRange)
-                    KeyValueRow(title: L10n.t("recap.info.location"), value: item.location)
-                    KeyValueRow(title: L10n.t("recap.info.intensity"), value: item.intensity)
-                }
-
-                SectionCard(title: L10n.t("recap.section.tracking")) {
-                    KeyValueRow(title: L10n.t("recap.info.device"), value: item.device)
-                    KeyValueRow(title: L10n.t("recap.info.source"), value: item.source)
-                    KeyValueRow(title: L10n.t("recap.info.workout_id"), value: shortId(item.workoutId))
-                }
-
-                if !item.notes.isEmpty {
-                    SectionCard(title: L10n.t("recap.section.notes")) {
-                        Text(item.notes)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                HStack {
-                    Text(L10n.t("gym.recap.swipe_close"))
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.70))
-                    Spacer()
-                }
-                .padding(.top, 2)
-            }
-            .padding(.top, 6)
+        let available = filteredMetrics(item.metrics).filter(\.isDisplayable)
+        let prioritized = preferredTitles.compactMap { title in
+            available.first(where: { $0.title == title })
         }
+        let prioritizedTitles = Set(prioritized.map(\.title))
+
+        return prioritized + available.filter { !prioritizedTitles.contains($0.title) }
+    }
+
+    private var headerMetaText: String? {
+        [
+            nonEmpty(item.date),
+            nonEmpty(item.timeRange)
+        ]
+        .compactMap { $0 }
+        .joined(separator: " • ")
+        .nilIfEmpty
+    }
+
+    private var sessionRows: [WorkoutDetailRowModel] {
+        [
+            WorkoutDetailRowModel(title: L10n.t("recap.info.date"), value: nonEmpty(item.date)),
+            WorkoutDetailRowModel(title: L10n.t("recap.info.start_time"), value: nonEmpty(item.startTime)),
+            WorkoutDetailRowModel(title: L10n.t("recap.info.end_time"), value: nonEmpty(item.endTime)),
+            WorkoutDetailRowModel(title: L10n.t("recap.info.location"), value: nonEmpty(item.location))
+        ]
+        .compactMap { $0 }
+    }
+
+    private var trackingRows: [WorkoutDetailRowModel] {
+        [
+            WorkoutDetailRowModel(title: L10n.t("recap.info.source"), value: nonEmpty(item.source)),
+            WorkoutDetailRowModel(title: L10n.t("recap.info.device"), value: nonEmpty(item.device)),
+            WorkoutDetailRowModel(title: L10n.t("recap.info.workout_id"), value: shortId(item.workoutId))
+        ]
+        .compactMap { $0 }
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            WorkoutSheetSurface(tint: item.tint)
+                .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+
+                    if !orderedMetrics.isEmpty {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(orderedMetrics) { metric in
+                                WorkoutMetricCard(metric: metric)
+                            }
+                        }
+                    }
+
+                    if !sessionRows.isEmpty {
+                        SectionCard(title: L10n.t("recap.section.session")) {
+                            ForEach(sessionRows) { row in
+                                KeyValueRow(title: row.title, value: row.value)
+                            }
+                        }
+                    }
+
+                    if !trackingRows.isEmpty {
+                        SectionCard(title: L10n.t("recap.section.tracking")) {
+                            ForEach(trackingRows) { row in
+                                KeyValueRow(title: row.title, value: row.value)
+                            }
+                        }
+                    }
+
+                    if let notes = nonEmpty(item.notes) {
+                        SectionCard(title: L10n.t("recap.section.notes")) {
+                            Text(notes)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 22)
+                .padding(.bottom, 36)
+            }
+        }
+        .background(Color.clear)
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(item.tint.opacity(0.14))
-                    .frame(width: 52, height: 52)
+                    .fill(item.tint.opacity(0.18))
+                    .frame(width: 58, height: 58)
 
                 Image(systemName: item.icon)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(item.tint)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(item.tint)
             }
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(item.title)
-                    .font(.system(size: 24, weight: .heavy))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .font(.system(size: 26, weight: .heavy))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
 
-                Text("\(item.date) • \(item.timeRange)")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                if let headerMetaText {
+                    Text(headerMetaText)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
             }
 
-            Spacer()
-        }
-    }
+            Spacer(minLength: 12)
 
-    private var chips: some View {
-        HStack(spacing: 8) {
-            WorkoutTag(text: item.location, icon: "location.fill", tint: item.tint)
-            WorkoutTag(text: item.intensity, icon: "bolt.fill", tint: item.tint)
-            WorkoutTag(text: item.source, icon: "wave.3.right", tint: item.tint)
-        }
-        .padding(.top, 2)
-    }
-
-    private var kpiRow: some View {
-        HStack(spacing: 10) {
-            SummaryPill(title: L10n.t("recap.metric.duration"), value: item.duration, icon: "timer", accent: item.tint)
-            SummaryPill(title: L10n.t("recap.metric.calories"), value: item.calories, icon: "flame.fill", accent: Color(red: 1.00, green: 0.65, blue: 0.20))
-
-            if let dist = item.metrics.first(where: { $0.title == L10n.t("gym.metric.distance") })?.value, dist != "--" {
-                SummaryPill(title: L10n.t("recap.metric.distance"), value: dist, icon: "figure.walk", accent: Color(red: 0.25, green: 0.85, blue: 0.70))
+            if let source = nonEmpty(item.source) {
+                WorkoutSourceBadge(text: source, tint: item.tint)
             }
         }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    item.tint.opacity(0.14),
+                                    Color.white.opacity(0.07)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+        )
     }
 
     private func shortId(_ id: String) -> String {
@@ -562,15 +414,63 @@ struct WorkoutDetailContent: View {
         return "\(id.prefix(8))…\(id.suffix(4))"
     }
 
-    // يمنع تكرار Duration/Calories إذا انضافت مرتين بالمصفوفة
     private func filteredMetrics(_ metrics: [WorkoutMetric]) -> [WorkoutMetric] {
         var seen = Set<String>()
-        return metrics.filter { m in
-            let key = "\(m.title)|\(m.icon)"
+        return metrics.filter { metric in
+            let key = "\(metric.title)|\(metric.icon)"
             if seen.contains(key) { return false }
             seen.insert(key)
             return true
         }
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty,
+              trimmed != "--" else {
+            return nil
+        }
+        return trimmed
+    }
+}
+
+private struct WorkoutDetailRowModel: Identifiable {
+    let id = UUID()
+    let title: String
+    let value: String
+
+    init?(title: String, value: String?) {
+        guard let value else { return nil }
+        self.title = title
+        self.value = value
+    }
+}
+
+struct WorkoutSheetSurface: View {
+    let tint: Color
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 34, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.16),
+                                tint.opacity(0.10),
+                                Color.white.opacity(0.04)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .stroke(Color.white.opacity(0.22), lineWidth: 0.9)
+            )
+            .shadow(color: .black.opacity(0.18), radius: 28, x: 0, y: -8)
     }
 }
 
@@ -581,8 +481,8 @@ struct SectionCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .heavy))
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.secondary.opacity(0.85))
                 .padding(.horizontal, 2)
 
@@ -633,50 +533,6 @@ struct KeyValueRow: View {
     }
 }
 
-// MARK: - Summary Pill (KPIs)
-struct SummaryPill: View {
-    let title: String
-    let value: String
-    let icon: String
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(accent.opacity(0.14))
-                    .frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(accent)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 16, weight: .heavy))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                Text(title)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 0.8)
-        )
-    }
-}
-
 // MARK: - Metric Card (Cleaner, global)
 struct WorkoutMetricCard: View {
     let metric: WorkoutMetric
@@ -719,23 +575,22 @@ struct WorkoutMetricCard: View {
     }
 }
 
-// MARK: - Tag (Light, not noisy)
-struct WorkoutTag: View {
+struct WorkoutSourceBadge: View {
     let text: String
-    let icon: String
     let tint: Color
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
+            Image(systemName: "wave.3.right")
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(tint)
             Text(text)
-                .font(.system(size: 11, weight: .heavy))
+                .font(.system(size: 11, weight: .bold))
                 .foregroundColor(.primary.opacity(0.92))
+                .lineLimit(1)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 9)
         .background(
             Capsule()
                 .fill(.thinMaterial)
@@ -744,6 +599,12 @@ struct WorkoutTag: View {
             Capsule()
                 .stroke(Color.white.opacity(0.14), lineWidth: 0.7)
         )
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
 
@@ -837,7 +698,7 @@ enum WorkoutMapper {
             ? formatPace(seconds: workout.duration, meters: distance ?? 0)
             : nil
 
-        let isIndoor = (workout.metadata?[HKMetadataKeyIndoorWorkout] as? Bool) ?? false
+        let indoorValue = workout.metadata?[HKMetadataKeyIndoorWorkout] as? Bool
 
         let metrics: [WorkoutMetric] = [
             .init(title: L10n.t("gym.metric.duration"), value: duration, icon: "timer", tint: tint),
@@ -846,8 +707,7 @@ enum WorkoutMapper {
             .init(title: L10n.t("gym.metric.avg_hr"), value: hrString(avgHR), icon: "heart.fill", tint: Color(red: 1.00, green: 0.40, blue: 0.55)),
             .init(title: L10n.t("gym.metric.max_hr"), value: hrString(maxHR), icon: "waveform.path.ecg", tint: Color(red: 0.95, green: 0.45, blue: 0.45)),
             .init(title: L10n.t("gym.metric.pace"), value: pace ?? "--", icon: "speedometer", tint: Color(red: 0.66, green: 0.58, blue: 0.98)),
-            .init(title: L10n.t("gym.metric.steps"), value: stepsString(steps), icon: "shoeprints.fill", tint: Color(red: 0.72, green: 0.86, blue: 0.34)),
-            .init(title: L10n.t("gym.metric.elevation"), value: "--", icon: "mountain.2.fill", tint: Color(red: 0.55, green: 0.45, blue: 0.95))
+            .init(title: L10n.t("gym.metric.steps"), value: stepsString(steps), icon: "shoeprints.fill", tint: Color(red: 0.72, green: 0.86, blue: 0.34))
         ]
 
         return WorkoutHistoryItem(
@@ -858,12 +718,13 @@ enum WorkoutMapper {
             icon: icon,
             tint: tint,
             date: dayFormatter.string(from: start),
+            startTime: timeFormatter.string(from: start),
+            endTime: timeFormatter.string(from: end),
             timeRange: timeRange,
-            location: isIndoor ? L10n.t("gym.recap.indoor") : L10n.t("gym.recap.outdoor"),
-            intensity: L10n.t("gym.recap.intensity.moderate"),
-            device: workout.device?.name ?? "Apple Watch",
+            location: indoorValue.map { $0 ? L10n.t("gym.recap.indoor") : L10n.t("gym.recap.outdoor") },
+            device: workout.device?.name,
             workoutId: workout.uuid.uuidString,
-            notes: "",
+            notes: nil,
             metrics: metrics
         )
     }
@@ -981,6 +842,10 @@ enum WorkoutMapper {
     }
 
     private static func distanceMeters(from workout: HKWorkout) -> Double? {
+        if let totalDistance = workout.totalDistance {
+            return totalDistance.doubleValue(for: .meter())
+        }
+
         let distanceType: HKQuantityTypeIdentifier
         switch workout.workoutActivityType {
         case .cycling:

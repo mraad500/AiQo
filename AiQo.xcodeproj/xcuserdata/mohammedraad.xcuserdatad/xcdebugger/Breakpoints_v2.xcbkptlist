@@ -20,5 +20,67 @@
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "6"
+            endingLineNumber = "6"
+            landmarkName = "GlobalTribeRadialView"
+            landmarkType = "14">
+            <Locations>
+               <Location
+                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - 55a27401929c9205"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "property wrapper backing initializer of AiQo.GlobalTribeRadialView.nodes : Swift.Array&lt;AiQo.RadialSoulNode&gt;"
+                  moduleName = "AiQo.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mohammedraad/Desktop/untitled%20folder/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - a5a8d61cb0c4bcf2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "AiQo.GlobalTribeRadialView.init(nodeCount: Swift.Int) -&gt; AiQo.GlobalTribeRadialView"
+                  moduleName = "AiQo.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mohammedraad/Desktop/untitled%20folder/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "6"
+                  endingLineNumber = "6">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "DF12F796-22F7-476F-AA49-098381000369"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "19"
+            endingLineNumber = "19"
+            landmarkName = "body"
+            landmarkType = "24">
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

@@ -34,20 +34,8 @@ final class KitchenAIService {
     private let anonKey: String
 
     private init() {
-        // نقرأ بيانات Supabase من Info.plist
-        let info = Bundle.main.infoDictionary ?? [:]
-        let supabaseURLString = (info["SUPABASE_URL"] as? String) ?? ""
-        let anon = (info["SUPABASE_ANON_KEY"] as? String) ?? ""
-
-        // مثال: https://bupiijjcbfchauedcisl.supabase.co
-        // دوال Edge: https://bupiijjcbfchauedcisl.functions.supabase.co
-        if let url = URL(string: supabaseURLString
-            .replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")) {
-            self.baseURL = url
-        } else {
-            self.baseURL = URL(string: "https://example.functions.supabase.co")!
-        }
-        self.anonKey = anon
+        self.baseURL = K.Supabase.functionsURL
+        self.anonKey = K.Supabase.anonKey
     }
 
     struct MealPlanRequest: Codable {

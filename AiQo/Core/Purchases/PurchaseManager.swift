@@ -1,9 +1,6 @@
 import Foundation
 internal import Combine
 import StoreKit
-#if canImport(StoreKitTest)
-import StoreKitTest
-#endif
 
 @MainActor
 final class PurchaseManager: ObservableObject {
@@ -40,9 +37,6 @@ final class PurchaseManager: ObservableObject {
     private let localStoreKitConfigurationName = "AiQo_Test.storekit"
     private let productLoadRetryDelayNanoseconds: UInt64 = 2_000_000_000
     private let userFacingProductLoadFailureMessage = "تعذر تحميل الباقات حالياً. حاول مرة ثانية."
-#if canImport(StoreKitTest)
-    private var storeKitTestSession: SKTestSession?
-#endif
 
     private init(
         calendar: Calendar = .current,
@@ -151,12 +145,6 @@ final class PurchaseManager: ObservableObject {
     func debugResetPremiumData() {
 #if DEBUG
         prepareLocalStoreKitTestingIfNeeded()
-
-#if canImport(StoreKitTest)
-        if #available(iOS 14.0, *) {
-            storeKitTestSession?.clearTransactions()
-        }
-#endif
 
         entitlementStore.clear()
         productLoadErrorMessage = nil
@@ -317,20 +305,7 @@ final class PurchaseManager: ObservableObject {
         let fileStem = String(localStoreKitConfigurationName.dropLast(".storekit".count))
 
         if Bundle.main.url(forResource: fileStem, withExtension: "storekit") != nil {
-#if canImport(StoreKitTest)
-            if #available(iOS 14.0, *) {
-                do {
-                    storeKitTestSession = try SKTestSession(configurationFileNamed: localStoreKitConfigurationName)
-                    print("🛒 StoreKitTest session is using bundled \(localStoreKitConfigurationName).")
-                } catch {
-                    print("🛒 Found \(localStoreKitConfigurationName) in bundle but failed to start StoreKitTest: \(error.localizedDescription)")
-                }
-            } else {
-                print("🛒 \(localStoreKitConfigurationName) is bundled, but StoreKitTest requires iOS 14 or later.")
-            }
-#else
             print("🛒 \(localStoreKitConfigurationName) is bundled. Run the app from Xcode with the StoreKit configuration enabled for local testing.")
-#endif
         } else {
             let context = isPreview ? "Preview" : "Simulator"
             print("🛒 \(context) detected. \(localStoreKitConfigurationName) is not bundled. If products fail to load locally, set Scheme > Run > Options > StoreKit Configuration to AiQo/Resources/\(localStoreKitConfigurationName).")
