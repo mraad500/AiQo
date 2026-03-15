@@ -6,6 +6,8 @@
 	<array>
 		<string>aiqo.captain.spiritual-whispers.refresh</string>
 	</array>
+	<key>CAPTAIN_API_KEY</key>
+	<string>$(CAPTAIN_API_KEY)</string>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CAPTAIN_VOICE_API_KEY</key>

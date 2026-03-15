@@ -1,11 +1,6 @@
 import Foundation
 import os.log
 
-enum HybridBrainPromptMarkers {
-    nonisolated static let fallbackJSONStart = "<captain_fallback_json>"
-    nonisolated static let fallbackJSONEnd = "</captain_fallback_json>"
-}
-
 enum CaptainConversationRole: String, Sendable {
     case system
     case user
@@ -28,7 +23,11 @@ struct HybridBrainRequest: Sendable {
     let language: AppLanguage
     let contextData: CaptainContextData
     let userProfileSummary: String
-    let hasAttachedImage: Bool
+    let attachedImageData: Data?
+
+    var hasAttachedImage: Bool {
+        attachedImageData != nil
+    }
 }
 
 struct HybridBrainServiceReply: Sendable {
@@ -76,15 +75,15 @@ enum HybridBrainServiceError: LocalizedError {
 }
 
 enum HybridBrainServiceConfigurationError: LocalizedError {
-    case invalidEndpoint
     case missingAPIKey
+    case invalidEndpoint
 
     var errorDescription: String? {
         switch self {
-        case .invalidEndpoint:
-            return "Captain hybrid endpoint is invalid."
         case .missingAPIKey:
-            return "Captain hybrid API key is missing."
+            return "Captain API key is missing from configuration."
+        case .invalidEndpoint:
+            return "Captain prompt endpoint is invalid."
         }
     }
 }
@@ -97,31 +96,27 @@ private struct HybridBrainServiceConfiguration: Sendable {
 }
 
 private enum HybridBrainServiceConfig {
-    static let apiKeyName = "CAPTAIN_HYBRID_BRAIN_API_KEY"
-    static let endpointName = "CAPTAIN_HYBRID_BRAIN_API_URL"
-    static let legacyOpenAIKeyName = "OPENAI_API_KEY"
-    static let defaultEndpoint = "https://api.openai.com/v1/responses"
+    static let apiKeyName = "CAPTAIN_API_KEY"
+    static let fallbackAPIKeyName = "COACH_BRAIN_LLM_API_KEY"
+    static let endpoint = "https://api.openai.com/v1/responses"
     static let promptID = "pmpt_6989314757d48190b10842e9b852048d0f4dbc957002f486"
-    static let promptVersion = "8"
+    static let promptVersion = "9"
 
     static func resolve(
         bundle: Bundle = .main,
         processInfo: ProcessInfo = .processInfo
     ) throws -> HybridBrainServiceConfiguration {
         let info = bundle.infoDictionary ?? [:]
-        let endpointString = normalized(processInfo.environment[endpointName])
-            ?? normalized(info[endpointName] as? String)
-            ?? defaultEndpoint
         let apiKey = normalized(processInfo.environment[apiKeyName])
             ?? normalized(info[apiKeyName] as? String)
-            ?? normalized(processInfo.environment[legacyOpenAIKeyName])
-
-        guard let endpointURL = URL(string: endpointString) else {
-            throw HybridBrainServiceConfigurationError.invalidEndpoint
-        }
+            ?? normalized(processInfo.environment[fallbackAPIKeyName])
+            ?? normalized(info[fallbackAPIKeyName] as? String)
 
         guard let apiKey else {
             throw HybridBrainServiceConfigurationError.missingAPIKey
+        }
+        guard let endpointURL = URL(string: endpoint) else {
+            throw HybridBrainServiceConfigurationError.invalidEndpoint
         }
 
         return HybridBrainServiceConfiguration(
@@ -140,40 +135,6 @@ private enum HybridBrainServiceConfig {
         guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
 
         return trimmed
-    }
-}
-
-private struct HybridBrainResponsesRequest: Encodable {
-    struct StoredPrompt: Encodable {
-        let id: String
-        let version: String
-    }
-
-    struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    struct TextConfiguration: Encodable {
-        struct Format: Encodable {
-            let type: String
-        }
-
-        let format: Format
-    }
-
-    let prompt: StoredPrompt
-    let input: [Message]
-    let text: TextConfiguration
-    let maxOutputTokens: Int
-    let store: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case prompt
-        case input
-        case text
-        case store
-        case maxOutputTokens = "max_output_tokens"
     }
 }
 
@@ -222,9 +183,7 @@ private struct HybridBrainAPIErrorEnvelope: Decodable {
 
 struct HybridBrainService: Sendable {
     private let session: URLSession
-    private let parser: LLMJSONParser
     private let bundle: Bundle
-    private let processInfo: ProcessInfo
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "HybridBrainService"
@@ -232,232 +191,83 @@ struct HybridBrainService: Sendable {
 
     init(
         session: URLSession = .shared,
-        parser: LLMJSONParser = LLMJSONParser(),
-        bundle: Bundle = .main,
-        processInfo: ProcessInfo = .processInfo
+        bundle: Bundle = .main
     ) {
         self.session = session
-        self.parser = parser
         self.bundle = bundle
-        self.processInfo = processInfo
     }
 
     func generateReply(request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
-        let session = try await startStreamingReply(request: request)
-        var rawText = ""
-        for await token in session.tokens {
-            rawText.append(token)
-        }
+        try validate(request)
 
-        let response = parser.decode(rawText: rawText, fallback: session.fallbackResponse)
+        let configuration = try HybridBrainServiceConfig.resolve(bundle: bundle)
+        let structuredResponse = try await requestCloudResponse(
+            configuration: configuration,
+            request: request
+        )
+        let rawText = try encodeStructuredResponse(structuredResponse)
 
-        return makeReply(
-            from: response,
+        return HybridBrainServiceReply(
+            message: structuredResponse.message,
+            workoutPlan: structuredResponse.workoutPlan,
+            mealPlan: structuredResponse.mealPlan,
             rawText: rawText
         )
     }
 
     func startStreamingReply(request: HybridBrainRequest) async throws -> HybridBrainStreamingSession {
-        let prepared = try prepareInference(request: request)
+        let reply = try await generateReply(request: request)
+        let fallbackResponse = CaptainStructuredResponse(
+            message: reply.message,
+            workoutPlan: reply.workoutPlan,
+            mealPlan: reply.mealPlan
+        )
 
-        do {
-            let configuration = try HybridBrainServiceConfig.resolve(
-                bundle: bundle,
-                processInfo: processInfo
-            )
-            let outputText = try await requestCloudResponse(
-                configuration: configuration,
-                systemPrompt: prepared.systemPrompt,
-                userMessage: prepared.userMessage
-            )
-            let structuredResponse = parser.decode(
-                rawText: outputText,
-                fallback: prepared.fallbackResponse
-            )
-            let normalizedRawText = try encodeStructuredResponse(structuredResponse)
-
-            return HybridBrainStreamingSession(
-                tokens: tokenStream(for: normalizedRawText),
-                fallbackResponse: structuredResponse
-            )
-        } catch {
-            logger.error(
-                "hybrid_brain_request_failed reason=\(sanitizedErrorDescription(from: error), privacy: .public)"
-            )
-
-            let fallbackRawText = (try? encodeStructuredResponse(prepared.fallbackResponse))
-                ?? """
-                {"message":"Captain fallback engaged.","workoutPlan":null,"mealPlan":null}
-                """
-
-            return HybridBrainStreamingSession(
-                tokens: tokenStream(for: fallbackRawText),
-                fallbackResponse: prepared.fallbackResponse
-            )
-        }
+        return HybridBrainStreamingSession(
+            tokens: tokenStream(for: reply.rawText),
+            fallbackResponse: fallbackResponse
+        )
     }
-}
-
-private struct LocalAppIntentPayload: Sendable {
-    let transcript: [CaptainConversationMessage]
-    let screenContext: ScreenContext
-    let language: AppLanguage
-    let contextData: CaptainContextData
-    let userProfileSummary: String
-    let hasAttachedImage: Bool
-
-    var latestUserMessage: String? {
-        transcript.last(where: { $0.role == .user })?.content
-    }
-}
-
-private struct PreparedLocalBrainInference: Sendable {
-    let systemPrompt: String
-    let userMessage: String
-    let fallbackResponse: CaptainStructuredResponse
-}
-
-private struct LocalIntentClassification: Sendable {
-    let wantsWorkoutPlan: Bool
-    let wantsMealPlan: Bool
-    let wantsSleepGuidance: Bool
-    let wantsVibeGuidance: Bool
-    let wantsChallengeGuidance: Bool
-}
-
-private struct LocalSleepSnapshot: Sendable {
-    let sleepStart: String
-    let sleepEnd: String
-    let totalHours: Double
-    let deepHours: Double
-    let remHours: Double
-    let coreHours: Double
-    let awakeMinutes: Int
-}
-
-private enum LocalWorkoutMode {
-    case recovery
-    case activation
-    case balanced
-    case performance
-    case challenge
-}
-
-private enum LocalMealStyle {
-    case balanced
-    case quick
-    case highProtein
 }
 
 private extension HybridBrainService {
-    func prepareInference(request: HybridBrainRequest) throws -> PreparedLocalBrainInference {
+    func validate(_ request: HybridBrainRequest) throws {
         let normalizedConversation = request.conversation.compactMap { message -> CaptainConversationMessage? in
-            let trimmedContent = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedContent.isEmpty else { return nil }
-            return CaptainConversationMessage(role: message.role, content: trimmedContent)
+            let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return CaptainConversationMessage(role: message.role, content: trimmed)
         }
 
         guard !normalizedConversation.isEmpty else {
             throw HybridBrainServiceError.emptyConversation
         }
-
-        let payload = LocalAppIntentPayload(
-            transcript: normalizedConversation,
-            screenContext: request.screenContext,
-            language: request.language,
-            contextData: request.contextData,
-            userProfileSummary: request.userProfileSummary,
-            hasAttachedImage: request.hasAttachedImage
-        )
-
-        guard let latestUserMessage = payload.latestUserMessage else {
+        guard normalizedConversation.contains(where: { $0.role == .user }) else {
             throw HybridBrainServiceError.missingUserMessage
-        }
-
-        let intent = classifyIntent(for: latestUserMessage, in: payload)
-        let fallbackResponse = buildStructuredFallback(for: payload, intent: intent)
-        let promptRouter = PromptRouter(language: payload.language)
-        let routedSystemPrompt = promptRouter.generateSystemPrompt(
-            for: payload.screenContext,
-            data: payload.contextData
-        )
-        let conversationHistory = transcriptExcludingLatestUserMessage(payload.transcript)
-        let systemPrompt = try buildSystemPrompt(
-            basePrompt: routedSystemPrompt,
-            for: payload,
-            conversationHistory: conversationHistory,
-            baselineResponse: fallbackResponse
-        )
-
-        return PreparedLocalBrainInference(
-            systemPrompt: systemPrompt,
-            userMessage: latestUserMessage,
-            fallbackResponse: fallbackResponse
-        )
-    }
-
-    func makeReply(
-        from response: CaptainStructuredResponse,
-        rawText: String
-    ) -> HybridBrainServiceReply {
-        HybridBrainServiceReply(
-            message: response.message,
-            workoutPlan: response.workoutPlan?.isMeaningful == true ? response.workoutPlan : nil,
-            mealPlan: response.mealPlan?.isMeaningful == true ? response.mealPlan : nil,
-            rawText: rawText
-        )
-    }
-
-    func tokenStream(for rawText: String) -> AsyncStream<String> {
-        AsyncStream { continuation in
-            let task = Task.detached(priority: .utility) {
-                for chunk in Self.chunked(rawText, size: 24) {
-                    guard !Task.isCancelled else { break }
-                    continuation.yield(chunk)
-                    try? await Task.sleep(nanoseconds: 18_000_000)
-                }
-                continuation.finish()
-            }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
         }
     }
 
     func requestCloudResponse(
         configuration: HybridBrainServiceConfiguration,
-        systemPrompt: String,
-        userMessage: String
-    ) async throws -> String {
-        var request = URLRequest(url: configuration.endpointURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 35
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
-
-        let requestBody = HybridBrainResponsesRequest(
-            prompt: .init(
-                id: configuration.promptID,
-                version: configuration.promptVersion
-            ),
-            input: [
-                .init(role: "developer", content: systemPrompt),
-                .init(role: "user", content: userMessage)
-            ],
-            text: .init(format: .init(type: "json_object")),
-            maxOutputTokens: 900,
-            store: false
+        request: HybridBrainRequest
+    ) async throws -> CaptainStructuredResponse {
+        var urlRequest = URLRequest(url: configuration.endpointURL)
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 35
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
+        urlRequest.httpBody = try JSONSerialization.data(
+            withJSONObject: makeRequestBody(
+                configuration: configuration,
+                request: request
+            )
         )
-
-        request.httpBody = try JSONEncoder().encode(requestBody)
 
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            (data, response) = try await session.data(for: urlRequest)
         } catch {
             throw isNetworkUnavailable(error)
                 ? HybridBrainServiceError.networkUnavailable
@@ -491,7 +301,244 @@ private extension HybridBrainService {
             throw HybridBrainServiceError.emptyResponse
         }
 
-        return outputText
+        return try decodeStructuredResponse(from: outputText)
+    }
+
+    func makeRequestBody(
+        configuration: HybridBrainServiceConfiguration,
+        request: HybridBrainRequest
+    ) -> [String: Any] {
+        [
+            "prompt": [
+                "id": configuration.promptID,
+                "version": configuration.promptVersion
+            ],
+            "input": makeInputMessages(for: request),
+            "text": [
+                "format": [
+                    "type": "json_schema",
+                    "name": "captain_structured_response",
+                    "description": "Captain Hamoudi structured reply for the AiQo chat UI.",
+                    "strict": true,
+                    "schema": structuredResponseSchema()
+                ]
+            ],
+            "max_output_tokens": 900,
+            "store": false
+        ]
+    }
+
+    func makeInputMessages(for request: HybridBrainRequest) -> [[String: Any]] {
+        var messages: [[String: Any]] = [
+            [
+                "role": "developer",
+                "content": [
+                    [
+                        "type": "input_text",
+                        "text": developerContextMessage(for: request)
+                    ]
+                ]
+            ]
+        ]
+
+        let lastUserIndex = request.conversation.lastIndex(where: { $0.role == .user })
+
+        for index in request.conversation.indices {
+            let message = request.conversation[index]
+            let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            var content: [[String: Any]] = [
+                [
+                    "type": "input_text",
+                    "text": trimmed
+                ]
+            ]
+
+            if index == lastUserIndex,
+               request.screenContext == .kitchen,
+               let attachedImageData = request.attachedImageData {
+                content.append(
+                    [
+                        "type": "input_image",
+                        "image_url": makeDataURL(for: attachedImageData),
+                        "detail": "low"
+                    ]
+                )
+            }
+
+            messages.append(
+                [
+                    "role": roleLabel(for: message.role),
+                    "content": content
+                ]
+            )
+        }
+
+        return messages
+    }
+
+    func roleLabel(for role: CaptainConversationRole) -> String {
+        switch role {
+        case .system:
+            return "developer"
+        case .user:
+            return "user"
+        case .assistant:
+            return "assistant"
+        }
+    }
+
+    func developerContextMessage(for request: HybridBrainRequest) -> String {
+        let profileSummary = request.userProfileSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedProfileSummary = profileSummary.isEmpty ? "Unavailable" : profileSummary
+        let languageLabel = request.language == .english ? "English" : "Arabic (Iraqi dialect)"
+
+        return """
+        Captain runtime context:
+        - ScreenContext: \(request.screenContext.rawValue)
+        - ScreenFocus: \(request.screenContext.focusSummary)
+        - ResponseLanguage: \(languageLabel)
+        - Steps: \(request.contextData.steps)
+        - Calories: \(request.contextData.calories)
+        - Vibe: \(request.contextData.vibe)
+        - Level: \(request.contextData.level)
+        - HasKitchenImage: \(request.screenContext == .kitchen && request.hasAttachedImage ? "true" : "false")
+        - UserProfileSummary: \(normalizedProfileSummary)
+
+        Return only JSON that matches the required schema.
+        """
+    }
+
+    func structuredResponseSchema() -> [String: Any] {
+        let exerciseSchema: [String: Any] = [
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "sets", "repsOrDuration"],
+            "properties": [
+                "name": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "sets": [
+                    "type": "integer",
+                    "minimum": 1
+                ],
+                "repsOrDuration": [
+                    "type": "string",
+                    "minLength": 1
+                ]
+            ]
+        ]
+
+        let workoutPlanSchema: [String: Any] = [
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["title", "exercises"],
+            "properties": [
+                "title": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "exercises": [
+                    "type": "array",
+                    "minItems": 1,
+                    "items": exerciseSchema
+                ]
+            ]
+        ]
+
+        let mealSchema: [String: Any] = [
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "description", "calories"],
+            "properties": [
+                "type": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "description": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "calories": [
+                    "type": "integer",
+                    "minimum": 1
+                ]
+            ]
+        ]
+
+        let mealPlanSchema: [String: Any] = [
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["meals"],
+            "properties": [
+                "meals": [
+                    "type": "array",
+                    "minItems": 1,
+                    "items": mealSchema
+                ]
+            ]
+        ]
+
+        return [
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["message", "workoutPlan", "mealPlan"],
+            "properties": [
+                "message": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "workoutPlan": workoutPlanSchema,
+                "mealPlan": mealPlanSchema
+            ]
+        ]
+    }
+
+    func makeDataURL(for data: Data) -> String {
+        "data:image/jpeg;base64,\(data.base64EncodedString())"
+    }
+
+    func decodeStructuredResponse(from rawText: String) throws -> CaptainStructuredResponse {
+        guard let data = rawText.data(using: .utf8) else {
+            throw HybridBrainServiceError.invalidStructuredResponse
+        }
+
+        do {
+            return try JSONDecoder().decode(CaptainStructuredResponse.self, from: data)
+        } catch {
+            throw HybridBrainServiceError.invalidStructuredResponse
+        }
+    }
+
+    func encodeStructuredResponse(_ response: CaptainStructuredResponse) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(response)
+
+        guard let rawText = String(data: data, encoding: .utf8) else {
+            throw HybridBrainServiceError.invalidStructuredResponse
+        }
+
+        return rawText
+    }
+
+    func tokenStream(for rawText: String) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            let task = Task.detached(priority: .utility) {
+                for chunk in Self.chunked(rawText, size: 24) {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(chunk)
+                    try? await Task.sleep(nanoseconds: 18_000_000)
+                }
+                continuation.finish()
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
     }
 
     nonisolated static func chunked(_ text: String, size: Int) -> [String] {
@@ -531,605 +578,4 @@ private extension HybridBrainService {
 
         return false
     }
-
-    func classifyIntent(
-        for userMessage: String,
-        in payload: LocalAppIntentPayload
-    ) -> LocalIntentClassification {
-        let wantsMealFromKeywords = containsAny(userMessage, keywords: Self.mealKeywords)
-        let wantsWorkoutFromKeywords = containsAny(userMessage, keywords: Self.workoutKeywords)
-        let wantsSleepGuidance = payload.screenContext == .sleepAnalysis || containsAny(userMessage, keywords: Self.sleepKeywords)
-        let wantsVibeGuidance = payload.screenContext == .myVibe || containsAny(userMessage, keywords: Self.vibeKeywords)
-        let wantsChallengeGuidance = payload.screenContext == .peaks || containsAny(userMessage, keywords: Self.challengeKeywords)
-
-        let wantsMealPlan: Bool
-        switch payload.screenContext {
-        case .kitchen:
-            wantsMealPlan = true
-        case .gym, .sleepAnalysis, .peaks, .mainChat, .myVibe:
-            wantsMealPlan = payload.hasAttachedImage || wantsMealFromKeywords
-        }
-
-        let wantsWorkoutPlan: Bool
-        switch payload.screenContext {
-        case .gym:
-            wantsWorkoutPlan = wantsWorkoutFromKeywords || (!wantsMealFromKeywords && !wantsSleepGuidance && !wantsVibeGuidance)
-        case .sleepAnalysis, .peaks, .mainChat, .myVibe, .kitchen:
-            wantsWorkoutPlan = wantsWorkoutFromKeywords
-        }
-
-        return LocalIntentClassification(
-            wantsWorkoutPlan: wantsWorkoutPlan,
-            wantsMealPlan: wantsMealPlan,
-            wantsSleepGuidance: wantsSleepGuidance,
-            wantsVibeGuidance: wantsVibeGuidance,
-            wantsChallengeGuidance: wantsChallengeGuidance
-        )
-    }
-
-    func buildStructuredFallback(
-        for payload: LocalAppIntentPayload,
-        intent: LocalIntentClassification
-    ) -> CaptainStructuredResponse {
-        CaptainStructuredResponse(
-            message: buildMessage(for: payload, intent: intent),
-            workoutPlan: intent.wantsWorkoutPlan ? buildWorkoutPlan(for: payload, intent: intent) : nil,
-            mealPlan: intent.wantsMealPlan ? buildMealPlan(for: payload) : nil
-        )
-    }
-
-    func buildSystemPrompt(
-        basePrompt: String,
-        for payload: LocalAppIntentPayload,
-        conversationHistory: [CaptainConversationMessage],
-        baselineResponse: CaptainStructuredResponse
-    ) throws -> String {
-        let baselineJSON = try encodeStructuredResponse(baselineResponse)
-        let profileSummary = payload.userProfileSummary.trimmingCharacters(in: .whitespacesAndNewlines)
-        let profileBlock = profileSummary.isEmpty ? "Unavailable" : profileSummary
-        let historyBlock = conversationHistory.isEmpty
-            ? "No prior transcript."
-            : formattedTranscript(from: conversationHistory)
-
-        return """
-        \(basePrompt)
-
-        Runtime context:
-        - Screen: \(payload.screenContext.promptTitle)
-        - Focus: \(payload.screenContext.focusSummary)
-        - HasAttachedImage: \(payload.hasAttachedImage ? "true" : "false")
-        - UserProfileSummary: \(profileBlock)
-        - Steps: \(payload.contextData.steps)
-        - Calories: \(payload.contextData.calories)
-        - Vibe: \(payload.contextData.vibe)
-        - Level: \(payload.contextData.level)
-
-        Prior transcript:
-        \(historyBlock)
-
-        Response contract:
-        - The active user request will be sent as the final user turn after this system prompt.
-        - Return one JSON object only.
-        - Do not add markdown, comments, or prose before the JSON.
-        - Use null for any plan that does not apply.
-        - If decoding confidence drops, repair toward the valid baseline JSON below instead of changing the schema.
-
-        \(HybridBrainPromptMarkers.fallbackJSONStart)
-        \(baselineJSON)
-        \(HybridBrainPromptMarkers.fallbackJSONEnd)
-        """
-    }
-
-    func transcriptExcludingLatestUserMessage(
-        _ transcript: [CaptainConversationMessage]
-    ) -> [CaptainConversationMessage] {
-        var removedLatestUser = false
-
-        return transcript.reversed().compactMap { message in
-            if !removedLatestUser && message.role == .user {
-                removedLatestUser = true
-                return nil
-            }
-
-            return message
-        }
-        .reversed()
-    }
-
-    func formattedTranscript(from transcript: [CaptainConversationMessage]) -> String {
-        transcript
-            .map { message in
-                "[\(message.role.rawValue.uppercased())] \(message.content)"
-            }
-            .joined(separator: "\n")
-    }
-
-    func fallbackRawOutput(
-        for response: CaptainStructuredResponse,
-        error: Error
-    ) -> String {
-        let fallbackJSON = (try? encodeStructuredResponse(response))
-            ?? """
-            {"message":"Captain hybrid fallback engaged.","workoutPlan":null,"mealPlan":null}
-            """
-
-        return """
-        [hybrid fallback]
-        reason=\(sanitizedErrorDescription(from: error))
-
-        \(fallbackJSON)
-
-        [/hybrid fallback]
-        """
-    }
-
-    func sanitizedErrorDescription(from error: Error) -> String {
-        error.localizedDescription
-            .replacingOccurrences(of: "\n", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func buildMessage(
-        for payload: LocalAppIntentPayload,
-        intent: LocalIntentClassification
-    ) -> String {
-        let userMessage = payload.latestUserMessage ?? ""
-        let sleepSnapshot = sleepSnapshot(from: userMessage)
-        let steps = payload.contextData.steps
-        let calories = payload.contextData.calories
-        let vibe = payload.contextData.vibe
-        let level = payload.contextData.level
-
-        switch payload.language {
-        case .arabic:
-            if intent.wantsMealPlan && intent.wantsWorkoutPlan {
-                return "مستواك \(level) وخطواتك \(steps)، فرتبتلك تمرين عملي مع 3 وجبات تمشي ويا مود \(vibe) وسعراتك الحالية \(calories)."
-            }
-
-            if intent.wantsMealPlan {
-                if payload.hasAttachedImage {
-                    return "بنيتلك 3 وجبات سريعة منطقية على أساس لقطة الثلاجة الحالية، وبشكل يناسب مود \(vibe) وحركتك اليوم \(steps) خطوة."
-                }
-
-                return "رتبتلك 3 وجبات واضحة تناسب مود \(vibe) وسعراتك الحالية \(calories)، حتى تبقى ثابت بدون تعقيد."
-            }
-
-            if intent.wantsWorkoutPlan {
-                return "خطواتك اليوم \(steps) ومستواك \(level)، فالأفضل نشتغل على جلسة قصيرة ومركزة ترفع الأداء بدون تخبيص."
-            }
-
-            if intent.wantsSleepGuidance {
-                if let sleepSnapshot {
-                    return buildArabicSleepMessage(from: sleepSnapshot, vibe: vibe)
-                }
-
-                return "جسمك يحتاج هدوء منظم الليلة. خفف التحفيز، ثبّت النفس، وخلي آخر ساعة قبل النوم أخف حتى يهدأ مود \(vibe)."
-            }
-
-            if intent.wantsVibeGuidance {
-                return "مود \(vibe) يحتاج إيقاع ثابت بالبداية، وبعدها تصعد الطاقة شوي شوي حتى يبقى تركيزك حاضر بدون استنزاف."
-            }
-
-            if intent.wantsChallengeGuidance {
-                return "أنت هسه على لفل \(level)، فاختار هدف واحد measurable اليوم وكمّله للنهاية قبل ما تفتح جبهة ثانية."
-            }
-
-            return "أنت اليوم على \(steps) خطوة و\(calories) سعرة فعالة، فخل نثبت اليوم بخطوة عملية وحدة تناسب مود \(vibe)."
-
-        case .english:
-            if intent.wantsMealPlan && intent.wantsWorkoutPlan {
-                return "You are at level \(level) with \(steps) steps today, so I lined up a focused workout and three meals that match your \(vibe) vibe and current calorie burn."
-            }
-
-            if intent.wantsMealPlan {
-                if payload.hasAttachedImage {
-                    return "I built three practical meals around the current fridge capture, tuned to your \(vibe) vibe and today's \(steps) steps."
-                }
-
-                return "I mapped out three practical meals that fit your \(vibe) vibe and current active calories of \(calories)."
-            }
-
-            if intent.wantsWorkoutPlan {
-                return "You are on level \(level) with \(steps) steps today, so the best move is a short, focused session that sharpens output without overloading recovery."
-            }
-
-            if intent.wantsSleepGuidance {
-                if let sleepSnapshot {
-                    return buildEnglishSleepMessage(from: sleepSnapshot, vibe: vibe)
-                }
-
-                return "Tonight should be about downshifting the system. Lower stimulation, slow the breathing, and give your \(vibe) state a softer landing."
-            }
-
-            if intent.wantsVibeGuidance {
-                return "Your \(vibe) vibe will respond best to a steady groove first, then a sharper ramp once your focus is fully online."
-            }
-
-            if intent.wantsChallengeGuidance {
-                return "You are level \(level), so lock one measurable win today and finish it before you open a second front."
-            }
-
-            return "You are at \(steps) steps and \(calories) active calories today, so anchor the day with one practical move that fits your current \(vibe) vibe."
-        }
-    }
-
-    func buildWorkoutPlan(
-        for payload: LocalAppIntentPayload,
-        intent: LocalIntentClassification
-    ) -> WorkoutPlan {
-        let mode = workoutMode(for: payload, intent: intent)
-
-        switch (payload.language, mode) {
-        case (.arabic, .recovery):
-            return WorkoutPlan(
-                title: "خطة استشفاء هادئة",
-                exercises: [
-                    Exercise(name: "تنفّس 4-6", sets: 3, repsOrDuration: "60 ثانية"),
-                    Exercise(name: "مشي خفيف", sets: 2, repsOrDuration: "8 دقائق"),
-                    Exercise(name: "فتح الورك والظهر", sets: 3, repsOrDuration: "45 ثانية"),
-                    Exercise(name: "تمدد أوتار خلفية", sets: 2, repsOrDuration: "45 ثانية")
-                ]
-            )
-        case (.arabic, .activation):
-            return WorkoutPlan(
-                title: "خطة تشغيل سريعة",
-                exercises: [
-                    Exercise(name: "إحماء ديناميكي", sets: 2, repsOrDuration: "60 ثانية"),
-                    Exercise(name: "سكوات وزن جسم", sets: 3, repsOrDuration: "12 تكرار"),
-                    Exercise(name: "ضغط مائل", sets: 3, repsOrDuration: "10 تكرار"),
-                    Exercise(name: "بلانك", sets: 3, repsOrDuration: "30 ثانية")
-                ]
-            )
-        case (.arabic, .balanced):
-            return WorkoutPlan(
-                title: "خطة توازن اليوم",
-                exercises: [
-                    Exercise(name: "إحماء مفاصل", sets: 2, repsOrDuration: "75 ثانية"),
-                    Exercise(name: "لانجز متبادلة", sets: 3, repsOrDuration: "10 لكل رجل"),
-                    Exercise(name: "سحب مطاط أو دامبل رو", sets: 3, repsOrDuration: "12 تكرار"),
-                    Exercise(name: "مشي سريع", sets: 2, repsOrDuration: "6 دقائق")
-                ]
-            )
-        case (.arabic, .performance):
-            return WorkoutPlan(
-                title: "خطة قوة وتركيز",
-                exercises: [
-                    Exercise(name: "سكوات", sets: 4, repsOrDuration: "8-10 تكرار"),
-                    Exercise(name: "ضغط أو بنش", sets: 4, repsOrDuration: "8-10 تكرار"),
-                    Exercise(name: "رو", sets: 4, repsOrDuration: "10 تكرار"),
-                    Exercise(name: "بلانك جانبي", sets: 3, repsOrDuration: "40 ثانية")
-                ]
-            )
-        case (.arabic, .challenge):
-            return WorkoutPlan(
-                title: "قمة اليوم: جلسة زخم",
-                exercises: [
-                    Exercise(name: "Air Squat", sets: 4, repsOrDuration: "15 تكرار"),
-                    Exercise(name: "Push-Up", sets: 4, repsOrDuration: "10 تكرار"),
-                    Exercise(name: "Mountain Climber", sets: 3, repsOrDuration: "30 ثانية"),
-                    Exercise(name: "Farmer Carry أو مشي سريع", sets: 3, repsOrDuration: "90 ثانية")
-                ]
-            )
-        case (.english, .recovery):
-            return WorkoutPlan(
-                title: "Recovery Reset",
-                exercises: [
-                    Exercise(name: "4-6 Breathing", sets: 3, repsOrDuration: "60 sec"),
-                    Exercise(name: "Light Walk", sets: 2, repsOrDuration: "8 min"),
-                    Exercise(name: "Hip and Thoracic Openers", sets: 3, repsOrDuration: "45 sec"),
-                    Exercise(name: "Hamstring Stretch", sets: 2, repsOrDuration: "45 sec")
-                ]
-            )
-        case (.english, .activation):
-            return WorkoutPlan(
-                title: "Quick Activation Session",
-                exercises: [
-                    Exercise(name: "Dynamic Warm-Up", sets: 2, repsOrDuration: "60 sec"),
-                    Exercise(name: "Bodyweight Squat", sets: 3, repsOrDuration: "12 reps"),
-                    Exercise(name: "Incline Push-Up", sets: 3, repsOrDuration: "10 reps"),
-                    Exercise(name: "Plank Hold", sets: 3, repsOrDuration: "30 sec")
-                ]
-            )
-        case (.english, .balanced):
-            return WorkoutPlan(
-                title: "Balanced Daily Session",
-                exercises: [
-                    Exercise(name: "Joint Prep Flow", sets: 2, repsOrDuration: "75 sec"),
-                    Exercise(name: "Alternating Lunge", sets: 3, repsOrDuration: "10 each leg"),
-                    Exercise(name: "Band Row or Dumbbell Row", sets: 3, repsOrDuration: "12 reps"),
-                    Exercise(name: "Brisk Walk", sets: 2, repsOrDuration: "6 min")
-                ]
-            )
-        case (.english, .performance):
-            return WorkoutPlan(
-                title: "Strength and Focus Block",
-                exercises: [
-                    Exercise(name: "Squat", sets: 4, repsOrDuration: "8-10 reps"),
-                    Exercise(name: "Press or Bench", sets: 4, repsOrDuration: "8-10 reps"),
-                    Exercise(name: "Row", sets: 4, repsOrDuration: "10 reps"),
-                    Exercise(name: "Side Plank", sets: 3, repsOrDuration: "40 sec")
-                ]
-            )
-        case (.english, .challenge):
-            return WorkoutPlan(
-                title: "Peaks Momentum Session",
-                exercises: [
-                    Exercise(name: "Air Squat", sets: 4, repsOrDuration: "15 reps"),
-                    Exercise(name: "Push-Up", sets: 4, repsOrDuration: "10 reps"),
-                    Exercise(name: "Mountain Climber", sets: 3, repsOrDuration: "30 sec"),
-                    Exercise(name: "Farmer Carry or Fast Walk", sets: 3, repsOrDuration: "90 sec")
-                ]
-            )
-        }
-    }
-
-    func buildMealPlan(for payload: LocalAppIntentPayload) -> MealPlan {
-        let style = mealStyle(for: payload.latestUserMessage ?? "")
-
-        switch (payload.language, style) {
-        case (.arabic, .quick):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextArabic(fromFridge: payload.hasAttachedImage, style: style), calories: 340),
-                    MealPlan.Meal(type: "Lunch", description: "ساندويچ بروتين سريع من الموجود مع خضار ولبن أو زبادي جانبي.", calories: 520),
-                    MealPlan.Meal(type: "Dinner", description: "سلطة خفيفة مع مصدر بروتين بسيط حتى تبقى المعدة هادئة بالليل.", calories: 390)
-                ]
-            )
-        case (.arabic, .highProtein):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextArabic(fromFridge: payload.hasAttachedImage, style: style), calories: 410),
-                    MealPlan.Meal(type: "Lunch", description: "صدر دجاج أو تونة مع رز معتدل وخضار، حتى تثبّت الشبع والبروتين.", calories: 610),
-                    MealPlan.Meal(type: "Dinner", description: "زبادي يوناني أو جبن خفيف مع سلطة وبذور أو خبز خفيف.", calories: 430)
-                ]
-            )
-        case (.arabic, .balanced):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextArabic(fromFridge: payload.hasAttachedImage, style: style), calories: 360),
-                    MealPlan.Meal(type: "Lunch", description: "طبق متوازن من بروتين + كارب نظيف + خضار حتى يبقى أداؤك ثابت.", calories: 560),
-                    MealPlan.Meal(type: "Dinner", description: "عشاء أخف: شوربة أو سلطة مع بروتين بسيط حتى تريح الهضم.", calories: 400)
-                ]
-            )
-        case (.english, .quick):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextEnglish(fromFridge: payload.hasAttachedImage, style: style), calories: 340),
-                    MealPlan.Meal(type: "Lunch", description: "A fast protein wrap from what is already on hand with vegetables and yogurt on the side.", calories: 520),
-                    MealPlan.Meal(type: "Dinner", description: "A lighter salad with a simple protein source to keep digestion calm at night.", calories: 390)
-                ]
-            )
-        case (.english, .highProtein):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextEnglish(fromFridge: payload.hasAttachedImage, style: style), calories: 410),
-                    MealPlan.Meal(type: "Lunch", description: "Chicken breast or tuna with moderate rice and vegetables to keep protein and satiety high.", calories: 610),
-                    MealPlan.Meal(type: "Dinner", description: "Greek yogurt or light cheese with salad and a small seed or toast side.", calories: 430)
-                ]
-            )
-        case (.english, .balanced):
-            return MealPlan(
-                meals: [
-                    MealPlan.Meal(type: "Breakfast", description: breakfastTextEnglish(fromFridge: payload.hasAttachedImage, style: style), calories: 360),
-                    MealPlan.Meal(type: "Lunch", description: "A balanced plate of protein, clean carbs, and vegetables to keep output stable.", calories: 560),
-                    MealPlan.Meal(type: "Dinner", description: "A lighter dinner such as soup or salad with an easy protein source.", calories: 400)
-                ]
-            )
-        }
-    }
-
-    func workoutMode(
-        for payload: LocalAppIntentPayload,
-        intent: LocalIntentClassification
-    ) -> LocalWorkoutMode {
-        if intent.wantsSleepGuidance || payload.screenContext == .sleepAnalysis {
-            return .recovery
-        }
-
-        if payload.screenContext == .peaks || intent.wantsChallengeGuidance {
-            return .challenge
-        }
-
-        if payload.contextData.steps < 2_500 {
-            return .activation
-        }
-
-        if payload.contextData.level >= 12 || payload.contextData.calories >= 650 {
-            return .performance
-        }
-
-        return .balanced
-    }
-
-    func mealStyle(for userMessage: String) -> LocalMealStyle {
-        if containsAny(userMessage, keywords: Self.quickMealKeywords) {
-            return .quick
-        }
-
-        if containsAny(userMessage, keywords: Self.highProteinKeywords) {
-            return .highProtein
-        }
-
-        return .balanced
-    }
-
-    func sleepSnapshot(from text: String) -> LocalSleepSnapshot? {
-        guard let sleepStart = value(after: "SleepStart:", in: text),
-              let sleepEnd = value(after: "SleepEnd:", in: text),
-              let totalHours = doubleValue(after: "TotalSleepHours:", in: text),
-              let deepHours = doubleValue(after: "DeepSleepHours:", in: text),
-              let remHours = doubleValue(after: "REMSleepHours:", in: text),
-              let coreHours = doubleValue(after: "CoreSleepHours:", in: text),
-              let awakeMinutes = intValue(after: "AwakeMinutes:", in: text) else {
-            return nil
-        }
-
-        return LocalSleepSnapshot(
-            sleepStart: sleepStart,
-            sleepEnd: sleepEnd,
-            totalHours: totalHours,
-            deepHours: deepHours,
-            remHours: remHours,
-            coreHours: coreHours,
-            awakeMinutes: awakeMinutes
-        )
-    }
-
-    func buildArabicSleepMessage(from snapshot: LocalSleepSnapshot, vibe: String) -> String {
-        let total = formattedMetric(snapshot.totalHours)
-        let deep = formattedMetric(snapshot.deepHours)
-
-        if snapshot.totalHours < 6 {
-            return "نومك من \(snapshot.sleepStart) إلى \(snapshot.sleepEnd) طلع تقريباً \(total) ساعات فقط، وهاي أقل من احتياجك. ابدأ يومك بهدوء، مي وضوء طبيعي، وخلي مود \(vibe) يمشي على خفيف بالبداية."
-        }
-
-        if snapshot.awakeMinutes >= 40 {
-            return "نوم البارحة كان بحدود \(total) ساعات، بس أكو تقطّع واضح حوالي \(snapshot.awakeMinutes) دقيقة صحوة. اليوم خلك على إيقاع أهدأ، وكافيينك خلّه بعد الفطور مو قبله."
-        }
-
-        if snapshot.deepHours < 1 {
-            return "أخذت تقريباً \(total) ساعات نوم، بس النوم العميق كان \(deep) ساعة فقط. هذا يعني الاستشفاء مو كامل، فخل بداية اليوم أخف ومشيك الصباحي يكون مريح."
-        }
-
-        return "نومك من \(snapshot.sleepStart) إلى \(snapshot.sleepEnd) كان مرتب: حوالي \(total) ساعات ونوم عميق \(deep) ساعة. هذا مؤشر زين، فابدأ يومك بثبات وخلي مود \(vibe) يصعد شوي شوي."
-    }
-
-    func buildEnglishSleepMessage(from snapshot: LocalSleepSnapshot, vibe: String) -> String {
-        let total = formattedMetric(snapshot.totalHours)
-        let deep = formattedMetric(snapshot.deepHours)
-
-        if snapshot.totalHours < 6 {
-            return "You slept from \(snapshot.sleepStart) to \(snapshot.sleepEnd) for about \(total) hours, which is short for solid recovery. Start the morning gently with water, daylight, and a softer \(vibe) pace."
-        }
-
-        if snapshot.awakeMinutes >= 40 {
-            return "Last night added up to about \(total) hours, but it was fragmented with roughly \(snapshot.awakeMinutes) minutes awake. Keep the morning steadier and delay caffeine until after breakfast."
-        }
-
-        if snapshot.deepHours < 1 {
-            return "You got about \(total) hours of sleep, but only \(deep) hour of deep sleep. Recovery is decent but not fully restored, so keep the first part of the day lighter."
-        }
-
-        return "Your sleep from \(snapshot.sleepStart) to \(snapshot.sleepEnd) looked solid: about \(total) hours with \(deep) hour of deep sleep. Recovery is in a good place, so build your \(vibe) rhythm gradually."
-    }
-
-    func value(after key: String, in text: String) -> String? {
-        let lines = text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-        guard let matchedLine = lines.first(where: { $0.hasPrefix(key) }) else {
-            return nil
-        }
-
-        return String(matchedLine.dropFirst(key.count))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func doubleValue(after key: String, in text: String) -> Double? {
-        guard let rawValue = value(after: key, in: text) else { return nil }
-        return Double(rawValue)
-    }
-
-    func intValue(after key: String, in text: String) -> Int? {
-        guard let rawValue = value(after: key, in: text) else { return nil }
-        return Int(rawValue)
-    }
-
-    func formattedMetric(_ value: Double) -> String {
-        String(format: "%.1f", value)
-    }
-
-    func breakfastTextArabic(
-        fromFridge: Bool,
-        style: LocalMealStyle
-    ) -> String {
-        switch style {
-        case .quick:
-            return fromFridge
-                ? "أومليت سريع من الموجود بالثلاجة مع خضار وخبز خفيف."
-                : "أومليت سريع مع خضار وخبز خفيف حتى تبدي يومك بدون ثقل."
-        case .highProtein:
-            return fromFridge
-                ? "بيض مع لبن أو زبادي يوناني من الموجود، وياها خضار بسيطة."
-                : "بيض مع زبادي يوناني وخضار بسيطة حتى ترفع البروتين من أول اليوم."
-        case .balanced:
-            return fromFridge
-                ? "فطور متوازن من الموجود: بيض أو لبن مع خضار وقطعة كارب خفيفة."
-                : "فطور متوازن: بيض أو لبن مع خضار وقطعة كارب خفيفة."
-        }
-    }
-
-    func breakfastTextEnglish(
-        fromFridge: Bool,
-        style: LocalMealStyle
-    ) -> String {
-        switch style {
-        case .quick:
-            return fromFridge
-                ? "A quick omelet from the fridge staples with vegetables and a light bread side."
-                : "A quick omelet with vegetables and a light bread side to start clean."
-        case .highProtein:
-            return fromFridge
-                ? "Eggs with yogurt or Greek yogurt from what is on hand, plus a simple vegetable side."
-                : "Eggs with Greek yogurt and a simple vegetable side to front-load protein."
-        case .balanced:
-            return fromFridge
-                ? "A balanced breakfast from what is on hand: eggs or yogurt, vegetables, and a light carb."
-                : "A balanced breakfast of eggs or yogurt, vegetables, and a light carb."
-        }
-    }
-
-    func containsAny(_ text: String, keywords: [String]) -> Bool {
-        let normalizedText = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        return keywords.contains { keyword in
-            normalizedText.contains(keyword.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current))
-        }
-    }
-
-    func encodeStructuredResponse(_ response: CaptainStructuredResponse) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        let data = try encoder.encode(response)
-
-        guard let rawText = String(data: data, encoding: .utf8) else {
-            throw HybridBrainServiceError.invalidStructuredResponse
-        }
-
-        return rawText
-    }
-
-    static let workoutKeywords = [
-        "workout", "gym", "exercise", "training", "lift", "cardio", "strength",
-        "تمرين", "تمارين", "جيم", "رياضة", "كارديو", "مقاومة", "نادي"
-    ]
-
-    static let mealKeywords = [
-        "meal", "food", "eat", "diet", "recipe", "cook", "kitchen", "fridge",
-        "breakfast", "lunch", "dinner", "protein", "وجبة", "اكل", "أكل", "طبخ",
-        "مطبخ", "ثلاجة", "فطور", "غداء", "عشاء", "سناك", "بروتين"
-    ]
-
-    static let sleepKeywords = [
-        "sleep", "recovery", "rest", "insomnia", "wind down", "nap",
-        "نوم", "استشفاء", "راحة", "ارق", "أرق", "نعاس"
-    ]
-
-    static let vibeKeywords = [
-        "vibe", "mood", "music", "playlist", "focus", "energy",
-        "مود", "فايب", "ذبذبة", "ذبذبات", "اغاني", "أغاني", "بلايليست", "تركيز", "طاقة"
-    ]
-
-    static let challengeKeywords = [
-        "peak", "challenge", "discipline", "mission", "quest",
-        "قمة", "قمم", "تحدي", "انضباط", "مهمة", "كويست"
-    ]
-
-    static let quickMealKeywords = [
-        "quick", "fast", "10 min", "10min", "سريع", "بسرعة", "10 دق", "10 دقائق"
-    ]
-
-    static let highProteinKeywords = [
-        "protein", "high protein", "بروتين", "عالي البروتين"
-    ]
 }

@@ -1167,12 +1167,56 @@ struct VibeControlSheet: View {
 struct VibeDashboardTriggerButton: View {
     var action: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     private let preferredVibeIconName = "vibe_ icon"
     private let fallbackVibeIconName = "vibe_icon"
-    private let buttonSize: CGFloat = 64
-    private let imageSize: CGFloat = 58
-    private let fallbackSymbolSize: CGFloat = 28
-    private let fallbackFrameSize: CGFloat = 38
+    private let buttonSize: CGFloat = 65
+    private let imageSize: CGFloat = 65
+    private let fallbackSymbolSize: CGFloat = 34
+    private let fallbackFrameSize: CGFloat = 52
+
+    private var borderTint: Color {
+        colorScheme == .dark
+        ? Color.white.opacity(0.14)
+        : Color.white.opacity(0.62)
+    }
+
+    private var shadowTint: Color {
+        colorScheme == .dark
+        ? Color.black.opacity(0.18)
+        : Color.black.opacity(0.08)
+    }
+
+    private var surfaceGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.white.opacity(colorScheme == .dark ? 0.08 : 0.54),
+                Color.aiqoMint.opacity(colorScheme == .dark ? 0.08 : 0.16),
+                Color.aiqoSand.opacity(colorScheme == .dark ? 0.05 : 0.12)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var iconGlow: some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color.aiqoMint.opacity(colorScheme == .dark ? 0.10 : 0.18),
+                        Color.aiqoSand.opacity(colorScheme == .dark ? 0.06 : 0.12),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: 2,
+                    endRadius: 22
+                )
+            )
+            .frame(width: 56, height: 56)
+            .blur(radius: 7)
+    }
 
     private var vibeIconName: String? {
         if UIImage(named: preferredVibeIconName) != nil {
@@ -1190,28 +1234,39 @@ struct VibeDashboardTriggerButton: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(0.36))
+                    .fill(.ultraThinMaterial)
 
                 Circle()
-                    .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
+                    .fill(surfaceGradient)
+
+                Circle()
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.10))
 
                 Group {
                     if let vibeIconName {
+                        iconGlow
+
                         Image(vibeIconName)
+                            .renderingMode(.original)
+                            .interpolation(.high)
                             .resizable()
                             .scaledToFit()
                             .frame(width: imageSize, height: imageSize)
+                            .opacity(1)
                     } else {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: fallbackSymbolSize, weight: .semibold))
-                            .foregroundStyle(.primary.opacity(0.78))
+                            .foregroundStyle(Color(red: 0.34, green: 0.30, blue: 0.26))
                             .frame(width: fallbackFrameSize, height: fallbackFrameSize)
                     }
                 }
+
+                Circle()
+                    .strokeBorder(borderTint, lineWidth: 1)
             }
             .frame(width: buttonSize, height: buttonSize)
-            .background(.ultraThinMaterial, in: Circle())
-            .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+            .shadow(color: shadowTint, radius: 14, x: 0, y: 7)
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Open My Vibe")

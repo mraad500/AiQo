@@ -92,11 +92,9 @@ final class CaptainViewModel: ObservableObject {
     var isTyping: Bool { isLoading }
 
     private let userDefaults = UserDefaults.standard
-    private let service: LocalBrainService
-    private let sleepAgent: AppleIntelligenceSleepAgent
+    private let orchestrator: BrainOrchestrator
     private let contextBuilder: CaptainContextBuilder
     private let morningHabitOrchestrator: MorningHabitOrchestrator
-    private let healthManager = HealthKitManager.shared
     private let minimumLoadingStateDuration: TimeInterval = 0.8
 
     private var responseTask: Task<Void, Never>?
@@ -112,13 +110,11 @@ final class CaptainViewModel: ObservableObject {
     }
 
     init(
-        service: LocalBrainService? = nil,
-        sleepAgent: AppleIntelligenceSleepAgent? = nil,
+        orchestrator: BrainOrchestrator? = nil,
         contextBuilder: CaptainContextBuilder? = nil,
         morningHabitOrchestrator: MorningHabitOrchestrator? = nil
     ) {
-        self.service = service ?? LocalBrainService()
-        self.sleepAgent = sleepAgent ?? AppleIntelligenceSleepAgent()
+        self.orchestrator = orchestrator ?? BrainOrchestrator()
         self.contextBuilder = contextBuilder ?? .shared
         self.morningHabitOrchestrator = morningHabitOrchestrator ?? .shared
         loadCustomization()
@@ -201,19 +197,15 @@ final class CaptainViewModel: ObservableObject {
 
         let requestID = UUID()
         activeRequestID = requestID
-        let hasAttachedImage = image != nil
+        let attachedImageData = Self.preparedImageData(from: image)
 
         responseTask = Task { [weak self] in
             guard let self else { return }
-            if self.shouldHandleLocalSleepAnalysis(for: trimmedText, context: context) {
-                await self.handleLocalSleepAnalysis(requestID: requestID)
-            } else {
-                await self.processMessage(
-                    requestID: requestID,
-                    screenContext: context,
-                    hasAttachedImage: hasAttachedImage
-                )
-            }
+            await self.processMessage(
+                requestID: requestID,
+                screenContext: context,
+                attachedImageData: attachedImageData
+            )
         }
     }
 
@@ -308,7 +300,7 @@ final class CaptainViewModel: ObservableObject {
     private func processMessage(
         requestID: UUID,
         screenContext: ScreenContext,
-        hasAttachedImage: Bool
+        attachedImageData: Data?
     ) async {
         defer {
             if activeRequestID == requestID {
@@ -318,16 +310,20 @@ final class CaptainViewModel: ObservableObject {
         }
 
         let conversation = buildConversationHistory()
-        let promptRequest = await buildPromptRequest(
+        let promptRequest = await buildHybridRequest(
             conversation: conversation,
             screenContext: screenContext,
-            hasAttachedImage: hasAttachedImage
+            attachedImageData: attachedImageData
         )
 
         do {
             let startedAt = Date()
-            let responseTask = Task<LocalBrainServiceReply, Error> { [service] in
-                try await service.generateReply(request: promptRequest)
+            let userName = captainReplyUserName()
+            let responseTask = Task<HybridBrainServiceReply, Error> { [orchestrator] in
+                try await orchestrator.processMessage(
+                    request: promptRequest,
+                    userName: userName
+                )
             }
 
             try await runCognitiveTimeline(requestID: requestID)
@@ -346,7 +342,7 @@ final class CaptainViewModel: ObservableObject {
             currentMealPlan = reply.mealPlan
             messages.append(
                 ChatMessage(
-                    text: prependUserNameIfNeeded(to: reply.message),
+                    text: reply.message,
                     isUser: false
                 )
             )
@@ -354,10 +350,10 @@ final class CaptainViewModel: ObservableObject {
             return
         } catch {
             guard activeRequestID == requestID else { return }
-            print("CaptainViewModel local brain error:", error)
+            print("CaptainViewModel hybrid brain error:", error)
             messages.append(
                 ChatMessage(
-                    text: prependUserNameIfNeeded(to: fallbackMessage(for: error)),
+                    text: fallbackMessage(for: error),
                     isUser: false
                 )
             )
@@ -388,128 +384,34 @@ final class CaptainViewModel: ObservableObject {
         )
     }
 
-    private func handleLocalSleepAnalysis() async {
-        guard let requestID = activeRequestID else { return }
-        await handleLocalSleepAnalysis(requestID: requestID)
-    }
-
-    private func handleLocalSleepAnalysis(requestID: UUID) async {
-        defer {
-            if activeRequestID == requestID {
-                isLoading = false
-                coachState = .idle
-            }
-        }
-
-        do {
-            let startedAt = Date()
-            try await transitionCoachState(to: .readingMessage, hold: 0.12, requestID: requestID)
-
-            let sleepSession = try await buildLatestSleepSession()
-            try await transitionCoachState(to: .thinkingOnDevice, hold: 0.12, requestID: requestID)
-            let generatedReply = try await sleepAgent.analyze(session: sleepSession)
-
-            try await transitionCoachState(to: .shapingReply, hold: 0.12, requestID: requestID)
-
-            let elapsed = Date().timeIntervalSince(startedAt)
-            if elapsed < minimumLoadingStateDuration {
-                let remaining = minimumLoadingStateDuration - elapsed
-                try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-            }
-
-            try await transitionCoachState(to: .typing, hold: 0.18, requestID: requestID)
-            try ensureActiveRequest(requestID)
-
-            let structuredResponse = CaptainStructuredResponse(
-                message: prependUserNameIfNeeded(to: generatedReply),
-                workoutPlan: nil,
-                mealPlan: nil
-            )
-
-            currentWorkoutPlan = structuredResponse.workoutPlan
-            currentMealPlan = structuredResponse.mealPlan
-            messages.append(
-                ChatMessage(
-                    text: structuredResponse.message,
-                    isUser: false,
-                    accessory: .morningGratitude
-                )
-            )
-        } catch is CancellationError {
-            return
-        } catch {
-            guard activeRequestID == requestID else { return }
-            print("CaptainViewModel local sleep analysis error:", error)
-
-            currentWorkoutPlan = nil
-            currentMealPlan = nil
-            messages.append(
-                ChatMessage(
-                    text: prependUserNameIfNeeded(to: localSleepFallbackMessage(for: error)),
-                    isUser: false
-                )
-            )
-        }
-    }
-
-    private func buildConversationHistory() -> [LocalConversationMessage] {
+    private func buildConversationHistory() -> [CaptainConversationMessage] {
         messages.compactMap { message in
             let trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedText.isEmpty else { return nil }
 
-            return LocalConversationMessage(
+            return CaptainConversationMessage(
                 role: message.isUser ? .user : .assistant,
                 content: trimmedText
             )
         }
     }
 
-    private func buildPromptRequest(
-        conversation: [LocalConversationMessage],
+    private func buildHybridRequest(
+        conversation: [CaptainConversationMessage],
         screenContext: ScreenContext,
-        hasAttachedImage: Bool
-    ) async -> LocalBrainRequest {
+        attachedImageData: Data?
+    ) async -> HybridBrainRequest {
         let contextData = await contextBuilder.buildContextData()
         let language = AppSettingsStore.shared.appLanguage
         let profileSummary = buildUserProfileSummary()
-        let router = PromptRouter(language: language)
-        let systemPrompt = router.generateSystemPrompt(for: screenContext, data: contextData)
 
-        return LocalBrainRequest(
+        return HybridBrainRequest(
             conversation: conversation,
             screenContext: screenContext,
             language: language,
-            systemPrompt: systemPrompt,
             contextData: contextData,
             userProfileSummary: profileSummary,
-            hasAttachedImage: hasAttachedImage
-        )
-    }
-
-    private func buildLatestSleepSession() async throws -> SleepSession {
-        let authorized = try await healthManager.requestSleepAuthorizationIfNeeded()
-        guard authorized else {
-            throw SleepStageFetchError.authorizationDenied
-        }
-
-        let stages = try await healthManager.fetchSleepStagesForLastNight()
-        guard !stages.isEmpty else {
-            throw MorningSleepAnalysisError.noSleepData
-        }
-
-        let totalSleep = stages
-            .filter { $0.stage != .awake }
-            .reduce(0) { $0 + $1.duration }
-        guard totalSleep > 0 else {
-            throw MorningSleepAnalysisError.noSleepData
-        }
-
-        return SleepSession(
-            totalSleep: totalSleep,
-            deepSleep: totalDuration(for: .deep, in: stages),
-            remSleep: totalDuration(for: .rem, in: stages),
-            coreSleep: totalDuration(for: .core, in: stages),
-            awake: totalDuration(for: .awake, in: stages)
+            attachedImageData: attachedImageData
         )
     }
 
@@ -582,16 +484,21 @@ final class CaptainViewModel: ObservableObject {
             }
         }
 
-        return localizedFallbackMessage(
-            arabic: "صار خلل بسيط بالمخ المحلي يا بطل. جرّب مرة ثانية.",
-            english: "Captain's local brain hit a small issue. Try again."
-        )
-    }
-
-    private func localSleepFallbackMessage(for error: Error) -> String {
-        if let sleepError = error as? MorningSleepAnalysisError,
-           sleepError == .noSleepData {
-            return morningSleepFallbackMessage()
+        if let hybridError = error as? HybridBrainServiceError {
+            switch hybridError {
+            case .invalidStructuredResponse:
+                return localizedFallbackMessage(
+                    arabic: "رد السحابة رجع بصيغة غير صالحة للواجهة. جرّب مرة ثانية.",
+                    english: "The cloud reply came back in an invalid format. Try again."
+                )
+            case .networkUnavailable, .requestFailed:
+                return localizedFallbackMessage(
+                    arabic: "الاتصال بالسحابة مو ثابت هسه. جرّب مرة ثانية.",
+                    english: "The cloud connection is unstable right now. Try again."
+                )
+            case .badStatusCode, .invalidResponse, .emptyResponse, .emptyConversation, .missingUserMessage:
+                break
+            }
         }
 
         if let sleepStageError = error as? SleepStageFetchError {
@@ -602,14 +509,14 @@ final class CaptainViewModel: ObservableObject {
                     english: "Enable sleep access in Health first, then try the local sleep analysis again."
                 )
             case .healthDataUnavailable, .sleepAnalysisUnavailable:
-                return localizedFallbackMessage(
-                    arabic: "بيانات النوم المحلية مو متاحة على هذا الجهاز حالياً.",
-                    english: "Local sleep data is not available on this device right now."
-                )
+                return morningSleepFallbackMessage()
             }
         }
 
-        return fallbackMessage(for: error)
+        return localizedFallbackMessage(
+            arabic: "صار خلل بسيط بمخ الكابتن يا بطل. جرّب مرة ثانية.",
+            english: "Captain hit a small issue. Try again."
+        )
     }
 
     private func localizedFallbackMessage(arabic: String, english: String) -> String {
@@ -675,15 +582,6 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
-    private func totalDuration(
-        for stage: SleepStageData.Stage,
-        in stages: [SleepStageData]
-    ) -> TimeInterval {
-        stages
-            .filter { $0.stage == stage }
-            .reduce(0) { $0 + $1.duration }
-    }
-
     private func morningSleepFallbackMessage() -> String {
         localizedFallbackMessage(
             arabic: "صباح الخير. ما قدرت أقرأ تفاصيل نوم البارحة بالكامل، بس خذ بداية هادئة اليوم: مي، ضوء طبيعي، ومشي خفيف.",
@@ -691,48 +589,11 @@ final class CaptainViewModel: ObservableObject {
         )
     }
 
-    private func shouldHandleLocalSleepAnalysis(
-        for message: String,
-        context: ScreenContext
-    ) -> Bool {
-        context == .sleepAnalysis || containsSleepIntent(in: message)
-    }
-
-    private func containsSleepIntent(in message: String) -> Bool {
-        let normalizedMessage = normalizedIntentText(message)
-
-        return Self.sleepIntentPatterns.contains { pattern in
-            normalizedMessage.range(
-                of: pattern,
-                options: [.regularExpression, .caseInsensitive]
-            ) != nil
-        }
-    }
-
-    private func normalizedIntentText(_ text: String) -> String {
-        text
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .replacingOccurrences(of: "ـ", with: "")
-    }
-
-}
-
-private enum MorningSleepAnalysisError: LocalizedError {
-    case noSleepData
-
-    var errorDescription: String? {
-        switch self {
-        case .noSleepData:
-            return "No sleep data was available for the previous night."
-        }
-    }
 }
 
 private extension CaptainViewModel {
-    static let sleepIntentPatterns: [String] = [
-        #"\b(?:sleep|sleeping|slept|nap|napping)\b"#,
-        #"(?<![\p{L}\p{N}_])نوم(?:ي|ك|ه|ها|نا|كم|هم)?(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])نمت(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])نايم(?:ة|ين)?(?![\p{L}\p{N}_])"#
-    ]
+    static func preparedImageData(from image: UIImage?) -> Data? {
+        guard let image else { return nil }
+        return image.jpegData(compressionQuality: 0.74) ?? image.pngData()
+    }
 }

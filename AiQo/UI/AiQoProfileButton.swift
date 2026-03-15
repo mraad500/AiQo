@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum AiQoProfileButtonLayout {
-    static let visualDiameter: CGFloat = 52
-    static let hitTargetDiameter: CGFloat = 56
-    static let symbolPointSize: CGFloat = 24
+    static let visualDiameter: CGFloat = 65
+    static let hitTargetDiameter: CGFloat = 65
+    static let symbolPointSize: CGFloat = 30
     static let reservedLaneWidth: CGFloat = 72
     static let shadowRadius: CGFloat = 16
     static let shadowYOffset: CGFloat = 7

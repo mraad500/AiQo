@@ -6,12 +6,12 @@ struct BrainOrchestrator: Sendable {
         case cloud
     }
 
-    private let localService: LocalIntelligenceService
+    private let localService: LocalBrainService
     private let cloudService: CloudBrainService
     private let sanitizer: PrivacySanitizer
 
     init(
-        localService: LocalIntelligenceService = LocalIntelligenceService(),
+        localService: LocalBrainService = LocalBrainService(),
         cloudService: CloudBrainService = CloudBrainService(),
         sanitizer: PrivacySanitizer = PrivacySanitizer()
     ) {
@@ -20,52 +20,35 @@ struct BrainOrchestrator: Sendable {
         self.sanitizer = sanitizer
     }
 
-    func generateReply(
+    func processMessage(
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
-        let resolvedRequest = requestByInterceptingIntent(request)
+        let routedRequest = requestByInterceptingStrictSleepDataIntent(request)
         let baseReply: HybridBrainServiceReply
-        switch route(for: resolvedRequest) {
+
+        switch route(for: routedRequest) {
         case .local:
-            baseReply = try await localService.generateReply(request: resolvedRequest)
+            baseReply = try await generateLocalReply(for: routedRequest)
         case .cloud:
-            baseReply = try await cloudService.generateReply(
-                request: resolvedRequest,
-                userName: userName
-            )
+            do {
+                baseReply = try await cloudService.generateReply(
+                    request: routedRequest,
+                    userName: userName
+                )
+            } catch {
+                baseReply = try await generateLocalReply(for: routedRequest)
+            }
         }
 
-        let personalizedMessage: String
-        if let userName, !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            personalizedMessage = sanitizer.injectUserName(
-                into: baseReply.message,
-                userName: userName
-            )
-        } else {
-            personalizedMessage = baseReply.message
-        }
-
-        let structuredResponse = CaptainStructuredResponse(
-            message: personalizedMessage,
-            workoutPlan: baseReply.workoutPlan,
-            mealPlan: baseReply.mealPlan
-        )
-        let rawText = try encode(structuredResponse)
-
-        return HybridBrainServiceReply(
-            message: structuredResponse.message,
-            workoutPlan: structuredResponse.workoutPlan,
-            mealPlan: structuredResponse.mealPlan,
-            rawText: rawText
-        )
+        return makePersonalizedReply(baseReply, userName: userName)
     }
 
     func startStreamingReply(
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainStreamingSession {
-        let reply = try await generateReply(
+        let reply = try await processMessage(
             request: request,
             userName: userName
         )
@@ -83,44 +66,118 @@ struct BrainOrchestrator: Sendable {
 }
 
 private extension BrainOrchestrator {
-    static let sleepIntentPatterns: [String] = [
-        #"\b(?:sleep|sleeping|slept|nap|napping)\b"#,
-        #"(?<![\p{L}\p{N}_])نوم(?:ي|ك|ه|ها|نا|كم|هم)?(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])نمت(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])نايم(?:ة|ين)?(?![\p{L}\p{N}_])"#
+    static let strictSleepTopicPatterns: [String] = [
+        #"\b(?:sleep|slept|sleeping|sleep quality|deep sleep|rem|nap|last night)\b"#,
+        #"(?<![\p{L}\p{N}_])(?:نوم|نمت|نومي|نومتك|نومتـي|نومي)(?![\p{L}\p{N}_])"#,
+        #"(?<![\p{L}\p{N}_])(?:نوم البارحة|مرحلة النوم|مراحل النوم|النوم العميق|ريم)(?![\p{L}\p{N}_])"#
     ]
 
-    // Sensitive sleep prompts must stay on-device even when they originate from main chat.
-    func requestByInterceptingIntent(_ request: HybridBrainRequest) -> HybridBrainRequest {
-        guard containsSleepIntent(in: latestUserMessage(in: request)),
-              request.screenContext != .sleepAnalysis else {
+    static let strictSleepDataPatterns: [String] = [
+        #"\b(?:analy[sz]e|analysis|how much|show me|read|track|score|data|metrics|stages?|healthkit)\b"#,
+        #"\b(?:did i sleep well|how did i sleep|how much did i sleep)\b"#,
+        #"(?<![\p{L}\p{N}_])(?:تحليل|حلل|شكد|قديش|بيانات|داتا|مراحل|اقرأ|قراية|سكرين|سكور|صحة|هيلث)(?![\p{L}\p{N}_])"#,
+        #"(?<![\p{L}\p{N}_])(?:تحليل نومي|بيانات نومي|شلون نمت|شكد نمت|اقرأ نومي|مراحل نومي)(?![\p{L}\p{N}_])"#
+    ]
+
+    func requestByInterceptingStrictSleepDataIntent(_ request: HybridBrainRequest) -> HybridBrainRequest {
+        guard request.screenContext != .sleepAnalysis,
+              isStrictSleepDataRequest(latestUserMessage(in: request)) else {
             return request
         }
 
         return HybridBrainRequest(
             conversation: request.conversation,
-            screenContext: ScreenContext.sleepAnalysis,
+            screenContext: .sleepAnalysis,
             language: request.language,
             contextData: request.contextData,
             userProfileSummary: request.userProfileSummary,
-            hasAttachedImage: request.hasAttachedImage
+            attachedImageData: nil
         )
     }
 
     private func route(for request: HybridBrainRequest) -> Route {
-        let latestUserMessage = latestUserMessage(in: request)
-
-        if request.screenContext == .sleepAnalysis || containsSensitiveHealthSignals(in: latestUserMessage) {
+        if request.screenContext == .sleepAnalysis {
             return .local
         }
 
         switch request.screenContext {
         case .gym, .kitchen, .peaks:
             return .cloud
-        case .mainChat, .myVibe:
-            return requiresCloudPlanning(for: latestUserMessage) ? .cloud : .local
+        case .mainChat:
+            return requiresCloudPlanning(for: latestUserMessage(in: request)) ? .cloud : .local
+        case .myVibe:
+            return .local
         case .sleepAnalysis:
             return .local
+        }
+    }
+
+    func generateLocalReply(for request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
+        let promptRouter = PromptRouter(language: request.language)
+        let localRequest = LocalBrainRequest(
+            conversation: request.conversation.map {
+                LocalConversationMessage(
+                    role: localRole(for: $0.role),
+                    content: $0.content
+                )
+            },
+            screenContext: request.screenContext,
+            language: request.language,
+            systemPrompt: promptRouter.generateSystemPrompt(
+                for: request.screenContext,
+                data: request.contextData
+            ),
+            contextData: request.contextData,
+            userProfileSummary: request.userProfileSummary,
+            hasAttachedImage: request.hasAttachedImage
+        )
+
+        let reply = try await localService.generateReply(request: localRequest)
+        return HybridBrainServiceReply(
+            message: reply.message,
+            workoutPlan: reply.workoutPlan,
+            mealPlan: reply.mealPlan,
+            rawText: reply.rawText
+        )
+    }
+
+    func makePersonalizedReply(
+        _ reply: HybridBrainServiceReply,
+        userName: String?
+    ) -> HybridBrainServiceReply {
+        let personalizedMessage: String
+        if let userName, !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            personalizedMessage = sanitizer.injectUserName(
+                into: reply.message,
+                userName: userName
+            )
+        } else {
+            personalizedMessage = reply.message
+        }
+
+        let structuredResponse = CaptainStructuredResponse(
+            message: personalizedMessage,
+            workoutPlan: reply.workoutPlan,
+            mealPlan: reply.mealPlan
+        )
+        let rawText = try? encode(structuredResponse)
+
+        return HybridBrainServiceReply(
+            message: structuredResponse.message,
+            workoutPlan: structuredResponse.workoutPlan,
+            mealPlan: structuredResponse.mealPlan,
+            rawText: rawText ?? reply.rawText
+        )
+    }
+
+    func localRole(for role: CaptainConversationRole) -> LocalConversationRole {
+        switch role {
+        case .system:
+            return .system
+        case .user:
+            return .user
+        case .assistant:
+            return .assistant
         }
     }
 
@@ -130,27 +187,22 @@ private extension BrainOrchestrator {
 
     func requiresCloudPlanning(for message: String) -> Bool {
         containsAny(message, keywords: [
-            "workout", "training", "plan", "meal", "diet", "recipe", "challenge", "discipline",
-            "تمرين", "خطة", "وجبة", "اكل", "أكل", "وصفة", "تحدي", "انضباط"
+            "plan", "routine", "program", "meal plan", "workout plan", "weekly", "schedule",
+            "split", "macros", "recipe", "challenge", "build me", "create me",
+            "خطة", "برنامج", "روتين", "جدول", "اسبوع", "أسبوع", "وجبات", "تمرين", "تمارين",
+            "ماكروز", "وصفة", "تحدي", "رتبلي", "سوّيلي", "سويلي", "ابنيلي"
         ])
     }
 
-    func containsSensitiveHealthSignals(in message: String) -> Bool {
-        if containsSleepIntent(in: message) {
-            return true
+    func isStrictSleepDataRequest(_ message: String) -> Bool {
+        let normalized = normalizedIntentText(message)
+        let hasSleepTopic = Self.strictSleepTopicPatterns.contains { pattern in
+            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
         }
+        guard hasSleepTopic else { return false }
 
-        return containsAny(message, keywords: [
-            "sleep", "insomnia", "nap", "recovery", "heart", "pulse", "healthkit", "diagnosis",
-            "نوم", "أرق", "استشفاء", "نبض", "قلب", "صحة", "طبي", "تشخيص"
-        ])
-    }
-
-    func containsSleepIntent(in message: String) -> Bool {
-        let normalizedMessage = normalizedIntentText(message)
-
-        return Self.sleepIntentPatterns.contains { pattern in
-            normalizedMessage.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        return Self.strictSleepDataPatterns.contains { pattern in
+            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
         }
     }
 
@@ -173,7 +225,7 @@ private extension BrainOrchestrator {
         let data = try encoder.encode(response)
 
         guard let rawText = String(data: data, encoding: .utf8) else {
-            throw LocalIntelligenceServiceError.invalidStructuredResponse
+            throw LocalBrainServiceError.invalidStructuredResponse
         }
 
         return rawText

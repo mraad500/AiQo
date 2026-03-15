@@ -51,9 +51,14 @@ enum LocalBrainServiceError: LocalizedError {
 }
 
 struct LocalBrainService: Sendable {
+    private let healthManager: HealthKitManager
     private let sleepAgent: AppleIntelligenceSleepAgent
 
-    init(sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent()) {
+    init(
+        healthManager: HealthKitManager = .shared,
+        sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent()
+    ) {
+        self.healthManager = healthManager
         self.sleepAgent = sleepAgent
     }
 
@@ -80,6 +85,10 @@ struct LocalBrainService: Sendable {
 
         guard let latestUserMessage = payload.latestUserMessage else {
             throw LocalBrainServiceError.missingUserMessage
+        }
+
+        if payload.screenContext == .sleepAnalysis {
+            return try await makeSleepAnalysisReply(payload: payload)
         }
 
         let intent = classifyIntent(for: latestUserMessage, in: payload)
@@ -178,6 +187,25 @@ private extension LocalBrainService {
             wantsSleepGuidance: wantsSleepGuidance,
             wantsVibeGuidance: wantsVibeGuidance,
             wantsChallengeGuidance: wantsChallengeGuidance
+        )
+    }
+
+    func makeSleepAnalysisReply(payload: LocalAppIntentPayload) async throws -> LocalBrainServiceReply {
+        let sleepSession = try await buildLatestSleepSession()
+        let message = try await sleepAgent.analyze(session: sleepSession)
+        let structuredResponse = CaptainStructuredResponse(
+            message: message,
+            workoutPlan: nil,
+            mealPlan: nil
+        )
+        let rawText = try encodeStructuredResponse(structuredResponse)
+        let validatedResponse = try decodeStructuredResponse(from: rawText)
+
+        return LocalBrainServiceReply(
+            message: validatedResponse.message,
+            workoutPlan: validatedResponse.workoutPlan,
+            mealPlan: validatedResponse.mealPlan,
+            rawText: rawText
         )
     }
 
@@ -561,6 +589,42 @@ private extension LocalBrainService {
         return keywords.contains { keyword in
             normalizedText.contains(keyword.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current))
         }
+    }
+
+    func buildLatestSleepSession() async throws -> SleepSession {
+        let authorized = try await healthManager.requestSleepAuthorizationIfNeeded()
+        guard authorized else {
+            throw SleepStageFetchError.authorizationDenied
+        }
+
+        let stages = try await healthManager.fetchSleepStagesForLastNight()
+        guard !stages.isEmpty else {
+            throw SleepStageFetchError.sleepAnalysisUnavailable
+        }
+
+        let totalSleep = stages
+            .filter { $0.stage != .awake }
+            .reduce(0) { $0 + $1.duration }
+        guard totalSleep > 0 else {
+            throw SleepStageFetchError.sleepAnalysisUnavailable
+        }
+
+        return SleepSession(
+            totalSleep: totalSleep,
+            deepSleep: totalDuration(for: .deep, in: stages),
+            remSleep: totalDuration(for: .rem, in: stages),
+            coreSleep: totalDuration(for: .core, in: stages),
+            awake: totalDuration(for: .awake, in: stages)
+        )
+    }
+
+    func totalDuration(
+        for stage: SleepStageData.Stage,
+        in stages: [SleepStageData]
+    ) -> TimeInterval {
+        stages
+            .filter { $0.stage == stage }
+            .reduce(0) { $0 + $1.duration }
     }
 
     func encodeStructuredResponse(_ response: CaptainStructuredResponse) throws -> String {
