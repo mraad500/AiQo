@@ -1,7 +1,6 @@
 {
   "images" : [
     {
-      "filename" : "Yellow.Tribe.Ring Medium.heic",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -10,6 +9,7 @@
       "scale" : "2x"
     },
     {
+      "filename" : "7CD32836-931C-4C4E-9EAE-054BB95A1967 Medium.heic",
       "idiom" : "universal",
       "scale" : "3x"
     }

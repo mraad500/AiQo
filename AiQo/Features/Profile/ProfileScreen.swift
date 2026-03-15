@@ -8,7 +8,6 @@ private enum ProfileEditField {
     case age
     case height
     case weight
-    case goal
 
     var title: String {
         switch self {
@@ -20,8 +19,6 @@ private enum ProfileEditField {
             return NSLocalizedString("screen.profile.editHeight.title", value: "Update Height", comment: "")
         case .weight:
             return NSLocalizedString("screen.profile.editWeight.title", value: "Update Weight", comment: "")
-        case .goal:
-            return NSLocalizedString("screen.profile.editGoal.title", value: "Daily Goal", comment: "")
         }
     }
 
@@ -35,8 +32,6 @@ private enum ProfileEditField {
             return NSLocalizedString("screen.profile.editHeight.message", value: "Enter height in cm", comment: "")
         case .weight:
             return NSLocalizedString("screen.profile.editWeight.message", value: "Enter weight in kg", comment: "")
-        case .goal:
-            return NSLocalizedString("screen.profile.editGoal.message", value: "Enter your goal", comment: "")
         }
     }
 
@@ -50,14 +45,12 @@ private enum ProfileEditField {
             return NSLocalizedString("screen.profile.editHeight.placeholder", value: "CM", comment: "")
         case .weight:
             return NSLocalizedString("screen.profile.editWeight.placeholder", value: "KG", comment: "")
-        case .goal:
-            return NSLocalizedString("screen.profile.editGoal.placeholder", value: "e.g. 500 kcal", comment: "")
         }
     }
 
     var keyboardType: UIKeyboardType {
         switch self {
-        case .name, .goal:
+        case .name:
             return .default
         case .age, .height, .weight:
             return .numberPad
@@ -71,24 +64,154 @@ private struct BioMetricDetail: Identifiable {
     let value: String
     let unit: String
     let symbol: String
-    let colors: [Color]
-    let iconTint: Color
+    let tone: ProfileSurfaceTone
+
+    var valueText: String {
+        [value, unit]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
 }
 
-private enum ProfileCardPalette {
-    static let pastelGreen = Color.aiqoMint
-    static let pastelBeige = Color.aiqoSand
+private struct BioScanHighlight {
+    let title: String
+    let value: String
+    let symbol: String
+}
 
-    static let textPrimary = Color.black.opacity(0.86)
+private struct ProfileLevelSummary {
+    let level: Int
+    let progress: CGFloat
+    let lineScore: Int
+
+    var clampedProgress: CGFloat {
+        min(max(progress, 0), 1)
+    }
+
+    static func load() -> ProfileLevelSummary {
+        let storedLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
+        let storedProgress = UserDefaults.standard.double(forKey: LevelStorageKeys.currentLevelProgress)
+        let storedScore = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
+
+        return ProfileLevelSummary(
+            level: storedLevel == 0 ? 1 : storedLevel,
+            progress: CGFloat(min(max(storedProgress, 0), 1)),
+            lineScore: max(storedScore, 0)
+        )
+    }
+}
+
+private enum ProfilePalette {
+    static let backgroundTop = Color(hex: "FEFCF8")
+    static let backgroundBottom = Color(hex: "F3ECE1")
+    static let mint = Color(hex: "B7E3CA")
+    static let sand = Color(hex: "EBC793")
+    static let pearl = Color(hex: "FFF8EF")
+    static let textPrimary = Color.black.opacity(0.84)
     static let textSecondary = Color.black.opacity(0.58)
-    static let textTertiary = Color.black.opacity(0.42)
-    static let shadow = Color.black.opacity(0.10)
-    static let badgeFill = Color.white.opacity(0.42)
+    static let textTertiary = Color.black.opacity(0.38)
+    static let whiteGlass = ProfilePalette.pearl.opacity(0.92)
+    static let whiteSoft = ProfilePalette.pearl.opacity(0.72)
+    static let stroke = Color.white.opacity(0.66)
+    static let shadow = Color.black.opacity(0.04)
+    static let innerGlow = Color.white.opacity(0.72)
+    static let innerShade = Color.black.opacity(0.028)
+}
+
+private enum ProfileSurfaceTone {
+    case sand
+    case mint
+    case pearl
+
+    var gradient: [Color] {
+        switch self {
+        case .sand:
+            return [
+                ProfilePalette.sand.opacity(0.99),
+                Color(hex: "F3D7AF"),
+                Color(hex: "FAEEDB")
+            ]
+        case .mint:
+            return [
+                ProfilePalette.mint.opacity(0.99),
+                Color(hex: "D2EEDD"),
+                Color(hex: "EDF8F1")
+            ]
+        case .pearl:
+            return [
+                Color(hex: "FFFBF6"),
+                Color(hex: "FCF6EE"),
+                Color(hex: "F7EFE5")
+            ]
+        }
+    }
+
+    var shadowTint: Color {
+        switch self {
+        case .sand:
+            return ProfilePalette.sand.opacity(0.17)
+        case .mint:
+            return ProfilePalette.mint.opacity(0.15)
+        case .pearl:
+            return Color(hex: "E2D7C6").opacity(0.28)
+        }
+    }
+
+    var topSheen: Color {
+        switch self {
+        case .sand:
+            return Color.white.opacity(0.42)
+        case .mint:
+            return Color.white.opacity(0.38)
+        case .pearl:
+            return Color.white.opacity(0.46)
+        }
+    }
+
+    var bottomTint: Color {
+        switch self {
+        case .sand:
+            return ProfilePalette.sand.opacity(0.12)
+        case .mint:
+            return ProfilePalette.mint.opacity(0.12)
+        case .pearl:
+            return Color(hex: "EEE5D8").opacity(0.26)
+        }
+    }
+
+    var rimStart: Color {
+        switch self {
+        case .sand, .mint:
+            return Color.white.opacity(0.82)
+        case .pearl:
+            return Color.white.opacity(0.88)
+        }
+    }
+
+    var rimEnd: Color {
+        switch self {
+        case .sand, .mint:
+            return Color.white.opacity(0.26)
+        case .pearl:
+            return Color.white.opacity(0.34)
+        }
+    }
+
+    var materialOpacity: Double {
+        switch self {
+        case .sand, .mint:
+            return 0.04
+        case .pearl:
+            return 0.10
+        }
+    }
 }
 
 struct ProfileScreen: View {
     @State private var profile: UserProfile = UserProfileStore.shared.current
     @State private var healthBioMetrics: HealthKitManager.BioMetrics = .empty
+    @State private var levelSummary = ProfileLevelSummary.load()
 
     @State private var avatarImage: UIImage? = UserProfileStore.shared.loadAvatar()
     @State private var selectedPhoto: PhotosPickerItem?
@@ -104,31 +227,142 @@ struct ProfileScreen: View {
 
     var body: some View {
         ZStack {
-            profileBackground
+            ProfileBackdrop()
                 .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
-                    headerCard
-
-                    LevelCardView()
-                        .frame(height: 100)
-                        .onTapGesture {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                LazyVStack(alignment: .leading, spacing: 20) {
+                    ProfileHeroCard(
+                        selectedPhoto: $selectedPhoto,
+                        avatarImage: avatarImage,
+                        displayName: displayName,
+                        displayUsername: displayUsername,
+                        subtitle: NSLocalizedString(
+                            "screen.profile.subtitle",
+                            value: "Let’s optimize your body & mind",
+                            comment: ""
+                        ),
+                        levelSummary: levelSummary,
+                        lineScoreText: formattedLineScore,
+                        onEditName: { beginEdit(.name) },
+                        onLevelTap: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showLevelInfo = true
                         }
+                    )
 
-                    weightCard
-                    bodySection
-                    preferencesSection
-                    appSection
+                    profileSection(
+                        title: NSLocalizedString(
+                            "screen.profile.section.health",
+                            value: "Bio-Scan",
+                            comment: ""
+                        )
+                    ) {
+                        BioScanSummaryCard(
+                            weightValue: weightNumberText,
+                            weightUnit: weightUnitText,
+                            subtitle: NSLocalizedString(
+                                "screen.profile.bio.subtitle",
+                                value: "Latest body composition synced from HealthKit",
+                                comment: ""
+                            ),
+                            highlight: bioScanHighlight
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showBioMetricsSheet = true
+                        }
+                    }
+
+                    profileSection(
+                        title: NSLocalizedString(
+                            "screen.profile.section.body",
+                            value: "Your Body Data",
+                            comment: ""
+                        )
+                    ) {
+                        HStack(spacing: 12) {
+                            MetricCard(
+                                title: NSLocalizedString("screen.profile.metric.age", value: "Age", comment: ""),
+                                value: ageText,
+                                symbol: "calendar",
+                                tone: .mint
+                            ) {
+                                beginEdit(.age)
+                            }
+
+                            MetricCard(
+                                title: NSLocalizedString("screen.profile.metric.height", value: "Height", comment: ""),
+                                value: heightText,
+                                symbol: "ruler",
+                                tone: .sand
+                            ) {
+                                beginEdit(.height)
+                            }
+                        }
+                    }
+
+                    profileSection(
+                        title: NSLocalizedString(
+                            "screen.profile.section.preferences",
+                            value: "Preferences",
+                            comment: ""
+                        )
+                    ) {
+                        PreferenceSelectorCard(selection: genderBinding)
+                    }
+
+                    profileSection(
+                        title: NSLocalizedString(
+                            "screen.profile.section.app",
+                            value: "AiQo",
+                            comment: ""
+                        )
+                    ) {
+                        VStack(spacing: 10) {
+                            AppActionRow(
+                                icon: "gearshape.fill",
+                                iconFill: ProfilePalette.mint.opacity(0.34),
+                                title: NSLocalizedString(
+                                    "screen.profile.app.settings.title",
+                                    value: "App Settings",
+                                    comment: ""
+                                ),
+                                subtitle: NSLocalizedString(
+                                    "screen.profile.app.settings.subtitle",
+                                    value: "Notifications, units, language",
+                                    comment: ""
+                                )
+                            ) {
+                                showSettingsSheet = true
+                            }
+
+                            AppActionRow(
+                                icon: "message.fill",
+                                iconFill: ProfilePalette.sand.opacity(0.36),
+                                title: NSLocalizedString(
+                                    "screen.profile.app.support.title",
+                                    value: "Contact Support",
+                                    comment: ""
+                                ),
+                                subtitle: NSLocalizedString(
+                                    "screen.profile.app.support.subtitle",
+                                    value: "We’re here to help you",
+                                    comment: ""
+                                )
+                            ) {
+                                contactSupport()
+                            }
+                        }
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 28)
             }
         }
         .onAppear {
             refreshProfileState()
+            refreshLevelSummary()
             HealthKitManager.shared.fetchSteps()
         }
         .task {
@@ -137,8 +371,15 @@ struct ProfileScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: .userProfileDidChange)) { _ in
             refreshProfileState()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("XPUpdated"))) { _ in
+            refreshLevelSummary()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .levelStoreDidChange)) { _ in
+            refreshLevelSummary()
+        }
         .onChange(of: selectedPhoto) { _, newItem in
             guard let newItem else { return }
+
             Task {
                 guard let data = try? await newItem.loadTransferable(type: Data.self),
                       let image = UIImage(data: data) else { return }
@@ -204,331 +445,20 @@ struct ProfileScreen: View {
         }
     }
 
-    private var profileBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color.white,
-                    Color.aiqoMint.opacity(0.18),
-                    Color.aiqoLemon.opacity(0.22)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Circle()
-                .fill(Color.aiqoMint.opacity(0.30))
-                .frame(width: 240, height: 240)
-                .blur(radius: 36)
-                .offset(x: -140, y: -260)
-
-            Circle()
-                .fill(Color.aiqoSand.opacity(0.22))
-                .frame(width: 280, height: 280)
-                .blur(radius: 42)
-                .offset(x: 150, y: -140)
-        }
-    }
-
-    private var headerCard: some View {
-        HStack(spacing: 16) {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Group {
-                    if let avatarImage {
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color.white.opacity(0.35))
-                    }
-                }
-                .frame(width: 84, height: 84)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.75), lineWidth: 2)
-                )
-                .shadow(color: Color.aiqoMint.opacity(0.18), radius: 18, x: 0, y: 10)
-            }
-            .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(NSLocalizedString("screen.profile.chip", value: "Profile", comment: ""))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.55), in: Capsule())
-
-                Button {
-                    beginEdit(.name)
-                } label: {
-                    Text(displayName)
-                        .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textPrimary)
-                        .multilineTextAlignment(.leading)
-                }
-                .buttonStyle(.plain)
-
-                Text(displayUsername)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
-
-                Text(
-                    NSLocalizedString(
-                        "optimize_bio",
-                        value: "Let's optimize your body & mind",
-                        comment: ""
-                    )
-                )
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(ProfileCardPalette.textSecondary)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(22)
-        .background(
-            ProfileCardBackground(
-                baseColor: ProfileCardPalette.pastelBeige,
-                shadowColor: ProfileCardPalette.shadow
-            )
-        )
-    }
-
-    private var weightCard: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            showBioMetricsSheet = true
-        } label: {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label(
-                        NSLocalizedString("screen.profile.metric.weight", value: "Weight", comment: ""),
-                        systemImage: "scalemass.fill"
-                    )
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(weightNumberText)
-                            .font(.system(size: 36, weight: .black, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-                            .contentTransition(.numericText())
-
-                        Text(weightUnitText)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textSecondary)
-                    }
-
-                    Text(
-                        NSLocalizedString(
-                            "screen.profile.weightCard.subtitle",
-                            value: "Tap to open Bio-Scan details",
-                            comment: ""
-                        )
-                    )
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
-                }
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .trailing, spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .fill(ProfileCardPalette.badgeFill)
-                            .frame(width: 58, height: 58)
-
-                        Image(systemName: "waveform.path.ecg.rectangle.fill")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-                    }
-
-                    HStack(spacing: 6) {
-                        Text(
-                            NSLocalizedString(
-                                "screen.profile.weightCard.action",
-                                value: "Bio-Scan",
-                                comment: ""
-                            )
-                        )
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-
-                        Image(systemName: "chevron.up")
-                            .font(.system(size: 12, weight: .black))
-                    }
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
-                }
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 92)
-            .frame(maxWidth: .infinity)
-            .background(
-                ProfileCardBackground(
-                    baseColor: ProfileCardPalette.pastelBeige,
-                    cornerRadius: 26,
-                    shadowColor: ProfileCardPalette.shadow
-                )
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var bodySection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionTitle(NSLocalizedString("body_stats", value: "Body Stats", comment: ""))
-
-            HStack(spacing: 14) {
-                ProfileMetricCard(
-                    title: NSLocalizedString("screen.profile.metric.age", value: "Age", comment: ""),
-                    value: ageText,
-                    symbol: "calendar",
-                    colors: [ProfileCardPalette.pastelGreen, ProfileCardPalette.pastelGreen.opacity(0.92)],
-                    iconTint: ProfileCardPalette.textPrimary,
-                    action: { beginEdit(.age) }
-                )
-
-                ProfileMetricCard(
-                    title: NSLocalizedString("screen.profile.metric.height", value: "Height", comment: ""),
-                    value: heightText,
-                    symbol: "ruler",
-                    colors: [ProfileCardPalette.pastelBeige, ProfileCardPalette.pastelBeige.opacity(0.92)],
-                    iconTint: ProfileCardPalette.textPrimary,
-                    action: { beginEdit(.height) }
-                )
-            }
-
-            Button {
-                beginEdit(.goal)
-            } label: {
-                HStack(spacing: 14) {
-                    iconBadge(
-                        symbol: "flame.fill",
-                        background: ProfileCardPalette.badgeFill,
-                        foreground: ProfileCardPalette.textPrimary
-                    )
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(NSLocalizedString("screen.profile.metric.goal", value: "Goal", comment: ""))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textSecondary)
-
-                        Text(goalText)
-                            .font(.system(size: 19, weight: .heavy, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "chevron.forward")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity)
-                .background(
-                    ProfileCardBackground(
-                        baseColor: ProfileCardPalette.pastelGreen,
-                        cornerRadius: 24,
-                        shadowColor: ProfileCardPalette.shadow
-                    )
-                )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionTitle(NSLocalizedString("screen.profile.preferences.title", value: "Preferences", comment: ""))
-
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    iconBadge(
-                        symbol: "figure.arms.open",
-                        background: ProfileCardPalette.badgeFill,
-                        foreground: ProfileCardPalette.textPrimary
-                    )
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(NSLocalizedString("gender", value: "Gender", comment: ""))
-                            .font(.system(size: 16, weight: .heavy, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-
-                        Text(
-                            NSLocalizedString(
-                                "screen.profile.preferences.subtitle",
-                                value: "Used for training and notification personalization",
-                                comment: ""
-                            )
-                        )
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-
-                Picker("", selection: genderBinding) {
-                    Text(NSLocalizedString("male", value: "Male", comment: ""))
-                        .tag(ActivityNotificationGender.male)
-                    Text(NSLocalizedString("female", value: "Female", comment: ""))
-                        .tag(ActivityNotificationGender.female)
-                }
-                .pickerStyle(.segmented)
-            }
-            .padding(18)
-            .background(
-                ProfileCardBackground(
-                    baseColor: ProfileCardPalette.pastelGreen,
-                    cornerRadius: 24,
-                    shadowColor: ProfileCardPalette.shadow
-                )
-            )
-        }
-    }
-
-    private var appSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionTitle(NSLocalizedString("app_section", value: "Application", comment: ""))
-
-            ProfileActionRow(
-                icon: "gearshape.fill",
-                title: NSLocalizedString("settings", value: "Settings", comment: ""),
-                subtitle: NSLocalizedString("notif_lang", value: "Notifications & Language", comment: ""),
-                colors: [ProfileCardPalette.pastelBeige, ProfileCardPalette.pastelBeige.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary,
-                action: { showSettingsSheet = true }
-            )
-
-            ProfileActionRow(
-                icon: "message.fill",
-                title: NSLocalizedString("support", value: "Support", comment: ""),
-                subtitle: NSLocalizedString("contact_us", value: "Contact Us", comment: ""),
-                colors: [ProfileCardPalette.pastelBeige, ProfileCardPalette.pastelBeige.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary,
-                action: contactSupport
-            )
+    @ViewBuilder
+    private func profileSection<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ProfileSectionHeader(title: title)
+            content()
         }
     }
 
     private var bioMetricDetails: [BioMetricDetail] {
-        let bodyFatMetric = metricComponents(
-            from: healthBioMetrics.bodyFatPercentage,
-            fallbackUnit: "%"
-        )
-        let leanBodyMassMetric = metricComponents(
-            from: healthBioMetrics.leanBodyMass,
-            fallbackUnit: defaultWeightUnitText
-        )
+        let bodyFatMetric = metricComponents(from: healthBioMetrics.bodyFatPercentage, fallbackUnit: "%")
+        let leanBodyMassMetric = metricComponents(from: healthBioMetrics.leanBodyMass, fallbackUnit: defaultWeightUnitText)
         let waterMetric = metricComponents(from: nil, fallbackUnit: "%")
         let bmrMetric = metricComponents(from: nil, fallbackUnit: "kcal")
 
@@ -539,8 +469,7 @@ struct ProfileScreen: View {
                 value: bodyFatMetric.value,
                 unit: bodyFatMetric.unit,
                 symbol: "drop.fill",
-                colors: [ProfileCardPalette.pastelBeige, ProfileCardPalette.pastelBeige.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary
+                tone: .sand
             ),
             BioMetricDetail(
                 id: "muscle-mass",
@@ -548,8 +477,7 @@ struct ProfileScreen: View {
                 value: leanBodyMassMetric.value,
                 unit: leanBodyMassMetric.unit,
                 symbol: "figure.strengthtraining.traditional",
-                colors: [ProfileCardPalette.pastelGreen, ProfileCardPalette.pastelGreen.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary
+                tone: .mint
             ),
             BioMetricDetail(
                 id: "water",
@@ -557,19 +485,41 @@ struct ProfileScreen: View {
                 value: waterMetric.value,
                 unit: waterMetric.unit,
                 symbol: "drop.circle.fill",
-                colors: [ProfileCardPalette.pastelGreen, ProfileCardPalette.pastelGreen.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary
+                tone: .mint
             ),
             BioMetricDetail(
                 id: "bmr",
-                title: NSLocalizedString("screen.profile.bio.bmr", value: "Basal Metabolic Rate", comment: ""),
+                title: NSLocalizedString(
+                    "screen.profile.bio.bmr",
+                    value: "Basal Metabolic Rate",
+                    comment: ""
+                ),
                 value: bmrMetric.value,
                 unit: bmrMetric.unit,
                 symbol: "flame.circle.fill",
-                colors: [ProfileCardPalette.pastelBeige, ProfileCardPalette.pastelBeige.opacity(0.92)],
-                iconTint: ProfileCardPalette.textPrimary
+                tone: .sand
             )
         ]
+    }
+
+    private var bioScanHighlight: BioScanHighlight {
+        if let preferredMetric = bioMetricDetails.first(where: { $0.value != "--" }) {
+            return BioScanHighlight(
+                title: preferredMetric.title,
+                value: preferredMetric.valueText,
+                symbol: preferredMetric.symbol
+            )
+        }
+
+        return BioScanHighlight(
+            title: NSLocalizedString(
+                "screen.profile.bio.highlightFallback",
+                value: "Health snapshot",
+                comment: ""
+            ),
+            value: "HealthKit",
+            symbol: "heart.text.square.fill"
+        )
     }
 
     private var genderBinding: Binding<ActivityNotificationGender> {
@@ -642,27 +592,8 @@ struct ProfileScreen: View {
         NSLocalizedString("weight", value: "kg", comment: "")
     }
 
-    private var goalText: String {
-        profile.goalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "--" : profile.goalText
-    }
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 18, weight: .black, design: .rounded))
-            .foregroundStyle(ProfileCardPalette.textPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-    }
-
-    private func iconBadge(symbol: String, background: Color, foreground: Color) -> some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(background)
-            .frame(width: 46, height: 46)
-            .overlay {
-                Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(foreground)
-            }
+    private var formattedLineScore: String {
+        Self.numberFormatter.string(from: NSNumber(value: levelSummary.lineScore)) ?? "\(levelSummary.lineScore)"
     }
 
     @MainActor
@@ -677,13 +608,24 @@ struct ProfileScreen: View {
     ) -> (value: String, unit: String) {
         let trimmed = formattedValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty, trimmed != "--" else {
-            return ("--", fallbackUnit)
+            return ("--", "")
         }
 
-        let parts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
-        let value = parts.first.map(String.init) ?? "--"
-        let unit = parts.dropFirst().first.map(String.init) ?? fallbackUnit
-        return (value, unit)
+        let spacedParts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        if spacedParts.count == 2 {
+            return (String(spacedParts[0]), String(spacedParts[1]))
+        }
+
+        let numericPrefix = trimmed.prefix { character in
+            character.isNumber || character == "." || character == "," || character == "-"
+        }
+        let unitSuffix = trimmed.dropFirst(numericPrefix.count).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !numericPrefix.isEmpty {
+            return (String(numericPrefix), unitSuffix.isEmpty ? fallbackUnit : unitSuffix)
+        }
+
+        return (trimmed, fallbackUnit)
     }
 
     private func refreshProfileState() {
@@ -691,8 +633,13 @@ struct ProfileScreen: View {
         avatarImage = UserProfileStore.shared.loadAvatar()
     }
 
+    private func refreshLevelSummary() {
+        levelSummary = ProfileLevelSummary.load()
+    }
+
     private func beginEdit(_ field: ProfileEditField) {
         currentEditField = field
+
         switch field {
         case .name:
             editText = profile.name
@@ -702,8 +649,6 @@ struct ProfileScreen: View {
             editText = profile.heightCm > 0 ? "\(profile.heightCm)" : ""
         case .weight:
             editText = profile.weightKg > 0 ? "\(profile.weightKg)" : ""
-        case .goal:
-            editText = profile.goalText
         }
 
         showingEditAlert = true
@@ -725,8 +670,6 @@ struct ProfileScreen: View {
         case .weight:
             guard let value = Int(trimmed), value > 0 else { return }
             updateProfile { $0.weightKg = value }
-        case .goal:
-            updateProfile { $0.goalText = trimmed }
         }
 
         editText = ""
@@ -748,102 +691,574 @@ struct ProfileScreen: View {
         guard let url = URL(string: "mailto:AppAiQo5@gmail.com") else { return }
         UIApplication.shared.open(url)
     }
+
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        return formatter
+    }()
 }
 
-private struct ProfileMetricCard: View {
-    let title: String
-    let value: String
-    let symbol: String
-    let colors: [Color]
-    let iconTint: Color
-    let action: () -> Void
-
+private struct ProfileBackdrop: View {
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 16) {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(ProfileCardPalette.badgeFill)
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Image(systemName: symbol)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(iconTint)
-                    }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
-
-                    Text(value)
-                        .font(.system(size: 21, weight: .black, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-            }
-            .padding(18)
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
-            .background(
-                ProfileCardBackground(
-                    colors: colors,
-                    cornerRadius: 24,
-                    shadowColor: ProfileCardPalette.shadow
-                )
+        ZStack {
+            LinearGradient(
+                colors: [
+                    ProfilePalette.backgroundTop,
+                    ProfilePalette.backgroundBottom
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
+
+            Circle()
+                .fill(ProfilePalette.mint.opacity(0.21))
+                .frame(width: 240, height: 240)
+                .blur(radius: 52)
+                .offset(x: -148, y: -238)
+
+            Circle()
+                .fill(ProfilePalette.sand.opacity(0.20))
+                .frame(width: 280, height: 280)
+                .blur(radius: 56)
+                .offset(x: 148, y: -110)
+
+            RoundedRectangle(cornerRadius: 120, style: .continuous)
+                .fill(Color.white.opacity(0.28))
+                .frame(width: 300, height: 240)
+                .blur(radius: 72)
+                .offset(y: 240)
         }
-        .buttonStyle(.plain)
     }
 }
 
-private struct ProfileActionRow: View {
-    let icon: String
-    let title: String
+private struct ProfileHeroCard: View {
+    @Binding var selectedPhoto: PhotosPickerItem?
+    let avatarImage: UIImage?
+    let displayName: String
+    let displayUsername: String
     let subtitle: String
-    let colors: [Color]
-    let iconTint: Color
+    let levelSummary: ProfileLevelSummary
+    let lineScoreText: String
+    let onEditName: () -> Void
+    let onLevelTap: () -> Void
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var textAlignment: Alignment {
+        isRTL ? .trailing : .leading
+    }
+
+    private var multilineAlignment: TextAlignment {
+        isRTL ? .trailing : .leading
+    }
+
+    private var shieldSymbol: String {
+        LevelSystem.getShieldIconName(for: levelSummary.level)
+    }
+
+    private var progressPercentageText: String {
+        "\(Int(levelSummary.clampedProgress * 100))%"
+    }
+
+    var body: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 14) {
+            if isRTL {
+                HStack(alignment: .center, spacing: 14) {
+                    identityBlock
+                    avatarPicker
+                }
+            } else {
+                HStack(alignment: .center, spacing: 14) {
+                    avatarPicker
+                    identityBlock
+                }
+            }
+
+            Button(action: onLevelTap) {
+                VStack(alignment: isRTL ? .trailing : .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        if isRTL {
+                            ProfileStatPill(
+                                title: NSLocalizedString("line_score", value: "Line Score", comment: ""),
+                                value: lineScoreText,
+                                symbol: "chart.line.uptrend.xyaxis",
+                                flipsForRTL: true
+                            )
+
+                            ProfileStatPill(
+                                title: NSLocalizedString("level", value: "Level", comment: ""),
+                                value: "\(levelSummary.level)",
+                                symbol: shieldSymbol,
+                                flipsForRTL: true
+                            )
+                        } else {
+                            ProfileStatPill(
+                                title: NSLocalizedString("level", value: "Level", comment: ""),
+                                value: "\(levelSummary.level)",
+                                symbol: shieldSymbol
+                            )
+
+                            ProfileStatPill(
+                                title: NSLocalizedString("line_score", value: "Line Score", comment: ""),
+                                value: lineScoreText,
+                                symbol: "chart.line.uptrend.xyaxis"
+                            )
+                        }
+                    }
+
+                    VStack(alignment: isRTL ? .trailing : .leading, spacing: 6) {
+                        HStack {
+                            Text(
+                                NSLocalizedString(
+                                    "screen.profile.hero.progress",
+                                    value: "Progress to next level",
+                                    comment: ""
+                                )
+                            )
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textSecondary)
+
+                            Spacer(minLength: 8)
+
+                            Text(progressPercentageText)
+                                .font(.system(size: 14, weight: .black, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textPrimary)
+                                .contentTransition(.numericText())
+                        }
+
+                        ProfileProgressBar(progress: levelSummary.clampedProgress)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background {
+                    ProfileInsetSurface(fill: ProfilePalette.pearl.opacity(0.54), cornerRadius: 22)
+                }
+            }
+            .buttonStyle(ProfileCardButtonStyle())
+        }
+        .padding(18)
+        .background {
+            ProfileSurface(tone: .sand, cornerRadius: 28)
+        }
+    }
+
+    private var avatarPicker: some View {
+        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if let avatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textPrimary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(ProfilePalette.pearl.opacity(0.48))
+                    }
+                }
+                .frame(width: 82, height: 82)
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.white.opacity(0.76), lineWidth: 1.5)
+                }
+                .shadow(color: ProfilePalette.sand.opacity(0.18), radius: 14, x: 0, y: 9)
+
+                ProfileIconBadge(
+                    symbol: "camera.fill",
+                    size: 26,
+                    background: ProfilePalette.pearl.opacity(0.84),
+                    foreground: ProfilePalette.textPrimary
+                )
+                .offset(x: isRTL ? -4 : 4, y: 4)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            NSLocalizedString(
+                "screen.profile.hero.avatar.action",
+                value: "Change profile photo",
+                comment: ""
+            )
+        )
+    }
+
+    private var identityBlock: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 5) {
+            Text(NSLocalizedString("screen.profile.chip", value: "Profile", comment: ""))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background {
+                    ProfilePillSurface(fill: ProfilePalette.pearl.opacity(0.54))
+                }
+
+            Button(action: onEditName) {
+                Text(displayName)
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundStyle(ProfilePalette.textPrimary)
+                    .multilineTextAlignment(multilineAlignment)
+                    .frame(maxWidth: .infinity, alignment: textAlignment)
+                    .lineLimit(2)
+            }
+            .buttonStyle(.plain)
+
+            Text(displayUsername)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+
+            Text(subtitle)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+                .multilineTextAlignment(multilineAlignment)
+                .frame(maxWidth: .infinity, alignment: textAlignment)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: textAlignment)
+    }
+}
+
+private struct BioScanSummaryCard: View {
+    let weightValue: String
+    let weightUnit: String
+    let subtitle: String
+    let highlight: BioScanHighlight
     let action: () -> Void
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var textAlignment: Alignment {
+        isRTL ? .trailing : .leading
+    }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(ProfileCardPalette.badgeFill)
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        Image(systemName: icon)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(iconTint)
+            Group {
+                if isRTL {
+                    HStack(alignment: .center, spacing: 14) {
+                        actionCluster
+                        bodyCopy
+                    }
+                } else {
+                    HStack(alignment: .center, spacing: 14) {
+                        bodyCopy
+                        actionCluster
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background {
+                ProfileSurface(tone: .mint, cornerRadius: 24)
+            }
+        }
+        .buttonStyle(ProfileCardButtonStyle())
+    }
+
+    private var bodyCopy: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 5) {
+            Text(NSLocalizedString("screen.profile.metric.weight", value: "Weight", comment: ""))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(weightValue)
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .foregroundStyle(ProfilePalette.textPrimary)
+                    .contentTransition(.numericText())
+
+                if !weightUnit.isEmpty {
+                    Text(weightUnit)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textSecondary)
+                }
+            }
+
+            Text(subtitle)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+                .multilineTextAlignment(isRTL ? .trailing : .leading)
+                .frame(maxWidth: .infinity, alignment: textAlignment)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: textAlignment)
+    }
+
+    private var actionCluster: some View {
+        VStack(alignment: isRTL ? .leading : .trailing, spacing: 8) {
+            ProfileInsightPill(
+                title: highlight.title,
+                value: highlight.value,
+                symbol: highlight.symbol
+            )
+
+            HStack(spacing: 8) {
+                ProfileIconBadge(
+                    symbol: "waveform.path.ecg.rectangle.fill",
+                    size: 42,
+                    background: ProfilePalette.pearl.opacity(0.5),
+                    foreground: ProfilePalette.textPrimary
+                )
+
+                ProfileDisclosureBadge(size: 30)
+            }
+        }
+    }
+}
+
+private struct MetricCard: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tone: ProfileSurfaceTone
+    let action: () -> Void
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading, spacing: 12) {
+                ProfileIconBadge(
+                    symbol: symbol,
+                    size: 38,
+                    background: ProfilePalette.pearl.opacity(0.54),
+                    foreground: ProfilePalette.textPrimary
+                )
+
+                VStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textSecondary)
+
+                    Text(value)
+                        .font(.system(size: 19, weight: .black, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textPrimary)
+                        .multilineTextAlignment(layoutDirection == .rightToLeft ? .trailing : .leading)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 102, alignment: layoutDirection == .rightToLeft ? .trailing : .leading)
+            .padding(14)
+            .background {
+                ProfileSurface(tone: tone, cornerRadius: 22)
+            }
+        }
+        .buttonStyle(ProfileCardButtonStyle())
+    }
+}
+
+private struct PreferenceSelectorCard: View {
+    @Binding var selection: ActivityNotificationGender
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var displayOptions: [ActivityNotificationGender] {
+        let base: [ActivityNotificationGender] = [.male, .female]
+        return isRTL ? Array(base.reversed()) : base
+    }
+
+    var body: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 12) {
+            if isRTL {
+                HStack(spacing: 10) {
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text(NSLocalizedString("gender", value: "Gender", comment: ""))
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textPrimary)
+
+                        Text(
+                            NSLocalizedString(
+                                "screen.profile.preferences.subtitle",
+                                value: "Used for training and notification personalization",
+                                comment: ""
+                            )
+                        )
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textSecondary)
+                        .multilineTextAlignment(.trailing)
                     }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .heavy, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textPrimary)
+                    Spacer(minLength: 8)
 
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
+                    ProfileIconBadge(
+                        symbol: "figure.arms.open",
+                        size: 38,
+                        background: ProfilePalette.pearl.opacity(0.46),
+                        foreground: ProfilePalette.textPrimary
+                    )
                 }
+            } else {
+                HStack(spacing: 10) {
+                    ProfileIconBadge(
+                        symbol: "figure.arms.open",
+                        size: 38,
+                        background: ProfilePalette.pearl.opacity(0.46),
+                        foreground: ProfilePalette.textPrimary
+                    )
 
-                Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(NSLocalizedString("gender", value: "Gender", comment: ""))
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textPrimary)
 
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
+                        Text(
+                            NSLocalizedString(
+                                "screen.profile.preferences.subtitle",
+                                value: "Used for training and notification personalization",
+                                comment: ""
+                            )
+                        )
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textSecondary)
+                    }
+                }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
-            .frame(maxWidth: .infinity)
-            .background(
-                ProfileCardBackground(
-                    colors: colors,
-                    cornerRadius: 24,
-                    shadowColor: ProfileCardPalette.shadow
-                )
-            )
+
+            HStack(spacing: 8) {
+                ForEach(displayOptions, id: \.self) { option in
+                    let isSelected = option == selection
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                            selection = option
+                        }
+                    } label: {
+                        Text(title(for: option))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(isSelected ? ProfilePalette.textPrimary : ProfilePalette.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: 46)
+                            .background {
+                                Group {
+                                    if isSelected {
+                                        ProfileInsetSurface(fill: ProfilePalette.pearl.opacity(0.86), cornerRadius: 18)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                            .fill(ProfilePalette.pearl.opacity(0.18))
+                                    }
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+            .padding(4)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(ProfilePalette.pearl.opacity(0.22))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.42), lineWidth: 1)
+                    }
+            }
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .background {
+            ProfileSurface(tone: .mint, cornerRadius: 22)
+        }
+    }
+
+    private func title(for option: ActivityNotificationGender) -> String {
+        switch option {
+        case .male:
+            return NSLocalizedString("male", value: "Male", comment: "")
+        case .female:
+            return NSLocalizedString("female", value: "Female", comment: "")
+        }
+    }
+}
+
+private struct AppActionRow: View {
+    let icon: String
+    let iconFill: Color
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if isRTL {
+                    HStack(spacing: 12) {
+                        ProfileDisclosureBadge(size: 28)
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(title)
+                                .font(.system(size: 15, weight: .black, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textPrimary)
+
+                            Text(subtitle)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textSecondary)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                        ProfileIconBadge(
+                            symbol: icon,
+                            size: 38,
+                            background: iconFill,
+                            foreground: ProfilePalette.textPrimary
+                        )
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        ProfileIconBadge(
+                            symbol: icon,
+                            size: 38,
+                            background: iconFill,
+                            foreground: ProfilePalette.textPrimary
+                        )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title)
+                                .font(.system(size: 15, weight: .black, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textPrimary)
+
+                            Text(subtitle)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textSecondary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        ProfileDisclosureBadge(size: 28)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background {
+                ProfileSurface(tone: .pearl, cornerRadius: 20)
+            }
+        }
+        .buttonStyle(ProfileCardButtonStyle())
     }
 }
 
@@ -852,59 +1267,48 @@ private struct BioMetricsSheet: View {
     let metrics: [BioMetricDetail]
     let onEditWeight: () -> Void
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
     private let columns = [
         GridItem(.flexible(), spacing: 14),
         GridItem(.flexible(), spacing: 14)
     ]
 
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(
-                            NSLocalizedString(
-                                "screen.profile.bioSheet.title",
-                                value: "Bio-Scan Details",
-                                comment: ""
-                            )
-                        )
-                        .font(.system(size: 25, weight: .black, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textPrimary)
+        ZStack {
+            ProfileBackdrop()
+                .ignoresSafeArea()
 
-                        Text(
-                            NSLocalizedString(
-                                "screen.profile.bioSheet.subtitle",
-                                value: "A quick look at your current body composition snapshot.",
-                                comment: ""
-                            )
-                        )
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: isRTL ? .trailing : .leading, spacing: 20) {
+                    Group {
+                        if isRTL {
+                            HStack(alignment: .top, spacing: 12) {
+                                updateButton
+                                Spacer(minLength: 8)
+                                headerCopy
+                            }
+                        } else {
+                            HStack(alignment: .top, spacing: 12) {
+                                headerCopy
+                                Spacer(minLength: 8)
+                                updateButton
+                            }
+                        }
                     }
 
-                    Spacer(minLength: 0)
-
-                    Button(action: onEditWeight) {
-                        Text(NSLocalizedString("screen.profile.editWeight.title", value: "Update Weight", comment: ""))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.60), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: isRTL ? .trailing : .leading, spacing: 10) {
                         Text(NSLocalizedString("screen.profile.metric.weight", value: "Weight", comment: ""))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textSecondary)
+                            .foregroundStyle(ProfilePalette.textSecondary)
 
                         Text(currentWeight)
-                            .font(.system(size: 34, weight: .black, design: .rounded))
-                            .foregroundStyle(ProfileCardPalette.textPrimary)
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textPrimary)
 
                         Text(
                             NSLocalizedString(
@@ -914,116 +1318,465 @@ private struct BioMetricsSheet: View {
                             )
                         )
                         .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
+                        .foregroundStyle(ProfilePalette.textSecondary)
+                        .multilineTextAlignment(isRTL ? .trailing : .leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: isRTL ? .trailing : .leading)
+                    .padding(20)
+                    .background {
+                        ProfileSurface(tone: .mint, cornerRadius: 30)
                     }
 
-                    Spacer(minLength: 0)
-
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(ProfileCardPalette.badgeFill)
-                        .frame(width: 82, height: 82)
-                        .overlay {
-                            Image(systemName: "heart.text.square.fill")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(ProfileCardPalette.textPrimary)
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(metrics) { metric in
+                            BioMetricTile(metric: metric)
                         }
-                }
-                .padding(18)
-                .background(
-                    ProfileCardBackground(
-                        colors: [ProfileCardPalette.pastelGreen, ProfileCardPalette.pastelGreen.opacity(0.92)],
-                        cornerRadius: 26,
-                        shadowColor: ProfileCardPalette.shadow
-                    )
-                )
-
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(metrics) { metric in
-                        BioMetricTile(metric: metric)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 22)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 22)
         }
+    }
+
+    private var headerCopy: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 6) {
+            Text(
+                NSLocalizedString(
+                    "screen.profile.bioSheet.title",
+                    value: "Bio-Scan Details",
+                    comment: ""
+                )
+            )
+            .font(.system(size: 28, weight: .black, design: .rounded))
+            .foregroundStyle(ProfilePalette.textPrimary)
+
+            Text(
+                NSLocalizedString(
+                    "screen.profile.bioSheet.subtitle",
+                    value: "A quick look at your current body composition snapshot.",
+                    comment: ""
+                )
+            )
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(ProfilePalette.textSecondary)
+            .multilineTextAlignment(isRTL ? .trailing : .leading)
+        }
+    }
+
+    private var updateButton: some View {
+        Button(action: onEditWeight) {
+            Text(NSLocalizedString("screen.profile.editWeight.title", value: "Update Weight", comment: ""))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(ProfilePalette.textPrimary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background {
+                    ProfilePillSurface(fill: ProfilePalette.pearl.opacity(0.82))
+                }
+        }
+        .buttonStyle(ProfileCardButtonStyle())
     }
 }
 
 private struct BioMetricTile: View {
     let metric: BioMetricDetail
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(ProfileCardPalette.badgeFill)
-                .frame(width: 46, height: 46)
-                .overlay {
-                    Image(systemName: metric.symbol)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(metric.iconTint)
-                }
+    @Environment(\.layoutDirection) private var layoutDirection
 
-            VStack(alignment: .leading, spacing: 4) {
+    var body: some View {
+        VStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading, spacing: 16) {
+            ProfileIconBadge(
+                symbol: metric.symbol,
+                size: 46,
+                background: ProfilePalette.pearl.opacity(0.54),
+                foreground: ProfilePalette.textPrimary
+            )
+
+            VStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading, spacing: 6) {
                 Text(metric.title)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(ProfileCardPalette.textSecondary)
+                    .foregroundStyle(ProfilePalette.textSecondary)
 
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(metric.value)
                         .font(.system(size: 26, weight: .black, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textPrimary)
+                        .foregroundStyle(ProfilePalette.textPrimary)
 
-                    Text(metric.unit)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(ProfileCardPalette.textSecondary)
+                    if !metric.unit.isEmpty {
+                        Text(metric.unit)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textSecondary)
+                    }
                 }
             }
         }
+        .frame(maxWidth: .infinity, minHeight: 156, alignment: layoutDirection == .rightToLeft ? .trailing : .leading)
         .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 156, alignment: .leading)
-        .background(
-            ProfileCardBackground(
-                colors: metric.colors,
-                cornerRadius: 24,
-                shadowColor: ProfileCardPalette.shadow
-            )
+        .background {
+            ProfileSurface(tone: metric.tone, cornerRadius: 26)
+        }
+    }
+}
+
+private struct ProfileSectionHeader: View {
+    let title: String
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 18, weight: .black, design: .rounded))
+            .foregroundStyle(ProfilePalette.textPrimary)
+            .frame(maxWidth: .infinity, alignment: layoutDirection == .rightToLeft ? .trailing : .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+private struct ProfileStatPill: View {
+    let title: String
+    let value: String
+    let symbol: String
+    var flipsForRTL = false
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isRTL && flipsForRTL {
+                textBlock
+                icon
+            } else {
+                icon
+                textBlock
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background {
+            ProfilePillSurface(fill: ProfilePalette.pearl.opacity(0.44))
+        }
+    }
+
+    private var textBlock: some View {
+        VStack(alignment: isRTL && flipsForRTL ? .trailing : .leading, spacing: 1) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(ProfilePalette.textSecondary)
+
+            Text(value)
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .foregroundStyle(ProfilePalette.textPrimary)
+                .contentTransition(.numericText())
+        }
+    }
+
+    private var icon: some View {
+        ProfileIconBadge(
+            symbol: symbol,
+            size: 30,
+            background: ProfilePalette.pearl.opacity(0.48),
+            foreground: ProfilePalette.textPrimary
         )
     }
 }
 
-private struct ProfileCardBackground: View {
-    let colors: [Color]
-    var cornerRadius: CGFloat = 28
-    var shadowColor: Color = ProfileCardPalette.shadow
+private struct ProfileInsightPill: View {
+    let title: String
+    let value: String
+    let symbol: String
 
-    init(baseColor: Color, cornerRadius: CGFloat = 28, shadowColor: Color = ProfileCardPalette.shadow) {
-        self.colors = [baseColor, baseColor.opacity(0.92)]
-        self.cornerRadius = cornerRadius
-        self.shadowColor = shadowColor
-    }
+    @Environment(\.layoutDirection) private var layoutDirection
 
-    init(colors: [Color], cornerRadius: CGFloat = 28, shadowColor: Color = ProfileCardPalette.shadow) {
-        self.colors = colors
-        self.cornerRadius = cornerRadius
-        self.shadowColor = shadowColor
+    var body: some View {
+        HStack(spacing: 10) {
+            ProfileIconBadge(
+                symbol: symbol,
+                size: 30,
+                background: ProfilePalette.pearl.opacity(0.5),
+                foreground: ProfilePalette.textPrimary
+            )
+
+            VStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(ProfilePalette.textSecondary)
+
+                Text(value)
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+                    .foregroundStyle(ProfilePalette.textPrimary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background {
+            ProfilePillSurface(fill: ProfilePalette.pearl.opacity(0.40))
+        }
     }
+}
+
+private struct ProfilePillSurface: View {
+    let fill: Color
+
+    var body: some View {
+        Capsule(style: .continuous)
+            .fill(fill)
+            .overlay {
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                ProfilePalette.innerGlow.opacity(0.42),
+                                Color.white.opacity(0.08),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .overlay {
+                Capsule(style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.78),
+                                Color.white.opacity(0.28)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: Color.black.opacity(0.018), radius: 6, x: 0, y: 3)
+    }
+}
+
+private struct ProfileIconBadge: View {
+    let symbol: String
+    var size: CGFloat = 40
+    var background: Color = ProfilePalette.whiteSoft
+    var foreground: Color = ProfilePalette.textPrimary
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.36, style: .continuous)
+            .fill(background)
+            .frame(width: size, height: size)
+            .overlay {
+                RoundedRectangle(cornerRadius: size * 0.36, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                ProfilePalette.innerGlow.opacity(0.36),
+                                Color.white.opacity(0.08),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .overlay {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.34, weight: .bold))
+                    .foregroundStyle(foreground)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: size * 0.36, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.78),
+                                Color.white.opacity(0.26)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: Color.black.opacity(0.02), radius: 7, x: 0, y: 4)
+    }
+}
+
+private struct ProfileDisclosureBadge: View {
+    @Environment(\.layoutDirection) private var layoutDirection
+    var size: CGFloat = 32
+    var background: Color = ProfilePalette.pearl.opacity(0.58)
+
+    var body: some View {
+        ProfileIconBadge(
+            symbol: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right",
+            size: size,
+            background: background,
+            foreground: ProfilePalette.textSecondary
+        )
+    }
+}
+
+private struct ProfileProgressBar: View {
+    let progress: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let fillWidth = width * min(max(progress, 0), 1)
+
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.white.opacity(0.36))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.34), lineWidth: 1)
+                    }
+
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(ProfilePalette.mint.opacity(0.22))
+                    .frame(width: fillWidth)
+                    .blur(radius: 2)
+
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [ProfilePalette.mint, ProfilePalette.sand.opacity(0.9)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: fillWidth)
+
+                Circle()
+                    .fill(Color.white.opacity(0.94))
+                    .frame(width: 12, height: 12)
+                    .overlay {
+                        Circle()
+                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                    }
+                    .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 3)
+                    .offset(x: max(0, min(fillWidth - 12, width - 12)))
+                    .opacity(progress > 0.02 ? 1 : 0)
+            }
+            .animation(.spring(response: 0.32, dampingFraction: 0.88), value: progress)
+        }
+        .frame(height: 10)
+    }
+}
+
+private struct ProfileSurface: View {
+    let tone: ProfileSurfaceTone
+    var cornerRadius: CGFloat = 24
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(
                 LinearGradient(
-                    colors: colors,
+                    colors: tone.gradient,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            .overlay(
+            .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.40), lineWidth: 1)
-            )
-            .shadow(color: shadowColor, radius: 14, x: 0, y: 8)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                tone.topSheen,
+                                Color.white.opacity(0.10),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .clear,
+                                tone.bottomTint
+                            ],
+                            startPoint: .center,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .opacity(tone.materialOpacity)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [tone.rimStart, tone.rimEnd],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: tone.shadowTint, radius: 18, x: 0, y: 10)
+            .shadow(color: ProfilePalette.shadow, radius: 7, x: 0, y: 4)
     }
 }
+
+private struct ProfileInsetSurface: View {
+    let fill: Color
+    var cornerRadius: CGFloat = 20
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(fill)
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                ProfilePalette.innerGlow.opacity(0.38),
+                                Color.white.opacity(0.08),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.74),
+                                Color.white.opacity(0.22)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: Color.black.opacity(0.022), radius: 10, x: 0, y: 5)
+    }
+}
+
+private struct ProfileCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .brightness(configuration.isPressed ? -0.015 : 0)
+            .animation(.spring(response: 0.24, dampingFraction: 0.88), value: configuration.isPressed)
+    }
+}
+
 private struct SupportMailComposer: UIViewControllerRepresentable {
     let to: String
     let subject: String
@@ -1061,8 +1814,15 @@ private struct SupportMailComposer: UIViewControllerRepresentable {
     }
 }
 
-#Preview {
+#Preview("Profile") {
     NavigationStack {
         ProfileScreen()
     }
+}
+
+#Preview("Profile RTL") {
+    NavigationStack {
+        ProfileScreen()
+    }
+    .environment(\.layoutDirection, .rightToLeft)
 }

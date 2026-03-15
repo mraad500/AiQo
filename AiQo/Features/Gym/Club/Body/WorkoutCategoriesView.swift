@@ -81,12 +81,14 @@ struct WorkoutCategoriesView: View {
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
-                .padding(.top, 12)
+                .padding(.top, 0)
                 .padding(.leading, contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.bottom, 120)
                 .offset(x: -2)
             }
+            .contentMargins(.top, 0, for: .scrollContent)
+            .contentMargins(.top, 0, for: .scrollIndicators)
 
             SlimRightSideRail(
                 items: railItems,

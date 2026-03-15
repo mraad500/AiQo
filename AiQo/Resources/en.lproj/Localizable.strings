@@ -119,8 +119,13 @@
 "screen.profile.chip" = "Profile";
 "screen.profile.subtitle" = "Let’s optimize your body & mind";
 
+"screen.profile.section.health" = "Bio-Scan";
 "screen.profile.section.body" = "Your Body Data";
+"screen.profile.section.preferences" = "Preferences";
 "screen.profile.section.app"  = "AiQo";
+
+"screen.profile.hero.progress" = "Progress to next level";
+"screen.profile.hero.avatar.action" = "Change profile photo";
 
 "screen.profile.metric.age"   = "Age";
 "screen.profile.metric.height" = "Height";
@@ -134,6 +139,16 @@
 
 "screen.profile.metric.height.full" = "Height (cm)";
 "screen.profile.metric.weight.full" = "Weight (kg)";
+
+"screen.profile.bio.subtitle" = "Latest body composition synced from HealthKit";
+"screen.profile.bio.highlightFallback" = "Health snapshot";
+"screen.profile.bio.bodyFat" = "Body Fat";
+"screen.profile.bio.muscleMass" = "Muscle Mass";
+"screen.profile.bio.water" = "Water";
+"screen.profile.bio.bmr" = "Basal Metabolic Rate";
+"screen.profile.bioSheet.title" = "Bio-Scan Details";
+"screen.profile.bioSheet.subtitle" = "A quick look at your current body composition snapshot.";
+"screen.profile.bioSheet.caption" = "Latest body composition synced from HealthKit";
 
 "screen.profile.app.settings.title"    = "App Settings";
 "screen.profile.app.settings.subtitle" = "Notifications, units, language";
@@ -151,6 +166,8 @@
 
 "screen.profile.goal.message"    = "What's your main goal now?";
 "screen.profile.goal.placeholder" = "Stronger • Leaner";
+"screen.profile.goal.hint" = "Tap to update your focus";
+"screen.profile.preferences.subtitle" = "Used for training and notification personalization";
 
 "action.cancel" = "Cancel";
 "action.save"   = "Save";
@@ -275,6 +292,7 @@
 "meal.tunaSalad.calories" = "380 kcal";
 "your_level_with_aiqo" = "Your Level with AiQo";
 "level" = "Level";
+"line_score" = "Line Score";
 "points" = "Points";
 
 "your_body_data" = "Your Body Data";

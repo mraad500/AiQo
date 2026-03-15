@@ -84,11 +84,15 @@ struct ClubRootView: View {
             ZStack {
                 selectedContentView
             }
+            .padding(.top, ClubChromeLayout.contentTopPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .top) {
             topHeaderBar
+                .padding(.top, ClubChromeLayout.headerOverlayTopInset)
+                .ignoresSafeArea(edges: .top)
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $presentedExercise) { presented in
@@ -137,7 +141,8 @@ struct ClubRootView: View {
 
     private var topHeaderBar: some View {
         HStack(spacing: 0) {
-            Spacer(minLength: 0)
+            Color.clear
+                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
 
             GlobalTopCapsuleTabsView(
                 tabs: displayedTabs.map { L10n.t($0.titleKey) },
@@ -146,8 +151,10 @@ struct ClubRootView: View {
             )
             .frame(maxWidth: 640)
 
-            Spacer(minLength: 0)
+            Color.clear
+                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
         }
+        .environment(\.layoutDirection, .leftToRight)
         .padding(.top, ClubChromeLayout.headerTopPadding)
         .padding(.horizontal, topHeaderHorizontalInset)
         .padding(.bottom, ClubChromeLayout.headerBottomPadding)

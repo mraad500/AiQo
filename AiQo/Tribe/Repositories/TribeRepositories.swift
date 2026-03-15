@@ -48,11 +48,24 @@ struct MockTribeRepository: TribeRepositoryProtocol {
 
         let members = [
             TribeMember(
+                id: "local-demo-user",
+                userId: "local-demo-user",
+                displayName: tribeRepo("tribe.mock.selfName"),
+                displayNamePublic: tribeRepo("tribe.mock.selfName"),
+                displayNamePrivate: tribeRepo("tribe.mock.selfName"),
+                avatarURL: nil,
+                level: 1,
+                privacyMode: .private,
+                energyContributionToday: 120,
+                initials: "أن",
+                role: .member
+            ),
+            TribeMember(
                 id: "tribe-owner",
                 userId: "tribe-owner",
                 displayName: "ليان",
                 displayNamePublic: "ليان",
-                displayNamePrivate: "لي",
+                displayNamePrivate: "ليان",
                 avatarURL: nil,
                 level: 19,
                 privacyMode: .public,
@@ -66,7 +79,7 @@ struct MockTribeRepository: TribeRepositoryProtocol {
                 userId: "tribe-admin-1",
                 displayName: "سكون",
                 displayNamePublic: "سكون",
-                displayNamePrivate: "سك",
+                displayNamePrivate: "سكون",
                 avatarURL: nil,
                 level: 17,
                 privacyMode: .public,
@@ -74,28 +87,16 @@ struct MockTribeRepository: TribeRepositoryProtocol {
                 initials: "سك",
                 role: .admin
             ),
-            TribeMember(
-                id: "tribe-self",
-                userId: "tribe-self",
-                displayName: tribeRepo("tribe.mock.selfName"),
-                displayNamePublic: tribeRepo("tribe.mock.selfName"),
-                displayNamePrivate: "أن",
-                avatarURL: nil,
-                level: 16,
-                privacyMode: .private,
-                energyContributionToday: 34,
-                initials: "أن",
-                role: .member
-            ),
-            TribeMember(id: "member-01", displayName: "نور", displayNamePublic: "نور", displayNamePrivate: "نو", level: 14, privacyMode: .public, energyContributionToday: 29, initials: "نو"),
-            TribeMember(id: "member-02", displayName: "مدى", displayNamePublic: "مدى", displayNamePrivate: "مد", level: 13, privacyMode: .public, energyContributionToday: 27, initials: "مد"),
-            TribeMember(id: "member-03", displayName: tribeRepo("tribe.mock.privateMember"), displayNamePublic: "روح", displayNamePrivate: "ره", level: 13, privacyMode: .private, energyContributionToday: 25, initials: "ره"),
-            TribeMember(id: "member-04", displayName: "أمل", displayNamePublic: "أمل", displayNamePrivate: "أم", level: 12, privacyMode: .public, energyContributionToday: 22, initials: "أم"),
-            TribeMember(id: "member-05", displayName: "صفا", displayNamePublic: "صفا", displayNamePrivate: "صف", level: 11, privacyMode: .public, energyContributionToday: 20, initials: "صف"),
-            TribeMember(id: "member-06", displayName: tribeRepo("tribe.mock.privateMember"), displayNamePublic: "وتر", displayNamePrivate: "وت", level: 11, privacyMode: .private, energyContributionToday: 18, initials: "وت"),
-            TribeMember(id: "member-07", displayName: "غيم", displayNamePublic: "غيم", displayNamePrivate: "غي", level: 10, privacyMode: .public, energyContributionToday: 16, initials: "غي"),
-            TribeMember(id: "member-08", displayName: "وَجد", displayNamePublic: "وَجد", displayNamePrivate: "وج", level: 9, privacyMode: .public, energyContributionToday: 13, initials: "وج"),
-            TribeMember(id: "member-09", displayName: "عضو خاص", displayNamePublic: "أثر", displayNamePrivate: "أث", level: 8, privacyMode: .private, energyContributionToday: 11, initials: "أث")
+            TribeMember(id: "member-01", displayName: "أن", displayNamePublic: "أن", displayNamePrivate: "أن", level: 16, privacyMode: .public, energyContributionToday: 34, initials: "أن"),
+            TribeMember(id: "member-02", displayName: "نور", displayNamePublic: "نور", displayNamePrivate: "نور", level: 12, privacyMode: .public, energyContributionToday: 29, initials: "نو"),
+            TribeMember(id: "member-03", displayName: "مدى", displayNamePublic: "مدى", displayNamePrivate: "مدى", level: 15, privacyMode: .public, energyContributionToday: 25, initials: "مد"),
+            TribeMember(id: "member-04", displayName: "أمل", displayNamePublic: "أمل", displayNamePrivate: "أمل", level: 14, privacyMode: .public, energyContributionToday: 22, initials: "أم"),
+            TribeMember(id: "member-05", displayName: "صفا", displayNamePublic: "صفا", displayNamePrivate: "صفا", level: 13, privacyMode: .public, energyContributionToday: 20, initials: "صف"),
+            TribeMember(id: "member-06", displayName: "وَجد", displayNamePublic: "وَجد", displayNamePrivate: "وَجد", level: 11, privacyMode: .public, energyContributionToday: 18, initials: "وج"),
+            TribeMember(id: "member-07", displayName: "غيم", displayNamePublic: "غيم", displayNamePrivate: "غيم", level: 10, privacyMode: .public, energyContributionToday: 18, initials: "غي"),
+            TribeMember(id: "member-08", displayName: "أثر", displayNamePublic: "أثر", displayNamePrivate: "أث", level: 9, privacyMode: .private, energyContributionToday: 17, initials: "أث"),
+            TribeMember(id: "member-09", displayName: "روح", displayNamePublic: "روح", displayNamePrivate: "روح", level: 9, privacyMode: .public, energyContributionToday: 16, initials: "رو"),
+            TribeMember(id: "member-10", displayName: "وتر", displayNamePublic: "وتر", displayNamePrivate: "وت", level: 8, privacyMode: .private, energyContributionToday: 16, initials: "وت")
         ]
 
         let now = Date()
@@ -118,11 +119,11 @@ struct MockTribeRepository: TribeRepositoryProtocol {
 
         let events = [
             TribeEvent(id: "event-01", type: .memberJoined, actorId: "member-07", actorDisplayName: "غيم", message: tribeRepo("tribe.mock.event.memberJoined"), createdAt: now.addingTimeInterval(-60 * 32)),
-            TribeEvent(id: "event-02", type: .sparkSent, actorId: "tribe-self", actorDisplayName: tribeRepo("tribe.mock.selfName"), message: tribeRepo("tribe.mock.event.spark"), value: 2, createdAt: now.addingTimeInterval(-60 * 56)),
+            TribeEvent(id: "event-02", type: .sparkSent, actorId: "local-demo-user", actorDisplayName: tribeRepo("tribe.mock.selfName"), message: tribeRepo("tribe.mock.event.spark"), value: 2, createdAt: now.addingTimeInterval(-60 * 56)),
             TribeEvent(id: "event-03", type: .challengeCompleted, actorId: "tribe-admin-1", actorDisplayName: "سكون", message: tribeRepo("tribe.mock.event.challengeCompleted"), createdAt: now.addingTimeInterval(-60 * 90)),
             TribeEvent(id: "event-04", type: .leadChanged, actorId: "tribe-owner", actorDisplayName: "ليان", message: tribeRepo("tribe.mock.event.leadChanged"), createdAt: now.addingTimeInterval(-60 * 130)),
-            TribeEvent(id: "event-05", type: .contribution, actorId: "member-01", actorDisplayName: "نور", message: tribeRepo("tribe.mock.event.contribution"), value: 12, createdAt: now.addingTimeInterval(-60 * 165)),
-            TribeEvent(id: "event-06", type: .challengeSuggested, actorId: "tribe-self", actorDisplayName: tribeRepo("tribe.mock.selfName"), message: tribeRepo("tribe.mock.event.suggested"), createdAt: now.addingTimeInterval(-60 * 210))
+            TribeEvent(id: "event-05", type: .contribution, actorId: "member-01", actorDisplayName: "أن", message: tribeRepo("tribe.mock.event.contribution"), value: 12, createdAt: now.addingTimeInterval(-60 * 165)),
+            TribeEvent(id: "event-06", type: .challengeSuggested, actorId: "local-demo-user", actorDisplayName: tribeRepo("tribe.mock.selfName"), message: tribeRepo("tribe.mock.event.suggested"), createdAt: now.addingTimeInterval(-60 * 210))
         ]
 
         return TribeRepositorySnapshot(
@@ -148,7 +149,7 @@ struct MockChallengeRepository: ChallengeRepositoryProtocol {
                 targetValue: 20,
                 progressValue: 8,
                 endAt: now.addingTimeInterval(60 * 60 * 10),
-                createdByUserId: "tribe-self",
+                createdByUserId: "local-demo-user",
                 participantsCount: 1
             ),
             TribeChallenge(
@@ -187,7 +188,7 @@ struct MockChallengeRepository: ChallengeRepositoryProtocol {
                 targetValue: 120_000,
                 progressValue: 74_000,
                 endAt: now.addingTimeInterval(60 * 60 * 24 * 20),
-                createdByUserId: "tribe-self",
+                createdByUserId: "local-demo-user",
                 participantsCount: 1
             ),
             TribeChallenge(

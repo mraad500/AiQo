@@ -15,8 +15,11 @@ struct GymTheme {
 }
 
 struct GymView: View {
+    @State private var isProfilePresented = false
+
     var body: some View {
         ClubRootView()
+            .aiqoTopTrailingProfileButton(isPresented: $isProfilePresented)
     }
 }
 

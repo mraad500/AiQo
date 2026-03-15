@@ -1,198 +1,225 @@
 import SwiftUI
 
 struct TribeRingView: View {
-    let summary: TribeHeroSummary
-    let featuredMembers: [TribeFeaturedMember]
+    let size: CGFloat
+    let members: [TribeRingMember]
+    let segmentTarget: Int
+    let highlightedSector: TribeSectorColor?
 
-    @State private var displayedProgress = 0.0
-    @State private var hasAnimated = false
-
-    private var progress: Double {
-        min(max(summary.progress, 0), 1)
+    init(
+        size: CGFloat = 150,
+        members: [TribeRingMember],
+        segmentTarget: Int,
+        highlightedSector: TribeSectorColor? = nil
+    ) {
+        self.size = size
+        self.members = members
+        self.segmentTarget = max(segmentTarget, 1)
+        self.highlightedSector = highlightedSector
     }
 
-    private var activeMemberCount: Int {
-        featuredMembers.filter { $0.isVacant == false }.count
+    private var membersBySector: [TribeSectorColor: TribeRingMember] {
+        Dictionary(uniqueKeysWithValues: members.map { ($0.sectorColor, $0) })
     }
-
-    var body: some View {
-        GeometryReader { geometry in
-            let size = min(geometry.size.width, geometry.size.height)
-
-            ZStack {
-                ambientGlowLayer(size: size)
-                ringTrackLayer(size: size)
-                ringFillLayer(size: size)
-
-                TribeRingCenterCard(summary: summary)
-                    .frame(width: size * 0.42, height: size * 0.42)
-                    .shadow(color: TribeModernPalette.shadow.opacity(0.08), radius: 18, x: 0, y: 14)
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .onAppear {
-            guard hasAnimated == false else { return }
-            hasAnimated = true
-            withAnimation(.spring(response: 1.1, dampingFraction: 0.88).delay(0.08)) {
-                displayedProgress = progress
-            }
-        }
-        .onChange(of: progress) { _, newValue in
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.9)) {
-                displayedProgress = newValue
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("حلقة القبيلة، \(activeMemberCount) أعضاء نشطين")
-    }
-
-    @ViewBuilder
-    private func ambientGlowLayer(size: CGFloat) -> some View {
-        ForEach(TribeRingSegmentToken.ringOrder) { segment in
-            let segmentProgress = progressForSegment(segment)
-
-            Circle()
-                .fill(segment.glowColor)
-                .frame(width: size * 0.33, height: size * 0.33)
-                .blur(radius: size * 0.11)
-                .offset(
-                    x: segment.ambientOffset.width * size,
-                    y: segment.ambientOffset.height * size
-                )
-                .opacity(0.06 + (segmentProgress * 0.24))
-        }
-    }
-
-    @ViewBuilder
-    private func ringTrackLayer(size: CGFloat) -> some View {
-        ForEach(TribeRingSegmentToken.ringOrder) { segment in
-            ringImage(for: segment, size: size)
-                .opacity(0.18)
-                .saturation(0.45)
-                .brightness(0.04)
-        }
-    }
-
-    @ViewBuilder
-    private func ringFillLayer(size: CGFloat) -> some View {
-        ForEach(TribeRingSegmentToken.ringOrder) { segment in
-            let segmentProgress = progressForSegment(segment)
-
-            ringImage(for: segment, size: size)
-                .opacity(segmentProgress == 0 ? 0 : 1)
-                .mask {
-                    TribeRingRevealMask(
-                        startAngle: segment.revealStartAngle,
-                        endAngle: segment.revealStartAngle + (segment.revealSweep * segmentProgress)
-                    )
-                }
-                .scaleEffect(0.985 + (segmentProgress * 0.015))
-                .shadow(color: segment.accent.opacity(0.22), radius: size * 0.045, x: 0, y: size * 0.02)
-        }
-    }
-
-    private func ringImage(for segment: TribeRingSegmentToken, size: CGFloat) -> some View {
-        Image(segment.assetName)
-            .resizable()
-            .interpolation(.high)
-            .antialiased(true)
-            .scaledToFit()
-            .frame(width: size, height: size)
-    }
-
-    private func progressForSegment(_ segment: TribeRingSegmentToken) -> Double {
-        guard let index = TribeRingSegmentToken.revealOrder.firstIndex(of: segment) else {
-            return 0
-        }
-
-        let step = 1 / Double(TribeRingSegmentToken.revealOrder.count)
-        let lowerBound = Double(index) * step
-        return min(max((displayedProgress - lowerBound) / step, 0), 1)
-    }
-}
-
-private struct TribeRingCenterCard: View {
-    let summary: TribeHeroSummary
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(.regularMaterial)
-                .overlay {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.92),
-                                    TribeModernPalette.sandSoft.opacity(0.45)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+            ForEach(TribeRingLayerLayout.layers) { layer in
+                let progress = progress(for: layer.sectorColor)
+                let isHighlighted = highlightedSector == nil || highlightedSector == layer.sectorColor
+
+                ZStack {
+                    Image(layer.assetName)
+                        .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .scaleEffect(layer.scale)
+                        .offset(layer.offset)
+                        .clipped()
+                        .opacity(layer.trackOpacity)
+
+                    Image(layer.assetName)
+                        .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .scaleEffect(layer.scale)
+                        .offset(layer.offset)
+                        .clipped()
+                        .mask {
+                            TribeRingSweepMask(
+                                progress: progress,
+                                startAngle: TribeRingLayerLayout.startAngle
                             )
-                        )
+                            .frame(width: size, height: size)
+                        }
+                        .opacity(progress > 0 ? 1 : 0)
                 }
-                .overlay {
-                    Circle()
-                        .stroke(TribeModernPalette.borderStrong, lineWidth: 1)
-                }
-                .overlay {
-                    Circle()
-                        .stroke(TribeModernPalette.surfaceHighlight, lineWidth: 0.8)
-                        .padding(2)
-                }
-
-            VStack(spacing: 5) {
-                Text(summary.centerValue)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(TribeModernPalette.textPrimary)
-
-                Text(summary.centerLabel)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(TribeModernPalette.textSecondary)
+                .opacity(isHighlighted ? 1 : 0.42)
+                .scaleEffect(isHighlighted ? 1 : 0.985)
+                .zIndex(layer.zIndex)
             }
-            .multilineTextAlignment(.center)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: TribeModernPalette.shadow.opacity(0.05), radius: size * 0.045, x: 0, y: size * 0.035)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("حلقة القبيلة")
+    }
+
+    private func progress(for sectorColor: TribeSectorColor) -> Double {
+        guard let member = membersBySector[sectorColor], member.isVacant == false else {
+            return 0
+        }
+
+        return min(max(Double(member.energyToday) / Double(segmentTarget), 0), 1)
+    }
+}
+
+private struct TribeRingLayerVisual: Identifiable {
+    let sectorColor: TribeSectorColor
+    let zIndex: Double
+    let scale: CGFloat
+    let offset: CGSize
+    let trackOpacity: Double
+
+    var id: TribeSectorColor { sectorColor }
+    var assetName: String { sectorColor.assetName }
+}
+
+private enum TribeRingLayerLayout {
+    static let startAngle = Angle.degrees(-90)
+
+    static let layers: [TribeRingLayerVisual] = TribeSectorColor.ringVisualOrder.enumerated().map { index, sectorColor in
+        TribeRingLayerVisual(
+            sectorColor: sectorColor,
+            zIndex: Double(index),
+            scale: scale(for: sectorColor),
+            offset: offset(for: sectorColor),
+            trackOpacity: 0.18
+        )
+    }
+
+    private static func scale(for sectorColor: TribeSectorColor) -> CGFloat {
+        switch sectorColor {
+        case .yellow:
+            return 1
+        case .purple:
+            return 1
+        case .blue:
+            return 1
+        case .green:
+            return 1
+        case .red:
+            return 0.925
+        }
+    }
+
+    private static func offset(for sectorColor: TribeSectorColor) -> CGSize {
+        switch sectorColor {
+        case .yellow, .purple, .blue, .green:
+            return .zero
+        case .red:
+            return CGSize(width: 0, height: -8.5)
         }
     }
 }
 
-private struct TribeRingRevealMask: Shape {
-    var startAngle: Double
-    var endAngle: Double
-
-    var animatableData: AnimatablePair<Double, Double> {
-        get { AnimatablePair(startAngle, endAngle) }
-        set {
-            startAngle = newValue.first
-            endAngle = newValue.second
-        }
-    }
+private struct TribeRingSweepMask: Shape {
+    let progress: Double
+    let startAngle: Angle
 
     func path(in rect: CGRect) -> Path {
+        let clampedProgress = min(max(progress, 0), 1)
+        guard clampedProgress > 0 else { return Path() }
+
         let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = hypot(rect.width, rect.height)
-        let resolvedEnd = max(endAngle, startAngle)
+        let radius = max(rect.width, rect.height) * 0.72
+        let endAngle = startAngle + .degrees(360 * clampedProgress)
 
         var path = Path()
         path.move(to: center)
-        path.addLine(to: point(in: rect, angle: startAngle, radius: radius))
-
-        for angle in stride(from: startAngle, through: resolvedEnd, by: 1) {
-            path.addLine(to: point(in: rect, angle: angle, radius: radius))
-        }
-
-        path.addLine(to: center)
+        path.addArc(
+            center: center,
+            radius: radius,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            clockwise: false
+        )
         path.closeSubpath()
         return path
     }
+}
 
-    private func point(in rect: CGRect, angle: Double, radius: CGFloat) -> CGPoint {
-        let radians = (angle - 90) * Double.pi / 180
-        let center = CGPoint(x: rect.midX, y: rect.midY)
+#Preview {
+    ZStack {
+        TribeModernPalette.backgroundBase
+            .ignoresSafeArea()
 
-        return CGPoint(
-            x: center.x + (CGFloat(cos(radians)) * radius),
-            y: center.y + (CGFloat(sin(radians)) * radius)
+        TribeRingView(
+            size: 220,
+            members: [
+                TribeRingMember(
+                    member: TribeMember(
+                        id: "preview-01",
+                        displayName: "أنت",
+                        level: 1,
+                        privacyMode: .public,
+                        energyContributionToday: 120
+                    ),
+                    sectorColor: .blue,
+                    isCurrentUser: true
+                ),
+                TribeRingMember(
+                    member: TribeMember(
+                        id: "preview-02",
+                        displayName: "ليان",
+                        level: 19,
+                        privacyMode: .public,
+                        energyContributionToday: 46,
+                        role: .owner
+                    ),
+                    sectorColor: .green,
+                    isCurrentUser: false
+                ),
+                TribeRingMember(
+                    member: TribeMember(
+                        id: "preview-03",
+                        displayName: "سكون",
+                        level: 17,
+                        privacyMode: .public,
+                        energyContributionToday: 38,
+                        role: .admin
+                    ),
+                    sectorColor: .yellow,
+                    isCurrentUser: false
+                ),
+                TribeRingMember(
+                    member: TribeMember(
+                        id: "preview-04",
+                        displayName: "أن",
+                        level: 16,
+                        privacyMode: .public,
+                        energyContributionToday: 34
+                    ),
+                    sectorColor: .red,
+                    isCurrentUser: false
+                ),
+                TribeRingMember(
+                    member: TribeMember(
+                        id: "preview-05",
+                        displayName: "نور",
+                        level: 14,
+                        privacyMode: .public,
+                        energyContributionToday: 29
+                    ),
+                    sectorColor: .purple,
+                    isCurrentUser: false
+                )
+            ],
+            segmentTarget: 120
         )
     }
 }

@@ -4,8 +4,9 @@ import UIKit
 enum ClubChromeLayout {
     static let headerLeadingInset: CGFloat = 16
     static let headerTrailingInset: CGFloat = 2
-    static let headerTopPadding: CGFloat = 14
-    static let headerBottomPadding: CGFloat = 8
+    static let headerTopPadding: CGFloat = 0
+    static let headerBottomPadding: CGFloat = 2
+    static let headerOverlayTopInset: CGFloat = 0
 
     static let railWidth: CGFloat = 46
     static let trailingLaneWidth: CGFloat = 78
@@ -14,7 +15,43 @@ enum ClubChromeLayout {
     static let railLocalScreenOffsetX: CGFloat = 1
     static let contentTrailingPadding: CGFloat =
         trailingScreenInset + (trailingLaneWidth / 2) - railRightShift + (railWidth / 2) + 10
-    static let railVerticalOffset: CGFloat = 240
+    static let contentTopPadding: CGFloat = 18
+}
+
+struct SlimRightSideRailConfiguration: Equatable {
+    var maxVisibleItems: Int?
+    var railWidth: CGFloat
+    var itemHeight: CGFloat
+    var titleFontSize: CGFloat
+    var titleLineCount: Int
+    var symbolPointSize: CGFloat
+    var stackSpacing: CGFloat
+    var contentInsets: NSDirectionalEdgeInsets
+    var horizontalPositionOffset: CGFloat
+
+    static let standard = SlimRightSideRailConfiguration(
+        maxVisibleItems: nil,
+        railWidth: 46,
+        itemHeight: 64,
+        titleFontSize: 11,
+        titleLineCount: 2,
+        symbolPointSize: 14,
+        stackSpacing: 10,
+        contentInsets: NSDirectionalEdgeInsets(top: 8, leading: 2, bottom: 8, trailing: 2),
+        horizontalPositionOffset: 0
+    )
+
+    static let stageSelector = SlimRightSideRailConfiguration(
+        maxVisibleItems: 5,
+        railWidth: 32,
+        itemHeight: 52,
+        titleFontSize: 9,
+        titleLineCount: 2,
+        symbolPointSize: 11,
+        stackSpacing: 7,
+        contentInsets: NSDirectionalEdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0),
+        horizontalPositionOffset: -12
+    )
 }
 
 private func makeRailGlassEffect() -> UIVisualEffect {
@@ -28,32 +65,48 @@ private func makeRailGlassEffect() -> UIVisualEffect {
 struct SlimRightSideRail: View {
     let items: [RailItem]
     @Binding var selection: Int
+    var configuration: SlimRightSideRailConfiguration = .standard
 
     var body: some View {
         GeometryReader { proxy in
+            let railHeight = calculatedRailHeight(for: items.count)
+            let preferredY = proxy.size.height / 2
+            let clampedY = min(
+                max(preferredY, proxy.safeAreaInsets.top + (railHeight / 2) + 20),
+                proxy.size.height - proxy.safeAreaInsets.bottom - (railHeight / 2) - 20
+            )
+
             AppleVerticalRailControl(
                 items: items,
-                selection: $selection
+                selection: $selection,
+                configuration: configuration
             )
-            .frame(width: ClubChromeLayout.railWidth)
+            .frame(width: configuration.railWidth)
             .position(
-                x: proxy.size.width - ClubChromeLayout.trailingScreenInset - (ClubChromeLayout.trailingLaneWidth / 2) + ClubChromeLayout.railRightShift,
-                y: (proxy.size.height / 2) + ClubChromeLayout.railVerticalOffset
+                x: proxy.size.width - ClubChromeLayout.trailingScreenInset - (ClubChromeLayout.trailingLaneWidth / 2) + ClubChromeLayout.railRightShift + configuration.horizontalPositionOffset,
+                y: clampedY
             )
         }
+    }
+
+    private func calculatedRailHeight(for itemCount: Int) -> CGFloat {
+        let visibleItemCount = max(1, min(itemCount, configuration.maxVisibleItems ?? itemCount))
+        let spacing = configuration.stackSpacing * CGFloat(max(visibleItemCount - 1, 0))
+        return (CGFloat(visibleItemCount) * configuration.itemHeight) + spacing + 12
     }
 }
 
 private struct AppleVerticalRailControl: UIViewRepresentable {
     let items: [RailItem]
     @Binding var selection: Int
+    let configuration: SlimRightSideRailConfiguration
 
     func makeCoordinator() -> Coordinator {
         Coordinator(selection: $selection)
     }
 
     func makeUIView(context: Context) -> AppleVerticalRailControlView {
-        let view = AppleVerticalRailControlView()
+        let view = AppleVerticalRailControlView(configuration: configuration)
         view.onSelectionChanged = { index in
             guard context.coordinator.selection != index else { return }
             DispatchQueue.main.async {
@@ -74,7 +127,7 @@ private struct AppleVerticalRailControl: UIViewRepresentable {
                 context.coordinator.selection = index
             }
         }
-        uiView.update(items: items, selection: selection)
+        uiView.update(items: items, selection: selection, configuration: configuration)
     }
 
     final class Coordinator {
@@ -88,15 +141,20 @@ private struct AppleVerticalRailControl: UIViewRepresentable {
 
 private final class AppleVerticalRailControlView: UIView {
     private let glassView = UIVisualEffectView(effect: makeRailGlassEffect())
+    private let scrollView = UIScrollView()
     private let stackView = UIStackView()
 
     private var buttons: [UIButton] = []
     private var currentItems: [RailItem] = []
+    private var itemHeightConstraints: [NSLayoutConstraint] = []
+    private var railConfiguration: SlimRightSideRailConfiguration
+    private var lastAppliedSelection: Int?
 
     var onSelectionChanged: ((Int) -> Void)?
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(configuration: SlimRightSideRailConfiguration) {
+        railConfiguration = configuration
+        super.init(frame: .zero)
 
         backgroundColor = .clear
         translatesAutoresizingMaskIntoConstraints = false
@@ -105,12 +163,18 @@ private final class AppleVerticalRailControlView: UIView {
         glassView.clipsToBounds = true
         addSubview(glassView)
 
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.contentInsetAdjustmentBehavior = .never
+        glassView.contentView.addSubview(scrollView)
+
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
         stackView.alignment = .fill
-        stackView.distribution = .fillEqually
-        stackView.spacing = 10
-        glassView.contentView.addSubview(stackView)
+        stackView.distribution = .fill
+        scrollView.addSubview(stackView)
 
         NSLayoutConstraint.activate([
             glassView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -118,11 +182,19 @@ private final class AppleVerticalRailControlView: UIView {
             glassView.topAnchor.constraint(equalTo: topAnchor),
             glassView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            stackView.leadingAnchor.constraint(equalTo: glassView.contentView.leadingAnchor, constant: 6),
-            stackView.trailingAnchor.constraint(equalTo: glassView.contentView.trailingAnchor, constant: -6),
-            stackView.topAnchor.constraint(equalTo: glassView.contentView.topAnchor, constant: 6),
-            stackView.bottomAnchor.constraint(equalTo: glassView.contentView.bottomAnchor, constant: -6)
+            scrollView.leadingAnchor.constraint(equalTo: glassView.contentView.leadingAnchor, constant: 6),
+            scrollView.trailingAnchor.constraint(equalTo: glassView.contentView.trailingAnchor, constant: -6),
+            scrollView.topAnchor.constraint(equalTo: glassView.contentView.topAnchor, constant: 6),
+            scrollView.bottomAnchor.constraint(equalTo: glassView.contentView.bottomAnchor, constant: -6),
+
+            stackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            stackView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor)
         ])
+
+        applyConfiguration(configuration)
     }
 
     @available(*, unavailable)
@@ -131,10 +203,10 @@ private final class AppleVerticalRailControlView: UIView {
     }
 
     override var intrinsicContentSize: CGSize {
-        let itemHeight: CGFloat = 64
-        let spacing = stackView.spacing * CGFloat(max(currentItems.count - 1, 0))
-        let height = CGFloat(currentItems.count) * itemHeight + spacing + 12
-        return CGSize(width: ClubChromeLayout.railWidth, height: height)
+        let visibleCount = visibleItemCount
+        let spacing = stackView.spacing * CGFloat(max(visibleCount - 1, 0))
+        let height = CGFloat(visibleCount) * railConfiguration.itemHeight + spacing + 12
+        return CGSize(width: railConfiguration.railWidth, height: height)
     }
 
     override func layoutSubviews() {
@@ -153,14 +225,25 @@ private final class AppleVerticalRailControlView: UIView {
         layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
     }
 
-    func update(items: [RailItem], selection: Int) {
+    func update(items: [RailItem], selection: Int, configuration: SlimRightSideRailConfiguration) {
+        if railConfiguration != configuration {
+            railConfiguration = configuration
+            applyConfiguration(configuration)
+            updateButtonMetrics()
+            invalidateIntrinsicContentSize()
+        }
+
         if needsRebuild(for: items) {
             rebuildButtons(with: items)
         }
 
         currentItems = items
+        scrollView.isScrollEnabled = shouldEnableScrolling(for: items.count)
+        scrollView.alwaysBounceVertical = scrollView.isScrollEnabled
         invalidateIntrinsicContentSize()
         applySelectionState(selection: selection)
+        centerSelectedButtonIfNeeded(selection: selection, animated: lastAppliedSelection != nil && lastAppliedSelection != selection)
+        lastAppliedSelection = selection
     }
 
     @objc
@@ -189,12 +272,16 @@ private final class AppleVerticalRailControlView: UIView {
             $0.removeFromSuperview()
         }
         buttons.removeAll()
+        itemHeightConstraints.forEach { $0.isActive = false }
+        itemHeightConstraints.removeAll()
 
         for (index, item) in items.enumerated() {
             let button = makeButton(for: item, index: index)
             buttons.append(button)
             stackView.addArrangedSubview(button)
         }
+
+        updateButtonMetrics()
     }
 
     private func makeButton(for item: RailItem, index: Int) -> UIButton {
@@ -209,15 +296,15 @@ private final class AppleVerticalRailControlView: UIView {
         configuration.imagePlacement = .top
         configuration.imagePadding = 5
         configuration.baseForegroundColor = UIColor.black.withAlphaComponent(0.82)
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 2, bottom: 8, trailing: 2)
+        configuration.contentInsets = railConfiguration.contentInsets
         configuration.titleAlignment = .center
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(
-            pointSize: 14,
+            pointSize: railConfiguration.symbolPointSize,
             weight: .semibold
         )
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
-            outgoing.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+            outgoing.font = UIFont.systemFont(ofSize: self.railConfiguration.titleFontSize, weight: .medium)
             return outgoing
         }
 
@@ -225,6 +312,15 @@ private final class AppleVerticalRailControlView: UIView {
         button.clipsToBounds = true
         button.layer.cornerCurve = .continuous
         button.layer.cornerRadius = 20
+        button.titleLabel?.numberOfLines = railConfiguration.titleLineCount
+        button.titleLabel?.textAlignment = .center
+        button.titleLabel?.adjustsFontSizeToFitWidth = true
+        button.titleLabel?.minimumScaleFactor = 0.8
+        button.titleLabel?.lineBreakMode = .byWordWrapping
+
+        let heightConstraint = button.heightAnchor.constraint(equalToConstant: railConfiguration.itemHeight)
+        heightConstraint.isActive = true
+        itemHeightConstraints.append(heightConstraint)
 
         return button
     }
@@ -246,15 +342,19 @@ private final class AppleVerticalRailControlView: UIView {
             configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 2, bottom: 8, trailing: 2)
             configuration.titleAlignment = .center
             configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(
-                pointSize: 14,
+                pointSize: railConfiguration.symbolPointSize,
                 weight: isSelected ? .bold : .semibold
             )
             configuration.baseForegroundColor = foreground
             configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
                 var outgoing = incoming
-                outgoing.font = UIFont.systemFont(ofSize: 11, weight: isSelected ? .semibold : .medium)
+                outgoing.font = UIFont.systemFont(
+                    ofSize: self.railConfiguration.titleFontSize,
+                    weight: isSelected ? .semibold : .medium
+                )
                 return outgoing
             }
+            configuration.contentInsets = railConfiguration.contentInsets
             if isSelected {
                 configuration.baseBackgroundColor = tint.withAlphaComponent(0.74)
             }
@@ -262,6 +362,48 @@ private final class AppleVerticalRailControlView: UIView {
             button.configuration = configuration
             button.isEnabled = !item.isLocked
             button.alpha = item.isLocked ? 0.45 : 1
+            button.titleLabel?.numberOfLines = railConfiguration.titleLineCount
+            button.titleLabel?.textAlignment = .center
+            button.titleLabel?.adjustsFontSizeToFitWidth = true
+            button.titleLabel?.minimumScaleFactor = 0.8
+            button.titleLabel?.lineBreakMode = .byWordWrapping
         }
+    }
+
+    private var visibleItemCount: Int {
+        let maxVisibleItems = railConfiguration.maxVisibleItems ?? currentItems.count
+        return max(1, min(currentItems.count, maxVisibleItems))
+    }
+
+    private func shouldEnableScrolling(for itemCount: Int) -> Bool {
+        guard let maxVisibleItems = railConfiguration.maxVisibleItems else { return false }
+        return itemCount > maxVisibleItems
+    }
+
+    private func applyConfiguration(_ configuration: SlimRightSideRailConfiguration) {
+        stackView.spacing = configuration.stackSpacing
+    }
+
+    private func updateButtonMetrics() {
+        for constraint in itemHeightConstraints {
+            constraint.constant = railConfiguration.itemHeight
+        }
+    }
+
+    private func centerSelectedButtonIfNeeded(selection: Int, animated: Bool) {
+        guard scrollView.isScrollEnabled, buttons.indices.contains(selection) else { return }
+
+        layoutIfNeeded()
+
+        let selectedButton = buttons[selection]
+        let targetOffsetY = max(
+            0,
+            min(
+                selectedButton.frame.midY - (scrollView.bounds.height / 2),
+                scrollView.contentSize.height - scrollView.bounds.height
+            )
+        )
+
+        scrollView.setContentOffset(CGPoint(x: 0, y: targetOffsetY), animated: animated)
     }
 }

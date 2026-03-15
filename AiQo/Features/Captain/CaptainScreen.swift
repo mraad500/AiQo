@@ -202,10 +202,7 @@ struct CaptainScreen: View {
             CaptainBackgroundView()
 
             VStack(spacing: 0) {
-                CaptainHeaderView(
-                    onProfileTap: { viewModel.openProfile() },
-                    onCustomizeTap: { viewModel.showCustomization = true }
-                )
+                CaptainHeaderView()
 
                 GeometryReader { geometry in
                     ZStack(alignment: .bottom) {
@@ -257,14 +254,6 @@ struct CaptainScreen: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
-        .sheet(isPresented: $viewModel.showProfile) {
-            NavigationStack {
-                ProfileScreen()
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(28)
-        }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
         }
@@ -272,6 +261,7 @@ struct CaptainScreen: View {
             viewModel.consumePendingCaptainNotificationIfAny()
         }
         .sensoryFeedback(.selection, trigger: viewModel.feedbackTrigger)
+        .aiqoTopTrailingProfileButton(isPresented: $viewModel.showProfile)
     }
 
     private func hideKeyboard() {
@@ -352,9 +342,6 @@ struct CaptainBackgroundView: View {
 // MARK: - Header View
 
 struct CaptainHeaderView: View {
-    var onProfileTap: () -> Void
-    var onCustomizeTap: () -> Void
-
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
 
@@ -366,30 +353,9 @@ struct CaptainHeaderView: View {
                 .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
 
             Spacer()
-
-            HStack(spacing: 10) {
-                compactHeaderButton(symbol: "person.crop.circle.fill", action: onProfileTap)
-                compactHeaderButton(symbol: "slider.horizontal.3", action: onCustomizeTap)
-            }
         }
         .padding(.horizontal, 24)
         .padding(.top, 8)
-    }
-
-    @ViewBuilder
-    private func compactHeaderButton(symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundColor(theme.text.opacity(0.92))
-                .frame(width: 42, height: 42)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.10 : 0.34), lineWidth: 0.8)
-                )
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.22 : 0.10), radius: 18, x: 0, y: 10)
-        }
     }
 }
 

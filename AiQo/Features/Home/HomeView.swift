@@ -90,16 +90,6 @@ struct HomeView: View {
             .presentationBackground(.ultraThinMaterial) // Transparent paper effect
         }
         
-        // MARK: - Profile Sheet
-        .sheet(isPresented: $isProfileSheetPresented) {
-            NavigationStack {
-                ProfileScreen()
-            }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .ignoresSafeArea(edges: .bottom)
-        }
-
         .sheet(isPresented: $showVibeSheet) {
             VibeControlSheet(viewModel: vibeControlViewModel)
                 .presentationDetents([.fraction(0.6), .large])
@@ -111,6 +101,7 @@ struct HomeView: View {
         .sheet(item: $viewModel.activeDestination) { destination in
             destinationView(for: destination)
         }
+        .aiqoTopTrailingProfileButton(isPresented: $isProfileSheetPresented)
     }
     
     // MARK: - Header View
@@ -122,10 +113,6 @@ struct HomeView: View {
             }
 
             Spacer()
-
-            FloatingProfileButton(size: 64) {
-                isProfileSheetPresented = true
-            }
         }
         .padding(.horizontal, 24)
         .padding(.top, 4)
@@ -539,7 +526,7 @@ extension MetricKind {
 }
 
 #Preview("Profile Button") {
-    FloatingProfileButton { }
+    AiQoProfileButton { }
         .padding()
         .background(Color(.systemBackground))
 }

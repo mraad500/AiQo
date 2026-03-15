@@ -15,63 +15,69 @@ struct QuestsView: View {
     @State private var centerToastHideTask: Task<Void, Never>?
 
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    private let contentLeadingPadding: CGFloat = 8
+    private let contentLeadingPadding: CGFloat = 10
     private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
     private let questCardWidthReduction: CGFloat = 1.5
+    private let clubTopBarHeight: CGFloat =
+        ClubChromeLayout.headerTopPadding + ClubChromeLayout.headerBottomPadding + 56
+    private let topContentInset: CGFloat =
+        ClubChromeLayout.headerTopPadding + ClubChromeLayout.headerBottomPadding + 80
 
     var body: some View {
         ZStack {
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 16) {
-                Text(questLocalizedText(selectedStage.titleKey))
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.primary)
+            ScrollView(showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    stageHeader
 
-                stageSelector
-
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 16) {
-                        ForEach(selectedStage.quests) { quest in
-                            QuestCard(
-                                quest: quest,
-                                progress: engine.cardProgress(for: quest),
-                                isLocked: false,
-                                referenceDate: currentTime
-                            )
-                            .padding(.horizontal, questCardWidthReduction)
-                            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                            .onTapGesture {
-                                questSheetDetent = .fraction(0.5)
-                                selectedQuest = quest
-                            }
-                        }
-
-                        if selectedStage.quests.isEmpty {
-                            Text("محتوى هذه المرحلة سيظهر هنا قريباً.")
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.primary.opacity(0.62))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(24)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                                .fill(AiQoColors.beige.opacity(0.16))
-                                        )
-                                )
+                    ForEach(selectedStage.quests) { quest in
+                        QuestCard(
+                            quest: quest,
+                            progress: engine.cardProgress(for: quest),
+                            isLocked: false,
+                            referenceDate: currentTime
+                        )
+                        .padding(.horizontal, questCardWidthReduction)
+                        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .onTapGesture {
+                            questSheetDetent = .fraction(0.5)
+                            selectedQuest = quest
                         }
                     }
-                    .padding(.top, 12)
-                    .padding(.bottom, 120)
+
+                    if selectedStage.quests.isEmpty {
+                        Text("محتوى هذه المرحلة سيظهر هنا قريباً.")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.primary.opacity(0.62))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                            .fill(AiQoColors.beige.opacity(0.16))
+                                    )
+                            )
+                    }
                 }
+                .padding(.top, topContentInset)
+                .padding(.leading, contentLeadingPadding)
+                .padding(.trailing, contentTrailingPadding)
+                .padding(.bottom, 120)
             }
-            .padding(.leading, contentLeadingPadding)
-            .padding(.trailing, contentTrailingPadding)
-            .padding(.top, 18)
+            .padding(.top, -clubTopBarHeight)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedStageID)
+
+            SlimRightSideRail(
+                items: stageRailItems,
+                selection: selectedStageIndex,
+                configuration: .stageSelector
+            )
+            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
+            .accessibilityLabel(Text("مراحل القمم"))
         }
         .overlay(alignment: .top) {
             if let centerToastMessage {
@@ -124,6 +130,48 @@ struct QuestsView: View {
 
     private var visibleStages: [QuestStageViewModel] {
         engine.stages
+    }
+
+    private var stageHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(questLocalizedText(selectedStage.tabTitleKey))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.primary.opacity(0.54))
+                .lineLimit(1)
+
+            Text(stageDisplayTitle)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.bottom, 4)
+    }
+
+    private var stageRailItems: [RailItem] {
+        visibleStages.map { stage in
+            RailItem(
+                id: "quest_stage_\(stage.id)",
+                title: questLocalizedText(stage.tabTitleKey),
+                icon: "\(stage.id).circle.fill",
+                tint: stageRailTint(for: stage.id)
+            )
+        }
+    }
+
+    private var selectedStageIndex: Binding<Int> {
+        Binding(
+            get: {
+                visibleStages.firstIndex(where: { $0.id == selectedStageID }) ?? 0
+            },
+            set: { newValue in
+                guard visibleStages.indices.contains(newValue) else { return }
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+                    selectedStageID = visibleStages[newValue].id
+                }
+            }
+        )
     }
 
     private func syncStageOneCenterBaseline() {
@@ -181,50 +229,30 @@ struct QuestsView: View {
         }
     }
 
-    private var stageSelector: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(visibleStages) { stage in
-                        let isSelected = stage.id == selectedStageID
+    private var stageDisplayTitle: String {
+        let localizedTitle = questLocalizedText(selectedStage.titleKey)
 
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.22)) {
-                                selectedStageID = stage.id
-                                proxy.scrollTo(stage.id, anchor: .center)
-                            }
-                        } label: {
-                            Text(questLocalizedText(stage.tabTitleKey))
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.72))
-                                .lineLimit(1)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(
-                                    Capsule()
-                                        .fill(isSelected ? AiQoColors.mint.opacity(0.42) : Color.white.opacity(0.58))
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(isSelected ? 0.46 : 0.28), lineWidth: 0.8)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .id(stage.id)
-                    }
-                }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 4)
-            }
-            .onAppear {
-                proxy.scrollTo(selectedStageID, anchor: .center)
-            }
-            .onChange(of: selectedStageID) { _, newValue in
-                withAnimation(.easeInOut(duration: 0.22)) {
-                    proxy.scrollTo(newValue, anchor: .center)
+        for separator in [": ", ":", "："] {
+            if let range = localizedTitle.range(of: separator) {
+                let trailingTitle = localizedTitle[range.upperBound...]
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trailingTitle.isEmpty {
+                    return trailingTitle
                 }
             }
         }
-        .accessibilityLabel(Text("مراحل القمم"))
+
+        return localizedTitle
+    }
+
+    private func stageRailTint(for stageID: Int) -> Color {
+        switch stageID % 3 {
+        case 1:
+            return AiQoColors.mint
+        case 2:
+            return AiQoColors.beige
+        default:
+            return AiQoColors.mint.opacity(0.88)
+        }
     }
 }

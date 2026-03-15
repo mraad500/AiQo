@@ -119,8 +119,13 @@
 "screen.profile.chip" = "الملف الشخصي";
 "screen.profile.subtitle" = "خل نرتّب جسمك وعقلك مع بعض";
 
+"screen.profile.section.health" = "Bio-Scan";
 "screen.profile.section.body" = "بيانات جسمك";
+"screen.profile.section.preferences" = "التفضيلات";
 "screen.profile.section.app"  = "تطبيق AiQo";
+
+"screen.profile.hero.progress" = "التقدم للمستوى القادم";
+"screen.profile.hero.avatar.action" = "تغيير صورة الملف الشخصي";
 
 "screen.profile.metric.age"    = "العمر";
 "screen.profile.metric.height" = "الطول";
@@ -134,6 +139,16 @@
 
 "screen.profile.metric.height.full" = "الطول (سم)";
 "screen.profile.metric.weight.full" = "الوزن (كغم)";
+
+"screen.profile.bio.subtitle" = "آخر تركيبة جسمية متزامنة من HealthKit";
+"screen.profile.bio.highlightFallback" = "ملخص صحي";
+"screen.profile.bio.bodyFat" = "دهون الجسم";
+"screen.profile.bio.muscleMass" = "الكتلة العضلية";
+"screen.profile.bio.water" = "الماء";
+"screen.profile.bio.bmr" = "معدل الحرق الأساسي";
+"screen.profile.bioSheet.title" = "تفاصيل Bio-Scan";
+"screen.profile.bioSheet.subtitle" = "نظرة سريعة على تركيبة جسمك الحالية.";
+"screen.profile.bioSheet.caption" = "آخر تركيبة جسمية متزامنة من HealthKit";
 
 "screen.profile.app.settings.title"    = "إعدادات التطبيق";
 "screen.profile.app.settings.subtitle" = "الإشعارات، الوحدات، اللغة";
@@ -151,6 +166,8 @@
 
 "screen.profile.goal.message"    = "شنو هدفك الأساسي هالفترة؟";
 "screen.profile.goal.placeholder" = "تنشيف • قوة • طاقة أعلى";
+"screen.profile.goal.hint" = "اضغط لتحديث هدفك";
+"screen.profile.preferences.subtitle" = "يُستخدم لتخصيص التمارين والإشعارات";
 
 "action.cancel" = "إلغاء";
 "action.save"   = "حفظ";
@@ -274,6 +291,7 @@
 "meal.tunaSalad.calories" = "380 سعرة";
 "your_level_with_aiqo" = "مستواك مع AiQo";
 "level" = "المستوى";
+"line_score" = "رصيدك";
 "points" = "نقطة";
 
 "your_body_data" = "بيانات جسمك";

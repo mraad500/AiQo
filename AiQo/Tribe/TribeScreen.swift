@@ -1,8 +1,17 @@
 import SwiftUI
 
+private enum TribeScreenLayout {
+    static let headerTopPadding: CGFloat = 0
+    static let headerBottomPadding: CGFloat = 2
+    static let headerOverlayTopInset: CGFloat = 0
+    static let contentTopPadding: CGFloat = 18
+    static let loadingIndicatorTopPadding: CGFloat = 62
+}
+
 @MainActor
 struct TribeScreen: View {
     @StateObject private var viewModel: TribeModuleViewModel
+    @State private var isProfilePresented = false
 
     init(allowsPreviewAccess: Bool = false) {
         _viewModel = StateObject(
@@ -18,19 +27,15 @@ struct TribeScreen: View {
         ZStack {
             TribeScreenBackground()
 
-            VStack(spacing: 18) {
-                TribeSegmentedControl(selection: $viewModel.selectedTab)
-                    .padding(.horizontal, TribePremiumTokens.horizontalPadding)
-                    .padding(.top, 8)
-
-                if viewModel.isLoading && hasLoadedTribeContent == false {
-                    TribeLoadingView()
-                        .padding(.horizontal, TribePremiumTokens.horizontalPadding)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                } else {
-                    activeTabView
-                }
-            }
+            contentLayer
+                .padding(.top, TribeScreenLayout.contentTopPadding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .top) {
+            topHeaderBar
+                .padding(.top, TribeScreenLayout.headerOverlayTopInset)
+                .ignoresSafeArea(edges: .top)
         }
         .environment(\.layoutDirection, .rightToLeft)
         .task {
@@ -49,37 +54,67 @@ struct TribeScreen: View {
                         Capsule(style: .continuous)
                             .stroke(TribeModernPalette.border, lineWidth: 1)
                     }
-                    .padding(.top, 64)
+                    .padding(.top, TribeScreenLayout.loadingIndicatorTopPadding)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .aiqoTopTrailingProfileButton(isPresented: $isProfilePresented)
+    }
+
+    private var topHeaderBar: some View {
+        HStack(spacing: 0) {
+            Color.clear
+                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
+
+            TribeTopSegmentedControl(selection: $viewModel.selectedTab)
+                .environment(\.layoutDirection, .rightToLeft)
+
+            Color.clear
+                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
+        }
+        .environment(\.layoutDirection, .leftToRight)
+        .padding(.horizontal, TribePremiumTokens.horizontalPadding)
+        .padding(.top, TribeScreenLayout.headerTopPadding)
+        .padding(.bottom, TribeScreenLayout.headerBottomPadding)
+    }
+
+    @ViewBuilder
+    private var contentLayer: some View {
+        if viewModel.isLoading && hasLoadedTribeContent == false {
+            TribeLoadingView()
+                .padding(.horizontal, TribePremiumTokens.horizontalPadding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            activeTabView
+        }
     }
 
     @ViewBuilder
     private var activeTabView: some View {
         switch viewModel.selectedTab {
         case .tribe:
-            TribeOverviewPage(
+            TribeView(
                 heroSummary: viewModel.heroSummary,
-                stats: viewModel.tribeStats,
                 featuredMembers: viewModel.featuredMembers,
                 onRefresh: viewModel.refresh
             )
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
 
         case .arena:
-            TribePhasePlaceholderPage(
-                title: "الارينا",
-                subtitle: "هذا التبويب سيبنى في المرحلة التالية.",
-                systemImage: "sparkles"
+            ArenaView(
+                heroSummary: viewModel.arenaHeroSummary,
+                challenges: viewModel.arenaCompactChallenges,
+                onRefresh: viewModel.refresh
             )
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
 
         case .global:
-            TribePhasePlaceholderPage(
-                title: "العالمي",
-                subtitle: "سيتم بناء هذا التبويب لاحقًا ضمن مرحلة مستقلة.",
-                systemImage: "globe"
+            GlobalView(
+                timeFilter: $viewModel.globalTimeFilter,
+                topThree: viewModel.globalTopThree,
+                selfRankSummary: viewModel.globalSelfRankSummary,
+                rankings: viewModel.globalRankingRows,
+                onRefresh: viewModel.refresh
             )
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
         }

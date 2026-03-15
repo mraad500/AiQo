@@ -8,34 +8,22 @@ struct QuestCard: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             Image(quest.rewardImageName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 108, height: 108)
+                .frame(width: 102, height: 102)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 7) {
                 Text(quest.title)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
                     .multilineTextAlignment(.leading)
 
-                if quest.source == .camera {
-                    Text(questLocalizedText("quests.card.camera_required"))
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color(red: 0.25, green: 0.40, blue: 0.96))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(red: 0.25, green: 0.40, blue: 0.96).opacity(0.12), in: Capsule())
-                }
-
-                Text(levelsLabel)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.secondary)
-
                 Text(questLevelsText(for: quest))
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.82))
+                    .lineLimit(1)
 
                 HStack(spacing: 8) {
                     Text(pillText)
@@ -50,19 +38,6 @@ struct QuestCard: View {
                         .foregroundStyle(Color.primary.opacity(0.78))
                 }
 
-                if let nextTargetText {
-                    Text(nextTargetText)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.secondary)
-                }
-
-                if let contextText {
-                    Text(contextText)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.secondary.opacity(0.9))
-                        .lineLimit(quest.id == "s1q3" ? 1 : nil)
-                }
-
                 ProgressView(value: min(progress.completionFraction, 1))
                     .tint(Color(red: 0.35, green: 0.43, blue: 0.95))
                     .scaleEffect(y: 1.1)
@@ -70,9 +45,9 @@ struct QuestCard: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, minHeight: 166)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 158)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(cardTint)
@@ -108,10 +83,6 @@ struct QuestCard: View {
         questProgressText(for: quest, progress: progress)
     }
 
-    private var levelsLabel: String {
-        quest.stageIndex == 1 ? "المراكز" : questLocalizedText("quests.card.levels")
-    }
-
     private var pillText: String {
         if quest.stageIndex == 1 {
             return questStageOneCenterPillText(for: progress)
@@ -122,16 +93,6 @@ struct QuestCard: View {
             locale: Locale.current,
             progress.tier
         )
-    }
-
-    private var nextTargetText: String? {
-        guard quest.stageIndex == 1 else { return nil }
-        return questStageOneNextTargetText(for: quest, progress: progress)
-    }
-
-    private var contextText: String? {
-        guard quest.stageIndex == 1 else { return nil }
-        return questStageOneContextText(for: quest, now: referenceDate)
     }
 
     private var cardTint: Color {
