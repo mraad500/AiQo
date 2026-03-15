@@ -36,9 +36,6 @@ struct HomeView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header
-                headerView
-
                 VStack(spacing: 6) {
                     dailyAuraSection
 
@@ -53,6 +50,9 @@ struct HomeView: View {
 
                 Spacer(minLength: 0)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topChrome
         }
         .task {
             await viewModel.onAppear()
@@ -101,22 +101,24 @@ struct HomeView: View {
         .sheet(item: $viewModel.activeDestination) { destination in
             destinationView(for: destination)
         }
-        .aiqoTopTrailingProfileButton(isPresented: $isProfileSheetPresented)
+        .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
     }
     
     // MARK: - Header View
     
-    private var headerView: some View {
-        HStack {
-            VibeDashboardTriggerButton {
-                showVibeSheet = true
-            }
+    private var topChrome: some View {
+        AiQoScreenTopChrome(
+            horizontalInset: 24,
+            onProfileTap: { isProfileSheetPresented = true }
+        ) {
+            HStack {
+                VibeDashboardTriggerButton {
+                    showVibeSheet = true
+                }
 
-            Spacer()
+                Spacer(minLength: 0)
+            }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 4)
-        .frame(height: 68)
     }
     
     // MARK: - Metrics Grid

@@ -42,36 +42,15 @@ struct TribeTopSegmentedControl: View {
         Picker("", selection: $selection) {
             ForEach(TribeDashboardTab.allCases) { tab in
                 Text(tab.title)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .tag(tab)
             }
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .tint(TribeModernPalette.mintDeep.opacity(0.72))
-        .padding(4)
-        .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    TribeModernPalette.surfaceOverlay,
-                                    TribeModernPalette.surfaceBottom.opacity(0.94)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(TribeModernPalette.border, lineWidth: 1)
-                }
-                .shadow(color: TribeModernPalette.shadow.opacity(0.04), radius: 12, x: 0, y: 8)
-        }
+        .controlSize(.regular)
+        .scaleEffect(y: 1.12)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
         .sensoryFeedback(.selection, trigger: selection)
     }
 }
@@ -83,7 +62,7 @@ struct TribeView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: TribePremiumTokens.sectionSpacing) {
+            VStack(spacing: 18) {
                 TribeHeroCardCompact(
                     summary: heroSummary,
                     featuredMembers: featuredMembers
@@ -108,11 +87,11 @@ struct TribeHeroCardCompact: View {
     let featuredMembers: [TribeRingMember]
 
     var body: some View {
-        TribeSurfaceCard(accent: TribeModernPalette.mint, padding: 10, cornerRadius: 30) {
-            HStack(alignment: .center, spacing: 8) {
-                VStack(spacing: 0) {
+        TribeSurfaceCard(padding: 18, cornerRadius: 30) {
+            HStack(alignment: .center, spacing: 18) {
+                VStack(spacing: 4) {
                     TribeRingView(
-                        size: 198,
+                        size: 138,
                         members: featuredMembers,
                         segmentTarget: summary.ringSegmentTarget
                     )
@@ -120,11 +99,10 @@ struct TribeHeroCardCompact: View {
                     Text(summary.progressValue)
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textSecondary)
-                        .padding(.top, -16)
                 }
-                .frame(width: 186, height: 182)
+                .frame(width: 138)
 
-                VStack(alignment: .trailing, spacing: 0) {
+                VStack(alignment: .trailing, spacing: 2) {
                     Text(summary.title)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textPrimary)
@@ -133,6 +111,7 @@ struct TribeHeroCardCompact: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .frame(minHeight: 156)
             .environment(\.layoutDirection, .leftToRight)
         }
     }
@@ -142,7 +121,7 @@ struct TribeMembersSection: View {
     let featuredMembers: [TribeRingMember]
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             TribeSectionHeader(
                 title: "أعضاء القبيلة",
                 subtitle: "كل عضو مرتبط بلون قطاع داخل الحلقة، مع حضور هادئ ومقاييس مختصرة."
@@ -205,7 +184,7 @@ struct TribeSectionHeader: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
             Text(title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(TribeModernPalette.textPrimary)
                 .multilineTextAlignment(.trailing)
 
@@ -312,17 +291,17 @@ struct TribeMemberCardCompact: View {
     let featuredMember: TribeRingMember
 
     var body: some View {
-        TribeSurfaceCard(accent: featuredMember.sectorColor.accent, padding: 12, cornerRadius: 26) {
-            HStack(alignment: .center, spacing: 12) {
+        TribeSurfaceCard(padding: 0, cornerRadius: 28) {
+            HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(featuredMember.displayName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textPrimary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
                     Text(featuredMember.isVacant ? "مساحة جاهزة لعضو جديد" : featuredMember.roleTitle)
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -342,21 +321,24 @@ struct TribeMemberCardCompact: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(featuredMember.sectorColor.accent.opacity(0.92))
-                    .frame(width: 3, height: 38)
+                    .frame(width: 4, height: 78)
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(featuredMember.contributionValue)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textPrimary)
 
                     Text(featuredMember.contributionLabel)
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textSecondary)
                 }
-                .frame(minWidth: 56, alignment: .trailing)
+                .frame(minWidth: 62, alignment: .trailing)
             }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .frame(minHeight: 96)
             .environment(\.layoutDirection, .leftToRight)
         }
     }
@@ -369,10 +351,10 @@ struct TribeMetadataChip: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold, design: .rounded))
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
             .foregroundStyle(usesMutedStyle ? TribeModernPalette.textSecondary : TribeModernPalette.textPrimary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background {
                 Capsule(style: .continuous)
                     .fill(usesMutedStyle ? tint.opacity(0.10) : tint.opacity(0.22))

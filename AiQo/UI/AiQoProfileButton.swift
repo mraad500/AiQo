@@ -4,8 +4,6 @@ enum AiQoProfileButtonLayout {
     static let visualDiameter: CGFloat = 52
     static let hitTargetDiameter: CGFloat = 56
     static let symbolPointSize: CGFloat = 24
-    static let topInset: CGFloat = 8
-    static let rightInset: CGFloat = 16
     static let reservedLaneWidth: CGFloat = 72
     static let shadowRadius: CGFloat = 16
     static let shadowYOffset: CGFloat = 7
@@ -86,23 +84,11 @@ struct AiQoProfileButton: View {
     }
 }
 
-struct AiQoTopTrailingProfileButtonModifier: ViewModifier {
+private struct AiQoProfileSheetModifier: ViewModifier {
     @Binding var isPresented: Bool
 
     func body(content: Content) -> some View {
         content
-            .overlay {
-                GeometryReader { proxy in
-                    AiQoProfileButton {
-                        isPresented = true
-                    }
-                    .padding(.top, proxy.safeAreaInsets.top + AiQoProfileButtonLayout.topInset)
-                    .padding(.trailing, AiQoProfileButtonLayout.rightInset)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .environment(\.layoutDirection, .leftToRight)
-                }
-                .ignoresSafeArea(edges: .top)
-            }
             .sheet(isPresented: $isPresented) {
                 NavigationStack {
                     ProfileScreen()
@@ -115,8 +101,8 @@ struct AiQoTopTrailingProfileButtonModifier: ViewModifier {
 }
 
 extension View {
-    func aiqoTopTrailingProfileButton(isPresented: Binding<Bool>) -> some View {
-        modifier(AiQoTopTrailingProfileButtonModifier(isPresented: isPresented))
+    func aiqoProfileSheet(isPresented: Binding<Bool>) -> some View {
+        modifier(AiQoProfileSheetModifier(isPresented: isPresented))
     }
 }
 

@@ -51,6 +51,7 @@ struct ClubRootView: View {
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
     @State private var isGratitudeSessionPresented = false
+    @State private var isProfilePresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
@@ -59,9 +60,6 @@ struct ClubRootView: View {
     @StateObject private var questEngine: QuestEngine
 
     private let displayedTabs: [ClubTopTab] = [.impact, .challenges, .plan, .body]
-    private var topHeaderHorizontalInset: CGFloat {
-        max(ClubChromeLayout.headerLeadingInset, ClubChromeLayout.headerTrailingInset)
-    }
 
     init() {
         _questEngine = StateObject(wrappedValue: .shared)
@@ -88,13 +86,11 @@ struct ClubRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
         }
-        .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             topHeaderBar
-                .padding(.top, ClubChromeLayout.headerOverlayTopInset)
-                .ignoresSafeArea(edges: .top)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .aiqoProfileSheet(isPresented: $isProfilePresented)
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionSheetView(session: presented.session)
@@ -140,24 +136,21 @@ struct ClubRootView: View {
     }
 
     private var topHeaderBar: some View {
-        HStack(spacing: 0) {
-            Color.clear
-                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
-
+        AiQoScreenTopChrome(
+            leadingReservedWidth: 0,
+            itemSpacing: 8,
+            horizontalInset: 12,
+            topPadding: ClubChromeLayout.headerTopPadding,
+            bottomPadding: ClubChromeLayout.headerBottomPadding,
+            contentMaxWidth: nil,
+            contentAlignment: .center,
+            onProfileTap: { isProfilePresented = true }
+        ) {
             GlobalTopCapsuleTabsView(
                 tabs: displayedTabs.map { L10n.t($0.titleKey) },
-                selectedTints: displayedTabs.map(topTabTint(for:)),
                 selection: displayedSelectedTabIndex
             )
-            .frame(maxWidth: 640)
-
-            Color.clear
-                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
         }
-        .environment(\.layoutDirection, .leftToRight)
-        .padding(.top, ClubChromeLayout.headerTopPadding)
-        .padding(.horizontal, topHeaderHorizontalInset)
-        .padding(.bottom, ClubChromeLayout.headerBottomPadding)
     }
 
     @ViewBuilder
@@ -236,19 +229,6 @@ struct ClubRootView: View {
                 }
             }
         )
-    }
-
-    private func topTabTint(for tab: ClubTopTab) -> Color {
-        switch tab {
-        case .plan:
-            return AiQoColors.beige
-        case .body:
-            return AiQoColors.mint
-        case .challenges:
-            return AiQoColors.mint
-        case .impact:
-            return AiQoColors.mint
-        }
     }
 }
 

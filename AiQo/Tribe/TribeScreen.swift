@@ -1,11 +1,14 @@
 import SwiftUI
 
 private enum TribeScreenLayout {
-    static let headerTopPadding: CGFloat = 0
-    static let headerBottomPadding: CGFloat = 2
-    static let headerOverlayTopInset: CGFloat = 0
-    static let contentTopPadding: CGFloat = 18
-    static let loadingIndicatorTopPadding: CGFloat = 62
+    static let headerTopPadding: CGFloat = AiQoScreenHeaderMetrics.topPadding
+    static let headerBottomPadding: CGFloat = AiQoScreenHeaderMetrics.bottomPadding
+    static let contentTopPadding: CGFloat = 8
+    static let loadingIndicatorTopPadding: CGFloat =
+        AiQoScreenHeaderMetrics.topPadding
+        + AiQoProfileButtonLayout.hitTargetDiameter
+        + AiQoScreenHeaderMetrics.bottomPadding
+        + 6
 }
 
 @MainActor
@@ -31,11 +34,8 @@ struct TribeScreen: View {
                 .padding(.top, TribeScreenLayout.contentTopPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             topHeaderBar
-                .padding(.top, TribeScreenLayout.headerOverlayTopInset)
-                .ignoresSafeArea(edges: .top)
         }
         .environment(\.layoutDirection, .rightToLeft)
         .task {
@@ -58,24 +58,23 @@ struct TribeScreen: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .aiqoTopTrailingProfileButton(isPresented: $isProfilePresented)
+        .aiqoProfileSheet(isPresented: $isProfilePresented)
     }
 
     private var topHeaderBar: some View {
-        HStack(spacing: 0) {
-            Color.clear
-                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
-
+        AiQoScreenTopChrome(
+            leadingReservedWidth: 0,
+            itemSpacing: 8,
+            horizontalInset: 12,
+            topPadding: TribeScreenLayout.headerTopPadding,
+            bottomPadding: TribeScreenLayout.headerBottomPadding,
+            contentMaxWidth: nil,
+            contentAlignment: .center,
+            onProfileTap: { isProfilePresented = true }
+        ) {
             TribeTopSegmentedControl(selection: $viewModel.selectedTab)
                 .environment(\.layoutDirection, .rightToLeft)
-
-            Color.clear
-                .frame(width: AiQoProfileButtonLayout.reservedLaneWidth)
         }
-        .environment(\.layoutDirection, .leftToRight)
-        .padding(.horizontal, TribePremiumTokens.horizontalPadding)
-        .padding(.top, TribeScreenLayout.headerTopPadding)
-        .padding(.bottom, TribeScreenLayout.headerBottomPadding)
     }
 
     @ViewBuilder

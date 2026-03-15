@@ -4,9 +4,9 @@ import UIKit
 enum ClubChromeLayout {
     static let headerLeadingInset: CGFloat = 16
     static let headerTrailingInset: CGFloat = 2
-    static let headerTopPadding: CGFloat = 0
-    static let headerBottomPadding: CGFloat = 2
-    static let headerOverlayTopInset: CGFloat = 0
+    static let headerTopPadding: CGFloat = 6
+    static let headerBottomPadding: CGFloat = 10
+    static let topChromeHeight: CGFloat = headerTopPadding + headerBottomPadding + 56
 
     static let railWidth: CGFloat = 46
     static let trailingLaneWidth: CGFloat = 78
@@ -15,7 +15,7 @@ enum ClubChromeLayout {
     static let railLocalScreenOffsetX: CGFloat = 1
     static let contentTrailingPadding: CGFloat =
         trailingScreenInset + (trailingLaneWidth / 2) - railRightShift + (railWidth / 2) + 10
-    static let contentTopPadding: CGFloat = 18
+    static let contentTopPadding: CGFloat = 12
 }
 
 struct SlimRightSideRailConfiguration: Equatable {
@@ -28,6 +28,7 @@ struct SlimRightSideRailConfiguration: Equatable {
     var stackSpacing: CGFloat
     var contentInsets: NSDirectionalEdgeInsets
     var horizontalPositionOffset: CGFloat
+    var verticalCenterRatio: CGFloat
 
     static let standard = SlimRightSideRailConfiguration(
         maxVisibleItems: nil,
@@ -38,7 +39,8 @@ struct SlimRightSideRailConfiguration: Equatable {
         symbolPointSize: 14,
         stackSpacing: 10,
         contentInsets: NSDirectionalEdgeInsets(top: 8, leading: 2, bottom: 8, trailing: 2),
-        horizontalPositionOffset: 0
+        horizontalPositionOffset: 0,
+        verticalCenterRatio: 0.78
     )
 
     static let stageSelector = SlimRightSideRailConfiguration(
@@ -50,7 +52,8 @@ struct SlimRightSideRailConfiguration: Equatable {
         symbolPointSize: 11,
         stackSpacing: 7,
         contentInsets: NSDirectionalEdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0),
-        horizontalPositionOffset: -12
+        horizontalPositionOffset: -12,
+        verticalCenterRatio: 0.31
     )
 }
 
@@ -70,7 +73,8 @@ struct SlimRightSideRail: View {
     var body: some View {
         GeometryReader { proxy in
             let railHeight = calculatedRailHeight(for: items.count)
-            let preferredY = proxy.size.height / 2
+            let availableHeight = proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom
+            let preferredY = proxy.safeAreaInsets.top + (availableHeight * configuration.verticalCenterRatio)
             let clampedY = min(
                 max(preferredY, proxy.safeAreaInsets.top + (railHeight / 2) + 20),
                 proxy.size.height - proxy.safeAreaInsets.bottom - (railHeight / 2) - 20
@@ -216,12 +220,12 @@ private final class AppleVerticalRailControlView: UIView {
         glassView.layer.cornerCurve = .continuous
         glassView.layer.cornerRadius = cornerRadius
         glassView.layer.borderWidth = 1
-        glassView.layer.borderColor = UIColor.white.withAlphaComponent(0.10).cgColor
+        glassView.layer.borderColor = UIColor.white.withAlphaComponent(0.20).cgColor
 
-        layer.shadowColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        layer.shadowColor = UIColor.black.withAlphaComponent(0.035).cgColor
         layer.shadowOpacity = 1
-        layer.shadowRadius = 12
-        layer.shadowOffset = CGSize(width: 0, height: 7)
+        layer.shadowRadius = 8
+        layer.shadowOffset = CGSize(width: 0, height: 5)
         layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
     }
 
@@ -314,8 +318,7 @@ private final class AppleVerticalRailControlView: UIView {
         button.layer.cornerRadius = 20
         button.titleLabel?.numberOfLines = railConfiguration.titleLineCount
         button.titleLabel?.textAlignment = .center
-        button.titleLabel?.adjustsFontSizeToFitWidth = true
-        button.titleLabel?.minimumScaleFactor = 0.8
+        button.titleLabel?.adjustsFontSizeToFitWidth = false
         button.titleLabel?.lineBreakMode = .byWordWrapping
 
         let heightConstraint = button.heightAnchor.constraint(equalToConstant: railConfiguration.itemHeight)
@@ -364,8 +367,7 @@ private final class AppleVerticalRailControlView: UIView {
             button.alpha = item.isLocked ? 0.45 : 1
             button.titleLabel?.numberOfLines = railConfiguration.titleLineCount
             button.titleLabel?.textAlignment = .center
-            button.titleLabel?.adjustsFontSizeToFitWidth = true
-            button.titleLabel?.minimumScaleFactor = 0.8
+            button.titleLabel?.adjustsFontSizeToFitWidth = false
             button.titleLabel?.lineBreakMode = .byWordWrapping
         }
     }

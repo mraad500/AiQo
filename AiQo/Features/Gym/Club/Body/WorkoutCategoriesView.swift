@@ -26,7 +26,7 @@ struct WorkoutCardItem: Identifiable, Hashable {
 struct WorkoutCategoriesView: View {
     let onSelectExercise: (GymExercise) -> Void
 
-    private let contentLeadingPadding: CGFloat = 10
+    private let contentLeadingPadding: CGFloat = 14
     private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 8
 
     @State private var selection = 0
@@ -58,7 +58,7 @@ struct WorkoutCategoriesView: View {
                 .ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 18) {
+                LazyVStack(spacing: 20) {
                     ForEach(Array(currentItems.enumerated()), id: \.element.id) { index, item in
                         let backgroundColor = cardBackgroundColor(for: index)
 
@@ -81,11 +81,11 @@ struct WorkoutCategoriesView: View {
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
-                .padding(.top, 0)
+                .padding(.top, 4)
                 .padding(.leading, contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.bottom, 120)
-                .offset(x: -2)
+                .offset(x: -1)
             }
             .contentMargins(.top, 0, for: .scrollContent)
             .contentMargins(.top, 0, for: .scrollIndicators)
@@ -258,12 +258,11 @@ struct GlassWorkoutCard: View {
             iconChip
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 18)
-        .frame(maxWidth: .infinity, minHeight: 109)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, minHeight: 118)
         .background(cardBackground)
-        .overlay(cardStroke)
-        .shadow(color: Color.black.opacity(0.055), radius: 16, x: 0, y: 10)
-        .shadow(color: backgroundColor.opacity(0.22), radius: 20, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.035), radius: 10, x: 0, y: 6)
+        .shadow(color: backgroundColor.opacity(0.12), radius: 14, x: 0, y: 8)
         .opacity(isVisible ? 1 : 0.001)
         .offset(y: isVisible ? 0 : 22)
         .scaleEffect(isVisible ? 1 : 0.96)
@@ -274,17 +273,20 @@ struct GlassWorkoutCard: View {
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(item.title)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
 
             if let subtitle = item.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.70))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -325,11 +327,11 @@ struct GlassWorkoutCard: View {
                 .blur(radius: 1.5)
 
             Image(systemName: item.iconName)
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 19, weight: .bold))
                 .foregroundStyle(Color.black.opacity(0.75))
                 .flipsForRightToLeftLayoutDirection(false)
         }
-        .frame(width: 52, height: 52)
+        .frame(width: 58, height: 58)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         .accessibilityHidden(true)
     }
@@ -338,11 +340,6 @@ struct GlassWorkoutCard: View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-    }
-
-    private var cardStroke: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(Color.white.opacity(0.18), lineWidth: 0.7)
     }
 
     private var accessibilityLabel: String {

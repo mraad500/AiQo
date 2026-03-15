@@ -18,7 +18,7 @@ final class TribeModuleViewModel: ObservableObject {
         summary: "إيقاع يومي هادئ يربط أعضاء القبيلة.",
         memberBadge: "0/5 أعضاء",
         progress: 0,
-        progressValue: "0٪",
+        progressValue: "0%",
         progressLabel: "اكتمال اليوم",
         ringSegmentTarget: 100
     )
@@ -129,7 +129,7 @@ final class TribeModuleViewModel: ObservableObject {
             summary: "تم جمع \(totalEnergy.formatted(.number.grouping(.automatic))) نقطة اليوم عبر \(activeMembers.count.formatted(.number.grouping(.automatic))) أعضاء نشطين.",
             memberBadge: "\(displayedMembers.count)/5 أعضاء",
             progress: energyProgress,
-            progressValue: "\(Int((energyProgress * 100).rounded()))٪",
+            progressValue: "\(Int((energyProgress * 100).rounded()))%",
             progressLabel: "اكتمال اليوم",
             ringSegmentTarget: ringSegmentTarget
         )

@@ -202,8 +202,6 @@ struct CaptainScreen: View {
             CaptainBackgroundView()
 
             VStack(spacing: 0) {
-                CaptainHeaderView()
-
                 GeometryReader { geometry in
                     ZStack(alignment: .bottom) {
                         let layout = viewModel.layout(for: geometry.size.height)
@@ -245,9 +243,13 @@ struct CaptainScreen: View {
                 .padding(.bottom, 16)
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topChrome
+        }
         .fontDesign(.rounded)
         .onTapGesture { hideKeyboard() }
         .gesture(DragGesture().onChanged { _ in hideKeyboard() })
+        .aiqoProfileSheet(isPresented: $viewModel.showProfile)
         .sheet(isPresented: $viewModel.showCustomization) {
             CustomizationSheetView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
@@ -261,7 +263,23 @@ struct CaptainScreen: View {
             viewModel.consumePendingCaptainNotificationIfAny()
         }
         .sensoryFeedback(.selection, trigger: viewModel.feedbackTrigger)
-        .aiqoTopTrailingProfileButton(isPresented: $viewModel.showProfile)
+    }
+
+    private var topChrome: some View {
+        AiQoScreenTopChrome(
+            horizontalInset: 24,
+            onProfileTap: { viewModel.showProfile = true }
+        ) {
+            HStack {
+                Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.text)
+                    .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
+
+                Spacer(minLength: 0)
+            }
+            .environment(\.layoutDirection, .rightToLeft)
+        }
     }
 
     private func hideKeyboard() {
@@ -340,24 +358,6 @@ struct CaptainBackgroundView: View {
 }
 
 // MARK: - Header View
-
-struct CaptainHeaderView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 18) {
-            Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundColor(theme.text)
-                .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
-
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 8)
-    }
-}
 
 // MARK: - Chat Container View
 
