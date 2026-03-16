@@ -26,8 +26,11 @@ struct WorkoutCardItem: Identifiable, Hashable {
 struct WorkoutCategoriesView: View {
     let onSelectExercise: (GymExercise) -> Void
 
+    // Matches the current rendered height of the club top chrome so cards slide directly under it.
+    private let renderedTopChromeHeight: CGFloat = 116
     private let contentLeadingPadding: CGFloat = 14
     private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 8
+    private let topContentSpacing: CGFloat = 4
 
     @State private var selection = 0
     @State private var visibleCardIDs = Set<UUID>()
@@ -41,13 +44,21 @@ struct WorkoutCategoriesView: View {
         WorkoutCategoriesCatalog.items(for: selectedCategory)
     }
 
+    private var topScrollOverlap: CGFloat {
+        renderedTopChromeHeight + ClubChromeLayout.contentTopPadding
+    }
+
+    private var topContentInset: CGFloat {
+        renderedTopChromeHeight + topContentSpacing
+    }
+
     private var railItems: [RailItem] {
         WorkoutCategory.allCases.map {
             RailItem(
                 id: "\($0.rawValue)",
                 title: $0.title,
                 icon: $0.railIcon,
-                tint: $0.railTint
+                tint: .aiqoAccent
             )
         }
     }
@@ -85,12 +96,13 @@ struct WorkoutCategoriesView: View {
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, topContentInset)
                 .padding(.leading, contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.bottom, 120)
                 .offset(x: -1)
             }
+            .padding(.top, -topScrollOverlap)
             .contentMargins(.top, 0, for: .scrollContent)
             .contentMargins(.top, 0, for: .scrollIndicators)
         }
@@ -425,9 +437,9 @@ private struct WorkoutCategoriesBackdrop: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(uiColor: .systemBackground),
-                    AiQoColors.mint.opacity(0.18),
-                    AiQoColors.beige.opacity(0.16)
+                    AiQoColors.mint.opacity(0.24),
+                    AiQoColors.beige.opacity(0.18),
+                    Color(uiColor: .systemBackground)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -507,15 +519,6 @@ private struct WorkoutSeed: Hashable {
 
 private enum WorkoutCategoriesCatalog {
     private static let cardioSeeds: [WorkoutSeed] = [
-        WorkoutSeed(
-            item: WorkoutCardItem(
-                title: "سينماتك غرايند",
-                subtitle: "كارديو Zone 2 وانت تشوف نتفلكس أو يوتيوب",
-                iconName: "popcorn.fill",
-                themeColor: AiQoColors.mint
-            ),
-            exerciseKey: "gym.exercise.cinematic_grind"
-        ),
         WorkoutSeed(
             item: WorkoutCardItem(
                 title: "كارديو ويا الكابتن حمّودي",

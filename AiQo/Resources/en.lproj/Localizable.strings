@@ -177,7 +177,7 @@
 "screen.kitchen.breakfast" = "Breakfast";
 "screen.kitchen.lunch" = "Lunch";
 "screen.kitchen.dinner" = "Dinner";
-"screen.kitchen.regenerate" = "Regenerate with AI";
+"screen.kitchen.regenerate" = "Kitchen";
 "screen.kitchen.analyze" = "Nutrition Analysis";
 "screen.kitchen.caloriesUnit" = "kcal";
 "screen.kitchen.noMeals" = "No meals available for this section.";

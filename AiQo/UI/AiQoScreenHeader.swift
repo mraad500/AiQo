@@ -14,6 +14,7 @@ struct AiQoScreenTopChrome<Content: View>: View {
     private let horizontalInset: CGFloat
     private let topPadding: CGFloat
     private let bottomPadding: CGFloat
+    private let profileVerticalOffset: CGFloat
     private let contentMaxWidth: CGFloat?
     private let contentAlignment: Alignment
     private let onProfileTap: () -> Void
@@ -25,6 +26,7 @@ struct AiQoScreenTopChrome<Content: View>: View {
         horizontalInset: CGFloat = AiQoScreenHeaderMetrics.horizontalInset,
         topPadding: CGFloat = AiQoScreenHeaderMetrics.topPadding,
         bottomPadding: CGFloat = AiQoScreenHeaderMetrics.bottomPadding,
+        profileVerticalOffset: CGFloat = 0,
         contentMaxWidth: CGFloat? = nil,
         contentAlignment: Alignment = .leading,
         onProfileTap: @escaping () -> Void,
@@ -35,6 +37,7 @@ struct AiQoScreenTopChrome<Content: View>: View {
         self.horizontalInset = horizontalInset
         self.topPadding = topPadding
         self.bottomPadding = bottomPadding
+        self.profileVerticalOffset = profileVerticalOffset
         self.contentMaxWidth = contentMaxWidth
         self.contentAlignment = contentAlignment
         self.onProfileTap = onProfileTap
@@ -53,6 +56,7 @@ struct AiQoScreenTopChrome<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: contentAlignment)
 
             AiQoProfileButton(action: onProfileTap)
+                .offset(y: profileVerticalOffset)
                 .frame(width: AiQoScreenHeaderMetrics.profileLaneWidth, alignment: .trailing)
         }
         .environment(\.layoutDirection, .leftToRight)

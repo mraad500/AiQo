@@ -177,7 +177,7 @@
 "screen.kitchen.breakfast" = "الفطور";
 "screen.kitchen.lunch" = "الغداء";
 "screen.kitchen.dinner" = "العشاء";
-"screen.kitchen.regenerate" = "إعادة توليد بالذكاء الاصطناعي";
+"screen.kitchen.regenerate" = "المطبخ";
 "screen.kitchen.analyze" = "تحليل النظام الغذائي";
 "screen.kitchen.calorie" = "سعرة";
 /// Localizable (Arabic).strings

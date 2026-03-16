@@ -6,6 +6,7 @@ struct InteractiveFridgeView: View {
 
     @State private var isScannerPresented = false
     @State private var isInventoryEditorPresented = false
+    @State private var highlightedItemID: UUID?
 
     private var sections: [FridgeShelfSection] {
         FridgeShelfSection.makeSections(from: kitchenStore.fridgeItems)
@@ -15,38 +16,39 @@ struct InteractiveFridgeView: View {
         IngredientPickerEntry.makeEntries(fridgeItems: kitchenStore.fridgeItems)
     }
 
-    private var totalItemCount: Int {
-        kitchenStore.fridgeItems.count
-    }
-
-    private var totalUnits: Double {
-        kitchenStore.fridgeItems.reduce(0) { partialResult, item in
-            partialResult + item.quantity
-        }
-    }
-
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            InteractiveFridgeContent(
-                totalItemCount: totalItemCount,
-                totalUnits: totalUnits,
+        GeometryReader { proxy in
+            InteractiveFridgeCanvasCard(
                 sections: sections,
-                onScanTap: presentScanner,
-                onListTap: presentInventoryEditor,
+                pickerEntries: pickerEntries,
+                highlightedItemID: highlightedItemID,
+                onSelectIngredient: addIngredient,
                 onIncrement: incrementItem,
                 onDecrement: decrementItem,
                 onRemove: removeItem
             )
+            .aspectRatio(871 / 1536, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, max(proxy.safeAreaInsets.bottom, 10))
         }
         .background(InteractiveFridgeScreenBackground().ignoresSafeArea())
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            IngredientPickerRailView(
-                entries: pickerEntries,
-                onSelect: addIngredient
-            )
-        }
         .navigationTitle("kitchen.fridge.title".localized)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button(action: presentInventoryEditor) {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .accessibilityLabel("Open fridge list")
+
+                Button(action: presentScanner) {
+                    Image(systemName: "camera.viewfinder")
+                }
+                .accessibilityLabel("Scan fridge")
+            }
+        }
         .fullScreenCover(isPresented: $isScannerPresented) {
             SmartFridgeScannerView()
                 .environmentObject(kitchenStore)
@@ -71,51 +73,60 @@ private extension InteractiveFridgeView {
     }
 
     func addIngredient(_ key: IngredientKey) {
-        kitchenStore.addFridgeItem(name: key.localizedTitle, quantity: 1, unit: nil)
+        let normalizedKey = IngredientCatalog.normalize(key.localizedTitle)
+        let existingID = kitchenStore.fridgeItems.first(where: {
+            IngredientCatalog.normalize($0.name) == normalizedKey
+        })?.id
+
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
+            kitchenStore.addFridgeItem(name: key.localizedTitle, quantity: 1, unit: nil)
+        }
+
+        let targetID = existingID ?? kitchenStore.fridgeItems.first(where: {
+            IngredientCatalog.normalize($0.name) == normalizedKey
+        })?.id
+
+        pulseItem(targetID)
     }
 
     func incrementItem(_ itemID: UUID) {
-        kitchenStore.incrementFridgeItem(id: itemID)
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.84)) {
+            kitchenStore.incrementFridgeItem(id: itemID)
+        }
+        pulseItem(itemID)
     }
 
     func decrementItem(_ itemID: UUID) {
-        kitchenStore.decrementFridgeItem(id: itemID)
+        guard let item = kitchenStore.fridgeItems.first(where: { $0.id == itemID }) else { return }
+
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
+            if item.quantity <= 1 {
+                kitchenStore.removeFridgeItem(id: itemID)
+            } else {
+                kitchenStore.decrementFridgeItem(id: itemID)
+            }
+        }
     }
 
     func removeItem(_ itemID: UUID) {
-        kitchenStore.removeFridgeItem(id: itemID)
-    }
-}
-
-private struct InteractiveFridgeContent: View {
-    let totalItemCount: Int
-    let totalUnits: Double
-    let sections: [FridgeShelfSection]
-    let onScanTap: () -> Void
-    let onListTap: () -> Void
-    let onIncrement: (UUID) -> Void
-    let onDecrement: (UUID) -> Void
-    let onRemove: (UUID) -> Void
-
-    var body: some View {
-        VStack(spacing: 18) {
-            InteractiveFridgeHeroCard(
-                totalItemCount: totalItemCount,
-                totalUnits: totalUnits,
-                onScanTap: onScanTap,
-                onListTap: onListTap
-            )
-
-            InteractiveFridgeCanvasCard(
-                sections: sections,
-                onIncrement: onIncrement,
-                onDecrement: onDecrement,
-                onRemove: onRemove
-            )
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+            kitchenStore.removeFridgeItem(id: itemID)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
+    }
+
+    func pulseItem(_ itemID: UUID?) {
+        guard let itemID else { return }
+
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.74)) {
+            highlightedItemID = itemID
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            guard highlightedItemID == itemID else { return }
+            withAnimation(.easeOut(duration: 0.22)) {
+                highlightedItemID = nil
+            }
+        }
     }
 }
 
@@ -133,170 +144,73 @@ private struct InteractiveFridgeScreenBackground: View {
     }
 }
 
-private struct InteractiveFridgeHeroCard: View {
-    let totalItemCount: Int
-    let totalUnits: Double
-    let onScanTap: () -> Void
-    let onListTap: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            FridgeHeroTextBlock()
-            FridgeHeroMetricsRow(totalItemCount: totalItemCount, totalUnits: totalUnits)
-            FridgeHeroActionRow(onScanTap: onScanTap, onListTap: onListTap)
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.58), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 8)
-    }
-}
-
-private struct FridgeHeroTextBlock: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Emoji Interactive Fridge")
-                .font(.system(size: 26, weight: .black, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text("Use native food emoji to stock shelves instantly, then scan the real fridge whenever you want to merge live inventory.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct FridgeHeroMetricsRow: View {
-    let totalItemCount: Int
-    let totalUnits: Double
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FridgeMetricBadge(
-                title: "Stored Items",
-                value: "\(totalItemCount)"
-            )
-
-            FridgeMetricBadge(
-                title: "Total Units",
-                value: FridgeTextFormatter.quantity(totalUnits, unit: nil)
-            )
-        }
-    }
-}
-
-private struct FridgeMetricBadge: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value)
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text(title)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.7))
-        )
-    }
-}
-
-private struct FridgeHeroActionRow: View {
-    let onScanTap: () -> Void
-    let onListTap: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FridgeActionButton(
-                title: "Scan Fridge",
-                systemImage: "camera.viewfinder",
-                fillColor: Color.kitchenMint,
-                foregroundColor: .black,
-                action: onScanTap
-            )
-
-            FridgeActionButton(
-                title: "Open List",
-                systemImage: "slider.horizontal.3",
-                fillColor: Color(.secondarySystemBackground),
-                foregroundColor: .primary,
-                action: onListTap
-            )
-        }
-    }
-}
-
-private struct FridgeActionButton: View {
-    let title: String
-    let systemImage: String
-    let fillColor: Color
-    let foregroundColor: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                Text(title)
-            }
-            .font(.system(size: 14, weight: .bold, design: .rounded))
-            .foregroundStyle(foregroundColor)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 46)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(fillColor)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 private struct InteractiveFridgeCanvasCard: View {
     let sections: [FridgeShelfSection]
+    let pickerEntries: [IngredientPickerEntry]
+    let highlightedItemID: UUID?
+    let onSelectIngredient: (IngredientKey) -> Void
     let onIncrement: (UUID) -> Void
     let onDecrement: (UUID) -> Void
     let onRemove: (UUID) -> Void
 
     var body: some View {
         GeometryReader { proxy in
-            InteractiveFridgeCanvas(
-                size: proxy.size,
-                sections: sections,
-                onIncrement: onIncrement,
-                onDecrement: onDecrement,
-                onRemove: onRemove
-            )
+            ZStack(alignment: .bottom) {
+                InteractiveFridgeCanvas(
+                    size: proxy.size,
+                    sections: sections,
+                    highlightedItemID: highlightedItemID,
+                    onIncrement: onIncrement,
+                    onDecrement: onDecrement,
+                    onRemove: onRemove
+                )
+
+                VStack {
+                    HStack {
+                        Spacer()
+
+                        Text("\(sections.reduce(0) { $0 + $1.items.count }) عنصر")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.kitchenMint.opacity(0.98))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.white.opacity(0.82))
+                            )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    Spacer()
+                }
+
+                IngredientPickerRailView(
+                    entries: pickerEntries,
+                    onSelect: onSelectIngredient
+                )
+                .frame(height: min(max(proxy.size.height * 0.18, 112), 142))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 16)
+            }
         }
-        .aspectRatio(0.74, contentMode: .fit)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.72))
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(Color.white.opacity(0.82))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(0.92), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.10), radius: 20, x: 0, y: 10)
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
     }
 }
 
 private struct InteractiveFridgeCanvas: View {
     let size: CGSize
     let sections: [FridgeShelfSection]
+    let highlightedItemID: UUID?
     let onIncrement: (UUID) -> Void
     let onDecrement: (UUID) -> Void
     let onRemove: (UUID) -> Void
@@ -304,9 +218,11 @@ private struct InteractiveFridgeCanvas: View {
     var body: some View {
         ZStack {
             FridgeBackgroundImage(size: size)
+
             FridgeShelvesOverlay(
                 size: size,
                 sections: sections,
+                highlightedItemID: highlightedItemID,
                 onIncrement: onIncrement,
                 onDecrement: onDecrement,
                 onRemove: onRemove
@@ -321,15 +237,15 @@ private struct FridgeBackgroundImage: View {
 
     var body: some View {
         Group {
-            if UIImage(named: "The refrigerator.1") != nil {
-                Image("The refrigerator.1")
+            if UIImage(named: "The.refrigerator") != nil {
+                Image("The.refrigerator")
                     .resizable()
                     .scaledToFit()
             } else {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color(.secondarySystemBackground))
                     .overlay(
-                        Text("Missing fridge asset: The refrigerator.1")
+                        Text("Missing fridge asset: The.refrigerator")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -344,242 +260,149 @@ private struct FridgeBackgroundImage: View {
 private struct FridgeShelvesOverlay: View {
     let size: CGSize
     let sections: [FridgeShelfSection]
+    let highlightedItemID: UUID?
     let onIncrement: (UUID) -> Void
     let onDecrement: (UUID) -> Void
     let onRemove: (UUID) -> Void
 
-    private var shelfSpacing: CGFloat {
-        size.height * 0.032
-    }
-
-    private var horizontalPadding: CGFloat {
-        size.width * 0.18
-    }
-
-    private var topPadding: CGFloat {
-        size.height * 0.115
-    }
-
-    private var bottomPadding: CGFloat {
-        size.height * 0.14
-    }
-
     var body: some View {
-        VStack(spacing: shelfSpacing) {
+        ZStack {
             ForEach(sections) { section in
-                FridgeShelfView(
-                    section: section,
-                    onIncrement: onIncrement,
-                    onDecrement: onDecrement,
-                    onRemove: onRemove
-                )
-            }
-        }
-        .padding(.horizontal, horizontalPadding)
-        .padding(.top, topPadding)
-        .padding(.bottom, bottomPadding)
-        .frame(width: size.width, height: size.height, alignment: .top)
-    }
-}
+                let layout = shelfLayout(for: section)
 
-private struct FridgeShelfView: View {
-    let section: FridgeShelfSection
-    let onIncrement: (UUID) -> Void
-    let onDecrement: (UUID) -> Void
-    let onRemove: (UUID) -> Void
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+                    FridgePinnedItemBadge(
+                        item: item,
+                        tint: section.tint,
+                        isHighlighted: highlightedItemID == item.id
+                    )
+                    .position(layout.position(for: index, total: section.items.count, in: size))
+                    .contextMenu {
+                        Button("Add one") {
+                            onIncrement(item.id)
+                        }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            FridgeShelfHeaderView(section: section)
-            FridgeShelfContentView(
-                section: section,
-                onIncrement: onIncrement,
-                onDecrement: onDecrement,
-                onRemove: onRemove
-            )
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.white.opacity(0.78))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(section.tint.opacity(0.18), lineWidth: 1)
-        )
-    }
-}
+                        Button("Use one") {
+                            onDecrement(item.id)
+                        }
 
-private struct FridgeShelfHeaderView: View {
-    let section: FridgeShelfSection
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(section.title)
-                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                .foregroundStyle(section.tint)
-
-            Text(section.subtitle)
-                .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct FridgeShelfContentView: View {
-    let section: FridgeShelfSection
-    let onIncrement: (UUID) -> Void
-    let onDecrement: (UUID) -> Void
-    let onRemove: (UUID) -> Void
-
-    var body: some View {
-        Group {
-            if section.items.isEmpty {
-                EmptyFridgeShelfState(tint: section.tint)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(section.items) { item in
-                            FridgeStoredItemCard(
-                                item: item,
-                                tint: section.tint,
-                                onIncrement: { onIncrement(item.id) },
-                                onDecrement: { onDecrement(item.id) },
-                                onRemove: { onRemove(item.id) }
-                            )
+                        Button("Remove", role: .destructive) {
+                            onRemove(item.id)
                         }
                     }
+                    .transition(
+                        .asymmetric(
+                            insertion: .offset(y: size.height * 0.14)
+                                .combined(with: .scale(scale: 0.5))
+                                .combined(with: .opacity),
+                            removal: .scale(scale: 0.75).combined(with: .opacity)
+                        )
+                    )
                 }
             }
         }
+        .frame(width: size.width, height: size.height)
     }
-}
 
-private struct EmptyFridgeShelfState: View {
-    let tint: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(tint)
-
-            Text("No items here yet")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-
-            Spacer()
+    private func shelfLayout(for section: FridgeShelfSection) -> FridgeShelfLayout {
+        switch section.id {
+        case FridgeShelfBucket.proteins.id:
+            return FridgeShelfLayout(yRatio: 0.27, xRange: 0.20 ... 0.80)
+        case FridgeShelfBucket.vegetables.id:
+            return FridgeShelfLayout(yRatio: 0.41, xRange: 0.20 ... 0.80)
+        case FridgeShelfBucket.fruits.id:
+            return FridgeShelfLayout(yRatio: 0.55, xRange: 0.20 ... 0.80)
+        default:
+            return FridgeShelfLayout(yRatio: 0.70, xRange: 0.20 ... 0.80)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
     }
 }
 
-private struct FridgeStoredItemCard: View {
+private struct FridgeShelfLayout {
+    let yRatio: CGFloat
+    let xRange: ClosedRange<CGFloat>
+    let maxColumns: Int = 5
+
+    func position(for index: Int, total: Int, in size: CGSize) -> CGPoint {
+        let columns = min(maxColumns, max(total, 1))
+        let row = index / columns
+        let column = index % columns
+        let itemsInRow = min(columns, total - (row * columns))
+
+        let left = xRange.lowerBound * size.width
+        let right = xRange.upperBound * size.width
+        let usableWidth = max(right - left, 1)
+        let spacing = itemsInRow > 1 ? usableWidth / CGFloat(itemsInRow - 1) : 0
+        let x = itemsInRow > 1 ? left + (CGFloat(column) * spacing) : left + (usableWidth / 2)
+        let y = (yRatio * size.height) - (CGFloat(row) * size.height * 0.062)
+
+        return CGPoint(x: x, y: y)
+    }
+}
+
+private struct FridgePinnedItemBadge: View {
     let item: FridgeDisplayItem
     let tint: Color
-    let onIncrement: () -> Void
-    let onDecrement: () -> Void
-    let onRemove: () -> Void
+    let isHighlighted: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            FridgeStoredItemHeader(item: item, tint: tint, onRemove: onRemove)
-            FridgeStoredItemText(item: item)
-            FridgeStoredItemStepper(
-                onIncrement: onIncrement,
-                onDecrement: onDecrement
-            )
-        }
-        .frame(width: 138, alignment: .leading)
-        .padding(12)
-        .background(
+        ZStack {
+            Capsule(style: .continuous)
+                .fill(Color.black.opacity(0.08))
+                .frame(width: 34, height: 6)
+                .blur(radius: 1.6)
+                .offset(y: 37)
+
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.systemBackground))
-        )
-    }
-}
+                .fill(Color.white.opacity(isHighlighted ? 0.97 : 0.88))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(tint.opacity(isHighlighted ? 0.52 : 0.18), lineWidth: isHighlighted ? 1.5 : 1)
+                )
 
-private struct FridgeStoredItemHeader: View {
-    let item: FridgeDisplayItem
-    let tint: Color
-    let onRemove: () -> Void
+            VStack(spacing: 6) {
+                Text(item.emoji)
+                    .font(.system(size: 28))
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            FridgeEmojiBadge(
-                emoji: item.emoji,
-                tint: tint,
-                size: 40
-            )
-
-            Spacer(minLength: 0)
-
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-}
-
-private struct FridgeStoredItemText: View {
-    let item: FridgeDisplayItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-
-            Text(item.quantityText)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-
-            if let alchemyNote = item.alchemyNote {
-                Text(alchemyNote)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(red: 0.19, green: 0.49, blue: 0.90))
+                Text(item.title)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.74)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 8)
+
+            if item.quantityValueText != "1" {
+                VStack {
+                    HStack {
+                        Spacer()
+
+                        Text(item.quantityValueText)
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(tint)
+                            )
+                    }
+
+                    Spacer()
+                }
+                .padding(6)
             }
         }
-    }
-}
-
-private struct FridgeStoredItemStepper: View {
-    let onIncrement: () -> Void
-    let onDecrement: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            StepperIconButton(systemImage: "minus.circle.fill", action: onDecrement)
-            StepperIconButton(systemImage: "plus.circle.fill", action: onIncrement)
-        }
-    }
-}
-
-private struct StepperIconButton: View {
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-        }
-        .buttonStyle(.plain)
-        .frame(width: 32, height: 32)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+        .frame(width: 56, height: 76)
+        .scaleEffect(isHighlighted ? 1.08 : 1)
+        .offset(y: isHighlighted ? -8 : 0)
+        .shadow(
+            color: tint.opacity(isHighlighted ? 0.28 : 0.12),
+            radius: isHighlighted ? 14 : 7,
+            x: 0,
+            y: isHighlighted ? 10 : 4
         )
     }
 }
@@ -589,31 +412,32 @@ private struct IngredientPickerRailView: View {
     let onSelect: (IngredientKey) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            IngredientPickerRailHeader()
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("إضافة إلى الثلاجة")
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text("اضغط على أي عنصر")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
             IngredientPickerRailScroll(entries: entries, onSelect: onSelect)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 18)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) {
-            Divider()
-        }
-    }
-}
-
-private struct IngredientPickerRailHeader: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Emoji Quick Add")
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text("Tap a chip to drop its ingredient straight onto the fridge shelves.")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 6)
     }
 }
 
@@ -623,7 +447,7 @@ private struct IngredientPickerRailScroll: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 12) {
+            LazyHStack(spacing: 10) {
                 ForEach(entries) { entry in
                     IngredientPickerCard(
                         entry: entry,
@@ -642,31 +466,31 @@ private struct IngredientPickerCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
+            VStack(spacing: 8) {
                 FridgeEmojiBadge(
                     emoji: entry.emoji,
                     tint: entry.isStored ? Color.green : Color.kitchenMint,
-                    size: 42
+                    size: 40
                 )
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(entry.title)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+                Text(entry.title)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
 
-                    IngredientPickerBadge(isStored: entry.isStored)
-                }
+                IngredientPickerBadge(isStored: entry.isStored)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .frame(width: 86, height: 94)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(0.86))
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.white.opacity(0.92))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke((entry.isStored ? Color.green : Color.kitchenMint).opacity(0.18), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke((entry.isStored ? Color.green : Color.kitchenMint).opacity(0.22), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -677,11 +501,11 @@ private struct IngredientPickerBadge: View {
     let isStored: Bool
 
     var body: some View {
-        Text(isStored ? "Stored" : "Add +1")
-            .font(.system(size: 11, weight: .heavy, design: .rounded))
+        Text(isStored ? "+1" : "أضف")
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
             .foregroundStyle(isStored ? Color.green : Color.blue)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
             .background(
                 Capsule(style: .continuous)
                     .fill((isStored ? Color.green : Color.blue).opacity(0.12))
@@ -729,28 +553,31 @@ private struct FridgeDisplayItem: Identifiable {
     let title: String
     let emoji: String
     let quantityText: String
-    let alchemyNote: String?
+    let quantityValueText: String
 
     init(item: FridgeItem) {
         self.id = item.id
         self.title = item.name
         self.emoji = item.emoji
         self.quantityText = FridgeTextFormatter.quantity(item.quantity, unit: item.unit)
-        self.alchemyNote = item.localizedAlchemyNote
+        self.quantityValueText = FridgeTextFormatter.value(item.quantity)
     }
 }
 
 private enum FridgeShelfBucket: CaseIterable {
     case proteins
-    case produce
+    case vegetables
+    case fruits
     case essentials
 
     var id: String {
         switch self {
         case .proteins:
             return "proteins"
-        case .produce:
-            return "produce"
+        case .vegetables:
+            return "vegetables"
+        case .fruits:
+            return "fruits"
         case .essentials:
             return "essentials"
         }
@@ -760,10 +587,12 @@ private enum FridgeShelfBucket: CaseIterable {
         switch self {
         case .proteins:
             return "Top Shelf"
-        case .produce:
-            return "Middle Shelf"
+        case .vegetables:
+            return "Second Shelf"
+        case .fruits:
+            return "Third Shelf"
         case .essentials:
-            return "Drawer"
+            return "Bottom Shelf"
         }
     }
 
@@ -771,8 +600,10 @@ private enum FridgeShelfBucket: CaseIterable {
         switch self {
         case .proteins:
             return "Proteins and dairy"
-        case .produce:
-            return "Fruit and vegetables"
+        case .vegetables:
+            return "Vegetables and greens"
+        case .fruits:
+            return "Fresh fruit"
         case .essentials:
             return "Carbs, drinks and extras"
         }
@@ -782,8 +613,10 @@ private enum FridgeShelfBucket: CaseIterable {
         switch self {
         case .proteins:
             return Color(red: 0.87, green: 0.33, blue: 0.27)
-        case .produce:
+        case .vegetables:
             return Color(red: 0.21, green: 0.58, blue: 0.34)
+        case .fruits:
+            return Color(red: 0.96, green: 0.62, blue: 0.28)
         case .essentials:
             return Color(red: 0.22, green: 0.42, blue: 0.78)
         }
@@ -797,8 +630,10 @@ private enum FridgeShelfBucket: CaseIterable {
         switch key.category {
         case .protein, .dairy:
             return .proteins
-        case .veg, .fruit:
-            return .produce
+        case .veg:
+            return .vegetables
+        case .fruit:
+            return .fruits
         case .carb, .fat, .drink, .other:
             return .essentials
         }
@@ -856,18 +691,20 @@ private struct FridgeEmojiBadge: View {
 
 private enum FridgeTextFormatter {
     static func quantity(_ quantity: Double, unit: String?) -> String {
-        let valueText: String
-        if quantity.rounded() == quantity {
-            valueText = "\(Int(quantity))"
-        } else {
-            valueText = String(format: "%.1f", quantity)
-        }
+        let valueText = value(quantity)
 
         guard let unit, !unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return valueText
         }
 
         return "\(valueText) \(unit)"
+    }
+
+    static func value(_ quantity: Double) -> String {
+        if quantity.rounded() == quantity {
+            return "\(Int(quantity))"
+        }
+        return String(format: "%.1f", quantity)
     }
 }
 

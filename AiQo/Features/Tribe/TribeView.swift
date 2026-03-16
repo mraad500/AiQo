@@ -14,7 +14,7 @@ struct TribeView: View {
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            tribeBackground
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 22) {
@@ -56,9 +56,42 @@ struct TribeView: View {
                     .presentationDetents([.height(310), .medium])
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(30)
-                    .presentationBackground(Color.white)
+                    .presentationBackground(TribeLeaderboardPalette.sheetBackground)
             }
         }
+    }
+
+    private var tribeBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    TribeLeaderboardPalette.backgroundTop,
+                    TribeLeaderboardPalette.backgroundMiddle,
+                    TribeLeaderboardPalette.backgroundBottom
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(TribeLeaderboardPalette.glowMint)
+                .frame(width: 320, height: 320)
+                .blur(radius: 78)
+                .offset(x: -118, y: -260)
+
+            Circle()
+                .fill(TribeLeaderboardPalette.glowSand)
+                .frame(width: 300, height: 300)
+                .blur(radius: 84)
+                .offset(x: 136, y: -52)
+
+            Circle()
+                .fill(TribeLeaderboardPalette.glowSky)
+                .frame(width: 320, height: 320)
+                .blur(radius: 96)
+                .offset(x: 42, y: 344)
+        }
+        .ignoresSafeArea()
     }
 
     private var header: some View {
@@ -164,13 +197,7 @@ private struct TribeUserRowCard: View {
     }
 
     private var surfaceTint: Color {
-        if user.isCurrentUser {
-            return user.isProfilePublic ? TribeLeaderboardPalette.mint : TribeLeaderboardPalette.sand
-        }
-
-        return user.isProfilePublic
-        ? TribeLeaderboardPalette.mint.opacity(0.94)
-        : TribeLeaderboardPalette.sand.opacity(0.94)
+        user.isProfilePublic ? TribeLeaderboardPalette.mint : TribeLeaderboardPalette.sand
     }
 
     private func labelChip(icon: String, text: String, tint: Color) -> some View {
@@ -189,8 +216,8 @@ private struct TribeUserRowCard: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            tint.opacity(0.38),
-                            tint.opacity(0.24)
+                            tint.opacity(0.78),
+                            tint.opacity(0.42)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -198,7 +225,7 @@ private struct TribeUserRowCard: View {
                 )
                 .overlay {
                     Capsule(style: .continuous)
-                        .stroke(tint.opacity(0.42), lineWidth: 0.9)
+                        .stroke(tint.opacity(0.62), lineWidth: 1)
                 }
         }
     }
@@ -209,7 +236,7 @@ private struct TribeUserDetailSheet: View {
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            TribeLeaderboardPalette.sheetBackground.ignoresSafeArea()
 
             VStack {
                 Spacer(minLength: 12)
@@ -263,7 +290,23 @@ private struct TribeUserDetailSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            tint.opacity(0.30),
+                            tint.opacity(0.14)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(tint.opacity(0.34), lineWidth: 0.9)
+                }
+        }
     }
 }
 
@@ -298,11 +341,11 @@ private struct ProfileVisibilityBadge: View {
     }
 
     private var backgroundTint: Color {
-        isProfilePublic ? TribeLeaderboardPalette.mint.opacity(0.32) : TribeLeaderboardPalette.sand.opacity(0.34)
+        isProfilePublic ? TribeLeaderboardPalette.mint.opacity(0.42) : TribeLeaderboardPalette.sand.opacity(0.44)
     }
 
     private var strokeTint: Color {
-        isProfilePublic ? TribeLeaderboardPalette.mint.opacity(0.44) : TribeLeaderboardPalette.sand.opacity(0.46)
+        isProfilePublic ? TribeLeaderboardPalette.mint.opacity(0.72) : TribeLeaderboardPalette.sand.opacity(0.74)
     }
 }
 
@@ -324,18 +367,18 @@ private struct AvatarView: View {
                 } else if user.isProfilePublic {
                     Text(user.initials)
                         .font(.system(size: max(14, size * 0.24), weight: .bold, design: .rounded))
-                        .foregroundStyle(TribeLeaderboardPalette.textPrimary.opacity(0.72))
+                        .foregroundStyle(TribeLeaderboardPalette.textPrimary.opacity(0.82))
                 } else {
                     Image(systemName: "person.fill")
                         .font(.system(size: size * 0.24, weight: .semibold))
-                        .foregroundStyle(TribeLeaderboardPalette.textPrimary.opacity(0.34))
+                        .foregroundStyle(TribeLeaderboardPalette.textPrimary.opacity(0.48))
                 }
             }
             .frame(width: size, height: size)
             .clipShape(Circle())
             .overlay {
                 Circle()
-                    .stroke(TribeLeaderboardPalette.cardStroke, lineWidth: 1)
+                    .stroke(TribeLeaderboardPalette.avatarStroke, lineWidth: 1.2)
             }
 
             if showsPrivateCaption && !user.isProfilePublic {
@@ -349,7 +392,7 @@ private struct AvatarView: View {
     private var backgroundTint: Color {
         if user.isProfilePublic {
             return user.profileImage == nil
-            ? TribeLeaderboardPalette.mint.opacity(0.26)
+            ? TribeLeaderboardPalette.mint.opacity(0.40)
             : TribeLeaderboardPalette.cardSurfaceRaised
         }
 
@@ -380,31 +423,55 @@ private struct TribeCardSurface<Content: View>: View {
             .padding(padding)
             .background {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(TribeLeaderboardPalette.cardSurface)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                TribeLeaderboardPalette.cardSurface,
+                                TribeLeaderboardPalette.cardSurfaceRaised
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        tint.opacity(0.16),
-                                        tint.opacity(0.06)
+                                        tint.opacity(0.30),
+                                        tint.opacity(0.14),
+                                        Color.clear
                                     ],
-                                    startPoint: .topTrailing,
+                                    startPoint: .topLeading,
                                     endPoint: .bottomLeading
                                 )
                             )
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(TribeLeaderboardPalette.cardStroke, lineWidth: 1)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.46),
+                                        Color.white.opacity(0.08),
+                                        Color.clear
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.74), lineWidth: 0.8)
+                            .stroke(TribeLeaderboardPalette.cardStroke, lineWidth: 1.05)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(Color.white.opacity(0.88), lineWidth: 0.9)
                             .padding(1)
                     }
             }
-            .shadow(color: TribeLeaderboardPalette.shadow, radius: 18, x: 0, y: 9)
+            .shadow(color: TribeLeaderboardPalette.shadow, radius: 22, x: 0, y: 12)
     }
 }
 
@@ -552,16 +619,29 @@ private struct TribeLeaderboardUser: Identifiable {
 }
 
 private enum TribeLeaderboardPalette {
-    static let mint = Color(hex: "A8D7BE")
-    static let sand = Color(hex: "DFC086")
-    static let cardSurface = Color(hex: "F4F4F1")
-    static let cardSurfaceRaised = Color(hex: "EFEFEA")
-    static let placeholderSurface = Color(hex: "ECE7DE")
-    static let textPrimary = Color.black.opacity(0.88)
-    static let textSecondary = Color.black.opacity(0.56)
-    static let textTertiary = Color.black.opacity(0.36)
-    static let cardStroke = Color.black.opacity(0.055)
-    static let shadow = Color.black.opacity(0.04)
+    static let backgroundTop = Color(hex: "F7FBF8")
+    static let backgroundMiddle = Color(hex: "EFF7F2")
+    static let backgroundBottom = Color(hex: "FAF1E3")
+
+    static let glowMint = Color(hex: "73D6B1").opacity(0.42)
+    static let glowSand = Color(hex: "F0B760").opacity(0.34)
+    static let glowSky = Color(hex: "96C8F0").opacity(0.26)
+
+    static let mint = Color(hex: "6FD7B4")
+    static let sand = Color(hex: "EDB45D")
+
+    static let cardSurface = Color(hex: "FFFDF8")
+    static let cardSurfaceRaised = Color(hex: "F6F3EA")
+    static let placeholderSurface = Color(hex: "EADFCB")
+    static let sheetBackground = Color(hex: "FBF7EF")
+
+    static let textPrimary = Color(hex: "162026")
+    static let textSecondary = Color(hex: "56636D")
+    static let textTertiary = Color(hex: "75808A")
+
+    static let cardStroke = Color.black.opacity(0.10)
+    static let avatarStroke = Color.black.opacity(0.12)
+    static let shadow = Color.black.opacity(0.09)
 }
 
 #Preview {

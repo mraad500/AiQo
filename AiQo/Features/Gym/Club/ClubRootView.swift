@@ -142,6 +142,7 @@ struct ClubRootView: View {
             horizontalInset: 12,
             topPadding: ClubChromeLayout.headerTopPadding,
             bottomPadding: ClubChromeLayout.headerBottomPadding,
+            profileVerticalOffset: -6,
             contentMaxWidth: nil,
             contentAlignment: .center,
             onProfileTap: { isProfilePresented = true }

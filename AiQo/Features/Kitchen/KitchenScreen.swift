@@ -149,14 +149,6 @@ private extension KitchenScreen {
         VStack(spacing: 14) {
             HStack(spacing: 10) {
                 smallEntryLink(
-                    title: "kitchen.fridge.title".localized,
-                    icon: "refrigerator.fill"
-                ) {
-                    InteractiveFridgeView()
-                        .environmentObject(kitchenStore)
-                }
-
-                smallEntryLink(
                     title: "kitchen.mealplan.title".localized,
                     icon: "fork.knife.circle.fill"
                 ) {

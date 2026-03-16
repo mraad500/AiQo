@@ -6,17 +6,24 @@ struct GlobalTopCapsuleTabsView: View {
     @Binding var selection: Int
 
     var body: some View {
-        ClubNativeTopTabsControl(
-            tabs: tabs,
-            selection: $selection
-        )
-        .frame(height: ClubChromeLayout.topTabsControlHeight)
-        .padding(.top, ClubChromeLayout.topTabsTopSpacing)
+        GeometryReader { proxy in
+            let controlWidth = TopTabsMetrics.controlWidth(for: proxy.size.width)
+
+            NativeTopCapsuleTabsControl(
+                tabs: tabs,
+                selection: $selection
+            )
+            .frame(width: controlWidth, height: TopTabsMetrics.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .offset(x: TopTabsMetrics.horizontalOffset)
+            .padding(.top, TopTabsMetrics.topPadding)
+        }
+        .frame(height: TopTabsMetrics.containerHeight)
         .accessibilityLabel(Text(verbatim: L10n.t("club_top_tabs_accessibility")))
     }
 }
 
-private struct ClubNativeTopTabsControl: UIViewRepresentable {
+private struct NativeTopCapsuleTabsControl: UIViewRepresentable {
     let tabs: [String]
     @Binding var selection: Int
 
@@ -24,8 +31,8 @@ private struct ClubNativeTopTabsControl: UIViewRepresentable {
         Coordinator(selection: $selection)
     }
 
-    func makeUIView(context: Context) -> ClubNativeTopTabsControlView {
-        let view = ClubNativeTopTabsControlView()
+    func makeUIView(context: Context) -> NativeTopCapsuleTabsControlView {
+        let view = NativeTopCapsuleTabsControlView()
         view.onSelectionChanged = { index in
             guard context.coordinator.selection != index else { return }
             UISelectionFeedbackGenerator().selectionChanged()
@@ -35,7 +42,7 @@ private struct ClubNativeTopTabsControl: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ uiView: ClubNativeTopTabsControlView, context: Context) {
+    func updateUIView(_ uiView: NativeTopCapsuleTabsControlView, context: Context) {
         uiView.onSelectionChanged = { index in
             guard context.coordinator.selection != index else { return }
             UISelectionFeedbackGenerator().selectionChanged()
@@ -53,53 +60,22 @@ private struct ClubNativeTopTabsControl: UIViewRepresentable {
     }
 }
 
-private final class ClubNativeTopTabsControlView: UIView {
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
-    private let control = UISegmentedControl()
+private final class NativeTopCapsuleTabsControlView: UIView {
+    private let backgroundBlurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
+    private let segmentedControl = UISegmentedControl()
     private var currentTabs: [String] = []
-    private var widthConstraint: NSLayoutConstraint?
 
     var onSelectionChanged: ((Int) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        backgroundColor = .clear
         translatesAutoresizingMaskIntoConstraints = false
+        backgroundColor = .clear
 
-        blurView.translatesAutoresizingMaskIntoConstraints = false
-        blurView.clipsToBounds = true
-
-        control.translatesAutoresizingMaskIntoConstraints = false
-        control.apportionsSegmentWidthsByContent = true
-        control.semanticContentAttribute = .forceRightToLeft
-        control.selectedSegmentTintColor = Colors.accent
-        control.backgroundColor = UIColor.secondarySystemFill.withAlphaComponent(0.78)
-        control.setContentPositionAdjustment(
-            .init(horizontal: 0, vertical: -1),
-            forSegmentType: .any,
-            barMetrics: .default
-        )
-        control.addTarget(self, action: #selector(selectionDidChange(_:)), for: .valueChanged)
-
-        addSubview(blurView)
-        blurView.contentView.addSubview(control)
-
-        NSLayoutConstraint.activate([
-            blurView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            blurView.topAnchor.constraint(equalTo: topAnchor),
-            blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            control.leadingAnchor.constraint(equalTo: blurView.contentView.leadingAnchor, constant: 6),
-            control.trailingAnchor.constraint(equalTo: blurView.contentView.trailingAnchor, constant: -6),
-            control.topAnchor.constraint(equalTo: blurView.contentView.topAnchor, constant: 6),
-            control.bottomAnchor.constraint(equalTo: blurView.contentView.bottomAnchor, constant: -6),
-            control.heightAnchor.constraint(equalToConstant: ClubChromeLayout.topTabsInnerHeight)
-        ])
-
-        widthConstraint = blurView.widthAnchor.constraint(equalToConstant: 240)
-        widthConstraint?.isActive = true
-
+        setupBackground()
+        setupSegmentedControl()
+        setupLayout()
         applyAppearance()
     }
 
@@ -111,93 +87,133 @@ private final class ClubNativeTopTabsControlView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        let capsuleRadius = min(bounds.height / 2, 26)
-        blurView.layer.cornerCurve = .continuous
-        blurView.layer.cornerRadius = capsuleRadius
+        layer.cornerCurve = .continuous
+        layer.cornerRadius = bounds.height / 2
 
-        control.layer.cornerCurve = .continuous
-        control.layer.cornerRadius = min(control.bounds.height / 2, 20)
-    }
+        backgroundBlurView.layer.cornerCurve = .continuous
+        backgroundBlurView.layer.cornerRadius = backgroundBlurView.bounds.height / 2
 
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        applyAppearance()
+        segmentedControl.layer.cornerCurve = .continuous
+        segmentedControl.layer.cornerRadius = segmentedControl.bounds.height / 2
     }
 
     func update(tabs: [String], selection: Int) {
         if currentTabs != tabs {
-            rebuildSegments(using: tabs)
+            rebuildSegments(with: tabs)
         } else {
             syncTitles(with: tabs)
         }
 
-        applyAppearance()
-        updatePreferredWidth()
-
         if tabs.indices.contains(selection) {
-            if control.selectedSegmentIndex != selection {
-                control.selectedSegmentIndex = selection
+            if segmentedControl.selectedSegmentIndex != selection {
+                segmentedControl.selectedSegmentIndex = selection
             }
         } else {
-            control.selectedSegmentIndex = UISegmentedControl.noSegment
+            segmentedControl.selectedSegmentIndex = UISegmentedControl.noSegment
         }
+
+        applyAppearance()
     }
 
-    private func rebuildSegments(using tabs: [String]) {
-        control.removeAllSegments()
+    private func setupBackground() {
+        backgroundBlurView.translatesAutoresizingMaskIntoConstraints = false
+        backgroundBlurView.clipsToBounds = true
+        backgroundBlurView.isUserInteractionEnabled = false
+        addSubview(backgroundBlurView)
+    }
+
+    private func setupSegmentedControl() {
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        segmentedControl.semanticContentAttribute = .forceRightToLeft
+        segmentedControl.apportionsSegmentWidthsByContent = false
+        segmentedControl.clipsToBounds = true
+        segmentedControl.addTarget(self, action: #selector(selectionDidChange), for: .valueChanged)
+
+        segmentedControl.setContentPositionAdjustment(
+            UIOffset(horizontal: 0, vertical: -1),
+            forSegmentType: .any,
+            barMetrics: .default
+        )
+
+        addSubview(segmentedControl)
+    }
+
+    private func setupLayout() {
+        NSLayoutConstraint.activate([
+            backgroundBlurView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundBlurView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            segmentedControl.leadingAnchor.constraint(equalTo: leadingAnchor, constant: TopTabsMetrics.innerHorizontalInset),
+            segmentedControl.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -TopTabsMetrics.innerHorizontalInset),
+            segmentedControl.topAnchor.constraint(equalTo: topAnchor, constant: TopTabsMetrics.innerVerticalInset),
+            segmentedControl.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -TopTabsMetrics.innerVerticalInset)
+        ])
+    }
+
+    private func rebuildSegments(with tabs: [String]) {
+        segmentedControl.removeAllSegments()
 
         for (index, title) in tabs.enumerated() {
-            control.insertSegment(withTitle: title, at: index, animated: false)
+            segmentedControl.insertSegment(withTitle: title, at: index, animated: false)
         }
 
         currentTabs = tabs
     }
 
     private func syncTitles(with tabs: [String]) {
-        for (index, title) in tabs.enumerated() where control.titleForSegment(at: index) != title {
-            control.setTitle(title, forSegmentAt: index)
+        for (index, title) in tabs.enumerated() where segmentedControl.titleForSegment(at: index) != title {
+            segmentedControl.setTitle(title, forSegmentAt: index)
         }
-    }
-
-    private func updatePreferredWidth() {
-        control.layoutIfNeeded()
-
-        let fittingSize = CGSize(width: UIView.layoutFittingCompressedSize.width, height: ClubChromeLayout.topTabsControlHeight)
-        let controlWidth = control.systemLayoutSizeFitting(fittingSize).width
-        let targetWidth = min(max(controlWidth + 12, ClubChromeLayout.topTabsMinWidth), ClubChromeLayout.topTabsMaxWidth)
-
-        widthConstraint?.constant = targetWidth
-        layoutIfNeeded()
     }
 
     private func applyAppearance() {
         let normalAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.secondaryLabel,
-            .font: Self.segmentFont(size: 17, weight: .semibold)
+            .foregroundColor: UIColor.secondaryLabel.withAlphaComponent(0.48),
+            .font: Self.segmentFont(size: 19, weight: .semibold)
         ]
 
         let selectedAttributes: [NSAttributedString.Key: Any] = [
             .foregroundColor: UIColor.label,
-            .font: Self.segmentFont(size: 17, weight: .bold)
+            .font: Self.segmentFont(size: 20, weight: .bold)
         ]
 
-        control.backgroundColor = UIColor.secondarySystemFill.withAlphaComponent(0.78)
-        control.selectedSegmentTintColor = Colors.accent
-        control.setTitleTextAttributes(normalAttributes, for: .normal)
-        control.setTitleTextAttributes(selectedAttributes, for: .selected)
+        segmentedControl.backgroundColor = UIColor.systemGray4.withAlphaComponent(0.78)
+        segmentedControl.selectedSegmentTintColor = Colors.accent
+        segmentedControl.setTitleTextAttributes(normalAttributes, for: .normal)
+        segmentedControl.setTitleTextAttributes(selectedAttributes, for: .selected)
     }
 
     private static func segmentFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
         let descriptor = UIFont.systemFont(ofSize: size, weight: weight).fontDescriptor
         let roundedDescriptor = descriptor.withDesign(.rounded) ?? descriptor
-        let baseFont = UIFont(descriptor: roundedDescriptor, size: size)
-        return UIFontMetrics(forTextStyle: .headline).scaledFont(for: baseFont)
+        let font = UIFont(descriptor: roundedDescriptor, size: size)
+        return UIFontMetrics(forTextStyle: .headline).scaledFont(for: font)
     }
 
     @objc
-    private func selectionDidChange(_ sender: UISegmentedControl) {
-        let index = sender.selectedSegmentIndex
+    private func selectionDidChange() {
+        let index = segmentedControl.selectedSegmentIndex
         guard index != UISegmentedControl.noSegment else { return }
         onSelectionChanged?(index)
+    }
+}
+
+private enum TopTabsMetrics {
+    static let containerHeight: CGFloat = 96
+    static let height: CGFloat = 78
+    static let maxWidth: CGFloat = 445
+    static let horizontalSafetyPadding: CGFloat = 140
+    static let topPadding: CGFloat = 10
+    static let horizontalOffset: CGFloat = -128
+
+    static let innerHorizontalInset: CGFloat = 7
+    static let innerVerticalInset: CGFloat = 7
+
+    static func controlWidth(for availableWidth: CGFloat) -> CGFloat {
+        guard availableWidth.isFinite else { return maxWidth }
+        let paddedWidth = availableWidth - horizontalSafetyPadding
+        return min(max(paddedWidth, 0), maxWidth)
     }
 }
