@@ -28,37 +28,37 @@ enum TribeSectorColor: String, CaseIterable, Identifiable {
     case purple
 
     static let memberDisplayOrder: [TribeSectorColor] = [.blue, .green, .yellow, .red, .purple]
-    static let ringVisualOrder: [TribeSectorColor] = [.yellow, .purple, .blue, .green, .red]
+    static let atomVisualOrder: [TribeSectorColor] = [.green, .yellow, .blue, .red, .purple]
 
     var id: String { rawValue }
 
     var assetName: String {
         switch self {
         case .blue:
-            return "Blue.Tribe.Ring"
+            return "3"
         case .green:
-            return "Green.Tribe.Ring"
+            return "1"
         case .yellow:
-            return "Yellow.Tribe.Ring"
+            return "2"
         case .red:
-            return "Red.Tribe.Ring"
+            return "4"
         case .purple:
-            return "purple.Tribe.Ring"
+            return "5"
         }
     }
 
     var accent: Color {
         switch self {
         case .blue:
-            return Color(hex: "2A71EA")
+            return Color(hex: "1E63F0")
         case .green:
-            return Color(hex: "51E9D1")
+            return Color(hex: "22CFCB")
         case .yellow:
-            return Color(hex: "F8A967")
+            return Color(hex: "F7E500")
         case .red:
-            return Color(hex: "DF3750")
+            return Color(hex: "FF6B3D")
         case .purple:
-            return Color(hex: "9751F6")
+            return Color(hex: "A78BFA")
         }
     }
 
@@ -88,30 +88,45 @@ enum TribeSectorColor: String, CaseIterable, Identifiable {
     var segmentName: String {
         switch self {
         case .blue:
-            return "الأزرق"
+            return "الحلقة الزرقاء"
         case .green:
-            return "الأخضر"
+            return "الحلقة الفيروزية"
         case .yellow:
-            return "الذهبي"
+            return "الحلقة الصفراء"
         case .red:
-            return "القرمزي"
+            return "الحلقة المرجانية"
         case .purple:
-            return "البنفسجي"
+            return "الحلقة البنفسجية"
         }
     }
 
     var memberLabel: String {
         switch self {
         case .blue:
-            return "القطاع الأزرق"
+            return "العضو الأزرق"
         case .green:
-            return "القطاع الأخضر"
+            return "العضو الفيروزي"
         case .yellow:
-            return "القطاع الذهبي"
+            return "العضو الأصفر"
         case .red:
-            return "القطاع القرمزي"
+            return "العضو المرجاني"
         case .purple:
-            return "القطاع البنفسجي"
+            return "العضو البنفسجي"
+        }
+    }
+
+    var compactTitle: String {
+        switch self {
+        case .blue:
+            return "سماوي"
+        case .green:
+            return "نعناع"
+        case .yellow:
+            return "رمل"
+        case .red:
+            return "مرجاني"
+        case .purple:
+            return "لافندر"
         }
     }
 }
@@ -192,7 +207,69 @@ struct TribeRingMember: Identifiable {
     }
 
     var segmentLabel: String {
+        sectorColor.segmentName
+    }
+
+    var memberToneLabel: String {
         sectorColor.memberLabel
+    }
+
+    var compactSectorLabel: String {
+        sectorColor.compactTitle
+    }
+
+    var compactLevelLabel: String {
+        isVacant ? "متاح" : "Lv \(level)"
+    }
+
+    var energyValueText: String {
+        contributionValue
+    }
+
+    var ringAssetName: String {
+        sectorColor.assetName
+    }
+
+    var accentColor: Color {
+        sectorColor.accent
+    }
+}
+
+struct TribeAtomRingLayer: Identifiable {
+    let id: String
+    let memberId: String?
+    let memberName: String
+    let role: TribeMemberRole
+    let energyValue: Int
+    let ringAssetName: String
+    let accentColor: Color
+    let layerName: String
+    let isVacant: Bool
+    let isSelected: Bool
+
+    init(member: TribeRingMember, isSelected: Bool) {
+        id = member.sectorColor.rawValue
+        memberId = member.memberId
+        memberName = member.displayName
+        role = member.role
+        energyValue = member.energyToday
+        ringAssetName = member.ringAssetName
+        accentColor = member.accentColor
+        layerName = member.segmentLabel
+        isVacant = member.isVacant
+        self.isSelected = isSelected
+    }
+}
+
+extension Array where Element == TribeRingMember {
+    func atomRingLayers(selectedMemberID: String?) -> [TribeAtomRingLayer] {
+        let membersBySector = Dictionary(uniqueKeysWithValues: map { ($0.sectorColor, $0) })
+
+        return TribeSectorColor.atomVisualOrder.enumerated().map { index, sectorColor in
+            let member = membersBySector[sectorColor] ?? TribeRingMember(slot: index + 1, sectorColor: sectorColor)
+            let selectionKey = member.memberId ?? member.id
+            return TribeAtomRingLayer(member: member, isSelected: selectedMemberID == selectionKey)
+        }
     }
 }
 

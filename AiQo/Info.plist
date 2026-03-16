@@ -5,6 +5,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>aiqo.captain.spiritual-whispers.refresh</string>
+		<string>aiqo.captain.inactivity-check</string>
 	</array>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>

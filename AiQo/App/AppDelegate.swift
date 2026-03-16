@@ -39,16 +39,16 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         LocalizationManager.shared.applySavedLanguage()
         NotificationService.shared.requestPermissions()
-        NotificationIntelligenceManager.shared.registerBackgroundTask()
+        NotificationCategoryManager.shared.registerAllCategories()
+        NotificationIntelligenceManager.shared.registerBackgroundTasks()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
 
         application.registerForRemoteNotifications()
 
-        ActivityNotificationEngine.shared.registerNotificationCategories()
-        CaptainSmartNotificationService.shared.registerNotificationCategories()
         MorningHabitOrchestrator.shared.start()
+        SleepSessionObserver.shared.start()
 
         Task {
             await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
@@ -56,9 +56,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         if AppSettingsStore.shared.notificationsEnabled {
             scheduleAngelNotifications()
-            NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
+            NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
         } else {
-            NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
+            NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
         }
         
         if #available(iOS 16.0, *) {
@@ -90,6 +90,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         WidgetCenter.shared.reloadAllTimelines()
         clearAppBadge()
         MorningHabitOrchestrator.shared.start()
+        SleepSessionObserver.shared.start()
 
         Task {
             await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
@@ -112,9 +113,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         NotificationIntelligenceManager.shared.scheduleQueuedDeveloperWhisperIfNeeded()
 
         if AppSettingsStore.shared.notificationsEnabled {
-            NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
+            NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
         } else {
-            NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
+            NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
         }
     }
 

@@ -62,19 +62,18 @@ struct TribeScreen: View {
     }
 
     private var topHeaderBar: some View {
-        AiQoScreenTopChrome(
-            leadingReservedWidth: 0,
-            itemSpacing: 8,
-            horizontalInset: 12,
-            topPadding: TribeScreenLayout.headerTopPadding,
-            bottomPadding: TribeScreenLayout.headerBottomPadding,
-            contentMaxWidth: nil,
-            contentAlignment: .center,
-            onProfileTap: { isProfilePresented = true }
-        ) {
+        HStack(spacing: 10) {
             TribeTopSegmentedControl(selection: $viewModel.selectedTab)
-                .environment(\.layoutDirection, .rightToLeft)
+                .frame(maxWidth: .infinity)
+
+            AiQoProfileButton(action: { isProfilePresented = true })
+                .scaleEffect(0.84)
+                .frame(width: 58, height: 58)
         }
+        .environment(\.layoutDirection, .leftToRight)
+        .padding(.horizontal, 12)
+        .padding(.top, TribeScreenLayout.headerTopPadding)
+        .padding(.bottom, TribeScreenLayout.headerBottomPadding)
     }
 
     @ViewBuilder
@@ -92,7 +91,7 @@ struct TribeScreen: View {
     private var activeTabView: some View {
         switch viewModel.selectedTab {
         case .tribe:
-            TribeView(
+            TribePulseScreenView(
                 heroSummary: viewModel.heroSummary,
                 featuredMembers: viewModel.featuredMembers,
                 onRefresh: viewModel.refresh

@@ -63,8 +63,7 @@ final class NotificationService {
     }
 
     func configureCategories() {
-        ActivityNotificationEngine.shared.registerNotificationCategories()
-        CaptainSmartNotificationService.shared.registerNotificationCategories()
+        NotificationCategoryManager.shared.registerAllCategories()
     }
 
     func sendImmediateNotification(body: String, type: String) {
@@ -138,6 +137,19 @@ final class CaptainSmartNotificationService {
     static let shared = CaptainSmartNotificationService()
 
     static let categoryIdentifier = "aiqo.captain.smart"
+    static var notificationCategory: UNNotificationCategory {
+        let openAction = UNNotificationAction(
+            identifier: "OPEN_CAPTAIN",
+            title: "Open Captain",
+            options: [.foreground]
+        )
+        return UNNotificationCategory(
+            identifier: Self.categoryIdentifier,
+            actions: [openAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+    }
     private let intelligenceManager = CaptainIntelligenceManager.shared
     private let defaults = UserDefaults.standard
     private let lastInactivitySentAtKey = "aiqo.captain.lastInactivitySentAt"
@@ -146,18 +158,7 @@ final class CaptainSmartNotificationService {
     private init() {}
 
     func registerNotificationCategories() {
-        let openAction = UNNotificationAction(
-            identifier: "OPEN_CAPTAIN",
-            title: "Open Captain",
-            options: [.foreground]
-        )
-        let category = UNNotificationCategory(
-            identifier: Self.categoryIdentifier,
-            actions: [openAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        NotificationCategoryManager.shared.registerAllCategories()
     }
 
     func evaluateInactivityAndNotifyIfNeeded() async {

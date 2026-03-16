@@ -6,6 +6,7 @@ final class NotificationIntelligenceManager {
     static let shared = NotificationIntelligenceManager()
 
     static let backgroundTaskIdentifier = "aiqo.captain.spiritual-whispers.refresh"
+    static let inactivityProcessingTaskIdentifier = "aiqo.captain.inactivity-check"
 
     private struct HealthContext: Sendable {
         let steps: Int
@@ -35,6 +36,7 @@ final class NotificationIntelligenceManager {
     private let defaults: UserDefaults
     private let notificationCenter: UNUserNotificationCenter
     private let captainIntelligenceManager: CaptainIntelligenceManager
+    private let notificationComposer: CaptainBackgroundNotificationComposer
     private let calendar: Calendar
     private let middlewareTranslator: any CoachBrainTranslating
     private let pendingDeveloperNotificationLock = NSLock()
@@ -45,6 +47,8 @@ final class NotificationIntelligenceManager {
     private let defaultEnglishMessage = "Captain Hamoudi says: start with one strong move now and build momentum before the day runs away from you."
     private let defaultArabicMessage = "هلا بطل، خلي هسه حركة صغيرة تعطي يومك روح. قوم وامش دقيقتين وخليها بداية قوية."
     private let developerWhisperDelay: TimeInterval = 5
+    private let backgroundInactivityCooldown: TimeInterval = 3 * 60 * 60
+    private let lastBackgroundInactivitySentAtKey = "aiqo.captain.background.lastInactivitySentAt"
 
     private var pendingDeveloperNotification: PendingLocalNotification?
 
@@ -52,17 +56,23 @@ final class NotificationIntelligenceManager {
         defaults: UserDefaults = .standard,
         notificationCenter: UNUserNotificationCenter = .current(),
         captainIntelligenceManager: CaptainIntelligenceManager = .shared,
+        notificationComposer: CaptainBackgroundNotificationComposer? = nil,
         calendar: Calendar = .current,
         middlewareTranslator: (any CoachBrainTranslating)? = nil
     ) {
         self.defaults = defaults
         self.notificationCenter = notificationCenter
         self.captainIntelligenceManager = captainIntelligenceManager
+        self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
         self.calendar = calendar
         self.middlewareTranslator = middlewareTranslator ?? CoachBrainLLMTranslator()
     }
 
     func registerBackgroundTask() {
+        registerBackgroundTasks()
+    }
+
+    func registerBackgroundTasks() {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.backgroundTaskIdentifier,
             using: nil
@@ -74,6 +84,28 @@ final class NotificationIntelligenceManager {
 
             self.handleBackgroundRefresh(task: refreshTask)
         }
+
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.inactivityProcessingTaskIdentifier,
+            using: nil
+        ) { [weak self] task in
+            guard let self, let processingTask = task as? BGProcessingTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+
+            self.handleInactivityProcessing(task: processingTask)
+        }
+    }
+
+    func scheduleBackgroundTasksIfNeeded() {
+        scheduleNextBackgroundRefresh()
+        scheduleNextInactivityProcessing()
+    }
+
+    func cancelScheduledBackgroundTasks() {
+        cancelPendingBackgroundRefresh()
+        cancelPendingInactivityProcessing()
     }
 
     func scheduleNextBackgroundRefresh() {
@@ -91,6 +123,25 @@ final class NotificationIntelligenceManager {
 
     func cancelPendingBackgroundRefresh() {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundTaskIdentifier)
+    }
+
+    func scheduleNextInactivityProcessing() {
+        let request = BGProcessingTaskRequest(identifier: Self.inactivityProcessingTaskIdentifier)
+        request.earliestBeginDate = nextPreferredInactivityCheckDate(after: Date())
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = false
+
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.inactivityProcessingTaskIdentifier)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            print("🔔 [NotificationIntelligenceManager] Failed to submit BG processing: \(error.localizedDescription)")
+        }
+    }
+
+    func cancelPendingInactivityProcessing() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.inactivityProcessingTaskIdentifier)
     }
 
     func queueDeveloperTestSpiritualWhisper() async -> Bool {
@@ -129,7 +180,8 @@ final class NotificationIntelligenceManager {
         let request = makeLocalNotificationRequest(
             title: pendingNotification.title,
             body: pendingNotification.body,
-            timeInterval: developerWhisperDelay
+            timeInterval: developerWhisperDelay,
+            notificationType: "spiritual_whisper"
         )
 
         notificationCenter.add(request) { error in
@@ -168,7 +220,8 @@ final class NotificationIntelligenceManager {
             try await scheduleLocalNotification(
                 title: preferredLanguage == .arabic ? "همسة كابتن حمودي" : "Captain Hamoudi",
                 body: finalBody,
-                timeInterval: 2
+                timeInterval: 2,
+                notificationType: "spiritual_whisper"
             )
             return true
         } catch {
@@ -232,6 +285,71 @@ final class NotificationIntelligenceManager {
         }
     }
 
+    private func handleInactivityProcessing(task: BGProcessingTask) {
+        if AppSettingsStore.shared.notificationsEnabled {
+            scheduleNextInactivityProcessing()
+        } else {
+            cancelPendingInactivityProcessing()
+        }
+
+        let operation = Task(priority: .background) { [weak self] in
+            guard let self else { return false }
+            return await self.performInactivityCheckAndNotifyIfNeeded()
+        }
+
+        task.expirationHandler = {
+            operation.cancel()
+        }
+
+        Task {
+            let success = await operation.value
+            task.setTaskCompleted(success: success)
+        }
+    }
+
+    private func performInactivityCheckAndNotifyIfNeeded(
+        now: Date = Date()
+    ) async -> Bool {
+        guard AppSettingsStore.shared.notificationsEnabled else { return true }
+        guard !Task.isCancelled else { return false }
+
+        let hour = calendar.component(.hour, from: now)
+        guard hour >= 14 else { return true }
+        guard canSendBackgroundInactivityNotification(now: now) else { return true }
+
+        let metrics: CaptainDailyHealthMetrics
+        do {
+            metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
+        } catch {
+            print("🔔 [NotificationIntelligenceManager] Inactivity metrics unavailable: \(error.localizedDescription)")
+            return true
+        }
+
+        guard metrics.stepCount < 3_000 else { return true }
+        guard !Task.isCancelled else { return false }
+
+        let body = await notificationComposer.composeInactivityNotification(
+            metrics: metrics,
+            now: now,
+            language: .arabic,
+            level: await MainActor.run { max(LevelStore.shared.level, 1) }
+        )
+
+        do {
+            try await scheduleLocalNotification(
+                title: "همسة كابتن حمودي",
+                body: body,
+                timeInterval: 1,
+                notificationType: "midday_inactivity"
+            )
+            defaults.set(now, forKey: lastBackgroundInactivitySentAtKey)
+            return true
+        } catch {
+            print("🔔 [NotificationIntelligenceManager] Inactivity notification scheduling failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
     private func loadHealthContext() async -> HealthContext {
         do {
             let metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
@@ -283,6 +401,31 @@ final class NotificationIntelligenceManager {
         return calendar.date(byAdding: .day, value: 1, to: morning) ?? date.addingTimeInterval(12 * 60 * 60)
     }
 
+    private func nextPreferredInactivityCheckDate(after date: Date) -> Date {
+        let afternoonStart = calendar.date(
+            bySettingHour: 14,
+            minute: 5,
+            second: 0,
+            of: date
+        ) ?? date.addingTimeInterval(60 * 60)
+        let eveningCutoff = calendar.date(
+            bySettingHour: 20,
+            minute: 30,
+            second: 0,
+            of: date
+        ) ?? date.addingTimeInterval(8 * 60 * 60)
+
+        if date < afternoonStart {
+            return afternoonStart
+        }
+
+        if date < eveningCutoff {
+            return date.addingTimeInterval(2 * 60 * 60)
+        }
+
+        return calendar.date(byAdding: .day, value: 1, to: afternoonStart) ?? date.addingTimeInterval(18 * 60 * 60)
+    }
+
     private func hasNotificationAuthorization() async -> Bool {
         let settings: UNNotificationSettings = await withCheckedContinuation {
             (continuation: CheckedContinuation<UNNotificationSettings, Never>) in
@@ -323,12 +466,14 @@ final class NotificationIntelligenceManager {
     private func scheduleLocalNotification(
         title: String,
         body: String,
-        timeInterval: TimeInterval
+        timeInterval: TimeInterval,
+        notificationType: String
     ) async throws {
         let request = makeLocalNotificationRequest(
             title: title,
             body: body,
-            timeInterval: timeInterval
+            timeInterval: timeInterval,
+            notificationType: notificationType
         )
 
         do {
@@ -352,7 +497,8 @@ final class NotificationIntelligenceManager {
     private func makeLocalNotificationRequest(
         title: String,
         body: String,
-        timeInterval: TimeInterval
+        timeInterval: TimeInterval,
+        notificationType: String
     ) -> UNNotificationRequest {
         let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalBody = trimmedBody.isEmpty ? defaultEnglishMessage : trimmedBody
@@ -364,7 +510,7 @@ final class NotificationIntelligenceManager {
         content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
         content.threadIdentifier = notificationThreadIdentifier
         content.userInfo = [
-            "notification_type": "spiritual_whisper",
+            "notification_type": notificationType,
             "source": "captain_hamoudi",
             "messageText": finalBody,
             "deepLink": "aiqo://captain"
@@ -378,6 +524,14 @@ final class NotificationIntelligenceManager {
                 repeats: false
             )
         )
+    }
+
+    private func canSendBackgroundInactivityNotification(now: Date) -> Bool {
+        guard let lastSentAt = defaults.object(forKey: lastBackgroundInactivitySentAtKey) as? Date else {
+            return true
+        }
+
+        return now.timeIntervalSince(lastSentAt) >= backgroundInactivityCooldown
     }
 
     private func storePendingDeveloperNotification(_ notification: PendingLocalNotification?) {

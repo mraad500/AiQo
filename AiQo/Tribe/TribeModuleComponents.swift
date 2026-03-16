@@ -1,35 +1,48 @@
 import SwiftUI
 
+private enum TribeAuraPalette {
+    static let canvas = Color.white
+    static let mint = Color(hex: "BCE2C6")
+    static let beige = Color(hex: "EEDCB2")
+    static let azure = Color(hex: "D4EAF7")
+    static let textPrimary = Color(hex: "17262B")
+    static let textSecondary = Color.black.opacity(0.34)
+    static let textTertiary = Color.black.opacity(0.20)
+    static let materialBorder = Color.white.opacity(0.82)
+    static let materialHairline = Color.black.opacity(0.05)
+    static let cardShadow = Color.black.opacity(0.04)
+    static let controlShadow = Color.black.opacity(0.05)
+    static let activeGreen = Color(hex: "79D49E")
+}
+
+private extension View {
+    func sfProRounded(size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        font(.system(size: size, weight: weight, design: .rounded))
+    }
+}
+
 struct TribeScreenBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    TribeModernPalette.backgroundTop,
-                    TribeModernPalette.backgroundMiddle,
-                    TribeModernPalette.backgroundBottom
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            TribeAuraPalette.canvas
 
             Circle()
-                .fill(TribeModernPalette.backgroundMintGlow.opacity(0.34))
+                .fill(TribeAuraPalette.mint.opacity(0.18))
                 .frame(width: 280, height: 280)
-                .blur(radius: 80)
-                .offset(x: -110, y: -220)
+                .blur(radius: 90)
+                .offset(x: -118, y: -250)
 
             Circle()
-                .fill(TribeModernPalette.backgroundSandGlow.opacity(0.24))
-                .frame(width: 220, height: 220)
-                .blur(radius: 70)
-                .offset(x: 120, y: -120)
-
-            Circle()
-                .fill(TribeModernPalette.backgroundWhiteGlow)
+                .fill(TribeAuraPalette.beige.opacity(0.18))
                 .frame(width: 320, height: 320)
-                .blur(radius: 110)
-                .offset(x: 60, y: 180)
+                .blur(radius: 92)
+                .offset(x: 132, y: -110)
+
+            Circle()
+                .fill(TribeAuraPalette.azure.opacity(0.20))
+                .frame(width: 360, height: 360)
+                .blur(radius: 100)
+                .offset(x: 40, y: 280)
         }
         .ignoresSafeArea()
     }
@@ -39,18 +52,42 @@ struct TribeTopSegmentedControl: View {
     @Binding var selection: TribeDashboardTab
 
     var body: some View {
-        Picker("", selection: $selection) {
+        HStack(spacing: 6) {
             ForEach(TribeDashboardTab.allCases) { tab in
-                Text(tab.title)
-                    .tag(tab)
+                let isSelected = selection == tab
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        selection = tab
+                    }
+                } label: {
+                    Text(tab.title)
+                        .sfProRounded(size: 13, weight: isSelected ? .medium : .light)
+                        .foregroundStyle(isSelected ? TribeAuraPalette.textPrimary : TribeAuraPalette.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background {
+                            Capsule(style: .continuous)
+                                .fill(isSelected ? Color.white.opacity(0.72) : Color.clear)
+                                .overlay {
+                                    Capsule(style: .continuous)
+                                        .stroke(isSelected ? TribeAuraPalette.materialBorder : .clear, lineWidth: 0.8)
+                                }
+                        }
+                }
+                .buttonStyle(.plain)
             }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .controlSize(.regular)
-        .scaleEffect(y: 1.12)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 2)
+        .padding(5)
+        .background {
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(TribeAuraPalette.materialBorder, lineWidth: 0.8)
+                }
+        }
+        .shadow(color: TribeAuraPalette.controlShadow, radius: 10, x: 0, y: 5)
         .sensoryFeedback(.selection, trigger: selection)
     }
 }
@@ -60,140 +97,194 @@ struct TribeView: View {
     let featuredMembers: [TribeRingMember]
     let onRefresh: @Sendable () async -> Void
 
+    @State private var selectedMemberID: String?
+
+    private var ringLayers: [TribeAtomRingLayer] {
+        featuredMembers.atomRingLayers(selectedMemberID: selectedMemberID)
+    }
+
+    private var featuredMemberKeys: [String] {
+        featuredMembers.map(selectionKey(for:))
+    }
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 18) {
-                TribeHeroCardCompact(
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 24) {
+                TribeHeroSummaryCard(
                     summary: heroSummary,
-                    featuredMembers: featuredMembers
+                    ringLayers: ringLayers
                 )
 
-                TribeMembersSection(featuredMembers: featuredMembers)
+                TribeMembersSection(
+                    featuredMembers: featuredMembers,
+                    selectedMemberID: selectedMemberID,
+                    onSelectMember: selectMember
+                )
             }
-            .padding(.horizontal, TribePremiumTokens.horizontalPadding)
-            .padding(.top, 0)
-            .padding(.bottom, 108)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 120)
         }
+        .scrollIndicators(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
         .contentMargins(.top, 0, for: .scrollIndicators)
         .refreshable {
             await onRefresh()
         }
+        .onChange(of: featuredMemberKeys, initial: false) { _, memberKeys in
+            guard let selectedMemberID, memberKeys.contains(selectedMemberID) == false else { return }
+            self.selectedMemberID = nil
+        }
+    }
+
+    private func selectMember(_ member: TribeRingMember) {
+        guard member.isVacant == false else { return }
+
+        let memberKey = selectionKey(for: member)
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+            selectedMemberID = selectedMemberID == memberKey ? nil : memberKey
+        }
+    }
+
+    private func selectionKey(for member: TribeRingMember) -> String {
+        member.memberId ?? member.id
     }
 }
 
-struct TribeHeroCardCompact: View {
+private struct TribeHeroSummaryCard: View {
     let summary: TribeSummary
-    let featuredMembers: [TribeRingMember]
+    let ringLayers: [TribeAtomRingLayer]
+
+    private var selectedLayer: TribeAtomRingLayer? {
+        ringLayers.first(where: \.isSelected)
+    }
+
+    private var progressValue: String {
+        summary.progressValue.isEmpty ? "84%" : summary.progressValue
+    }
+
+    private var selectionBadgeText: String? {
+        guard let selectedLayer, selectedLayer.isVacant == false else { return nil }
+        return "\(selectedLayer.memberName) • \(selectedLayer.layerName)"
+    }
 
     var body: some View {
-        TribeSurfaceCard(padding: 18, cornerRadius: 30) {
+        TribeSurfaceCard(
+            accent: selectedLayer?.accentColor ?? TribeModernPalette.mint,
+            padding: 20,
+            cornerRadius: 34
+        ) {
             HStack(alignment: .center, spacing: 18) {
-                VStack(spacing: 4) {
-                    TribeRingView(
-                        size: 138,
-                        members: featuredMembers,
-                        segmentTarget: summary.ringSegmentTarget
-                    )
+                TribeAtomRingView(layers: ringLayers, size: 132)
+                    .frame(width: 132, height: 132)
 
-                    Text(summary.progressValue)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                VStack(alignment: .trailing, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(summary.eyebrow)
+                                .sfProRounded(size: 11, weight: .medium)
+                                .foregroundStyle(TribeModernPalette.textSecondary)
+
+                            Text(summary.title)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(TribeModernPalette.textPrimary)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(progressValue)
+                                .font(.system(size: 31, weight: .bold, design: .rounded))
+                                .foregroundStyle(TribeModernPalette.textPrimary)
+                                .monospacedDigit()
+                                .minimumScaleFactor(0.8)
+
+                            Text(summary.progressLabel)
+                                .sfProRounded(size: 11, weight: .medium)
+                                .foregroundStyle(TribeModernPalette.textTertiary)
+                        }
+                    }
+
+                    Text(summary.summary)
+                        .sfProRounded(size: 12, weight: .light)
                         .foregroundStyle(TribeModernPalette.textSecondary)
-                }
-                .frame(width: 138)
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(summary.title)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(TribeModernPalette.textPrimary)
                         .multilineTextAlignment(.trailing)
-                        .lineLimit(1)
+                        .lineLimit(3)
+
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+
+                        TribeHeroBadge(text: summary.memberBadge, tint: TribeModernPalette.mint)
+
+                        if let selectionBadgeText {
+                            TribeHeroBadge(
+                                text: selectionBadgeText,
+                                tint: selectedLayer?.accentColor ?? TribeModernPalette.sky
+                            )
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .frame(minHeight: 156)
             .environment(\.layoutDirection, .leftToRight)
         }
     }
 }
 
+private struct TribeHeroBadge: View {
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        Text(text)
+            .sfProRounded(size: 11, weight: .medium)
+            .foregroundStyle(TribeModernPalette.textPrimary)
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                tint.opacity(0.18),
+                                TribeModernPalette.surfaceTop.opacity(0.92)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay {
+                        Capsule(style: .continuous)
+                            .stroke(tint.opacity(0.24), lineWidth: 0.8)
+                    }
+            }
+    }
+}
+
 struct TribeMembersSection: View {
     let featuredMembers: [TribeRingMember]
+    let selectedMemberID: String?
+    let onSelectMember: (TribeRingMember) -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            TribeSectionHeader(
-                title: "أعضاء القبيلة",
-                subtitle: "كل عضو مرتبط بلون قطاع داخل الحلقة، مع حضور هادئ ومقاييس مختصرة."
-            )
+        VStack(alignment: .trailing, spacing: 14) {
+            Text("الحضور")
+                .sfProRounded(size: 11, weight: .light)
+                .foregroundStyle(TribeAuraPalette.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
 
-            VStack(spacing: 8) {
+            LazyVStack(spacing: 12) {
                 ForEach(featuredMembers) { featuredMember in
-                    TribeMemberCardCompact(featuredMember: featuredMember)
-                }
-            }
-        }
-    }
-}
-
-struct TribePhasePlaceholderPage: View {
-    let title: String
-    let subtitle: String
-    let systemImage: String
-
-    var body: some View {
-        VStack {
-            Spacer(minLength: 16)
-
-            TribeSurfaceCard(accent: TribeModernPalette.sand, padding: 28) {
-                VStack(spacing: 16) {
-                    Circle()
-                        .fill(TribeModernPalette.sandSoft.opacity(0.72))
-                        .frame(width: 72, height: 72)
-                        .overlay {
-                            Image(systemName: systemImage)
-                                .font(.system(size: 26, weight: .medium))
-                                .foregroundStyle(TribeModernPalette.textSecondary)
+                    TribeMemberCardCompact(
+                        featuredMember: featuredMember,
+                        isSelected: selectedMemberID == (featuredMember.memberId ?? featuredMember.id),
+                        onTap: {
+                            onSelectMember(featuredMember)
                         }
-
-                    VStack(spacing: 6) {
-                        Text(title)
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(TribeModernPalette.textPrimary)
-
-                        Text(subtitle)
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundStyle(TribeModernPalette.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
+                    )
                 }
-                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, TribePremiumTokens.horizontalPadding)
-
-            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct TribeSectionHeader: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            Text(title)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(TribeModernPalette.textPrimary)
-                .multilineTextAlignment(.trailing)
-
-            Text(subtitle)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(TribeModernPalette.textSecondary)
-                .multilineTextAlignment(.trailing)
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 }
 
@@ -266,20 +357,20 @@ struct TribeSurfaceCard<Content: View>: View {
 
 struct TribeLoadingView: View {
     var body: some View {
-        TribeSurfaceCard(accent: TribeModernPalette.mint, padding: 26) {
-            VStack(spacing: 14) {
+        TribeMemberCardMaterial {
+            VStack(spacing: 12) {
                 ProgressView()
                     .progressViewStyle(.circular)
                     .controlSize(.large)
-                    .tint(TribeModernPalette.mintDeep)
+                    .tint(TribeAuraPalette.mint)
 
-                Text("جارٍ تجهيز حلقة القبيلة")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(TribeModernPalette.textPrimary)
+                Text("جارٍ تهيئة توهج القبيلة")
+                    .sfProRounded(size: 17, weight: .medium)
+                    .foregroundStyle(TribeAuraPalette.textPrimary)
 
-                Text("نحضر لك نبض اليوم والأعضاء المرتبطين بكل قطاع.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(TribeModernPalette.textSecondary)
+                Text("نرتب الحضور بهدوء قبل ظهور المشهد.")
+                    .sfProRounded(size: 13, weight: .light)
+                    .foregroundStyle(TribeAuraPalette.textTertiary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -289,80 +380,232 @@ struct TribeLoadingView: View {
 
 struct TribeMemberCardCompact: View {
     let featuredMember: TribeRingMember
+    let isSelected: Bool
+    let onTap: () -> Void
 
     var body: some View {
-        TribeSurfaceCard(padding: 0, cornerRadius: 28) {
-            HStack(alignment: .center, spacing: 16) {
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(featuredMember.displayName)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(TribeModernPalette.textPrimary)
-                        .lineLimit(1)
+        Button(action: onTap) {
+            TribeMemberCardMaterial(
+                accent: featuredMember.accentColor,
+                isSelected: isSelected
+            ) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .trailing, spacing: 9) {
+                        Text(featuredMember.displayName)
+                            .sfProRounded(size: 16, weight: .medium)
+                            .foregroundStyle(TribeAuraPalette.textPrimary)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+
+                        HStack(spacing: 6) {
+                            Text(featuredMember.roleTitle)
+                            if featuredMember.isVacant == false {
+                                Text("•")
+                                Text(featuredMember.levelText)
+                            }
+                        }
+                        .sfProRounded(size: 12, weight: .light)
+                        .foregroundStyle(TribeAuraPalette.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
-                    Text(featuredMember.isVacant ? "مساحة جاهزة لعضو جديد" : featuredMember.roleTitle)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(TribeModernPalette.textSecondary)
+                        HStack(spacing: 8) {
+                            TribeMemberMetaBadge(
+                                text: featuredMember.segmentLabel,
+                                tint: featuredMember.accentColor,
+                                emphasized: true
+                            )
+
+                            TribeMemberMetaBadge(
+                                text: featuredMember.isVacant
+                                    ? featuredMember.contributionLabel
+                                    : "\(featuredMember.contributionValue) طاقة",
+                                tint: featuredMember.accentColor,
+                                emphasized: false
+                            )
+                        }
                         .frame(maxWidth: .infinity, alignment: .trailing)
-
-                    HStack(spacing: 6) {
-                        TribeMetadataChip(
-                            text: featuredMember.levelText,
-                            tint: featuredMember.sectorColor.accent,
-                            usesMutedStyle: true
-                        )
-
-                        TribeMetadataChip(
-                            text: featuredMember.segmentLabel,
-                            tint: featuredMember.sectorColor.accent,
-                            usesMutedStyle: true
-                        )
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    Spacer(minLength: 14)
+
+                    TribeMemberEnergyAvatar(
+                        featuredMember: featuredMember,
+                        tint: featuredMember.accentColor,
+                        isActive: featuredMember.energyToday > 0
+                    )
                 }
-
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(featuredMember.sectorColor.accent.opacity(0.92))
-                    .frame(width: 4, height: 78)
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(featuredMember.contributionValue)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(TribeModernPalette.textPrimary)
-
-                    Text(featuredMember.contributionLabel)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(TribeModernPalette.textSecondary)
-                }
-                .frame(minWidth: 62, alignment: .trailing)
+                .environment(\.layoutDirection, .leftToRight)
+                .accessibilityElement(children: .combine)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
-            .frame(minHeight: 96)
-            .environment(\.layoutDirection, .leftToRight)
         }
+        .buttonStyle(.plain)
+        .disabled(featuredMember.isVacant)
     }
 }
 
-struct TribeMetadataChip: View {
+private struct TribeMemberCardMaterial<Content: View>: View {
+    private let accent: Color?
+    private let isSelected: Bool
+    private let content: Content
+
+    init(
+        accent: Color? = nil,
+        isSelected: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.accent = accent
+        self.isSelected = isSelected
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .background {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.regularMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(Color.white.opacity(0.56))
+                    }
+                    .overlay {
+                        if let accent {
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            accent.opacity(isSelected ? 0.14 : 0.06),
+                                            Color.clear,
+                                            accent.opacity(isSelected ? 0.08 : 0.03)
+                                        ],
+                                        startPoint: .topTrailing,
+                                        endPoint: .bottomLeading
+                                    )
+                                )
+                        }
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(
+                                (accent?.opacity(isSelected ? 0.34 : 0.12) ?? TribeAuraPalette.materialBorder),
+                                lineWidth: isSelected ? 1.1 : 0.8
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.black.opacity(0.03), lineWidth: 0.8)
+                            .padding(0.5)
+                    }
+            }
+            .shadow(
+                color: (accent?.opacity(isSelected ? 0.14 : 0.06) ?? TribeAuraPalette.cardShadow),
+                radius: isSelected ? 16 : 12,
+                x: 0,
+                y: isSelected ? 10 : 7
+            )
+            .scaleEffect(isSelected ? 1.01 : 1)
+            .animation(.spring(response: 0.34, dampingFraction: 0.84), value: isSelected)
+    }
+}
+
+private struct TribeMemberMetaBadge: View {
     let text: String
     let tint: Color
-    let usesMutedStyle: Bool
+    let emphasized: Bool
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundStyle(usesMutedStyle ? TribeModernPalette.textSecondary : TribeModernPalette.textPrimary)
+            .sfProRounded(size: 11, weight: emphasized ? .medium : .light)
+            .foregroundStyle(emphasized ? TribeModernPalette.textPrimary : TribeModernPalette.textSecondary)
+            .lineLimit(1)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background {
                 Capsule(style: .continuous)
-                    .fill(usesMutedStyle ? tint.opacity(0.10) : tint.opacity(0.22))
+                    .fill(emphasized ? tint.opacity(0.16) : Color.white.opacity(0.56))
                     .overlay {
                         Capsule(style: .continuous)
-                            .stroke(usesMutedStyle ? tint.opacity(0.14) : tint.opacity(0.26), lineWidth: 0.8)
+                            .stroke(
+                                emphasized ? tint.opacity(0.24) : TribeModernPalette.border.opacity(0.72),
+                                lineWidth: 0.8
+                            )
                     }
             }
+    }
+}
+
+private struct TribeMemberEnergyAvatar: View {
+    let featuredMember: TribeRingMember
+    let tint: Color
+    let isActive: Bool
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            ZStack {
+                Circle()
+                    .fill(Color.white)
+
+                Text(featuredMember.isVacant ? "+" : featuredMember.displayName.tribeDisplayInitials)
+                    .sfProRounded(size: 16, weight: .light)
+                    .foregroundStyle(TribeAuraPalette.textPrimary)
+            }
+            .frame(width: 58, height: 58)
+            .overlay {
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                tint.opacity(0.96),
+                                tint.opacity(0.40)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.8
+                    )
+            }
+            .overlay {
+                Circle()
+                    .strokeBorder(tint.opacity(0.30), lineWidth: 8)
+                    .blur(radius: 9)
+            }
+            .shadow(color: tint.opacity(0.16), radius: 10, x: 0, y: 5)
+
+            if isActive {
+                TribeActivePulseDot()
+                    .offset(x: -2, y: -2)
+            }
+        }
+    }
+}
+
+private struct TribeActivePulseDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(TribeAuraPalette.activeGreen.opacity(0.20))
+                .frame(width: 18, height: 18)
+                .scaleEffect(reduceMotion ? 1 : (isAnimating ? 1.20 : 0.76))
+                .opacity(reduceMotion ? 0.45 : (isAnimating ? 0.18 : 0.42))
+
+            Circle()
+                .fill(TribeAuraPalette.activeGreen)
+                .frame(width: 8, height: 8)
+                .overlay {
+                    Circle()
+                        .stroke(Color.white, lineWidth: 2.4)
+                }
+        }
+        .onAppear {
+            guard reduceMotion == false, isAnimating == false else { return }
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
     }
 }
 

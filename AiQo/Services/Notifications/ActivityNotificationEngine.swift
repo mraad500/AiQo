@@ -36,6 +36,20 @@ final class ActivityNotificationEngine {
     
     static let categoryIdentifier = "CAPTAIN_ANGEL_REMINDER"
     static let actionOpenChat = "OPEN_CAPTAIN_CHAT"
+    static var notificationCategory: UNNotificationCategory {
+        let openChatAction = UNNotificationAction(
+            identifier: Self.actionOpenChat,
+            title: NSLocalizedString("فتح المحادثة", comment: "Open chat action"),
+            options: [.foreground]
+        )
+
+        return UNNotificationCategory(
+            identifier: Self.categoryIdentifier,
+            actions: [openChatAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+    }
     
     // MARK: - Angel Numbers Configuration
     
@@ -274,20 +288,7 @@ final class ActivityNotificationEngine {
     // MARK: - 🔗 Deep Linking Setup
     
     func registerNotificationCategories() {
-        let openChatAction = UNNotificationAction(
-            identifier: Self.actionOpenChat,
-            title: NSLocalizedString("فتح المحادثة", comment: "Open chat action"),
-            options: [.foreground]
-        )
-        
-        let category = UNNotificationCategory(
-            identifier: Self.categoryIdentifier,
-            actions: [openChatAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-        
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        NotificationCategoryManager.shared.registerAllCategories()
         print("✅ [AiQo] Notification categories registered")
     }
     

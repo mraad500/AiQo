@@ -30,7 +30,7 @@ final class MorningHabitOrchestrator: NSObject {
     private let healthManager: HealthKitManager
     private let notificationCenter: UNUserNotificationCenter
     private let userDefaults: UserDefaults
-    private let sleepAgent: AppleIntelligenceSleepAgent
+    private let notificationComposer: CaptainBackgroundNotificationComposer
 
     private let stepThreshold = 25
     private let monitoringWindow: TimeInterval = 6 * 60 * 60
@@ -43,20 +43,19 @@ final class MorningHabitOrchestrator: NSObject {
         healthManager: HealthKitManager? = nil,
         notificationCenter: UNUserNotificationCenter = .current(),
         userDefaults: UserDefaults = .standard,
-        sleepAgent: AppleIntelligenceSleepAgent? = nil
+        notificationComposer: CaptainBackgroundNotificationComposer? = nil
     ) {
         self.healthStore = healthStore
         self.healthManager = healthManager ?? .shared
         self.notificationCenter = notificationCenter
         self.userDefaults = userDefaults
-        self.sleepAgent = sleepAgent ?? AppleIntelligenceSleepAgent()
+        self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
         super.init()
     }
 
     func start() {
-        startStepObservationIfPossible()
-
         Task { @MainActor [weak self] in
+            await self?.startStepObservationIfPossible()
             await self?.refreshMonitoringState()
         }
     }
@@ -80,7 +79,13 @@ final class MorningHabitOrchestrator: NSObject {
         guard isInsideMonitoringWindow(now: now, wakeDate: wakeDate) else { return }
 
         do {
-            let insight = try await ensureEphemeralInsight(for: wakeDate)
+            let stepsSinceWake = try await stepCountSinceWake(from: wakeDate, to: now)
+            guard stepsSinceWake >= stepThreshold else { return }
+
+            let insight = try await ensureEphemeralInsight(
+                for: wakeDate,
+                stepsSinceWake: stepsSinceWake
+            )
             guard !insight.isRead else {
                 cancelMorningNotification()
                 return
@@ -88,10 +93,11 @@ final class MorningHabitOrchestrator: NSObject {
 
             guard !hasScheduledNotification(for: wakeDate) else { return }
 
-            let stepsSinceWake = try await stepCountSinceWake(from: wakeDate, to: now)
-            guard stepsSinceWake >= stepThreshold else { return }
-
-            scheduleMorningNotification(for: wakeDate, stepsSinceWake: stepsSinceWake)
+            await scheduleMorningNotification(
+                for: wakeDate,
+                stepsSinceWake: stepsSinceWake,
+                body: insight.message
+            )
         } catch {
             print("MorningHabitOrchestrator refresh failed:", error.localizedDescription)
         }
@@ -102,7 +108,10 @@ final class MorningHabitOrchestrator: NSObject {
         guard isInsideMonitoringWindow(now: now, wakeDate: wakeDate) else { return nil }
 
         do {
-            return try await ensureEphemeralInsight(for: wakeDate)
+            return try await ensureEphemeralInsight(
+                for: wakeDate,
+                stepsSinceWake: nil
+            )
         } catch {
             print("MorningHabitOrchestrator insight generation failed:", error.localizedDescription)
             return nil
@@ -143,16 +152,20 @@ private extension MorningHabitOrchestrator {
         return try? JSONDecoder().decode(MorningInsight.self, from: data)
     }
 
-    func startStepObservationIfPossible() {
+    func startStepObservationIfPossible() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         guard !hasStartedStepObserver else { return }
         guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
-        guard healthStore.authorizationStatus(for: stepType) == .sharingAuthorized else { return }
+        guard scheduledWakeDate != nil else { return }
+        guard await ensureStepReadAuthorization(for: stepType) else { return }
 
-        healthStore.enableBackgroundDelivery(for: stepType, frequency: .immediate) { _, error in
-            if let error {
-                print("MorningHabitOrchestrator background delivery failed:", error.localizedDescription)
-            }
+        do {
+            try await healthStore.enableBackgroundDelivery(
+                for: stepType,
+                frequency: .immediate
+            )
+        } catch {
+            print("MorningHabitOrchestrator background delivery failed:", error.localizedDescription)
         }
 
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completionHandler, error in
@@ -178,12 +191,18 @@ private extension MorningHabitOrchestrator {
         hasStartedStepObserver = true
     }
 
-    func ensureEphemeralInsight(for wakeDate: Date) async throws -> MorningInsight {
+    func ensureEphemeralInsight(
+        for wakeDate: Date,
+        stepsSinceWake: Int?
+    ) async throws -> MorningInsight {
         if let cachedInsight, cachedInsight.wakeTimestamp == wakeDate.timeIntervalSince1970 {
             return cachedInsight
         }
 
-        let generatedMessage = try await generateEphemeralInsightMessage()
+        let generatedMessage = try await generateEphemeralInsightMessage(
+            for: wakeDate,
+            stepsSinceWake: stepsSinceWake
+        )
         let insight = MorningInsight(
             wakeTimestamp: wakeDate.timeIntervalSince1970,
             message: generatedMessage,
@@ -194,15 +213,24 @@ private extension MorningHabitOrchestrator {
         return insight
     }
 
-    func generateEphemeralInsightMessage() async throws -> String {
-        _ = try await healthManager.requestSleepAuthorizationIfNeeded()
-        let stages = try await healthManager.fetchSleepStagesForLastNight()
-
-        guard let sleepSession = sleepSession(from: stages) else {
-            throw MorningHabitOrchestratorError.noSleepData
+    func generateEphemeralInsightMessage(
+        for wakeDate: Date,
+        stepsSinceWake: Int?
+    ) async throws -> String {
+        if let stepsSinceWake {
+            return await notificationComposer.composeMorningSleepNotification(
+                wakeDate: wakeDate,
+                stepsSinceWake: stepsSinceWake,
+                language: AppSettingsStore.shared.appLanguage,
+                level: max(LevelStore.shared.level, 1)
+            )
         }
 
-        return try await sleepAgent.analyze(session: sleepSession)
+        return await notificationComposer.composeSleepCompletionNotification(
+            sessionEndedAt: wakeDate,
+            language: AppSettingsStore.shared.appLanguage,
+            level: max(LevelStore.shared.level, 1)
+        )
     }
 
     func sleepSession(from stages: [SleepStageData]) -> SleepSession? {
@@ -266,11 +294,16 @@ private extension MorningHabitOrchestrator {
         }
     }
 
-    func scheduleMorningNotification(for wakeDate: Date, stepsSinceWake: Int) {
+    func scheduleMorningNotification(
+        for wakeDate: Date,
+        stepsSinceWake: Int,
+        body: String
+    ) async {
         let content = UNMutableNotificationContent()
         content.title = "Captain Hamoudi"
-        content.body = "بطل! تحركت.. هسه تعال شوف تحليل نومك"
+        content.body = body
         content.sound = nil
+        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
         content.userInfo = [
             "source": Self.notificationSource,
             "destination": "captain_chat",
@@ -288,18 +321,11 @@ private extension MorningHabitOrchestrator {
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         )
 
-        notificationCenter.add(request) { [weak self] error in
-            if let error {
-                print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)
-                return
-            }
-
-            Task { @MainActor [weak self] in
-                self?.userDefaults.set(
-                    wakeDate.timeIntervalSince1970,
-                    forKey: DefaultsKeys.notificationWakeTimestamp
-                )
-            }
+        do {
+            try await notificationCenter.add(request)
+            userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
+        } catch {
+            print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)
         }
     }
 
@@ -326,6 +352,21 @@ private extension MorningHabitOrchestrator {
         let timestamp = userDefaults.double(forKey: key)
         guard timestamp > 0 else { return nil }
         return Date(timeIntervalSince1970: timestamp)
+    }
+
+    func ensureStepReadAuthorization(
+        for stepType: HKQuantityType
+    ) async -> Bool {
+        do {
+            try await healthStore.requestAuthorization(
+                toShare: [],
+                read: Set([stepType])
+            )
+            return true
+        } catch {
+            print("MorningHabitOrchestrator step authorization failed:", error.localizedDescription)
+            return false
+        }
     }
 }
 

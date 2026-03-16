@@ -228,9 +228,9 @@ struct AppSettingsScreen: View {
             if enabled {
                 NotificationService.shared.requestPermissions()
                 rescheduleNotifications(language: appLanguage)
-                NotificationIntelligenceManager.shared.scheduleNextBackgroundRefresh()
+                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
             } else {
-                NotificationIntelligenceManager.shared.cancelPendingBackgroundRefresh()
+                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
                 UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                 UNUserNotificationCenter.current().removeAllDeliveredNotifications()
             }

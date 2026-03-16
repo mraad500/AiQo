@@ -1,5 +1,10 @@
 import Foundation
 
+private enum LocalBackgroundNotificationKind: String {
+    case sleepNotification = "background.sleep_notification"
+    case inactivityNotification = "background.inactivity_notification"
+}
+
 enum LocalConversationRole: String, Sendable {
     case system
     case user
@@ -53,13 +58,16 @@ enum LocalBrainServiceError: LocalizedError {
 struct LocalBrainService: Sendable {
     private let healthManager: HealthKitManager
     private let sleepAgent: AppleIntelligenceSleepAgent
+    private let onDeviceNotificationEngine: CaptainOnDeviceChatEngine
 
     init(
         healthManager: HealthKitManager = .shared,
-        sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent()
+        sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent(),
+        onDeviceNotificationEngine: CaptainOnDeviceChatEngine = CaptainOnDeviceChatEngine()
     ) {
         self.healthManager = healthManager
         self.sleepAgent = sleepAgent
+        self.onDeviceNotificationEngine = onDeviceNotificationEngine
     }
 
     func generateReply(request: LocalBrainRequest) async throws -> LocalBrainServiceReply {
@@ -85,6 +93,14 @@ struct LocalBrainService: Sendable {
 
         guard let latestUserMessage = payload.latestUserMessage else {
             throw LocalBrainServiceError.missingUserMessage
+        }
+
+        if let backgroundKind = LocalBackgroundNotificationKind(rawValue: payload.systemPrompt) {
+            return try await makeBackgroundNotificationReply(
+                payload: payload,
+                latestUserMessage: latestUserMessage,
+                kind: backgroundKind
+            )
         }
 
         if payload.screenContext == .sleepAnalysis {
@@ -155,6 +171,49 @@ private enum LocalMealStyle {
 }
 
 private extension LocalBrainService {
+    func makeBackgroundNotificationReply(
+        payload: LocalAppIntentPayload,
+        latestUserMessage: String,
+        kind: LocalBackgroundNotificationKind
+    ) async throws -> LocalBrainServiceReply {
+        let fallback: String
+        let message: String
+
+        switch kind {
+        case .sleepNotification:
+            fallback = payload.language == .english
+                ? "Your sleep session is logged. Open Captain Hamoudi for today's recovery analysis."
+                : "نومك انحفظ. افتح Captain Hamoudi حتى تشوف تحليل تعافيك اليوم."
+            message = try await makeSleepNotificationMessage()
+
+        case .inactivityNotification:
+            fallback = inactivityFallback(
+                currentSteps: payload.contextData.steps,
+                language: payload.language
+            )
+            do {
+                message = try await onDeviceNotificationEngine.respond(to: latestUserMessage)
+            } catch {
+                message = fallback
+            }
+        }
+
+        let normalized = normalizedNotificationMessage(
+            message,
+            fallback: fallback
+        )
+        let structuredResponse = CaptainStructuredResponse(message: normalized)
+        let rawText = try encodeStructuredResponse(structuredResponse)
+        let validatedResponse = try decodeStructuredResponse(from: rawText)
+
+        return LocalBrainServiceReply(
+            message: validatedResponse.message,
+            workoutPlan: nil,
+            mealPlan: nil,
+            rawText: rawText
+        )
+    }
+
     func classifyIntent(
         for userMessage: String,
         in payload: LocalAppIntentPayload
@@ -207,6 +266,11 @@ private extension LocalBrainService {
             mealPlan: validatedResponse.mealPlan,
             rawText: rawText
         )
+    }
+
+    func makeSleepNotificationMessage() async throws -> String {
+        let sleepSession = try await buildLatestSleepSession()
+        return try await sleepAgent.analyze(session: sleepSession)
     }
 
     func buildMessage(
@@ -291,6 +355,32 @@ private extension LocalBrainService {
 
             return "You are at \(steps) steps and \(calories) active calories today, so anchor the day with one practical move that fits your current \(vibe) vibe."
         }
+    }
+
+    func normalizedNotificationMessage(
+        _ message: String,
+        fallback: String
+    ) -> String {
+        let compact = message
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let resolved = compact.isEmpty ? fallback : compact
+        guard resolved.count > 160 else { return resolved }
+
+        let index = resolved.index(resolved.startIndex, offsetBy: 160)
+        return String(resolved[..<index]).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
+    }
+
+    func inactivityFallback(
+        currentSteps: Int,
+        language: AppLanguage
+    ) -> String {
+        SmartNotificationManager.shared.inactivityNotificationBody(
+            currentSteps: currentSteps,
+            language: language
+        )
     }
 
     func buildWorkoutPlan(
