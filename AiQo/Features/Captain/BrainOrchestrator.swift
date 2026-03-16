@@ -55,7 +55,8 @@ struct BrainOrchestrator: Sendable {
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
             workoutPlan: reply.workoutPlan,
-            mealPlan: reply.mealPlan
+            mealPlan: reply.mealPlan,
+            spotifyRecommendation: reply.spotifyRecommendation
         )
 
         return HybridBrainStreamingSession(
@@ -106,7 +107,7 @@ private extension BrainOrchestrator {
         case .mainChat:
             return requiresCloudPlanning(for: latestUserMessage(in: request)) ? .cloud : .local
         case .myVibe:
-            return .local
+            return .cloud
         case .sleepAnalysis:
             return .local
         }
@@ -137,6 +138,7 @@ private extension BrainOrchestrator {
             message: reply.message,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
+            spotifyRecommendation: reply.spotifyRecommendation,
             rawText: reply.rawText
         )
     }
@@ -158,7 +160,8 @@ private extension BrainOrchestrator {
         let structuredResponse = CaptainStructuredResponse(
             message: personalizedMessage,
             workoutPlan: reply.workoutPlan,
-            mealPlan: reply.mealPlan
+            mealPlan: reply.mealPlan,
+            spotifyRecommendation: reply.spotifyRecommendation
         )
         let rawText = try? encode(structuredResponse)
 
@@ -166,6 +169,7 @@ private extension BrainOrchestrator {
             message: structuredResponse.message,
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
+            spotifyRecommendation: structuredResponse.spotifyRecommendation,
             rawText: rawText ?? reply.rawText
         )
     }

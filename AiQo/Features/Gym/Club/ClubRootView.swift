@@ -137,7 +137,7 @@ struct ClubRootView: View {
 
     private var topHeaderBar: some View {
         AiQoScreenTopChrome(
-            leadingReservedWidth: 0,
+            leadingReservedWidth: AiQoScreenHeaderMetrics.profileLaneWidth,
             itemSpacing: 8,
             horizontalInset: 12,
             topPadding: ClubChromeLayout.headerTopPadding,

@@ -35,6 +35,7 @@ struct LocalBrainServiceReply: Sendable {
     let message: String
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
+    let spotifyRecommendation: SpotifyRecommendation?
     let rawText: String
 }
 
@@ -111,7 +112,8 @@ struct LocalBrainService: Sendable {
         let structuredResponse = CaptainStructuredResponse(
             message: try await buildMessage(for: payload, intent: intent),
             workoutPlan: intent.wantsWorkoutPlan ? buildWorkoutPlan(for: payload, intent: intent) : nil,
-            mealPlan: intent.wantsMealPlan ? buildMealPlan(for: payload) : nil
+            mealPlan: intent.wantsMealPlan ? buildMealPlan(for: payload) : nil,
+            spotifyRecommendation: spotifyRecommendation(for: payload, intent: intent)
         )
 
         let rawText = try encodeStructuredResponse(structuredResponse)
@@ -121,6 +123,7 @@ struct LocalBrainService: Sendable {
             message: validatedResponse.message,
             workoutPlan: validatedResponse.workoutPlan?.isMeaningful == true ? validatedResponse.workoutPlan : nil,
             mealPlan: validatedResponse.mealPlan?.isMeaningful == true ? validatedResponse.mealPlan : nil,
+            spotifyRecommendation: validatedResponse.spotifyRecommendation,
             rawText: rawText
         )
     }
@@ -210,6 +213,7 @@ private extension LocalBrainService {
             message: validatedResponse.message,
             workoutPlan: nil,
             mealPlan: nil,
+            spotifyRecommendation: nil,
             rawText: rawText
         )
     }
@@ -264,6 +268,7 @@ private extension LocalBrainService {
             message: validatedResponse.message,
             workoutPlan: validatedResponse.workoutPlan,
             mealPlan: validatedResponse.mealPlan,
+            spotifyRecommendation: validatedResponse.spotifyRecommendation,
             rawText: rawText
         )
     }
@@ -311,7 +316,7 @@ private extension LocalBrainService {
             }
 
             if intent.wantsVibeGuidance {
-                return "مود \(vibe) يحتاج إيقاع ثابت بالبداية، وبعدها تصعد الطاقة شوي شوي حتى يبقى تركيزك حاضر بدون استنزاف."
+                return "مود \(vibe) يحتاج إيقاع ثابت بالبداية، فرتبتلك فايب سبوتفاي مناسب حتى تدخل الجو بسرعة وتبقى أعصابك مرتبة."
             }
 
             if intent.wantsChallengeGuidance {
@@ -346,7 +351,7 @@ private extension LocalBrainService {
             }
 
             if intent.wantsVibeGuidance {
-                return "Your \(vibe) vibe will respond best to a steady groove first, then a sharper ramp once your focus is fully online."
+                return "Your \(vibe) state will respond best to a steady groove first, so I lined up a Spotify fallback that can carry the mood without overstimulating it."
             }
 
             if intent.wantsChallengeGuidance {
@@ -355,6 +360,21 @@ private extension LocalBrainService {
 
             return "You are at \(steps) steps and \(calories) active calories today, so anchor the day with one practical move that fits your current \(vibe) vibe."
         }
+    }
+
+    func spotifyRecommendation(
+        for payload: LocalAppIntentPayload,
+        intent: LocalIntentClassification
+    ) -> SpotifyRecommendation? {
+        guard payload.screenContext == .myVibe || intent.wantsVibeGuidance else {
+            return nil
+        }
+
+        return SpotifyRecommendation.myVibeFallback(
+            for: payload.latestUserMessage ?? "",
+            currentVibe: payload.contextData.vibe,
+            language: payload.language
+        )
     }
 
     func normalizedNotificationMessage(

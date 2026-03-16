@@ -18,10 +18,8 @@ struct QuestsView: View {
     private let contentLeadingPadding: CGFloat = 10
     private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
     private let questCardWidthReduction: CGFloat = 1.5
-    private let clubTopBarHeight: CGFloat =
-        ClubChromeLayout.headerTopPadding + ClubChromeLayout.headerBottomPadding + 56
-    private let topContentInset: CGFloat =
-        ClubChromeLayout.headerTopPadding + ClubChromeLayout.headerBottomPadding + 80
+    private let clubTopBarHeight: CGFloat = ClubChromeLayout.topChromeHeight
+    private let topContentInset: CGFloat = ClubChromeLayout.topChromeHeight + 24
 
     var body: some View {
         ZStack {

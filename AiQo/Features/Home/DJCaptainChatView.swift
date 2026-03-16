@@ -14,7 +14,7 @@ struct DJCaptainChatView: View {
 
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 14) {
+                    LazyVStack(spacing: 12) {
                         headerCard
 
                         ForEach(captainBrain.messages) { message in
@@ -235,22 +235,61 @@ private struct DJCaptainMessageRow: View {
                     .padding(.vertical, 12)
                     .background(userBubbleBackground)
                     .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+                    .frame(maxWidth: 420, alignment: .trailing)
             } else {
                 DJCaptainAvatarView(size: 34)
 
-                Text(message.text)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.96))
-                    .multilineTextAlignment(.leading)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 12)
-                    .background(captainBubbleBackground)
-                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+                assistantContent
+                .frame(maxWidth: 420, alignment: .leading)
 
                 Spacer(minLength: 52)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.isUser ? .trailing : .leading)
+    }
+
+    @ViewBuilder
+    private var assistantContent: some View {
+        if let recommendation = message.spotifyRecommendation {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(message.text)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.96))
+                    .multilineTextAlignment(.leading)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.04),
+                                Color(hex: "BCE2C6").opacity(0.34),
+                                Color.white.opacity(0.04)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 1)
+
+                SpotifyVibeCard(
+                    recommendation: recommendation,
+                    presentation: .embedded
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            .padding(16)
+            .background(captainBubbleBackground)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        } else {
+            Text(message.text)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.96))
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 15)
+                .padding(.vertical, 12)
+                .background(captainBubbleBackground)
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        }
     }
 
     private var userBubbleBackground: some View {

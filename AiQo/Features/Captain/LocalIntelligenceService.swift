@@ -39,6 +39,7 @@ struct LocalIntelligenceService: Sendable {
             message: response.message,
             workoutPlan: response.workoutPlan,
             mealPlan: response.mealPlan,
+            spotifyRecommendation: response.spotifyRecommendation,
             rawText: rawText
         )
     }

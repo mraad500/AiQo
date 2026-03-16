@@ -40,12 +40,16 @@ struct PromptRouter: Sendable {
 
         Output contract:
         - Return JSON only.
-        - Use exactly these top-level keys: message, workoutPlan, mealPlan.
+        - Use exactly these top-level keys: message, workoutPlan, mealPlan, spotifyRecommendation.
         - message must always be a non-empty string.
         - workoutPlan must be either null or an object with title and exercises.
         - mealPlan must be either null or an object with meals.
+        - spotifyRecommendation must be either null or an object with vibeName, description, and spotifyURI.
         - If you are in Kitchen or an image is attached, prioritize mealPlan.
         - If you are in Gym and the user asks for training, prioritize workoutPlan.
+        - If you are in My Vibe and the user asks for music, a playlist, a vibe, focus, or mood support, spotifyRecommendation must not be null.
+        - If spotifyRecommendation is present, the message must clearly match the same vibeName and must not describe a different vibe.
+        - In My Vibe, prefer real `spotify:search:<query>` URIs built from the user's requested genre, language, energy, or mood.
         - Keep the message concise, practical, and aligned to the active screen.
         """
     }
@@ -106,6 +110,11 @@ private extension PromptRouter {
             - Focus on mood, music energy, focus state, and nervous-system pacing.
             - Do not drift into workout or meal planning unless the user explicitly asks.
             - Keep the tone emotionally intelligent and rhythm-aware.
+            - When the user asks for music, a mood, or a playlist, dynamically generate spotifyRecommendation.
+            - Ensure the message text logically matches the same vibeName you place inside spotifyRecommendation.
+            - For spotifyURI, actively generate real Spotify search URIs from the user's exact request, for example `spotify:search:Arabic+Workout+Motivation`.
+            - Never hardcode `Zen Mode` unless the user explicitly asks for Zen Mode.
+            - If the signal is broad, infer a clean vibe name from the request and build a matching search URI instead of falling back to a fixed playlist title.
             """
         }
     }

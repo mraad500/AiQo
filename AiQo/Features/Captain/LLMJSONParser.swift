@@ -116,11 +116,16 @@ private extension LLMJSONParser {
         let message = normalizedMessage(from: object["message"]) ?? fallback.message
         let workoutPlan = decodePlan(WorkoutPlan.self, from: object["workoutPlan"])
         let mealPlan = decodePlan(MealPlan.self, from: object["mealPlan"])
+        let spotifyRecommendation = decodePlan(
+            SpotifyRecommendation.self,
+            from: object["spotifyRecommendation"]
+        )
 
         return CaptainStructuredResponse(
             message: message,
             workoutPlan: workoutPlan,
-            mealPlan: mealPlan
+            mealPlan: mealPlan,
+            spotifyRecommendation: spotifyRecommendation
         )
     }
 

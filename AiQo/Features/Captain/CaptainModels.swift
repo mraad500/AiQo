@@ -4,21 +4,25 @@ struct CaptainStructuredResponse: Codable, Sendable {
     let message: String
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
+    let spotifyRecommendation: SpotifyRecommendation?
 
     private enum CodingKeys: String, CodingKey {
         case message
         case workoutPlan
         case mealPlan
+        case spotifyRecommendation
     }
 
     init(
         message: String,
         workoutPlan: WorkoutPlan? = nil,
-        mealPlan: MealPlan? = nil
+        mealPlan: MealPlan? = nil,
+        spotifyRecommendation: SpotifyRecommendation? = nil
     ) {
         self.message = message.trimmingCharacters(in: .whitespacesAndNewlines)
         self.workoutPlan = workoutPlan?.isMeaningful == true ? workoutPlan : nil
         self.mealPlan = mealPlan?.isMeaningful == true ? mealPlan : nil
+        self.spotifyRecommendation = spotifyRecommendation?.isMeaningful == true ? spotifyRecommendation : nil
     }
 
     init(from decoder: Decoder) throws {
@@ -38,6 +42,158 @@ struct CaptainStructuredResponse: Codable, Sendable {
         workoutPlan = try container.decodeIfPresent(WorkoutPlan.self, forKey: .workoutPlan)
         let decodedMealPlan = try container.decodeIfPresent(MealPlan.self, forKey: .mealPlan)
         mealPlan = decodedMealPlan?.isMeaningful == true ? decodedMealPlan : nil
+        let decodedSpotifyRecommendation = try container.decodeIfPresent(
+            SpotifyRecommendation.self,
+            forKey: .spotifyRecommendation
+        )
+        spotifyRecommendation = decodedSpotifyRecommendation?.isMeaningful == true ? decodedSpotifyRecommendation : nil
+    }
+}
+
+struct SpotifyRecommendation: Codable, Equatable, Sendable {
+    let vibeName: String
+    let description: String
+    let spotifyURI: String
+
+    private enum CodingKeys: String, CodingKey {
+        case vibeName
+        case description
+        case spotifyURI
+    }
+
+    init(
+        vibeName: String,
+        description: String,
+        spotifyURI: String
+    ) {
+        self.vibeName = vibeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.description = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.spotifyURI = spotifyURI.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let rawVibeName = try container.decode(String.self, forKey: .vibeName)
+        let normalizedVibeName = rawVibeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedVibeName.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .vibeName,
+                in: container,
+                debugDescription: "SpotifyRecommendation.vibeName must not be empty."
+            )
+        }
+
+        let rawDescription = try container.decode(String.self, forKey: .description)
+        let normalizedDescription = rawDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedDescription.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .description,
+                in: container,
+                debugDescription: "SpotifyRecommendation.description must not be empty."
+            )
+        }
+
+        let rawSpotifyURI = try container.decode(String.self, forKey: .spotifyURI)
+        let normalizedSpotifyURI = rawSpotifyURI.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedSpotifyURI.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .spotifyURI,
+                in: container,
+                debugDescription: "SpotifyRecommendation.spotifyURI must not be empty."
+            )
+        }
+
+        vibeName = normalizedVibeName
+        description = normalizedDescription
+        spotifyURI = normalizedSpotifyURI
+    }
+
+    var isMeaningful: Bool {
+        !vibeName.isEmpty && !description.isEmpty && !spotifyURI.isEmpty
+    }
+}
+
+extension SpotifyRecommendation {
+    static func myVibeFallback(
+        for userMessage: String,
+        currentVibe: String = "",
+        language: AppLanguage
+    ) -> SpotifyRecommendation {
+        let normalizedSignal = normalizedSignal(from: [userMessage, currentVibe])
+
+        if containsAny(normalizedSignal, keywords: [
+            "energy", "boost", "pump", "hype", "gym", "workout", "run",
+            "طاقه", "طاقة", "حماس", "نشاط", "تمرين", "رياضه", "رياضة"
+        ]) {
+            return recommendation(
+                vibeNameArabic: "Energy Lift",
+                vibeNameEnglish: "Energy Lift",
+                descriptionArabic: "مسار يرفع الطاقة شوي شوي بدون فوضى، حتى تدخل المود بسرعة وتبقى حاضر.",
+                descriptionEnglish: "A clean energy ramp that wakes the system up without turning the room noisy.",
+                spotifyURI: "spotify:playlist:37i9dQZF1DX76Wlfdnj7AP",
+                language: language
+            )
+        }
+
+        if containsAny(normalizedSignal, keywords: [
+            "focus", "deep work", "study", "work", "clarity", "concentrate",
+            "تركيز", "دراسه", "دراسة", "شغل", "وضوح"
+        ]) {
+            return recommendation(
+                vibeNameArabic: "Deep Focus",
+                vibeNameEnglish: "Deep Focus",
+                descriptionArabic: "تركيز ناعم وثابت يقلل التشويش ويحافظ على صفاء الخط الواحد.",
+                descriptionEnglish: "A stable focus lane built to cut noise and hold a clean line of concentration.",
+                spotifyURI: "spotify:playlist:37i9dQZF1DWZeKCadgRdKQ",
+                language: language
+            )
+        }
+
+        return recommendation(
+            vibeNameArabic: "Zen Mode",
+            vibeNameEnglish: "Zen Mode",
+            descriptionArabic: "فايب هادئ يخفف التحفيز ويرجع النفس لإيقاع أهدأ مع حضور أنظف.",
+            descriptionEnglish: "A low-stimulus grounding mix that softens the system and settles the room.",
+            spotifyURI: "spotify:playlist:37i9dQZF1DWZqd5JICZI0u",
+            language: language
+        )
+    }
+}
+
+private extension SpotifyRecommendation {
+    static func recommendation(
+        vibeNameArabic: String,
+        vibeNameEnglish: String,
+        descriptionArabic: String,
+        descriptionEnglish: String,
+        spotifyURI: String,
+        language: AppLanguage
+    ) -> SpotifyRecommendation {
+        SpotifyRecommendation(
+            vibeName: language == .arabic ? vibeNameArabic : vibeNameEnglish,
+            description: language == .arabic ? descriptionArabic : descriptionEnglish,
+            spotifyURI: spotifyURI
+        )
+    }
+
+    static func normalizedSignal(from values: [String]) -> String {
+        values
+            .joined(separator: " ")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .replacingOccurrences(of: "أ", with: "ا")
+            .replacingOccurrences(of: "إ", with: "ا")
+            .replacingOccurrences(of: "آ", with: "ا")
+            .replacingOccurrences(of: "ة", with: "ه")
+            .replacingOccurrences(of: "ـ", with: "")
+    }
+
+    static func containsAny(_ text: String, keywords: [String]) -> Bool {
+        keywords.contains { keyword in
+            text.contains(
+                keyword.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            )
+        }
     }
 }
 

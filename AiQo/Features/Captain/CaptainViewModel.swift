@@ -24,6 +24,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     var isEphemeral: Bool
     var isRead: Bool
     var accessory: ChatMessageAccessory?
+    var spotifyRecommendation: SpotifyRecommendation?
 
     init(
         id: UUID = UUID(),
@@ -33,7 +34,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         isAnimating: Bool = false,
         isEphemeral: Bool = false,
         isRead: Bool = true,
-        accessory: ChatMessageAccessory? = nil
+        accessory: ChatMessageAccessory? = nil,
+        spotifyRecommendation: SpotifyRecommendation? = nil
     ) {
         self.id = id
         self.text = text
@@ -43,6 +45,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.isEphemeral = isEphemeral
         self.isRead = isRead
         self.accessory = accessory
+        self.spotifyRecommendation = spotifyRecommendation
     }
 
     init(
@@ -53,7 +56,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         isAnimating: Bool = false,
         isEphemeral: Bool = false,
         isRead: Bool = true,
-        accessory: ChatMessageAccessory? = nil
+        accessory: ChatMessageAccessory? = nil,
+        spotifyRecommendation: SpotifyRecommendation? = nil
     ) {
         self.init(
             id: id,
@@ -63,7 +67,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
             isAnimating: isAnimating,
             isEphemeral: isEphemeral,
             isRead: isRead,
-            accessory: accessory
+            accessory: accessory,
+            spotifyRecommendation: spotifyRecommendation
         )
     }
 
@@ -340,12 +345,16 @@ final class CaptainViewModel: ObservableObject {
 
             currentWorkoutPlan = reply.workoutPlan
             currentMealPlan = reply.mealPlan
-            messages.append(
-                ChatMessage(
-                    text: reply.message,
-                    isUser: false
+
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+                messages.append(
+                    ChatMessage(
+                        text: reply.message,
+                        isUser: false,
+                        spotifyRecommendation: reply.spotifyRecommendation
+                    )
                 )
-            )
+            }
         } catch is CancellationError {
             return
         } catch {
@@ -353,8 +362,9 @@ final class CaptainViewModel: ObservableObject {
             print("CaptainViewModel hybrid brain error:", error)
             messages.append(
                 ChatMessage(
-                    text: fallbackMessage(for: error),
-                    isUser: false
+                    text: fallbackMessage(for: error, screenContext: screenContext),
+                    isUser: false,
+                    spotifyRecommendation: fallbackSpotifyRecommendation(for: screenContext)
                 )
             )
         }
@@ -468,10 +478,19 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
-    private func fallbackMessage(for error: Error) -> String {
+    private func fallbackMessage(
+        for error: Error,
+        screenContext: ScreenContext
+    ) -> String {
         if let serviceError = error as? LocalBrainServiceError {
             switch serviceError {
             case .invalidStructuredResponse:
+                if screenContext == .myVibe {
+                    return localizedFallbackMessage(
+                        arabic: "الرد المحلي طلع بصيغة مو مستقرة، فحطيتلك فايب احتياطي تقدر تفتحه مباشرة.",
+                        english: "The on-device reply came back unstable, so I dropped in a fallback vibe you can open right now."
+                    )
+                }
                 return localizedFallbackMessage(
                     arabic: "الرد المحلي طلع بصيغة غير متوقعة. جرّب مرة ثانية.",
                     english: "The on-device reply came back in an unexpected format. Try again."
@@ -487,11 +506,23 @@ final class CaptainViewModel: ObservableObject {
         if let hybridError = error as? HybridBrainServiceError {
             switch hybridError {
             case .invalidStructuredResponse:
+                if screenContext == .myVibe {
+                    return localizedFallbackMessage(
+                        arabic: "رد السحابة رجع بصيغة مو صالحة، ففعّلتلك بلايليست احتياطية حتى ما ينقطع المود.",
+                        english: "The cloud reply came back malformed, so I activated a fallback playlist to keep the vibe moving."
+                    )
+                }
                 return localizedFallbackMessage(
                     arabic: "رد السحابة رجع بصيغة غير صالحة للواجهة. جرّب مرة ثانية.",
                     english: "The cloud reply came back in an invalid format. Try again."
                 )
             case .networkUnavailable, .requestFailed:
+                if screenContext == .myVibe {
+                    return localizedFallbackMessage(
+                        arabic: "الاتصال بالسحابة مو ثابت هسه، فرتبتلك فايب احتياطي من سبوتفاي لحد ما يرجع الاتصال.",
+                        english: "The cloud connection is unstable right now, so I queued a Spotify fallback vibe until the network settles."
+                    )
+                }
                 return localizedFallbackMessage(
                     arabic: "الاتصال بالسحابة مو ثابت هسه. جرّب مرة ثانية.",
                     english: "The cloud connection is unstable right now. Try again."
@@ -513,9 +544,26 @@ final class CaptainViewModel: ObservableObject {
             }
         }
 
+        if screenContext == .myVibe {
+            return localizedFallbackMessage(
+                arabic: "صار خلل بسيط بمخ الدي جي، فحطيتلك فايب احتياطي يشتغل مباشرة.",
+                english: "DJ Hamoudi hit a small issue, so I added a fallback vibe you can open immediately."
+            )
+        }
+
         return localizedFallbackMessage(
             arabic: "صار خلل بسيط بمخ الكابتن يا بطل. جرّب مرة ثانية.",
             english: "Captain hit a small issue. Try again."
+        )
+    }
+
+    private func fallbackSpotifyRecommendation(for screenContext: ScreenContext) -> SpotifyRecommendation? {
+        guard screenContext == .myVibe else { return nil }
+
+        let latestUserMessage = messages.last(where: { $0.isUser })?.text ?? ""
+        return SpotifyRecommendation.myVibeFallback(
+            for: latestUserMessage,
+            language: AppSettingsStore.shared.appLanguage
         )
     }
 

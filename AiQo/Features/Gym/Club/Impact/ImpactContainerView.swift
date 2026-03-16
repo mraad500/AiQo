@@ -64,7 +64,11 @@ struct ImpactContainerView: View {
     }
 
     var body: some View {
-        ZStack {
+        ClubStandardRightRailContainer(
+            items: railItems,
+            selection: selectedTabIndex,
+            accessibilityLabel: Text(verbatim: L10n.t("club.impact_tabs.accessibility.label"))
+        ) {
             ZStack {
                 switch selectedTab {
                 case .summary:
@@ -79,13 +83,6 @@ struct ImpactContainerView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.trailing, contentTrailingPadding)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
-
-            SlimRightSideRail(
-                items: railItems,
-                selection: selectedTabIndex
-            )
-            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
-            .accessibilityLabel(Text(verbatim: L10n.t("club.impact_tabs.accessibility.label")))
         }
     }
 

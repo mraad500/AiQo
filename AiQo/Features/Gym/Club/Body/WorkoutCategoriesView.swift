@@ -53,7 +53,11 @@ struct WorkoutCategoriesView: View {
     }
 
     var body: some View {
-        ZStack {
+        ClubStandardRightRailContainer(
+            items: railItems,
+            selection: $selection,
+            accessibilityLabel: Text("فئات التمارين")
+        ) {
             WorkoutCategoriesBackdrop()
                 .ignoresSafeArea()
 
@@ -89,13 +93,6 @@ struct WorkoutCategoriesView: View {
             }
             .contentMargins(.top, 0, for: .scrollContent)
             .contentMargins(.top, 0, for: .scrollIndicators)
-
-            SlimRightSideRail(
-                items: railItems,
-                selection: $selection
-            )
-            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
-            .accessibilityLabel(Text("فئات التمارين"))
         }
         .onAppear {
             animateCards(for: currentItems)
@@ -273,7 +270,7 @@ struct GlassWorkoutCard: View {
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(item.title)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
@@ -282,7 +279,7 @@ struct GlassWorkoutCard: View {
 
             if let subtitle = item.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.70))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -369,13 +366,13 @@ private struct WorkoutPlaceholderDetailView: View {
 
                     VStack(spacing: 14) {
                         Text(item.title)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         if let subtitle = item.subtitle, !subtitle.isEmpty {
                             Text(subtitle)
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary.opacity(0.72))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }

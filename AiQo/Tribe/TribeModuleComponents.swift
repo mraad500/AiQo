@@ -92,7 +92,7 @@ struct TribeTopSegmentedControl: View {
     }
 }
 
-struct TribeView: View {
+struct LegacyTribeView: View {
     let heroSummary: TribeSummary
     let featuredMembers: [TribeRingMember]
     let onRefresh: @Sendable () async -> Void

@@ -34,6 +34,7 @@ struct HybridBrainServiceReply: Sendable {
     let message: String
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
+    let spotifyRecommendation: SpotifyRecommendation?
     let rawText: String
 }
 
@@ -211,6 +212,7 @@ struct HybridBrainService: Sendable {
             message: structuredResponse.message,
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
+            spotifyRecommendation: structuredResponse.spotifyRecommendation,
             rawText: rawText
         )
     }
@@ -220,7 +222,8 @@ struct HybridBrainService: Sendable {
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
             workoutPlan: reply.workoutPlan,
-            mealPlan: reply.mealPlan
+            mealPlan: reply.mealPlan,
+            spotifyRecommendation: reply.spotifyRecommendation
         )
 
         return HybridBrainStreamingSession(
@@ -406,6 +409,19 @@ private extension HybridBrainService {
         - HasKitchenImage: \(request.screenContext == .kitchen && request.hasAttachedImage ? "true" : "false")
         - UserProfileSummary: \(normalizedProfileSummary)
 
+        Output rules:
+        - Always return valid JSON for the schema below.
+        - For ScreenContext `myVibe`, populate `spotifyRecommendation` when the user asks for music, a playlist, a mood, focus audio, or energy pacing.
+        - For ScreenContext `myVibe`, if the user asks for music, a playlist, a vibe, or mood enhancement, you MUST NOT return null for `spotifyRecommendation`.
+        - For ScreenContext `myVibe`, you strictly must construct and return a valid Spotify URI that matches the defined JSON schema.
+        - When the user asks for music, a mood, or a playlist, dynamically generate `spotifyRecommendation`.
+        - The `message` text must logically match `spotifyRecommendation.vibeName` and must not describe a different mood or title.
+        - For `spotifyURI`, actively generate a real Spotify search URI from the user's exact request, such as `spotify:search:Arabic+Workout+Motivation`.
+        - Never hardcode `Zen Mode` unless the user explicitly asks for Zen Mode.
+        - Use `spotify:search:<query>` for intent-led mixes and `spotify:playlist:<id>` only when you have a concrete playlist that truly matches the request.
+        - When `spotifyRecommendation` is present, keep `workoutPlan` and `mealPlan` null unless the user explicitly asked for them.
+        - For non-music requests, return `spotifyRecommendation` as null.
+
         Return only JSON that matches the required schema.
         """
     }
@@ -481,17 +497,38 @@ private extension HybridBrainService {
             ]
         ]
 
+        let spotifyRecommendationSchema: [String: Any] = [
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["vibeName", "description", "spotifyURI"],
+            "properties": [
+                "vibeName": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "description": [
+                    "type": "string",
+                    "minLength": 1
+                ],
+                "spotifyURI": [
+                    "type": "string",
+                    "minLength": 1
+                ]
+            ]
+        ]
+
         return [
             "type": "object",
             "additionalProperties": false,
-            "required": ["message", "workoutPlan", "mealPlan"],
+            "required": ["message", "workoutPlan", "mealPlan", "spotifyRecommendation"],
             "properties": [
                 "message": [
                     "type": "string",
                     "minLength": 1
                 ],
                 "workoutPlan": workoutPlanSchema,
-                "mealPlan": mealPlanSchema
+                "mealPlan": mealPlanSchema,
+                "spotifyRecommendation": spotifyRecommendationSchema
             ]
         ]
     }

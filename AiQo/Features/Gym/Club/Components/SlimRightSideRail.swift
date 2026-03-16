@@ -4,9 +4,15 @@ import UIKit
 enum ClubChromeLayout {
     static let headerLeadingInset: CGFloat = 16
     static let headerTrailingInset: CGFloat = 2
-    static let headerTopPadding: CGFloat = 6
-    static let headerBottomPadding: CGFloat = 10
-    static let topChromeHeight: CGFloat = headerTopPadding + headerBottomPadding + 56
+    static let headerTopPadding: CGFloat = 8
+    static let headerBottomPadding: CGFloat = 12
+    static let topTabsControlHeight: CGFloat = 52
+    static let topTabsInnerHeight: CGFloat = 40
+    static let topTabsTopSpacing: CGFloat = 6
+    static let topTabsMinWidth: CGFloat = 220
+    static let topTabsMaxWidth: CGFloat = 340
+    static let topChromeHeight: CGFloat =
+        headerTopPadding + headerBottomPadding + topTabsTopSpacing + topTabsControlHeight
 
     static let railWidth: CGFloat = 46
     static let trailingLaneWidth: CGFloat = 78
@@ -53,7 +59,7 @@ struct SlimRightSideRailConfiguration: Equatable {
         stackSpacing: 7,
         contentInsets: NSDirectionalEdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0),
         horizontalPositionOffset: -12,
-        verticalCenterRatio: 0.31
+        verticalCenterRatio: 0.68
     )
 }
 
@@ -97,6 +103,40 @@ struct SlimRightSideRail: View {
         let visibleItemCount = max(1, min(itemCount, configuration.maxVisibleItems ?? itemCount))
         let spacing = configuration.stackSpacing * CGFloat(max(visibleItemCount - 1, 0))
         return (CGFloat(visibleItemCount) * configuration.itemHeight) + spacing + 12
+    }
+}
+
+struct ClubStandardRightRailContainer<Content: View>: View {
+    let items: [RailItem]
+    @Binding var selection: Int
+    let accessibilityLabel: Text
+    @ViewBuilder let content: () -> Content
+
+    init(
+        items: [RailItem],
+        selection: Binding<Int>,
+        accessibilityLabel: Text,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.items = items
+        _selection = selection
+        self.accessibilityLabel = accessibilityLabel
+        self.content = content
+    }
+
+    var body: some View {
+        ZStack {
+            content()
+
+            SlimRightSideRail(
+                items: items,
+                selection: $selection
+            )
+            .offset(x: ClubChromeLayout.railLocalScreenOffsetX)
+            .zIndex(1)
+            .accessibilityLabel(accessibilityLabel)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
