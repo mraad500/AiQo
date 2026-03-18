@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Supabase
 import Auth
+import HealthKit
 internal import Combine
 
 private enum OnboardingKeys {
@@ -43,12 +44,59 @@ final class AppFlowController: ObservableObject {
 
     func onboardingFinished() {
         Task { @MainActor in
+            // Request all remaining HealthKit permissions
+            await requestFullHealthKitPermissions()
+
+            // Request notification permission
             requestNotificationAuthorizationIfNeeded()
+
             await protectionModel.requestAuthorization()
 
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .main)
+        }
+    }
+
+    private func requestFullHealthKitPermissions() async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+
+        let healthStore = HKHealthStore()
+
+        let allReadTypes: Set<HKObjectType> = [
+            HKQuantityType(.stepCount),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.distanceWalkingRunning),
+            HKQuantityType(.distanceCycling),
+            HKQuantityType(.heartRate),
+            HKQuantityType(.heartRateVariabilitySDNN),
+            HKQuantityType(.restingHeartRate),
+            HKQuantityType(.walkingHeartRateAverage),
+            HKQuantityType(.oxygenSaturation),
+            HKQuantityType(.vo2Max),
+            HKQuantityType(.bodyMass),
+            HKQuantityType(.dietaryWater),
+            HKQuantityType(.appleStandTime),
+            HKCategoryType(.sleepAnalysis),
+            HKObjectType.activitySummaryType(),
+            HKObjectType.workoutType()
+        ]
+
+        let allWriteTypes: Set<HKSampleType> = [
+            HKQuantityType(.heartRate),
+            HKQuantityType(.heartRateVariabilitySDNN),
+            HKQuantityType(.restingHeartRate),
+            HKQuantityType(.vo2Max),
+            HKQuantityType(.distanceWalkingRunning),
+            HKQuantityType(.dietaryWater),
+            HKQuantityType(.bodyMass),
+            HKObjectType.workoutType()
+        ]
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            healthStore.requestAuthorization(toShare: allWriteTypes, read: allReadTypes) { _, _ in
+                continuation.resume()
+            }
         }
     }
 
@@ -71,7 +119,7 @@ final class AppFlowController: ObservableObject {
     }
 
     private func transition(to screen: RootScreen) {
-        withAnimation(.easeInOut(duration: 0.45)) {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
             currentScreen = screen
             refreshID = UUID()
         }
@@ -141,16 +189,28 @@ struct AppRootView: View {
         switch flow.currentScreen {
         case .login:
             LoginScreenView()
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
         case .dating:
             DatingScreenView()
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
         case .legacy:
             LegacyCalculationScreenView()
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
         case .main:
             MainTabScreen()
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
         }
     }
 }

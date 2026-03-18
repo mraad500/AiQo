@@ -85,7 +85,7 @@ struct MyPlanView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 // Title
                 Text(L10n.t("plan.title"))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -93,31 +93,31 @@ struct MyPlanView: View {
                     .padding(.top, 18)
 
                 workoutPlanEntryCard
-                
+
                 // Stats Overview Section
                 sectionHeader(L10n.t("plan.overview"))
                 statsCard
-                
+
                 // Today's Workouts Section
                 Text(L10n.t("plan.today_workouts"))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                     .padding(.top, 4)
-                
+
                 todayWorkoutsCard
-                
+
                 // Templates Section
                 Text(L10n.t("plan.templates"))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                     .padding(.top, 4)
-                
+
                 templatesCard
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 40)
         }
-        .background(Color(.systemBackground))
+        .background(Color.white.ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
     }
     
@@ -158,19 +158,16 @@ struct MyPlanView: View {
             }
             .padding(18)
             .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(.ultraThinMaterial)
-
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(workoutCardTint.opacity(0.82))
-                }
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.97, green: 0.84, blue: 0.64), Color(red: 0.97, green: 0.84, blue: 0.64).opacity(0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 7)
+            .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
         }
         .buttonStyle(.plain)
         .padding(.top, 10)
@@ -291,30 +288,36 @@ struct MyPlanView: View {
 struct PlanGlassCard<Content: View>: View {
     enum Tone {
         case mint, sand
-        
-        var color: Color {
+
+        var gradient: LinearGradient {
             switch self {
-            case .mint: return GymTheme.mint
-            case .sand: return GymTheme.beige
+            case .mint:
+                return LinearGradient(
+                    colors: [Color(red: 0.77, green: 0.94, blue: 0.86), Color(red: 0.77, green: 0.94, blue: 0.86).opacity(0.85)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .sand:
+                return LinearGradient(
+                    colors: [Color(red: 0.97, green: 0.84, blue: 0.64), Color(red: 0.97, green: 0.84, blue: 0.64).opacity(0.85)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         }
     }
-    
+
     let tone: Tone
     @ViewBuilder let content: Content
-    
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(tone.color)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.30), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(tone.gradient)
 
             content
         }
+        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
     }
 }
 

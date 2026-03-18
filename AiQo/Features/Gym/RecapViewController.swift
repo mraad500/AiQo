@@ -131,14 +131,12 @@ struct DatePillView: View {
     var body: some View {
         HStack {
             Text(text)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.primary)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color(hex: "1A1A1A"))
                 .padding(.horizontal, 14)
-                .padding(.vertical, 9)
+                .padding(.vertical, 6)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color(.secondarySystemBackground).opacity(0.78))
-                        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 6)
+                    Capsule().fill(Color(hex: "F5F5F5"))
                 )
             Spacer()
         }
@@ -155,7 +153,15 @@ struct HistoryCardView: View {
 
     var body: some View {
         ZStack {
-            SoftGlassBackground(tint: item.tint, intensity: 0.42)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "E8F7F0"), Color(hex: "D4F0E3")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
 
             HStack(spacing: 14) {
                 ZStack {

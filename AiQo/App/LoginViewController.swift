@@ -7,6 +7,7 @@ internal import Combine
 
 struct LoginScreenView: View {
     @StateObject private var viewModel = LoginScreenViewModel()
+    @State private var appeared = false
 
     private var layoutDirection: LayoutDirection {
         AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
@@ -16,72 +17,78 @@ struct LoginScreenView: View {
         ZStack {
             AuthFlowBackground()
 
-            VStack(spacing: 22) {
-                AuthFlowBrandHeader(
-                    subtitle: localized("login.brand.subtitle", fallback: "World Class Wellness System")
-                )
+            VStack(spacing: 0) {
+                Spacer()
 
+                // Logo
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(AuthFlowTheme.mint)
+                        .font(.system(size: 24, weight: .medium, design: .rounded))
+                    Text("AiQo")
+                        .font(.system(size: 48, weight: .black, design: .rounded))
+                }
+                .padding(.bottom, 40)
+
+                // Card
                 AuthFlowCard {
-                    VStack(spacing: 18) {
-                        Text(localized("login.welcome.title", fallback: "أهلًا بيك في AiQo"))
-                            .font(.aiqoDisplay(33))
-                            .foregroundStyle(AuthFlowTheme.text)
+                    VStack(spacing: 20) {
+                        Text(localized("login.welcome.title", fallback: "أهلاً بيك في AiQo"))
+                            .font(.system(size: 26, weight: .black, design: .rounded))
                             .multilineTextAlignment(.center)
 
                         Text(localized(
                             "login.welcome.subtitle",
                             fallback: "أنشئ حسابك حتى نحفظ تقدمك الصحي ونزامن بياناتك بأمان."
                         ))
-                        .font(.aiqoBody(16))
-                        .foregroundStyle(AuthFlowTheme.subtext)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
 
-                        VStack(spacing: 13) {
-                            Text(localized("login.apple.hint", fallback: "التسجيل يتم فقط باستخدام Apple"))
-                                .font(.aiqoLabel(13))
-                                .tracking(0.6)
-                                .foregroundStyle(AuthFlowTheme.subtext)
+                        Text(localized("login.apple.hint", fallback: "التسجيل يتم فقط باستخدام Apple"))
+                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .foregroundColor(AuthFlowTheme.mint)
 
-                            SignInWithAppleButton(.signIn) { request in
-                                viewModel.prepareAppleSignInRequest(request)
-                            } onCompletion: { result in
-                                viewModel.handleAppleAuthorizationResult(result)
-                            }
-                            .signInWithAppleButtonStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                            )
-                            .shadow(color: Color.black.opacity(0.35), radius: 10, x: 0, y: 6)
-                            .disabled(viewModel.isLoading)
-                            .opacity(viewModel.isLoading ? 0.55 : 1.0)
-
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .tint(AuthFlowTheme.mint)
-                            }
-
-                            if let error = viewModel.errorMessage {
-                                Text(error)
-                                    .font(.aiqoBody(13))
-                                    .foregroundStyle(Color.red.opacity(0.9))
-                                    .multilineTextAlignment(.center)
-                            }
+                        SignInWithAppleButton(.signUp) { request in
+                            viewModel.prepareAppleSignInRequest(request)
+                        } onCompletion: { result in
+                            viewModel.handleAppleAuthorizationResult(result)
                         }
-                        .padding(.top, 8)
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 56)
+                        .cornerRadius(16)
+                        .disabled(viewModel.isLoading)
+                        .opacity(viewModel.isLoading ? 0.55 : 1.0)
+
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .tint(AuthFlowTheme.mint)
+                        }
+
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.system(size: 13, weight: .regular, design: .rounded))
+                                .foregroundColor(.red.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                        }
                     }
                 }
+                .padding(.horizontal, 24)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 30)
+                .scaleEffect(appeared ? 1 : 0.96)
+
+                Spacer()
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 20)
         }
         .environment(\.layoutDirection, layoutDirection)
-        .preferredColorScheme(.dark)
         .onAppear {
             viewModel.onLoginSuccess = {
                 AppFlowController.shared.didLoginSuccessfully()
+            }
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                appeared = true
             }
         }
     }

@@ -1060,8 +1060,8 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo uses HealthKit on iPhone to coordinate Apple Watch workouts and show live heart rate, calories, distance, and elapsed time.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo uses HealthKit on iPhone to launch and manage Apple Watch workout sessions that are saved to Apple Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo يقرأ بياناتك الصحية لتحديد مستواك وتتبع تقدمك اليومي";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo يسجّل بيانات التمارين والنبض لتحليل أدائك";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
@@ -1128,8 +1128,8 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "يستخدم AiQo الكاميرا لحساب العدّات ودقة الأداء داخل تحديات التمارين بشكل محلي وآمن.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo uses HealthKit on iPhone to coordinate Apple Watch workouts and show live heart rate, calories, distance, and elapsed time.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo uses HealthKit on iPhone to launch and manage Apple Watch workout sessions that are saved to Apple Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo يقرأ بياناتك الصحية لتحديد مستواك وتتبع تقدمك اليومي";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo يسجّل بيانات التمارين والنبض لتحليل أدائك";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";

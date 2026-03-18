@@ -46,7 +46,8 @@ struct CaptainChatView: View {
                             .frame(height: 1)
                             .id(bottomAnchorID)
                     }
-                    .padding(.horizontal, 14)
+                    // CHANGED: horizontal padding from 14 to 16pt — messages flow directly on screen background, no container box
+                    .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 20)
                 }
@@ -89,6 +90,7 @@ struct CaptainChatView: View {
 }
 
 private extension CaptainChatView {
+    // CHANGED: Title HStack is now leading-aligned (shifts left on screen in RTL context)
     var headerCard: some View {
         HStack(spacing: 12) {
             CaptainChatAvatarView(size: 40)
@@ -120,6 +122,8 @@ private extension CaptainChatView {
                     .fill(Color.white.opacity(0.22))
             )
         }
+        // CHANGED: leading-aligned instead of centered, pushes title toward left side of screen
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 2)
         .padding(.vertical, 8)
     }

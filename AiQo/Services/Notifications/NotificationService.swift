@@ -95,11 +95,11 @@ final class NotificationService {
     private func routeFromNotification(type: NotificationType) {
         Task { @MainActor in
             switch type {
-            case .dailyStepsReminder, .workoutReminder:
+            case .dailyStepsReminder, .workoutReminder, .stepGoalProgress:
                 MainTabRouter.shared.navigate(to: .gym)
-            case .waterReminder:
+            case .waterReminder, .mealTimeReminder:
                 MainTabRouter.shared.navigate(to: .kitchen)
-            case .checkInReminder:
+            case .checkInReminder, .sleepReminder:
                 MainTabRouter.shared.navigate(to: .home)
             }
         }
@@ -218,6 +218,164 @@ final class CaptainSmartNotificationService {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    // MARK: - Water Reminder
+
+    func evaluateWaterAndNotifyIfNeeded(currentLiters: Double, targetLiters: Double) {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard currentLiters < targetLiters * 0.5 else { return }
+
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        guard (9...21).contains(currentHour) else { return }
+        guard canSendWaterReminderNow() else { return }
+
+        let remaining = targetLiters - currentLiters
+        let body = "شربت ماي؟ باقيلك \(String(format: "%.1f", remaining)) لتر عشان توصل هدفك. 💧"
+
+        sendCaptainNotification(
+            title: "كابتن حمودي",
+            body: body,
+            type: "waterReminder",
+            messageText: body
+        )
+        defaults.set(Date(), forKey: lastWaterReminderSentAtKey)
+    }
+
+    // MARK: - Meal Time Reminder
+
+    func evaluateMealTimeAndNotifyIfNeeded() {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        let mealInfo: (name: String, type: String)?
+
+        switch currentHour {
+        case 7...9:
+            mealInfo = ("الفطور", "breakfast")
+        case 12...14:
+            mealInfo = ("الغداء", "lunch")
+        case 18...20:
+            mealInfo = ("العشاء", "dinner")
+        default:
+            mealInfo = nil
+        }
+
+        guard let meal = mealInfo else { return }
+        guard canSendMealReminderNow(meal: meal.type) else { return }
+
+        let body = "وقت \(meal.name)، خل ناكل صحّي. 🍽️"
+
+        sendCaptainNotification(
+            title: "كابتن حمودي",
+            body: body,
+            type: "mealTimeReminder",
+            messageText: body
+        )
+        defaults.set(Date(), forKey: "\(lastMealReminderSentAtKeyPrefix).\(meal.type)")
+    }
+
+    // MARK: - Step Goal Progress
+
+    func evaluateStepGoalAndNotifyIfNeeded(currentSteps: Int, targetSteps: Int) {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard targetSteps > 0 else { return }
+
+        let progress = Double(currentSteps) / Double(targetSteps)
+        let milestone: Int?
+
+        if progress >= 0.9 && progress < 1.0 {
+            milestone = 90
+        } else if progress >= 0.75 && progress < 0.9 {
+            milestone = 75
+        } else if progress >= 0.5 && progress < 0.75 {
+            milestone = 50
+        } else {
+            milestone = nil
+        }
+
+        guard let milestone else { return }
+        guard canSendStepGoalNow(milestone: milestone) else { return }
+
+        let remaining = targetSteps - currentSteps
+        let body: String
+        switch milestone {
+        case 90:
+            body = "باقيلك \(remaining) خطوة بس، يلا كمّل! 🔥"
+        case 75:
+            body = "وصلت ٧٥٪ من هدفك، كمّل لا تستسلم! 💪"
+        default:
+            body = "نص الطريق! \(currentSteps) خطوة لحد هسّه، يلا نكمّل."
+        }
+
+        sendCaptainNotification(
+            title: "كابتن حمودي",
+            body: body,
+            type: "stepGoalProgress",
+            messageText: body
+        )
+        defaults.set(Date(), forKey: "\(lastStepGoalSentAtKeyPrefix).\(milestone)")
+    }
+
+    // MARK: - Sleep Reminder
+
+    func evaluateSleepTimeAndNotifyIfNeeded(targetBedtimeHour: Int) {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+
+        let now = Date()
+        let currentHour = Calendar.current.component(.hour, from: now)
+        let currentMinute = Calendar.current.component(.minute, from: now)
+
+        // Notify 30 minutes before target bedtime
+        let isApproaching = (currentHour == targetBedtimeHour - 1 && currentMinute >= 30) ||
+                            (currentHour == targetBedtimeHour && currentMinute == 0)
+
+        guard isApproaching else { return }
+        guard canSendSleepReminderNow() else { return }
+
+        let body = "وقت النوم قرب، جهّز نفسك للنوم. جسمك يحتاج راحة عشان باچر يكون أحسن. 🌙"
+
+        sendCaptainNotification(
+            title: "كابتن حمودي",
+            body: body,
+            type: "sleepReminder",
+            messageText: body
+        )
+        defaults.set(Date(), forKey: lastSleepReminderSentAtKey)
+    }
+
+    // MARK: - Cooldown Keys
+
+    private let lastWaterReminderSentAtKey = "aiqo.captain.lastWaterReminderSentAt"
+    private let lastMealReminderSentAtKeyPrefix = "aiqo.captain.lastMealReminderSentAt"
+    private let lastStepGoalSentAtKeyPrefix = "aiqo.captain.lastStepGoalSentAt"
+    private let lastSleepReminderSentAtKey = "aiqo.captain.lastSleepReminderSentAt"
+
+    private let waterReminderCooldownSeconds: TimeInterval = 2 * 60 * 60  // 2 hours
+    private let mealReminderCooldownSeconds: TimeInterval = 4 * 60 * 60   // 4 hours
+    private let stepGoalCooldownSeconds: TimeInterval = 60 * 60           // 1 hour
+    private let sleepReminderCooldownSeconds: TimeInterval = 20 * 60 * 60 // 20 hours
+
+    private func canSendWaterReminderNow() -> Bool {
+        guard let last = defaults.object(forKey: lastWaterReminderSentAtKey) as? Date else { return true }
+        return Date().timeIntervalSince(last) >= waterReminderCooldownSeconds
+    }
+
+    private func canSendMealReminderNow(meal: String) -> Bool {
+        let key = "\(lastMealReminderSentAtKeyPrefix).\(meal)"
+        guard let last = defaults.object(forKey: key) as? Date else { return true }
+        return Date().timeIntervalSince(last) >= mealReminderCooldownSeconds
+    }
+
+    private func canSendStepGoalNow(milestone: Int) -> Bool {
+        let key = "\(lastStepGoalSentAtKeyPrefix).\(milestone)"
+        guard let last = defaults.object(forKey: key) as? Date else { return true }
+        return Date().timeIntervalSince(last) >= stepGoalCooldownSeconds
+    }
+
+    private func canSendSleepReminderNow() -> Bool {
+        guard let last = defaults.object(forKey: lastSleepReminderSentAtKey) as? Date else { return true }
+        return Date().timeIntervalSince(last) >= sleepReminderCooldownSeconds
     }
 
     private func generateInactivityMessage(currentSteps: Int) async -> String {

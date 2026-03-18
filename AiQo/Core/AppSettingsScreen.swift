@@ -118,6 +118,29 @@ struct AppSettingsScreen: View {
                 .padding(.vertical, 4)
             }
 
+            Section("كابتن حمّودي") {
+                NavigationLink {
+                    CaptainMemorySettingsView()
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("ذاكرة الكابتن 🧠")
+                                .foregroundStyle(.primary)
+
+                            Text("المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "brain")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section("Community") {
                 Button {
                     showTribeFlow = true

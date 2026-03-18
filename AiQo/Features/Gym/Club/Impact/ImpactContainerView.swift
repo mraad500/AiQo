@@ -50,25 +50,10 @@ struct ImpactContainerView: View {
 
     let winsStore: WinsStore
 
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 10
-
-    private var railItems: [RailItem] {
-        ImpactSubTab.allCases.map {
-            RailItem(
-                id: $0.rawValue,
-                title: L10n.t($0.titleKey),
-                icon: $0.railIcon,
-                tint: $0.railTint
-            )
-        }
-    }
+    private let filterLabels = ["الملخص", "الإنجازات"]
 
     var body: some View {
-        ClubStandardRightRailContainer(
-            items: railItems,
-            selection: selectedTabIndex,
-            accessibilityLabel: Text(verbatim: L10n.t("club.impact_tabs.accessibility.label"))
-        ) {
+        HStack(alignment: .top, spacing: 0) {
             ZStack {
                 switch selectedTab {
                 case .summary:
@@ -81,21 +66,47 @@ struct ImpactContainerView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.trailing, contentTrailingPadding)
             .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
+
+            impactSideFilter
+                .frame(width: 58)
         }
     }
 
-    private var selectedTabIndex: Binding<Int> {
-        Binding(
-            get: {
-                ImpactSubTab.allCases.firstIndex(of: selectedTab) ?? 0
-            },
-            set: { newValue in
-                guard ImpactSubTab.allCases.indices.contains(newValue) else { return }
-                selectedTab = ImpactSubTab.allCases[newValue]
+    private var impactSideFilter: some View {
+        VStack(spacing: 4) {
+            ForEach(Array(ImpactSubTab.allCases.enumerated()), id: \.element) { index, tab in
+                let isSelected = selectedTab == tab
+                let label = filterLabels[index]
+
+                Button {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    Text(label)
+                        .font(.system(size: 9, weight: isSelected ? .heavy : .medium))
+                        .foregroundColor(isSelected ? Color(hex: "1A1A1A") : Color(hex: "AAAAAA"))
+                        .frame(width: 44, height: 62)
+                        .background {
+                            if isSelected {
+                                Capsule().fill(Color(hex: "FFE68C"))
+                                    .shadow(color: Color(hex: "FFE68C").opacity(0.4), radius: 4, y: 2)
+                            } else {
+                                Capsule().fill(Color.clear)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
             }
-        )
+        }
+        .padding(4)
+        .background(Color(hex: "F5F5F5"))
+        .clipShape(RoundedRectangle(cornerRadius: 25))
+        .padding(.top, 120)
+        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+        .accessibilityLabel(Text(verbatim: L10n.t("club.impact_tabs.accessibility.label")))
     }
 }
 

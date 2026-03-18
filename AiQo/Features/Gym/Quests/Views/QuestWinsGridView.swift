@@ -11,25 +11,33 @@ struct QuestWinsGridView: View {
 
     var body: some View {
         let visibleWins = winsStore.wins.filter { !isHiddenWin($0) }
+        let questAchievements = QuestAchievementStore.load().sorted(by: { $0.earnedDate > $1.earnedDate })
 
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text(L10n.t("wins.title"))
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
 
-                if visibleWins.isEmpty {
+                // Quest achievements section
+                if !questAchievements.isEmpty {
+                    ForEach(questAchievements) { achievement in
+                        QuestAchievementCard(achievement: achievement)
+                    }
+                }
+
+                if visibleWins.isEmpty, questAchievements.isEmpty {
                     emptyState
-                } else {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(visibleWins) { win in
-                            WinAwardCard(win: win)
+                } else if !visibleWins.isEmpty {
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(Array(visibleWins.enumerated()), id: \.element.id) { index, win in
+                            WinAwardCard(win: win, useMint: index.isMultiple(of: 2))
                         }
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 32)
+            .padding(.bottom, 100)
             .background(alignment: .top) {
                 RailScrollOffsetReader(coordinateSpaceName: railScrollOffsetSpaceName)
             }
@@ -41,25 +49,19 @@ struct QuestWinsGridView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Text(L10n.t("quests.wins.empty_title"))
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-            Text(L10n.t("quests.wins.empty_subtitle"))
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 16) {
+            Image(systemName: "trophy")
+                .font(.system(size: 48))
+                .foregroundColor(Color(hex: "DDDDDD"))
+            Text("ما عندك إنجازات بعد")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color(hex: "999999"))
+            Text("أكمل تحديات قِمَم عشان تحصل على جوائز")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(Color(hex: "AAAAAA"))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 30)
-        .padding(.horizontal, 18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(GymTheme.mint.opacity(0.16))
-                )
-        )
+        .padding(.top, 60)
     }
 
     private func isHiddenWin(_ win: WinRecord) -> Bool {
@@ -78,6 +80,7 @@ struct QuestWinsGridView: View {
 
 private struct WinAwardCard: View {
     let win: WinRecord
+    var useMint: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -105,17 +108,14 @@ private struct WinAwardCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 234, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(GymTheme.beige.opacity(0.19))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.34), lineWidth: 0.6)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    useMint
+                        ? LinearGradient(colors: [Color(hex: "E8F7F0"), Color(hex: "D4F0E3")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [Color(hex: "F7EDD8"), Color(hex: "EBCF97"), Color(hex: "F0DFB8")], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
         )
+        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -190,5 +190,51 @@ private struct WinAwardCard: View {
             return nil
         }
         return (lhs, rhs)
+    }
+}
+
+private struct QuestAchievementCard: View {
+    let achievement: QuestEarnedAchievement
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Badge image
+            Image(achievement.badgeImageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 64, height: 64)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(achievement.questName)
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundColor(Color(hex: "1A1A1A"))
+
+                Text("المرحلة \(achievement.stageNumber)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(hex: "666666"))
+
+                Text(achievement.formattedDate)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(hex: "999999"))
+            }
+
+            Spacer()
+
+            // Checkmark
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 22))
+                .foregroundColor(Color(hex: "B7E5D2"))
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "E8F7F0"), Color(hex: "D4F0E3")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
     }
 }

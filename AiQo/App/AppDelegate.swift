@@ -14,6 +14,45 @@ struct AiQoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var globalBrain = CaptainViewModel()
 
+    /// ModelContainer منفصل لذاكرة الكابتن ومشاريع كسر الأرقام — store مخصص عشان ما يتعارض مع الـ containers الثانية
+    private let captainContainer: ModelContainer = {
+        do {
+            let schema = Schema([
+                CaptainMemory.self,
+                RecordProject.self,
+                WeeklyLog.self
+            ])
+
+            // مسار مخصص منفصل عن default.store
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+            let storeURL = appSupport.appending(path: "captain_memory.store")
+
+            let config = ModelConfiguration(
+                "CaptainMemoryStore",
+                schema: schema,
+                url: storeURL
+            )
+            return try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            fatalError("Failed to create CaptainMemory ModelContainer: \(error)")
+        }
+    }()
+
+    init() {
+        // ربط الـ stores بالـ container
+        MemoryStore.shared.configure(container: captainContainer)
+        RecordProjectManager.shared.configure(container: captainContainer)
+
+        // تنظيف الذكريات القديمة
+        MemoryStore.shared.removeStale()
+
+        // مزامنة HealthKit مع الذاكرة
+        Task {
+            await HealthKitMemoryBridge.syncHealthDataToMemory()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             AppRootView()

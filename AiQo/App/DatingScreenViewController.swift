@@ -7,6 +7,7 @@ struct DatingScreenView: View {
     @State private var gender: ActivityNotificationGender = .male
     @State private var weightText = ""
     @State private var heightText = ""
+    @State private var appeared = false
 
     private var layoutDirection: LayoutDirection {
         AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
@@ -25,93 +26,132 @@ struct DatingScreenView: View {
         ZStack {
             AuthFlowBackground()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 22) {
-                    AuthFlowBrandHeader(
-                        subtitle: localized("dating.brand.subtitle", fallback: "Elite Profile Setup")
-                    )
+            VStack(spacing: 0) {
+                AuthFlowBrandHeader()
 
-                    AuthFlowCard {
-                        VStack(spacing: 18) {
-                            Text(localized("dating.title", fallback: "كمّل ملفك الشخصي"))
-                                .font(.aiqoDisplay(32))
-                                .foregroundStyle(AuthFlowTheme.text)
-                                .multilineTextAlignment(.center)
-
-                            Text(localized(
-                                "dating.subtitle",
-                                fallback: "أدخل معلوماتك حتى نجهّز خطتك الصحية بشكل أدق."
-                            ))
-                            .font(.aiqoBody(15))
-                            .foregroundStyle(AuthFlowTheme.subtext)
-                            .multilineTextAlignment(.center)
-
-                            AuthFlowTextField(
-                                title: localized("dating.name", fallback: "الاسم"),
-                                text: $fullName,
-                                keyboardType: .default
-                            )
-
-                            AuthFlowTextField(
-                                title: localized("dating.username", fallback: "اسم المستخدم"),
-                                text: $username,
-                                keyboardType: .asciiCapable
-                            )
-
-                            AuthFlowFieldPanel(
-                                title: localized("dating.birthDate", fallback: "تاريخ الميلاد")
-                            ) {
-                                DatePicker(
-                                    "",
-                                    selection: $birthDate,
-                                    in: ...Date(),
-                                    displayedComponents: .date
-                                )
-                                .labelsHidden()
-                                .datePickerStyle(.compact)
-                                .tint(AuthFlowTheme.mint)
-                            }
-
-                            AuthFlowFieldPanel(
-                                title: localized("dating.gender", fallback: "الجنس")
-                            ) {
-                                Picker("Gender", selection: $gender) {
-                                    Text(localized("male", fallback: "Male")).tag(ActivityNotificationGender.male)
-                                    Text(localized("female", fallback: "Female")).tag(ActivityNotificationGender.female)
-                                }
-                                .pickerStyle(.segmented)
-                                .tint(AuthFlowTheme.gold)
-                            }
-
-                            HStack(spacing: 12) {
-                                AuthFlowTextField(
-                                    title: localized("dating.weight", fallback: "الوزن (كغم)"),
-                                    text: $weightText,
-                                    keyboardType: .numberPad
-                                )
-
-                                AuthFlowTextField(
-                                    title: localized("dating.height", fallback: "الطول (سم)"),
-                                    text: $heightText,
-                                    keyboardType: .numberPad
-                                )
-                            }
-
-                            AuthPrimaryButton(
-                                title: localized("dating.continue", fallback: "متابعة"),
-                                isEnabled: canContinue,
-                                action: continueTapped
-                            )
-                            .padding(.top, 4)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        // Title
+                        VStack(spacing: 8) {
+                            Text(localized("dating.title", fallback: "أكمل ملفك"))
+                                .font(.system(size: 28, weight: .black, design: .rounded))
+                            Text(localized("dating.subtitle", fallback: "خلينا نجهّز حسابك"))
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                        // Name
+                        AuthFlowTextField(
+                            title: localized("dating.name", fallback: "الاسم"),
+                            text: $fullName,
+                            icon: "person.fill"
+                        )
+
+                        // Username
+                        AuthFlowTextField(
+                            title: localized("dating.username", fallback: "اسم المستخدم"),
+                            text: $username,
+                            icon: "at",
+                            prefix: "@",
+                            keyboardType: .asciiCapable
+                        )
+
+                        // Birth date
+                        HStack {
+                            DatePicker(
+                                "",
+                                selection: $birthDate,
+                                in: ...Date(),
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            Spacer()
+                            Text(localized("dating.birthDate", fallback: "تاريخ الميلاد"))
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                            Image(systemName: "calendar")
+                                .foregroundColor(AuthFlowTheme.sand)
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                                )
+                        )
+
+                        // Gender
+                        VStack(alignment: .trailing, spacing: 10) {
+                            Text(localized("dating.gender", fallback: "الجنس"))
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+
+                            HStack(spacing: 0) {
+                                GenderButton(
+                                    title: localized("female", fallback: "أنثى"),
+                                    isSelected: gender == .female
+                                ) {
+                                    gender = .female
+                                }
+                                GenderButton(
+                                    title: localized("male", fallback: "ذكر"),
+                                    isSelected: gender == .male
+                                ) {
+                                    gender = .male
+                                }
+                            }
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.gray.opacity(0.08))
+                            )
+                        }
+
+                        // Weight & Height
+                        HStack(spacing: 12) {
+                            AuthFlowTextField(
+                                title: localized("dating.weight", fallback: "الوزن"),
+                                text: $weightText,
+                                icon: "scalemass.fill",
+                                suffix: "كغم",
+                                keyboardType: .decimalPad
+                            )
+                            AuthFlowTextField(
+                                title: localized("dating.height", fallback: "الطول"),
+                                text: $heightText,
+                                icon: "ruler.fill",
+                                suffix: "سم",
+                                keyboardType: .numberPad
+                            )
+                        }
+
+                        // Continue button
+                        AuthPrimaryButton(
+                            title: localized("dating.continue", fallback: "متابعة"),
+                            isEnabled: canContinue,
+                            action: continueTapped
+                        )
                     }
+                    .padding(28)
+                    .glassCard()
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 40)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 30)
+                    .scaleEffect(appeared ? 1 : 0.96)
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 20)
             }
         }
         .environment(\.layoutDirection, layoutDirection)
-        .preferredColorScheme(.dark)
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                appeared = true
+            }
+        }
     }
 
     private var normalizedUsername: String {

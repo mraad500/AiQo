@@ -374,7 +374,7 @@ private final class AppleVerticalRailControlView: UIView {
 
             let item = currentItems[index]
             let isSelected = index == selection
-            let tint = UIColor(item.tint ?? Color.aiqoAccent)
+            _ = UIColor(item.tint ?? Color.aiqoAccent)
             let foreground = UIColor.black.withAlphaComponent(isSelected ? 0.90 : 0.82)
 
             var configuration = isSelected ? UIButton.Configuration.prominentGlass() : UIButton.Configuration.glass()
@@ -399,7 +399,7 @@ private final class AppleVerticalRailControlView: UIView {
             }
             configuration.contentInsets = railConfiguration.contentInsets
             if isSelected {
-                configuration.baseBackgroundColor = tint.withAlphaComponent(0.74)
+                configuration.baseBackgroundColor = UIColor(red: 1.0, green: 0.902, blue: 0.549, alpha: 0.85) // #FFE68C
             }
 
             button.configuration = configuration

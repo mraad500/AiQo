@@ -51,7 +51,7 @@ struct ClubRootView: View {
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
     @State private var isGratitudeSessionPresented = false
-    @State private var isProfilePresented = false
+    @State private var isTribePresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
@@ -76,21 +76,20 @@ struct ClubRootView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground)
-                .ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
 
-            ZStack {
+            VStack(spacing: 0) {
+                topHeaderBar
                 selectedContentView
+                    .padding(.top, 19.5)
             }
-            .padding(.top, ClubChromeLayout.contentTopPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedTab)
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            topHeaderBar
+            .animation(.easeInOut(duration: 0.3), value: selectedTab)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .aiqoProfileSheet(isPresented: $isProfilePresented)
+        .navigationDestination(isPresented: $isTribePresented) {
+            TribeScreen()
+        }
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionSheetView(session: presented.session)
@@ -136,22 +135,28 @@ struct ClubRootView: View {
     }
 
     private var topHeaderBar: some View {
-        AiQoScreenTopChrome(
-            leadingReservedWidth: AiQoScreenHeaderMetrics.profileLaneWidth,
-            itemSpacing: 8,
-            horizontalInset: 12,
-            topPadding: ClubChromeLayout.headerTopPadding,
-            bottomPadding: ClubChromeLayout.headerBottomPadding,
-            profileVerticalOffset: -6,
-            contentMaxWidth: nil,
-            contentAlignment: .center,
-            onProfileTap: { isProfilePresented = true }
-        ) {
-            GlobalTopCapsuleTabsView(
-                tabs: displayedTabs.map { L10n.t($0.titleKey) },
-                selection: displayedSelectedTabIndex
+        HStack(spacing: 10) {
+            // Tabs — appear on RIGHT in RTL (first in code)
+            PrimarySegmentedTabs(
+                tabs: displayedTabs,
+                selection: $selectedTab
             )
+
+            // Tribe icon — appears on LEFT in RTL (second in code)
+            Button {
+                isTribePresented = true
+            } label: {
+                Image("Tribe_icon")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 42, height: 42)
+                    .clipShape(Circle())
+                    .shadow(color: Color(hex: "D4B87A").opacity(0.3), radius: 4, y: 2)
+            }
         }
+        .padding(.leading, 16)
+        .padding(.trailing, 10)
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -215,22 +220,6 @@ struct ClubRootView: View {
         }
     }
 
-    private var displayedSelectedTabIndex: Binding<Int> {
-        Binding(
-            get: {
-                displayedTabs.firstIndex(of: selectedTab) ?? 0
-            },
-            set: { newValue in
-                guard displayedTabs.indices.contains(newValue) else { return }
-                let nextTab = displayedTabs[newValue]
-                guard selectedTab != nextTab else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    selectedTab = nextTab
-                }
-            }
-        )
-    }
 }
 
 #Preview("Club Root RTL") {

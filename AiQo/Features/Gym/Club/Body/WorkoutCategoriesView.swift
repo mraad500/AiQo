@@ -26,12 +26,6 @@ struct WorkoutCardItem: Identifiable, Hashable {
 struct WorkoutCategoriesView: View {
     let onSelectExercise: (GymExercise) -> Void
 
-    // Matches the current rendered height of the club top chrome so cards slide directly under it.
-    private let renderedTopChromeHeight: CGFloat = 116
-    private let contentLeadingPadding: CGFloat = 14
-    private let contentTrailingPadding: CGFloat = ClubChromeLayout.contentTrailingPadding - 8
-    private let topContentSpacing: CGFloat = 4
-
     @State private var selection = 0
     @State private var visibleCardIDs = Set<UUID>()
     @State private var animationSeed = 0
@@ -44,50 +38,26 @@ struct WorkoutCategoriesView: View {
         WorkoutCategoriesCatalog.items(for: selectedCategory)
     }
 
-    private var topScrollOverlap: CGFloat {
-        renderedTopChromeHeight + ClubChromeLayout.contentTopPadding
-    }
-
-    private var topContentInset: CGFloat {
-        renderedTopChromeHeight + topContentSpacing
-    }
-
-    private var railItems: [RailItem] {
-        WorkoutCategory.allCases.map {
-            RailItem(
-                id: "\($0.rawValue)",
-                title: $0.title,
-                icon: $0.railIcon,
-                tint: .aiqoAccent
-            )
-        }
-    }
-
     var body: some View {
-        ClubStandardRightRailContainer(
-            items: railItems,
-            selection: $selection,
-            accessibilityLabel: Text("فئات التمارين")
-        ) {
-            WorkoutCategoriesBackdrop()
-                .ignoresSafeArea()
-
+        HStack(alignment: .top, spacing: 0) {
+            // Cards (scrollable)
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 20) {
+                LazyVStack(spacing: 14) {
                     ForEach(Array(currentItems.enumerated()), id: \.element.id) { index, item in
-                        let backgroundColor = cardBackgroundColor(for: index)
+                        let isFeatured = selectedCategory == .cardio && index == 0
 
                         NavigationLink {
                             WorkoutPlaceholderDetailView(
                                 item: item,
-                                backgroundColor: backgroundColor,
+                                backgroundColor: cardGradientPrimary(for: index),
                                 linkedExercise: WorkoutCategoriesCatalog.linkedExercise(for: item),
                                 onSelectExercise: onSelectExercise
                             )
                         } label: {
-                            GlassWorkoutCard(
+                            ClubWorkoutCard(
                                 item: item,
-                                backgroundColor: backgroundColor,
+                                isFeatured: isFeatured,
+                                useMint: index.isMultiple(of: 2),
                                 isVisible: visibleCardIDs.contains(item.id)
                             )
                             .frame(maxWidth: .infinity)
@@ -96,15 +66,15 @@ struct WorkoutCategoriesView: View {
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
-                .padding(.top, topContentInset)
-                .padding(.leading, contentLeadingPadding)
-                .padding(.trailing, contentTrailingPadding)
-                .padding(.bottom, 120)
-                .offset(x: -1)
+                .padding(.horizontal, 16)
+                .padding(.trailing, 8)
+                .padding(.top, 18)
+                .padding(.bottom, 100)
             }
-            .padding(.top, -topScrollOverlap)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .contentMargins(.top, 0, for: .scrollIndicators)
+
+            // Vertical side filter
+            clubSideFilter
+                .frame(width: 58)
         }
         .onAppear {
             animateCards(for: currentItems)
@@ -112,6 +82,37 @@ struct WorkoutCategoriesView: View {
         .onChange(of: selection) { _, _ in
             animateCards(for: currentItems)
         }
+    }
+
+    private var clubSideFilter: some View {
+        VStack(spacing: 4) {
+            ForEach(Array(WorkoutCategory.allCases.enumerated()), id: \.element) { index, category in
+                let isSelected = selection == index
+
+                Button {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selection = index
+                    }
+                } label: {
+                    Text(category.title)
+                        .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
+                        .foregroundColor(isSelected ? Color(.label) : Color(.secondaryLabel))
+                        .frame(width: 44, height: 62)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Color.aiqoAccent : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Color(.systemGray6).opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 25))
+        .padding(.top, 120)
+        .animation(.easeInOut(duration: 0.3), value: selection)
+        .accessibilityLabel(Text("فئات التمارين"))
     }
 
     private func animateCards(for items: [WorkoutCardItem]) {
@@ -132,231 +133,116 @@ struct WorkoutCategoriesView: View {
         }
     }
 
-    private func cardBackgroundColor(for index: Int) -> Color {
-        index.isMultiple(of: 2) ? GymTheme.mint : GymTheme.beige
+    private func cardGradientPrimary(for index: Int) -> Color {
+        index.isMultiple(of: 2) ? Color(hex: "E8F7F0") : Color(hex: "F7EDD8")
     }
 }
 
-struct GlassSegmentedControl: View {
-    let tabs: [String]
-    @Binding var selection: Int
-
-    @Namespace private var selectionAnimation
+private struct ClubWorkoutCard: View {
+    let item: WorkoutCardItem
+    let isFeatured: Bool
+    let useMint: Bool
+    let isVisible: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(tabs.enumerated()), id: \.offset) { index, title in
-                Button {
-                    UISelectionFeedbackGenerator().selectionChanged()
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.system(size: 20, weight: .heavy))
+                    .foregroundColor(Color(.label))
+                    .lineLimit(2)
 
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        selection = index
-                    }
-                } label: {
-                    Text(title)
-                        .font(.system(size: 16, weight: selection == index ? .bold : .medium, design: .rounded))
-                        .foregroundStyle(labelColor(for: index))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(segmentBackground(for: index))
+                if isFeatured, let subtitle = item.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color(.secondaryLabel))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(title))
-                .accessibilityAddTraits(selection == index ? [.isSelected] : [])
             }
-        }
-        .padding(6)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
+
+            Spacer()
+
+            Circle()
+                .fill(Color(.systemBackground).opacity(0.7))
+                .frame(width: 48, height: 48)
                 .overlay(
-                    Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.18),
-                                    AiQoColors.mint.opacity(0.10),
-                                    AiQoColors.beige.opacity(0.10)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    Image(systemName: item.iconName)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(Color(.label))
+                        .flipsForRightToLeftLayoutDirection(false)
                 )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 0.8)
+                .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(minHeight: isFeatured ? 120 : 100)
+        .background(
+            RoundedRectangle(cornerRadius: 26)
+                .fill(
+                    useMint
+                        ? LinearGradient(colors: [Color(red: 0.77, green: 0.94, blue: 0.86), Color(red: 0.77, green: 0.94, blue: 0.86).opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [Color(red: 0.97, green: 0.84, blue: 0.64), Color(red: 0.97, green: 0.84, blue: 0.64).opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
         )
-        .shadow(color: Color.black.opacity(0.06), radius: 18, x: 0, y: 10)
-        .shadow(color: AiQoColors.mint.opacity(0.12), radius: 24, x: 0, y: 12)
-    }
-
-    private func labelColor(for index: Int) -> Color {
-        selection == index ? Color.black.opacity(0.82) : Color.primary.opacity(0.68)
-    }
-
-    @ViewBuilder
-    private func segmentBackground(for index: Int) -> some View {
-        if selection == index {
-            selectedSegmentBackground(for: index)
-                .matchedGeometryEffect(id: "workoutCategorySelection", in: selectionAnimation)
-        } else {
-            Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
-                .opacity(0.24)
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 0.6)
-                )
-        }
-    }
-
-    private func selectedSegmentBackground(for index: Int) -> some View {
-        let fillColor = selectedBackgroundColor(for: index)
-
-        return Capsule(style: .continuous)
-            .fill(fillColor)
-            .overlay(
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.22)
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.18),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.28), lineWidth: 0.8)
-            )
-    }
-
-    private func selectedBackgroundColor(for index: Int) -> Color {
-        switch index {
-        case 1:
-            return AiQoColors.beige
-        default:
-            return AiQoColors.mint
-        }
+        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        .opacity(isVisible ? 1 : 0.001)
+        .offset(y: isVisible ? 0 : 22)
+        .scaleEffect(isVisible ? 1 : 0.96)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(item.title))
     }
 }
 
+// Keep GlassWorkoutCard for detail view usage
 struct GlassWorkoutCard: View {
     let item: WorkoutCardItem
     let backgroundColor: Color
     let isVisible: Bool
 
-    private let cornerRadius: CGFloat = 30
-
     var body: some View {
         HStack(spacing: 14) {
-            textContent
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.title)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.primary.opacity(0.70))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer(minLength: 0)
 
-            iconChip
+            Circle()
+                .fill(Color(.systemBackground).opacity(0.7))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: item.iconName)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(Color(.label))
+                        .flipsForRightToLeftLayoutDirection(false)
+                )
+                .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 20)
-        .frame(maxWidth: .infinity, minHeight: 118)
-        .background(cardBackground)
-        .shadow(color: Color.black.opacity(0.035), radius: 10, x: 0, y: 6)
-        .shadow(color: backgroundColor.opacity(0.12), radius: 14, x: 0, y: 8)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, minHeight: 76)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(backgroundColor)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
         .opacity(isVisible ? 1 : 0.001)
         .offset(y: isVisible ? 0 : 22)
         .scaleEffect(isVisible ? 1 : 0.96)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(accessibilityLabel))
-    }
-
-    private var textContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(item.title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(1)
-
-            if let subtitle = item.subtitle, !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.primary.opacity(0.70))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var iconChip: some View {
-        ZStack {
-            Circle()
-                .fill(.ultraThinMaterial)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            Circle()
-                .stroke(Color.white.opacity(0.24), lineWidth: 0.8)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.30),
-                            Color.clear
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .padding(3)
-                .blur(radius: 1.5)
-
-            Image(systemName: item.iconName)
-                .font(.system(size: 19, weight: .bold))
-                .foregroundStyle(Color.black.opacity(0.75))
-                .flipsForRightToLeftLayoutDirection(false)
-        }
-        .frame(width: 58, height: 58)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        .accessibilityHidden(true)
-    }
-
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-    }
-
-    private var accessibilityLabel: String {
-        if let subtitle = item.subtitle, !subtitle.isEmpty {
-            return "\(item.title)، \(subtitle)"
-        }
-
-        return item.title
+        .accessibilityLabel(Text(item.title))
     }
 }
 
@@ -368,8 +254,7 @@ private struct WorkoutPlaceholderDetailView: View {
 
     var body: some View {
         ZStack {
-            WorkoutCategoriesBackdrop()
-                .ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 22) {
@@ -429,35 +314,6 @@ private struct WorkoutPlaceholderDetailView: View {
         }
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-private struct WorkoutCategoriesBackdrop: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    AiQoColors.mint.opacity(0.24),
-                    AiQoColors.beige.opacity(0.18),
-                    Color(uiColor: .systemBackground)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Circle()
-                .fill(AiQoColors.mint.opacity(0.18))
-                .frame(width: 260, height: 260)
-                .blur(radius: 44)
-                .offset(x: 120, y: -180)
-
-            Circle()
-                .fill(AiQoColors.beige.opacity(0.20))
-                .frame(width: 280, height: 280)
-                .blur(radius: 56)
-                .offset(x: -140, y: 220)
-        }
-        .allowsHitTesting(false)
     }
 }
 

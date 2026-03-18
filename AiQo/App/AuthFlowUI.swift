@@ -1,297 +1,442 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Theme
+
 enum AuthFlowTheme {
-    static let darkBackground = Color(red: 0.03, green: 0.05, blue: 0.09)
-    static let deepBlue = Color(red: 0.07, green: 0.13, blue: 0.22)
-    static let mint = Color(red: 0.54, green: 0.92, blue: 0.86)
-    static let beige = Color(red: 0.99, green: 0.87, blue: 0.66)
-    static let gold = Color(red: 0.98, green: 0.83, blue: 0.56)
+    // Brand colors
+    static let mint = Color(hex: "B7E5D2")
+    static let sand = Color(hex: "EBCF97")
 
-    static let cardTop = Color(red: 0.10, green: 0.17, blue: 0.29).opacity(0.94)
-    static let cardBottom = Color(red: 0.05, green: 0.09, blue: 0.17).opacity(0.94)
+    // Background gradient
+    static let bgTop = Color(hex: "FDFCFA")
+    static let bgMid = Color(hex: "F7F2EA")
+    static let bgBottom = Color(hex: "F2EDE4")
 
-    static let text = Color(red: 0.95, green: 0.98, blue: 1.00)
-    static let subtext = Color(red: 0.76, green: 0.82, blue: 0.90)
+    // Text
+    static let text = Color.primary
+    static let subtext = Color.secondary
+
+    // Card
+    static let cardFill = Color.white.opacity(0.65)
+
+    // Field
+    static let fieldBorder = Color.black.opacity(0.08)
 }
+
+// MARK: - Fonts (system rounded Arabic-first)
 
 extension Font {
     static func aiqoDisplay(_ size: CGFloat) -> Font {
-        .custom("AvenirNext-Heavy", size: size)
+        .system(size: size, weight: .black, design: .rounded)
     }
 
     static func aiqoHeading(_ size: CGFloat) -> Font {
-        .custom("AvenirNext-DemiBold", size: size)
+        .system(size: size, weight: .bold, design: .rounded)
     }
 
     static func aiqoBody(_ size: CGFloat) -> Font {
-        .custom("AvenirNext-Medium", size: size)
+        .system(size: size, weight: .medium, design: .rounded)
     }
 
     static func aiqoLabel(_ size: CGFloat) -> Font {
-        .custom("AvenirNext-Bold", size: size)
+        .system(size: size, weight: .bold, design: .rounded)
+    }
+
+    static func aiqoCaption(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .regular, design: .rounded)
     }
 }
 
-struct AuthFlowBackground: View {
-    @State private var animateGlow = false
+// MARK: - Background
 
+struct AuthFlowBackground: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    AuthFlowTheme.darkBackground,
-                    AuthFlowTheme.deepBlue,
-                    AuthFlowTheme.darkBackground
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [AuthFlowTheme.bgTop, AuthFlowTheme.bgMid, AuthFlowTheme.bgBottom],
+                startPoint: .top,
+                endPoint: .bottom
             )
+            .ignoresSafeArea()
+
+            // Decorative background circles for depth
+            Circle()
+                .fill(Color(hex: "B7E5D2").opacity(0.08))
+                .frame(width: 300, height: 300)
+                .blur(radius: 60)
+                .offset(x: -100, y: -200)
 
             Circle()
-                .fill(AuthFlowTheme.mint.opacity(0.24))
-                .frame(width: 360, height: 360)
-                .blur(radius: 90)
-                .offset(x: animateGlow ? -170 : -40, y: animateGlow ? -280 : -160)
-
-            Circle()
-                .fill(AuthFlowTheme.gold.opacity(0.18))
-                .frame(width: 320, height: 320)
-                .blur(radius: 95)
-                .offset(x: animateGlow ? 160 : 60, y: animateGlow ? 260 : 180)
-
-            Circle()
-                .fill(Color.white.opacity(0.08))
-                .frame(width: 220, height: 220)
-                .blur(radius: 110)
-                .offset(x: animateGlow ? 30 : -70, y: animateGlow ? -30 : 120)
-
-            VStack {
-                Spacer()
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.clear, Color.black.opacity(0.38)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(height: 240)
-                    .allowsHitTesting(false)
-            }
-        }
-        .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
-                animateGlow = true
-            }
+                .fill(Color(hex: "EBCF97").opacity(0.06))
+                .frame(width: 250, height: 250)
+                .blur(radius: 50)
+                .offset(x: 120, y: 300)
         }
     }
 }
+
+// MARK: - Brand Header (small, top-right for inner screens)
 
 struct AuthFlowBrandHeader: View {
-    let subtitle: String
+    var subtitle: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Text("AiQo")
-                    .font(.aiqoDisplay(44))
-                    .foregroundStyle(AuthFlowTheme.text)
-
-                Image(systemName: "sparkles")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(AuthFlowTheme.mint)
-            }
-
-            Text(subtitle.uppercased())
-                .font(.aiqoLabel(11))
-                .tracking(1.8)
-                .foregroundStyle(AuthFlowTheme.subtext)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .foregroundColor(AuthFlowTheme.mint)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+            Text("AiQo")
+                .font(.aiqoDisplay(24))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
     }
 }
+
+// MARK: - Glassmorphism Card
 
 struct AuthFlowCard<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
         content
-            .padding(22)
+            .padding(28)
             .background(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [AuthFlowTheme.cardTop, AuthFlowTheme.cardBottom],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                ZStack {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(.white.opacity(0.65))
+
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
                         )
-                    )
+                }
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                AuthFlowTheme.mint.opacity(0.55),
-                                Color.white.opacity(0.14),
-                                AuthFlowTheme.gold.opacity(0.50)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.2
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.46), radius: 24, x: 0, y: 16)
+            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
     }
 }
+
+// MARK: - Glassmorphism Card Modifier (for inline use)
+
+struct GlassmorphismCardModifier: ViewModifier {
+    var cornerRadius: CGFloat = 28
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.white.opacity(0.65))
+
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+            )
+            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
+    }
+}
+
+extension View {
+    func glassCard(cornerRadius: CGFloat = 28) -> some View {
+        modifier(GlassmorphismCardModifier(cornerRadius: cornerRadius))
+    }
+}
+
+// MARK: - Text Field
 
 struct AuthFlowTextField: View {
     let title: String
     @Binding var text: String
+    var icon: String? = nil
+    var prefix: String? = nil
+    var suffix: String? = nil
     var keyboardType: UIKeyboardType = .default
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.aiqoLabel(12))
-                .tracking(0.7)
-                .foregroundStyle(AuthFlowTheme.subtext)
-
-            TextField("", text: $text)
+        HStack(spacing: 12) {
+            if let suffix = suffix {
+                Text(suffix)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            TextField(title, text: $text)
+                .keyboardType(keyboardType)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
-                .keyboardType(keyboardType)
-                .font(.aiqoHeading(17))
-                .foregroundStyle(AuthFlowTheme.text)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+            if let prefix = prefix {
+                Text(prefix)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            if let icon = icon {
+                Image(systemName: icon)
+                    .foregroundColor(AuthFlowTheme.sand)
+                    .font(.system(size: 16))
+            }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
+        )
     }
 }
+
+// MARK: - Field Panel
 
 struct AuthFlowFieldPanel<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.aiqoLabel(12))
-                .tracking(0.7)
-                .foregroundStyle(AuthFlowTheme.subtext)
-
+        HStack {
             content
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+            Spacer()
+            Text(title)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(.secondary)
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
+        )
     }
 }
+
+// MARK: - Primary Button
 
 struct AuthPrimaryButton: View {
     let title: String
     let isEnabled: Bool
     let action: () -> Void
+    var icon: String? = "arrow.left"
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                }
+                Text(title)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(AuthFlowTheme.mint)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+// MARK: - Secondary Button
+
+struct AuthSecondaryButton: View {
+    let title: String
+    let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.aiqoHeading(18))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.primary.opacity(0.6))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(Color.black.opacity(0.86))
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AuthFlowTheme.sand.opacity(0.3))
+                )
         }
         .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [AuthFlowTheme.gold, AuthFlowTheme.mint],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.22), lineWidth: 1)
-        )
-        .shadow(color: AuthFlowTheme.mint.opacity(0.22), radius: 14, x: 0, y: 8)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.45)
     }
 }
+
+// MARK: - Metric Row
 
 struct AuthMetricRow: View {
     let symbol: String
     let title: String
     let value: String
     let points: Int
+    var color: Color = AuthFlowTheme.mint
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .foregroundStyle(AuthFlowTheme.mint)
-                .frame(width: 22)
-
-            Text(title)
-                .font(.aiqoHeading(14))
-                .foregroundStyle(AuthFlowTheme.text)
-
-            Spacer(minLength: 8)
+        HStack {
+            Text("+\(points.formatted())")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(color)
+                .frame(width: 80, alignment: .leading)
 
             Text(value)
-                .font(.aiqoBody(13))
-                .foregroundStyle(AuthFlowTheme.subtext)
+                .font(.system(size: 14, weight: .regular, design: .rounded))
+                .foregroundColor(.secondary)
 
-            Text("+\(points)")
-                .font(.aiqoLabel(13))
-                .foregroundStyle(Color.black.opacity(0.88))
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
+            Spacer()
+
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                Image(systemName: symbol)
+                    .foregroundColor(color)
+                    .font(.system(size: 14))
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.08))
+        )
+    }
+}
+
+// MARK: - Gender Button
+
+struct GenderButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(isSelected ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
                 .background(
-                    Capsule(style: .continuous)
-                        .fill(AuthFlowTheme.mint)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? AuthFlowTheme.mint : Color.clear)
                 )
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 10)
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Analysis Loading View
+
+struct AnalysisLoadingView: View {
+    @State private var rotation: Double = 0
+    @State private var appeared = false
+    @State private var progressText = "نقرأ بياناتك..."
+
+    private let progressMessages = [
+        "نقرأ بياناتك...",
+        "نحسب خطواتك...",
+        "نحلّل نومك...",
+        "نجمع سعراتك...",
+        "نحسب المسافة...",
+        "نحدد مستواك..."
+    ]
+
+    var body: some View {
+        VStack(spacing: 24) {
+            // Custom spinner
+            ZStack {
+                Circle()
+                    .stroke(Color(hex: "EBCF97").opacity(0.2), lineWidth: 3)
+                    .frame(width: 64, height: 64)
+
+                Circle()
+                    .trim(from: 0, to: 0.3)
+                    .stroke(
+                        Color(hex: "B7E5D2"),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 64, height: 64)
+                    .rotationEffect(.degrees(rotation))
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .medium, design: .rounded))
+                    .foregroundColor(Color(hex: "B7E5D2"))
+            }
+
+            VStack(spacing: 8) {
+                Text("جاري التحليل")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+
+                Text(progressText)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .animation(.easeInOut(duration: 0.3), value: progressText)
+            }
+        }
+        .padding(40)
         .background(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(Color.white.opacity(0.07))
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.white.opacity(0.65))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
+        .shadow(color: .black.opacity(0.06), radius: 20, y: 8)
+        .shadow(color: .black.opacity(0.02), radius: 4, y: 2)
+        .opacity(appeared ? 1 : 0)
+        .scaleEffect(appeared ? 1 : 0.9)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                appeared = true
+            }
+            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+            startProgressMessages()
+        }
+    }
+
+    private func startProgressMessages() {
+        for (index, message) in progressMessages.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 2.0) {
+                withAnimation { progressText = message }
+            }
+        }
     }
 }

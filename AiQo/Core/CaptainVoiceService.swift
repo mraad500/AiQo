@@ -21,6 +21,8 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     )
     private let speechSynthesizer = AVSpeechSynthesizer()
 
+    private let voiceCache = CaptainVoiceCache.shared
+
     private var audioPlayer: AVAudioPlayer?
     private var playContinuation: CheckedContinuation<Void, Never>?
     private var hasActiveSpeechSession = false
@@ -197,6 +199,20 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     }
 
     private func playRemoteSpeechIfAvailable(for text: String, sequence: Int) async -> Bool {
+        // Check voice cache first (instant, offline)
+        if let cachedAudio = await voiceCache.matchedAudio(for: text) {
+            guard sequence == activeSpeechSequence else { return true }
+            do {
+                try playRemoteAudio(data: cachedAudio)
+                await withCheckedContinuation { continuation in
+                    playContinuation = continuation
+                }
+                return true
+            } catch {
+                logger.error("captain_voice_cache_playback_failed error=\(error.localizedDescription, privacy: .public)")
+            }
+        }
+
         guard CaptainVoiceAPI.isConfigured else { return false }
 
         do {
@@ -217,6 +233,12 @@ final class CaptainVoiceService: NSObject, ObservableObject {
             audioPlayer = nil
             return false
         }
+    }
+
+    /// Pre-caches all common Captain Hamoudi phrases via ElevenLabs.
+    /// Call this on WiFi (e.g., after first login or in background).
+    func preCacheVoices() async {
+        await voiceCache.preCacheAllPhrases()
     }
 
     private func playRemoteAudio(data: Data) throws {

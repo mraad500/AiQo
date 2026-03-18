@@ -104,6 +104,7 @@ final class CaptainViewModel: ObservableObject {
 
     private var responseTask: Task<Void, Never>?
     private var activeRequestID: UUID?
+    private var messageCount = 0
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -346,13 +347,28 @@ final class CaptainViewModel: ObservableObject {
             currentWorkoutPlan = reply.workoutPlan
             currentMealPlan = reply.mealPlan
 
+            let userText = messages.last(where: { $0.isUser })?.text ?? ""
+            let assistantReply = reply.message
+
             withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
                 messages.append(
                     ChatMessage(
-                        text: reply.message,
+                        text: assistantReply,
                         isUser: false,
                         spotifyRecommendation: reply.spotifyRecommendation
                     )
+                )
+            }
+
+            // استخراج الذكريات بالخلفية
+            messageCount += 1
+            let count = messageCount
+            Task.detached(priority: .utility) {
+                await MemoryExtractor.extract(
+                    userMessage: userText,
+                    assistantReply: assistantReply,
+                    store: MemoryStore.shared,
+                    messageCount: count
                 )
             }
         } catch is CancellationError {
@@ -429,7 +445,7 @@ final class CaptainViewModel: ObservableObject {
         let profile = UserProfileStore.shared.current
         let preferredName = captainReplyUserName() ?? "not provided"
 
-        return """
+        var summary = """
         - Preferred name: \(preferredName)
         - Profile name: \(summaryValue(profile.name))
         - Username: \(summaryValue(profile.username))
@@ -438,6 +454,30 @@ final class CaptainViewModel: ObservableObject {
         - Weight kg: \(summaryValue(customization.weight))
         - Preferred tone: \(customization.tone.rawValue)
         """
+
+        // إضافة سياق الذاكرة
+        let memoryContext = MemoryStore.shared.buildPromptContext(maxTokens: 800)
+        if !memoryContext.isEmpty {
+            summary += "\n\n<user_context>\n\(memoryContext)\n</user_context>"
+        }
+
+        // إضافة سياق المشروع النشط
+        if let project = RecordProjectManager.shared.activeProject() {
+            summary += """
+
+            \n<active_record_project>
+            المستخدم عنده مشروع كسر رقم قياسي نشط:
+            - الرقم: \(project.recordTitle)
+            - الهدف: \(project.targetValue) \(project.unit)
+            - أفضل أداء حالي: \(project.bestPerformance) \(project.unit)
+            - الأسبوع الحالي: \(project.currentWeek) من \(project.totalWeeks)
+            - آخر مراجعة: \(project.lastReviewDate?.formatted() ?? "ما صارت بعد")
+            قواعد: تابع تقدمه وحمّسه. إذا سأل عن خطته اليوم ربطها بالمشروع.
+            </active_record_project>
+            """
+        }
+
+        return summary
     }
 
     private func summaryValue(_ value: String?) -> String {
