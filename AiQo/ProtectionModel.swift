@@ -19,8 +19,16 @@ final class ProtectionModel: ObservableObject {
     private var unlockTimer: Timer?
 
     var isEnabled: Bool {
-        UserDefaults(suiteName: AppGroupKeys.appGroupID)?
-            .bool(forKey: AppGroupKeys.isEnabled) ?? false
+        if let value = AppGroupKeys.defaults()?.object(forKey: AppGroupKeys.isEnabled) as? Bool {
+            return value
+        }
+
+        if let legacyValue = AppGroupKeys.legacyDefaults()?.object(forKey: AppGroupKeys.isEnabled) as? Bool {
+            AppGroupKeys.defaults()?.set(legacyValue, forKey: AppGroupKeys.isEnabled)
+            return legacyValue
+        }
+
+        return false
     }
 
     var canEnable: Bool {
@@ -90,14 +98,14 @@ final class ProtectionModel: ObservableObject {
     }
 
     private func saveSelectionToAppGroup() {
-        let defaults = UserDefaults(suiteName: AppGroupKeys.appGroupID)
+        let defaults = AppGroupKeys.defaults()
         if let data = try? JSONEncoder().encode(selection) {
             defaults?.set(data, forKey: AppGroupKeys.savedSelection)
         }
     }
 
     private func setEnabled(_ value: Bool) {
-        let defaults = UserDefaults(suiteName: AppGroupKeys.appGroupID)
+        let defaults = AppGroupKeys.defaults()
         defaults?.set(value, forKey: AppGroupKeys.isEnabled)
         objectWillChange.send()
     }

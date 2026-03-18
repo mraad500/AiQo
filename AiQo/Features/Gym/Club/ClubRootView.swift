@@ -3,7 +3,8 @@ import SwiftUI
 enum ClubTopTab: String, CaseIterable, Identifiable {
     case body
     case plan
-    case challenges
+    case peaks
+    case battle
     case impact
 
     var id: Self { self }
@@ -12,7 +13,8 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
         switch self {
         case .body: return "tab_body"
         case .plan: return "tab_plan"
-        case .challenges: return "tab_challenges"
+        case .peaks: return "tab_peaks"
+        case .battle: return "tab_battle"
         case .impact: return "tab_impact"
         }
     }
@@ -21,7 +23,8 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
         switch self {
         case .body: return "club.tab.body.accessibility.label"
         case .plan: return "club.tab.plan.accessibility.label"
-        case .challenges: return "club.tab.challenges.accessibility.label"
+        case .peaks: return "club.tab.peaks.accessibility.label"
+        case .battle: return "club.tab.battle.accessibility.label"
         case .impact: return "club.tab.impact.accessibility.label"
         }
     }
@@ -30,7 +33,8 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
         switch self {
         case .body: return "club.tab.body.accessibility.hint"
         case .plan: return "club.tab.plan.accessibility.hint"
-        case .challenges: return "club.tab.challenges.accessibility.hint"
+        case .peaks: return "club.tab.peaks.accessibility.hint"
+        case .battle: return "club.tab.battle.accessibility.hint"
         case .impact: return "club.tab.impact.accessibility.hint"
         }
     }
@@ -59,7 +63,7 @@ struct ClubRootView: View {
     @StateObject private var winsStore: WinsStore
     @StateObject private var questEngine: QuestEngine
 
-    private let displayedTabs: [ClubTopTab] = [.impact, .challenges, .plan, .body]
+    private let displayedTabs: [ClubTopTab] = [.impact, .battle, .peaks, .plan, .body]
 
     init() {
         _questEngine = StateObject(wrappedValue: .shared)
@@ -170,8 +174,12 @@ struct ClubRootView: View {
             PlanView()
                 .transition(.opacity)
 
-        case .challenges:
-            ChallengesView(questEngine: questEngine)
+        case .peaks:
+            PeaksRecordsView()
+                .transition(.opacity)
+
+        case .battle:
+            BattleChallengesView(questEngine: questEngine)
                 .transition(.opacity)
 
         case .impact:

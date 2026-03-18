@@ -17,9 +17,6 @@ struct MainTabScreen: View {
             }
         }
         .onAppear(perform: configureTabBarAppearance)
-        .onReceive(NotificationCenter.default.publisher(for: .navigateToCaptainScreen)) { _ in
-            tabRouter.navigate(to: .captain)
-        }
     }
 
     private var tabBody: some View {

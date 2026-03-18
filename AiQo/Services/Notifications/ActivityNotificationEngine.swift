@@ -28,6 +28,8 @@ final class ActivityNotificationEngine {
     
     private let lastProgressKey = "aiqo.activity.lastProgress"
     private let lastGoalCompletedDateKey = "aiqo.activity.lastGoalCompletedDate"
+    private let lastAlmostThereDateKey = "aiqo.activity.lastAlmostThereDate"
+    private let lastAlmostThereMilestoneKey = "aiqo.activity.lastAlmostThereMilestone"
     private let selectedAngelTimesKey = "aiqo.activity.selectedAngelTimes"
     private let lastScheduleDateKey = "aiqo.activity.lastScheduleDate"
     private let yesterdayTimesKey = "aiqo.activity.yesterdayTimes"  // ✅ جديد: حفظ أوقات أمس
@@ -448,6 +450,7 @@ final class ActivityNotificationEngine {
         }
 
         if type == .goalCompleted, hasSentGoalCompletedToday() { return }
+        if type == .almostThere, !shouldSendAlmostThere(progress: progress) { return }
 
         guard let notification = NotificationRepository.shared.getNotification(
             type: type,
@@ -462,6 +465,8 @@ final class ActivityNotificationEngine {
 
         if type == .goalCompleted {
             markGoalCompletedSent()
+        } else if type == .almostThere {
+            markAlmostThereSent(progress: progress)
         }
     }
     
@@ -529,6 +534,26 @@ final class ActivityNotificationEngine {
 
     private func markGoalCompletedSent() {
         UserDefaults.standard.set(Date(), forKey: lastGoalCompletedDateKey)
+    }
+
+    private func shouldSendAlmostThere(progress: Double) -> Bool {
+        let milestone = progress >= 0.75 ? 75 : 60
+        let defaults = UserDefaults.standard
+
+        guard let lastDate = defaults.object(forKey: lastAlmostThereDateKey) as? Date,
+              Calendar.current.isDateInToday(lastDate) else {
+            return true
+        }
+
+        let lastMilestone = defaults.integer(forKey: lastAlmostThereMilestoneKey)
+        return milestone > lastMilestone
+    }
+
+    private func markAlmostThereSent(progress: Double) {
+        let defaults = UserDefaults.standard
+        let milestone = progress >= 0.75 ? 75 : 60
+        defaults.set(Date(), forKey: lastAlmostThereDateKey)
+        defaults.set(milestone, forKey: lastAlmostThereMilestoneKey)
     }
     
     // MARK: - Debug Utilities

@@ -1,5 +1,4 @@
 import SwiftUI
-import WidgetKit
 internal import Combine
 
 class CoinManager: ObservableObject {
@@ -7,15 +6,21 @@ class CoinManager: ObservableObject {
     
     @Published var balance: Int = 0 {
         didSet {
-            // الحفظ باستخدام مفتاح المجموعة
-            UserDefaults(suiteName: AppGroupKeys.appGroupID)?.set(balance, forKey: AppGroupKeys.userCoins)
-            WidgetCenter.shared.reloadAllTimelines()
+            AppGroupKeys.defaults()?.set(balance, forKey: AppGroupKeys.userCoins)
         }
     }
     
     private init() {
-        // التحميل عند البدء
-        self.balance = UserDefaults(suiteName: AppGroupKeys.appGroupID)?.integer(forKey: AppGroupKeys.userCoins) ?? 0
+        let sharedDefaults = AppGroupKeys.defaults()
+        let sharedValue = sharedDefaults?.object(forKey: AppGroupKeys.userCoins) as? Int
+        let legacyValue = AppGroupKeys.legacyDefaults()?.object(forKey: AppGroupKeys.userCoins) as? Int
+        let resolvedBalance = sharedValue ?? legacyValue ?? 0
+
+        if sharedValue == nil, let legacyValue {
+            sharedDefaults?.set(legacyValue, forKey: AppGroupKeys.userCoins)
+        }
+
+        self.balance = resolvedBalance
     }
     
     func addCoins(_ amount: Int) {

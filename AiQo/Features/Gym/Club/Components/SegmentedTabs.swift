@@ -130,9 +130,9 @@ struct ClubNativeSegmentedControl<Item: Hashable>: UIViewRepresentable {
         // Selected bubble: same accent as bottom tab bar
         control.selectedSegmentTintColor = Colors.accent
 
-        // Typography
-        let normalFont = UIFont.systemFont(ofSize: 15, weight: .medium)
-        let selectedFont = UIFont.systemFont(ofSize: 15, weight: .bold)
+        // Typography — sized for 5 tabs
+        let normalFont = UIFont.systemFont(ofSize: 13, weight: .medium)
+        let selectedFont = UIFont.systemFont(ofSize: 13, weight: .bold)
 
         control.setTitleTextAttributes([
             .foregroundColor: UIColor.label,

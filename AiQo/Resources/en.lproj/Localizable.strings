@@ -1278,8 +1278,13 @@
 "club_title" = "Gym";
 "tab_body" = "Body";
 "tab_plan" = "Plan";
-"tab_challenges" = "PeaKs";
+"tab_peaks" = "PeaKs";
+"tab_battle" = "Battle";
 "tab_impact" = "Impact";
+"club.tab.peaks.accessibility.label" = "Peaks";
+"club.tab.peaks.accessibility.hint" = "View world records";
+"club.tab.battle.accessibility.label" = "Battle";
+"club.tab.battle.accessibility.hint" = "View challenges and stages";
 "impact_summary" = "Summary";
 "impact_achievements" = "Achievements";
 "club_top_tabs_accessibility" = "Club top tabs";

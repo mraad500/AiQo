@@ -68,7 +68,6 @@ final class CaptainNavigationHelper {
         Task { @MainActor in
             MainTabRouter.shared.navigate(to: .captain)
         }
-        NotificationCenter.default.post(name: .navigateToCaptainScreen, object: nil)
     }
 }
 

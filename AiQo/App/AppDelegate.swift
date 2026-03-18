@@ -126,7 +126,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
-        WidgetCenter.shared.reloadAllTimelines()
+        reloadWidgetTimelines()
         clearAppBadge()
         MorningHabitOrchestrator.shared.start()
         SleepSessionObserver.shared.start()
@@ -164,6 +164,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         } else {
             UIApplication.shared.applicationIconBadgeNumber = 0
         }
+    }
+
+    private func reloadWidgetTimelines() {
+        WidgetCenter.shared.reloadTimelines(ofKind: "AiQoWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "AiQoRingsFaceWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "AiQoWatchFaceWidget")
     }
 
     func application(

@@ -1277,8 +1277,13 @@
 "club_title" = "النادي";
 "tab_body" = "الجسم";
 "tab_plan" = "الخطة";
-"tab_challenges" = "قِمَم";
+"tab_peaks" = "قِمَم";
+"tab_battle" = "معركة";
 "tab_impact" = "الأثر";
+"club.tab.peaks.accessibility.label" = "قِمَم";
+"club.tab.peaks.accessibility.hint" = "عرض الأرقام القياسية";
+"club.tab.battle.accessibility.label" = "معركة";
+"club.tab.battle.accessibility.hint" = "عرض التحديات والمراحل";
 "impact_summary" = "الملخص";
 "impact_achievements" = "الإنجازات";
 "club_top_tabs_accessibility" = "تبويبات النادي العلوية";

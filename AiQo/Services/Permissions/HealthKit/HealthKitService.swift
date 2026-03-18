@@ -12,12 +12,22 @@ struct HealthKitQuantitySeries: Sendable {
 }
 
 actor HealthKitService {
+    private struct WidgetSnapshot: Equatable {
+        let steps: Int
+        let calories: Int
+        let standPercent: Int
+        let stepsGoal: Int
+        let caloriesGoal: Int
+    }
 
     // Singleton
     static let shared = HealthKitService()
 
     let store = HKHealthStore()
     private var isAuthorized = false
+    private var lastWidgetSnapshot: WidgetSnapshot?
+    private var lastWidgetReloadAt: Date = .distantPast
+    private let minimumWidgetReloadInterval: TimeInterval = 20
 
     // MARK: - Authorization
 
@@ -146,13 +156,29 @@ actor HealthKitService {
         stepsGoal: Int,
         caloriesGoal: Int
     ) {
-        let shared = UserDefaults(suiteName: "group.aiqo")!
+        guard let shared = UserDefaults(suiteName: "group.aiqo") else { return }
         shared.set(steps, forKey: "aiqo_steps")
         shared.set(calories, forKey: "aiqo_active_cal")
         shared.set(stepsGoal, forKey: "aiqo_steps_goal")
         shared.set(caloriesGoal, forKey: "aiqo_active_cal_goal")
         shared.set(standPercent, forKey: "aiqo_stand_percent")
 
+        let snapshot = WidgetSnapshot(
+            steps: steps,
+            calories: calories,
+            standPercent: standPercent,
+            stepsGoal: stepsGoal,
+            caloriesGoal: caloriesGoal
+        )
+
+        let isSameSnapshot = snapshot == lastWidgetSnapshot
+        let elapsedSinceReload = Date().timeIntervalSince(lastWidgetReloadAt)
+        guard !isSameSnapshot || elapsedSinceReload >= minimumWidgetReloadInterval else {
+            return
+        }
+
+        lastWidgetSnapshot = snapshot
+        lastWidgetReloadAt = Date()
         WidgetCenter.shared.reloadTimelines(ofKind: "AiQoWidget")
     }
 

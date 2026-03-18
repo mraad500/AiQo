@@ -20,13 +20,16 @@ final class MainTabRouter: ObservableObject {
 
     func navigate(to tab: Tab) {
         if tab == .kitchen {
-            selectedTab = .home
+            if selectedTab != .home {
+                selectedTab = .home
+            }
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .openKitchenFromHome, object: nil)
             }
             return
         }
 
+        guard selectedTab != tab else { return }
         selectedTab = tab
     }
 }
