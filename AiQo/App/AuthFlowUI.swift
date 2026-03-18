@@ -4,24 +4,13 @@ import UIKit
 // MARK: - Theme
 
 enum AuthFlowTheme {
-    // Brand colors
     static let mint = Color(hex: "B7E5D2")
     static let sand = Color(hex: "EBCF97")
 
-    // Background gradient
-    static let bgTop = Color(hex: "FDFCFA")
-    static let bgMid = Color(hex: "F7F2EA")
-    static let bgBottom = Color(hex: "F2EDE4")
-
-    // Text
-    static let text = Color.primary
-    static let subtext = Color.secondary
-
-    // Card
-    static let cardFill = Color.white.opacity(0.65)
-
-    // Field
+    static let bgTop = Color(hex: "FAFAF8")
+    static let bgBottom = Color(hex: "F5F0E8")
     static let fieldBorder = Color.black.opacity(0.08)
+    static let cardShadow = Color.black.opacity(0.04)
 }
 
 // MARK: - Fonts (system rounded Arabic-first)
@@ -54,24 +43,29 @@ struct AuthFlowBackground: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [AuthFlowTheme.bgTop, AuthFlowTheme.bgMid, AuthFlowTheme.bgBottom],
+                colors: [AuthFlowTheme.bgTop, Color.white.opacity(0.96), AuthFlowTheme.bgBottom],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            // Decorative background circles for depth
             Circle()
-                .fill(Color(hex: "B7E5D2").opacity(0.08))
-                .frame(width: 300, height: 300)
-                .blur(radius: 60)
-                .offset(x: -100, y: -200)
+                .fill(AuthFlowTheme.mint.opacity(0.18))
+                .frame(width: 320, height: 320)
+                .blur(radius: 100)
+                .offset(x: 130, y: -220)
 
             Circle()
-                .fill(Color(hex: "EBCF97").opacity(0.06))
-                .frame(width: 250, height: 250)
-                .blur(radius: 50)
-                .offset(x: 120, y: 300)
+                .fill(AuthFlowTheme.sand.opacity(0.16))
+                .frame(width: 280, height: 280)
+                .blur(radius: 90)
+                .offset(x: -120, y: 260)
+
+            Circle()
+                .fill(Color.white.opacity(0.7))
+                .frame(width: 220, height: 220)
+                .blur(radius: 70)
+                .offset(x: 0, y: -30)
         }
     }
 }
@@ -105,32 +99,31 @@ struct AuthFlowCard<Content: View>: View {
             .padding(28)
             .background(
                 ZStack {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(.ultraThinMaterial)
 
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(.white.opacity(0.65))
-
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
                             LinearGradient(
-                                colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                                colors: [.white.opacity(0.92), .white.opacity(0.8)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
+                            )
                         )
+
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(.white.opacity(0.72), lineWidth: 1)
                 }
             )
-            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
-            .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
+            .shadow(color: AuthFlowTheme.cardShadow, radius: 18, x: 0, y: 10)
+            .shadow(color: .white.opacity(0.48), radius: 8, x: 0, y: -2)
     }
 }
 
 // MARK: - Glassmorphism Card Modifier (for inline use)
 
 struct GlassmorphismCardModifier: ViewModifier {
-    var cornerRadius: CGFloat = 28
+    var cornerRadius: CGFloat = 24
 
     func body(content: Content) -> some View {
         content
@@ -140,26 +133,25 @@ struct GlassmorphismCardModifier: ViewModifier {
                         .fill(.ultraThinMaterial)
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.white.opacity(0.65))
-
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+                        .fill(
                             LinearGradient(
-                                colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                                colors: [.white.opacity(0.92), .white.opacity(0.8)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
+                            )
                         )
+
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(.white.opacity(0.72), lineWidth: 1)
                 }
             )
-            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
-            .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
+            .shadow(color: AuthFlowTheme.cardShadow, radius: 18, x: 0, y: 10)
+            .shadow(color: .white.opacity(0.48), radius: 8, x: 0, y: -2)
     }
 }
 
 extension View {
-    func glassCard(cornerRadius: CGFloat = 28) -> some View {
+    func glassCard(cornerRadius: CGFloat = 24) -> some View {
         modifier(GlassmorphismCardModifier(cornerRadius: cornerRadius))
     }
 }
@@ -184,12 +176,12 @@ struct AuthFlowTextField: View {
             TextField(title, text: $text)
                 .keyboardType(keyboardType)
                 .multilineTextAlignment(.trailing)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
             if let prefix = prefix {
                 Text(prefix)
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
             }
             if let icon = icon {
@@ -201,7 +193,13 @@ struct AuthFlowTextField: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.white)
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.95), .white.opacity(0.88)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.black.opacity(0.08), lineWidth: 1)
@@ -258,7 +256,13 @@ struct AuthPrimaryButton: View {
             .frame(height: 56)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(AuthFlowTheme.mint)
+                    .fill(
+                        LinearGradient(
+                            colors: [AuthFlowTheme.mint, AuthFlowTheme.mint.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             )
         }
         .buttonStyle(.plain)
@@ -282,7 +286,7 @@ struct AuthSecondaryButton: View {
                 .frame(height: 50)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(AuthFlowTheme.sand.opacity(0.3))
+                        .fill(AuthFlowTheme.sand.opacity(0.22))
                 )
         }
         .buttonStyle(.plain)
@@ -306,7 +310,7 @@ struct AuthMetricRow: View {
                 .frame(width: 80, alignment: .leading)
 
             Text(value)
-                .font(.system(size: 14, weight: .regular, design: .rounded))
+                .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
 
             Spacer()
@@ -354,71 +358,95 @@ struct GenderButton: View {
 // MARK: - Analysis Loading View
 
 struct AnalysisLoadingView: View {
+    let title: String
+    let subtitle: String
     @State private var rotation: Double = 0
     @State private var appeared = false
-    @State private var progressText = "نقرأ بياناتك..."
+    @State private var barOffset: CGFloat = -100
 
-    private let progressMessages = [
-        "نقرأ بياناتك...",
-        "نحسب خطواتك...",
-        "نحلّل نومك...",
-        "نجمع سعراتك...",
-        "نحسب المسافة...",
-        "نحدد مستواك..."
-    ]
+    init(
+        title: String = "جاري التحليل",
+        subtitle: String = "نحضّر مستواك اعتماداً على Apple Health"
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+    }
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Custom spinner
+        VStack(spacing: 26) {
             ZStack {
                 Circle()
-                    .stroke(Color(hex: "EBCF97").opacity(0.2), lineWidth: 3)
-                    .frame(width: 64, height: 64)
+                    .fill(AuthFlowTheme.mint.opacity(0.12))
+                    .frame(width: 86, height: 86)
 
                 Circle()
-                    .trim(from: 0, to: 0.3)
+                    .stroke(AuthFlowTheme.mint.opacity(0.12), lineWidth: 8)
+                    .frame(width: 74, height: 74)
+
+                Circle()
+                    .trim(from: 0.18, to: 0.92)
                     .stroke(
-                        Color(hex: "B7E5D2"),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        LinearGradient(
+                            colors: [AuthFlowTheme.mint, AuthFlowTheme.sand],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
                     )
-                    .frame(width: 64, height: 64)
+                    .frame(width: 74, height: 74)
                     .rotationEffect(.degrees(rotation))
 
                 Image(systemName: "sparkles")
-                    .font(.system(size: 20, weight: .medium, design: .rounded))
-                    .foregroundColor(Color(hex: "B7E5D2"))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AuthFlowTheme.mint)
             }
 
             VStack(spacing: 8) {
-                Text("جاري التحليل")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
+                Text(title)
+                    .font(.system(size: 28, weight: .black, design: .rounded))
 
-                Text(progressText)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                Text(subtitle)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
-                    .animation(.easeInOut(duration: 0.3), value: progressText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
             }
+
+            RoundedRectangle(cornerRadius: 999)
+                .fill(Color.white.opacity(0.58))
+                .frame(width: 220, height: 10)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 999)
+                        .fill(
+                            LinearGradient(
+                                colors: [AuthFlowTheme.mint, AuthFlowTheme.sand],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: 120, height: 10)
+                        .offset(x: barOffset)
+                }
+                .clipped()
         }
         .padding(40)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.white.opacity(0.65))
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
                         LinearGradient(
-                            colors: [.white.opacity(0.8), .white.opacity(0.2)],
+                            colors: [.white.opacity(0.94), .white.opacity(0.82)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
+                        )
                     )
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(.white.opacity(0.72), lineWidth: 1)
             }
         )
-        .shadow(color: .black.opacity(0.06), radius: 20, y: 8)
-        .shadow(color: .black.opacity(0.02), radius: 4, y: 2)
+        .shadow(color: AuthFlowTheme.cardShadow, radius: 18, y: 10)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.9)
         .onAppear {
@@ -428,14 +456,8 @@ struct AnalysisLoadingView: View {
             withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
                 rotation = 360
             }
-            startProgressMessages()
-        }
-    }
-
-    private func startProgressMessages() {
-        for (index, message) in progressMessages.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 2.0) {
-                withAnimation { progressText = message }
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                barOffset = 100
             }
         }
     }

@@ -9,10 +9,6 @@ struct LoginScreenView: View {
     @StateObject private var viewModel = LoginScreenViewModel()
     @State private var appeared = false
 
-    private var layoutDirection: LayoutDirection {
-        AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
-    }
-
     var body: some View {
         ZStack {
             AuthFlowBackground()
@@ -47,7 +43,7 @@ struct LoginScreenView: View {
                         .padding(.horizontal, 8)
 
                         Text(localized("login.apple.hint", fallback: "التسجيل يتم فقط باستخدام Apple"))
-                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundColor(AuthFlowTheme.mint)
 
                         SignInWithAppleButton(.signUp) { request in
@@ -68,7 +64,7 @@ struct LoginScreenView: View {
 
                         if let error = viewModel.errorMessage {
                             Text(error)
-                                .font(.system(size: 13, weight: .regular, design: .rounded))
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundColor(.red.opacity(0.9))
                                 .multilineTextAlignment(.center)
                         }
@@ -82,7 +78,7 @@ struct LoginScreenView: View {
                 Spacer()
             }
         }
-        .environment(\.layoutDirection, layoutDirection)
+        .environment(\.layoutDirection, .rightToLeft)
         .onAppear {
             viewModel.onLoginSuccess = {
                 AppFlowController.shared.didLoginSuccessfully()

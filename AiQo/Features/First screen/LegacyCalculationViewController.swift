@@ -8,10 +8,6 @@ struct LegacyCalculationScreenView: View {
     @State private var introAppeared = false
     @State private var resultAppeared = false
 
-    private var layoutDirection: LayoutDirection {
-        AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
-    }
-
     var body: some View {
         ZStack {
             AuthFlowBackground()
@@ -30,7 +26,7 @@ struct LegacyCalculationScreenView: View {
                 .padding(.vertical, 20)
             }
         }
-        .environment(\.layoutDirection, layoutDirection)
+        .environment(\.layoutDirection, .rightToLeft)
     }
 
     // MARK: - Intro (Screen 3)
@@ -49,7 +45,6 @@ struct LegacyCalculationScreenView: View {
                         .font(.system(size: 36, weight: .black, design: .rounded))
                 }
 
-                // Main text with username
                 VStack(spacing: 12) {
                     Text("\(viewModel.userName)، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.")
                         .font(.system(size: 17, weight: .medium, design: .rounded))
@@ -63,14 +58,12 @@ struct LegacyCalculationScreenView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // Continue
                 AuthPrimaryButton(
                     title: "متابعة",
                     isEnabled: true,
                     action: { viewModel.primaryButtonTapped() }
                 )
 
-                // Skip
                 AuthSecondaryButton(title: "ليس الآن") {
                     viewModel.skipToHome()
                 }
@@ -94,7 +87,10 @@ struct LegacyCalculationScreenView: View {
     private var loadingView: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 120)
-            AnalysisLoadingView()
+            AnalysisLoadingView(
+                title: viewModel.loadingTitle,
+                subtitle: viewModel.loadingSubtitle
+            )
                 .padding(.horizontal, 24)
         }
     }
@@ -108,7 +104,6 @@ struct LegacyCalculationScreenView: View {
             VStack(spacing: 24) {
                 // Title + Level
                 HStack(alignment: .top) {
-                    // Level (left)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("المستوى")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -120,7 +115,6 @@ struct LegacyCalculationScreenView: View {
 
                     Spacer()
 
-                    // Title + Description (right)
                     VStack(alignment: .trailing, spacing: 8) {
                         Text(model.title)
                             .font(.system(size: 28, weight: .black, design: .rounded))
@@ -221,6 +215,19 @@ struct LegacyCalculationScreenView: View {
 // MARK: - ViewModel
 
 final class LegacyCalculationViewModel: ObservableObject {
+    private enum LoadingPhase {
+        case permissions
+        case locatingHistory
+        case aggregating
+        case finalizing
+        case timeout
+        case unauthorized
+    }
+
+    private enum HealthFetchOutcome {
+        case data(steps: Double, calories: Double, distanceKm: Double, sleepHours: Double)
+        case timeout
+    }
 
     // MARK: - LevelResult
 
@@ -246,8 +253,23 @@ final class LegacyCalculationViewModel: ObservableObject {
     }
 
     @Published var state: State = .intro
+    @Published var loadingTitle = "نطلب Apple Health"
+    @Published var loadingSubtitle = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل"
 
-    let userName: String = UserProfileStore.shared.current.name
+    let userName: String = {
+        let profile = UserProfileStore.shared.current
+        let trimmedName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty {
+            return trimmedName
+        }
+
+        let trimmedUsername = (profile.username ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty {
+            return trimmedUsername
+        }
+
+        return "أنت"
+    }()
     private let healthStore = HKHealthStore()
     private var didPresentResult = false
 
@@ -256,21 +278,24 @@ final class LegacyCalculationViewModel: ObservableObject {
     func primaryButtonTapped() {
         guard case .intro = state else { return }
         state = .loading
-        Task { await startCalculationFlow() }
+        Task(priority: .userInitiated) {
+            await startCalculationFlow()
+        }
     }
 
     func skipToHome() {
-        AppFlowController.shared.onboardingFinished()
+        AppFlowController.shared.finishOnboardingWithoutAdditionalPermissions()
     }
 
     func goHome() {
-        AppFlowController.shared.onboardingFinished()
+        AppFlowController.shared.finishOnboardingRequestingPermissions()
     }
 
     // MARK: - Flow
 
     private func startCalculationFlow() async {
         let startedAt = Date()
+        setLoadingPhase(.permissions)
 
         let authorized = await requestHealthAuthorizationIfNeeded()
         let levelResult: LevelResult
@@ -284,6 +309,7 @@ final class LegacyCalculationViewModel: ObservableObject {
                 sleepHours: totals.sleepHours
             )
         } else {
+            setLoadingPhase(.unauthorized)
             levelResult = calculateLevel(steps: 0, calories: 0, distanceKM: 0, sleepHours: 0)
         }
 
@@ -300,7 +326,8 @@ final class LegacyCalculationViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: wait)
         }
 
-        await presentResult(levelResult)
+        setLoadingPhase(.finalizing)
+        presentResult(levelResult)
     }
 
     @MainActor
@@ -313,6 +340,7 @@ final class LegacyCalculationViewModel: ObservableObject {
 
     // MARK: - HealthKit Authorization
 
+    @MainActor
     private func requestHealthAuthorizationIfNeeded() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
 
@@ -333,42 +361,71 @@ final class LegacyCalculationViewModel: ObservableObject {
         }
     }
 
+    @MainActor
+    private func setLoadingPhase(_ phase: LoadingPhase) {
+        switch phase {
+        case .permissions:
+            loadingTitle = "نطلب Apple Health"
+            loadingSubtitle = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل"
+        case .locatingHistory:
+            loadingTitle = "نحدد أول سجل"
+            loadingSubtitle = "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك"
+        case .aggregating:
+            loadingTitle = "نجمع تاريخك الكامل"
+            loadingSubtitle = "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح"
+        case .finalizing:
+            loadingTitle = "نشكّل مستواك"
+            loadingSubtitle = "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي"
+        case .timeout:
+            loadingTitle = "أخذت البيانات وقتاً أطول"
+            loadingSubtitle = "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة"
+        case .unauthorized:
+            loadingTitle = "لم تُمنح الصلاحية"
+            loadingSubtitle = "يمكنك تفعيل Apple Health لاحقاً من الإعدادات"
+        }
+    }
+
     // MARK: - Fetch Data with Timeout
 
     private func fetchHealthTotalsWithTimeout() async -> (steps: Double, calories: Double, distanceKm: Double, sleepHours: Double) {
-        // Race between actual fetch and 15-second timeout
-        return await withTaskGroup(of: (steps: Double, calories: Double, distanceKm: Double, sleepHours: Double)?.self) { group in
-            // Actual fetch task
+        await withTaskGroup(of: HealthFetchOutcome.self) { group in
             group.addTask {
-                return await self.fetchHealthTotals()
+                let totals = await self.fetchHealthTotals()
+                return .data(
+                    steps: totals.steps,
+                    calories: totals.calories,
+                    distanceKm: totals.distanceKm,
+                    sleepHours: totals.sleepHours
+                )
             }
 
-            // Timeout task
             group.addTask {
-                try? await Task.sleep(nanoseconds: 15_000_000_000)
-                return nil // signals timeout
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                return .timeout
             }
 
-            // Return first completed result
-            for await result in group {
-                if let result = result {
-                    group.cancelAll()
-                    return result
-                }
-            }
-
-            // If timeout won, return zeros
+            let firstOutcome = await group.next() ?? .timeout
             group.cancelAll()
-            print("⚠️ HealthKit timeout — presenting with zero data")
-            return (steps: 0, calories: 0, distanceKm: 0, sleepHours: 0)
+
+            switch firstOutcome {
+            case .data(let steps, let calories, let distanceKm, let sleepHours):
+                return (steps: steps, calories: calories, distanceKm: distanceKm, sleepHours: sleepHours)
+            case .timeout:
+                setLoadingPhase(.timeout)
+                return (steps: 0, calories: 0, distanceKm: 0, sleepHours: 0)
+            }
         }
     }
 
     private func fetchHealthTotals() async -> (steps: Double, calories: Double, distanceKm: Double, sleepHours: Double) {
-        async let steps = fetchCumulativeQuantity(for: .stepCount, unit: .count())
-        async let calories = fetchCumulativeQuantity(for: .activeEnergyBurned, unit: .kilocalorie())
-        async let distanceMeters = fetchCumulativeQuantity(for: .distanceWalkingRunning, unit: .meter())
-        async let sleepHours = fetchSleepHours()
+        setLoadingPhase(.locatingHistory)
+        let startDate = await fetchEarliestHealthRecordDate()
+        setLoadingPhase(.aggregating)
+
+        async let steps = fetchCumulativeQuantity(for: .stepCount, unit: .count(), startDate: startDate)
+        async let calories = fetchCumulativeQuantity(for: .activeEnergyBurned, unit: .kilocalorie(), startDate: startDate)
+        async let distanceMeters = fetchCumulativeQuantity(for: .distanceWalkingRunning, unit: .meter(), startDate: startDate)
+        async let sleepHours = fetchSleepHours(startDate: startDate)
 
         let resolvedDistanceKm = (await distanceMeters) / 1000.0
 
@@ -380,10 +437,43 @@ final class LegacyCalculationViewModel: ObservableObject {
         )
     }
 
-    private func fetchCumulativeQuantity(for identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double {
+    private func fetchEarliestHealthRecordDate() async -> Date {
+        let fallbackDate = Calendar.current.date(byAdding: .year, value: -10, to: Date()) ?? .distantPast
+
+        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount),
+              let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+              let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
+              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            return fallbackDate
+        }
+
+        let stepDate = await fetchEarliestSampleStartDate(for: stepType)
+        let energyDate = await fetchEarliestSampleStartDate(for: energyType)
+        let distanceDate = await fetchEarliestSampleStartDate(for: distanceType)
+        let sleepDate = await fetchEarliestSampleStartDate(for: sleepType)
+
+        return [stepDate, energyDate, distanceDate, sleepDate].compactMap { $0 }.min() ?? fallbackDate
+    }
+
+    private func fetchEarliestSampleStartDate(for sampleType: HKSampleType) async -> Date? {
+        await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: sampleType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.first?.startDate)
+            }
+
+            self.healthStore.execute(query)
+        }
+    }
+
+    private func fetchCumulativeQuantity(for identifier: HKQuantityTypeIdentifier, unit: HKUnit, startDate: Date) async -> Double {
         guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return 0 }
 
-        let predicate = HKQuery.predicateForSamples(withStart: .distantPast, end: Date(), options: .strictStartDate)
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: .strictStartDate)
 
         return await withCheckedContinuation { continuation in
             let query = HKStatisticsQuery(
@@ -399,10 +489,10 @@ final class LegacyCalculationViewModel: ObservableObject {
         }
     }
 
-    private func fetchSleepHours() async -> Double {
+    private func fetchSleepHours(startDate: Date) async -> Double {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return 0 }
 
-        let predicate = HKQuery.predicateForSamples(withStart: .distantPast, end: Date(), options: .strictStartDate)
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: .strictStartDate)
         let asleepValues: Set<Int> = [
             HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
             HKCategoryValueSleepAnalysis.asleepCore.rawValue,
@@ -433,14 +523,13 @@ final class LegacyCalculationViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Scoring System (Updated Multipliers)
+    // MARK: - Scoring System
 
     func calculateLevel(steps: Double, calories: Double, distanceKM: Double, sleepHours: Double) -> LevelResult {
-        // Updated generous multipliers — target level ~40 for strong data
-        let stepsPoints = Int(steps / 150.0)
-        let caloriesPoints = Int(calories / 18.0)
-        let distancePoints = Int(distanceKM * 15.0)
-        let sleepPoints = Int(sleepHours * 8.0)
+        let stepsPoints = Int(steps / 200.0)
+        let caloriesPoints = Int(calories / 25.0)
+        let distancePoints = Int(distanceKM * 10.0)
+        let sleepPoints = Int(sleepHours * 5.0)
 
         let totalPoints = stepsPoints + caloriesPoints + distancePoints + sleepPoints
 

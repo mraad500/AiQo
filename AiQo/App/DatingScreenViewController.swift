@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct DatingScreenView: View {
+struct ProfileSetupView: View {
     @State private var fullName = ""
     @State private var username = ""
     @State private var birthDate = Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
@@ -9,17 +9,11 @@ struct DatingScreenView: View {
     @State private var heightText = ""
     @State private var appeared = false
 
-    private var layoutDirection: LayoutDirection {
-        AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
-    }
-
-    private var canContinue: Bool {
-        let weight = Int(weightText) ?? 0
-        let height = Int(heightText) ?? 0
+    private var isFormValid: Bool {
         return !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !normalizedUsername.isEmpty
-            && weight > 0
-            && height > 0
+            && !weightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !heightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -31,7 +25,6 @@ struct DatingScreenView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // Title
                         VStack(spacing: 8) {
                             Text(localized("dating.title", fallback: "أكمل ملفك"))
                                 .font(.system(size: 28, weight: .black, design: .rounded))
@@ -41,14 +34,12 @@ struct DatingScreenView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
 
-                        // Name
                         AuthFlowTextField(
                             title: localized("dating.name", fallback: "الاسم"),
                             text: $fullName,
                             icon: "person.fill"
                         )
 
-                        // Username
                         AuthFlowTextField(
                             title: localized("dating.username", fallback: "اسم المستخدم"),
                             text: $username,
@@ -57,7 +48,6 @@ struct DatingScreenView: View {
                             keyboardType: .asciiCapable
                         )
 
-                        // Birth date
                         HStack {
                             DatePicker(
                                 "",
@@ -84,7 +74,6 @@ struct DatingScreenView: View {
                                 )
                         )
 
-                        // Gender
                         VStack(alignment: .trailing, spacing: 10) {
                             Text(localized("dating.gender", fallback: "الجنس"))
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -110,7 +99,6 @@ struct DatingScreenView: View {
                             )
                         }
 
-                        // Weight & Height
                         HStack(spacing: 12) {
                             AuthFlowTextField(
                                 title: localized("dating.weight", fallback: "الوزن"),
@@ -128,10 +116,9 @@ struct DatingScreenView: View {
                             )
                         }
 
-                        // Continue button
                         AuthPrimaryButton(
                             title: localized("dating.continue", fallback: "متابعة"),
-                            isEnabled: canContinue,
+                            isEnabled: isFormValid,
                             action: continueTapped
                         )
                     }
@@ -146,7 +133,7 @@ struct DatingScreenView: View {
                 }
             }
         }
-        .environment(\.layoutDirection, layoutDirection)
+        .environment(\.layoutDirection, .rightToLeft)
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                 appeared = true
@@ -165,7 +152,10 @@ struct DatingScreenView: View {
 
     private func continueTapped() {
         let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let weight = Int(weightText), let height = Int(heightText), !trimmedName.isEmpty else { return }
+        let normalizedWeight = weightText.replacingOccurrences(of: ",", with: ".")
+        guard let weight = Double(normalizedWeight),
+              let height = Int(heightText),
+              !trimmedName.isEmpty else { return }
 
         let age = Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 0
 
@@ -173,7 +163,7 @@ struct DatingScreenView: View {
         profile.name = trimmedName
         profile.age = max(age, 0)
         profile.heightCm = height
-        profile.weightKg = weight
+        profile.weightKg = Int(weight.rounded())
         profile.username = normalizedUsername
         profile.birthDate = birthDate
         profile.gender = gender
@@ -185,10 +175,12 @@ struct DatingScreenView: View {
         UserProfileStore.shared.current = profile
         NotificationPreferencesStore.shared.gender = gender
 
-        AppFlowController.shared.didCompleteDatingProfile()
+        AppFlowController.shared.didCompleteProfileSetup()
     }
 
     private func localized(_ key: String, fallback: String) -> String {
         NSLocalizedString(key, tableName: "Localizable", bundle: .main, value: fallback, comment: "")
     }
 }
+
+typealias DatingScreenView = ProfileSetupView

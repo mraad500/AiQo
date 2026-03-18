@@ -17,7 +17,7 @@ final class AppFlowController: ObservableObject {
 
     enum RootScreen {
         case login
-        case dating
+        case profileSetup
         case legacy
         case main
     }
@@ -37,25 +37,39 @@ final class AppFlowController: ObservableObject {
         transition(to: Self.nextScreenAfterLogin())
     }
 
-    func didCompleteDatingProfile() {
+    func didCompleteProfileSetup() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteDatingProfile)
         transition(to: .legacy)
     }
 
-    func onboardingFinished() {
+    func didCompleteDatingProfile() {
+        didCompleteProfileSetup()
+    }
+
+    func finishOnboardingWithoutAdditionalPermissions() {
         Task { @MainActor in
-            // Request all remaining HealthKit permissions
-            await requestFullHealthKitPermissions()
-
-            // Request notification permission
-            requestNotificationAuthorizationIfNeeded()
-
             await protectionModel.requestAuthorization()
+            finalizeOnboarding()
+        }
+    }
 
+    func finishOnboardingRequestingPermissions() {
+        Task { @MainActor in
+            await requestFullHealthKitPermissions()
+            requestNotificationAuthorizationIfNeeded()
+            await protectionModel.requestAuthorization()
+            finalizeOnboarding()
+        }
+    }
+
+    func onboardingFinished() {
+        finishOnboardingRequestingPermissions()
+    }
+
+    private func finalizeOnboarding() {
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .main)
-        }
     }
 
     private func requestFullHealthKitPermissions() async {
@@ -119,7 +133,7 @@ final class AppFlowController: ObservableObject {
     }
 
     private func transition(to screen: RootScreen) {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+        withAnimation(.easeInOut(duration: 0.4)) {
             currentScreen = screen
             refreshID = UUID()
         }
@@ -135,7 +149,7 @@ final class AppFlowController: ObservableObject {
         guard isLoggedIn else { return .login }
 
         if !didCompleteDatingProfile {
-            return .dating
+            return .profileSetup
         }
 
         if !didCompleteLegacyCalculation {
@@ -150,7 +164,7 @@ final class AppFlowController: ObservableObject {
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
 
         if !didCompleteDatingProfile {
-            return .dating
+            return .profileSetup
         }
 
         if !didCompleteLegacyCalculation {
@@ -175,6 +189,7 @@ struct AppRootView: View {
             rootScreen
                 .id(flow.refreshID)
         }
+        .animation(.easeInOut(duration: 0.4), value: flow.currentScreen)
         .modelContainer(QuestPersistenceController.shared.container)
         .onReceive(NotificationCenter.default.publisher(for: .appLanguageDidChange)) { _ in
             flow.reloadCurrentScreen()
@@ -189,28 +204,16 @@ struct AppRootView: View {
         switch flow.currentScreen {
         case .login:
             LoginScreenView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .leading).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
-        case .dating:
-            DatingScreenView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .leading).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .profileSetup:
+            ProfileSetupView()
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .legacy:
             LegacyCalculationScreenView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .leading).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .main:
             MainTabScreen()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .leading).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         }
     }
 }

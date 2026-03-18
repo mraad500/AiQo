@@ -8,6 +8,17 @@ import HealthKit
 internal import Combine
 
 final class HealthKitManager: ObservableObject {
+    private struct LiveHealthSnapshot: Equatable {
+        let steps: Int
+        let activeKcal: Int
+        let distanceMeters: Int
+
+        init(summary: TodaySummary) {
+            self.steps = Int(summary.steps.rounded())
+            self.activeKcal = Int(summary.activeKcal.rounded())
+            self.distanceMeters = Int(summary.distanceMeters.rounded())
+        }
+    }
 
     struct BioMetrics {
         let weight: String?
@@ -34,6 +45,13 @@ final class HealthKitManager: ObservableObject {
     private var lastObservedSteps: Int = 0
     private var hasStartedBackgroundObserver = false
     private var stepObserverQuery: HKObserverQuery?
+    @MainActor private var isProcessingHealthData = false
+    @MainActor private var pendingHealthDataRefresh = false
+    @MainActor private var pendingForcedHealthDataRefresh = false
+    @MainActor private var lastHealthRefreshAt: Date?
+    @MainActor private var lastProcessedSnapshot: LiveHealthSnapshot?
+
+    private let minimumHealthRefreshInterval: TimeInterval = 3
     
     private init() {}
 
@@ -168,8 +186,8 @@ final class HealthKitManager: ObservableObject {
             }
             
             print("👣 [AiQo HK] Steps changed detected!")
-            Task {
-                await self?.processNewHealthData()
+            Task { @MainActor [weak self] in
+                await self?.enqueueHealthDataRefresh()
                 completionHandler()
             }
         }
@@ -186,7 +204,35 @@ final class HealthKitManager: ObservableObject {
     
     /// Public method to trigger a manual fetch (used by ProfileViewController, etc.)
     func fetchSteps() {
-        Task {
+        Task { @MainActor [weak self] in
+            await self?.enqueueHealthDataRefresh(force: true)
+        }
+    }
+
+    @MainActor
+    private func enqueueHealthDataRefresh(force: Bool = false) async {
+        pendingHealthDataRefresh = true
+        pendingForcedHealthDataRefresh = pendingForcedHealthDataRefresh || force
+
+        guard !isProcessingHealthData else { return }
+
+        isProcessingHealthData = true
+        defer { isProcessingHealthData = false }
+
+        while pendingHealthDataRefresh {
+            let shouldForce = pendingForcedHealthDataRefresh
+            pendingHealthDataRefresh = false
+            pendingForcedHealthDataRefresh = false
+
+            if !shouldForce, let lastHealthRefreshAt {
+                let elapsed = Date().timeIntervalSince(lastHealthRefreshAt)
+                if elapsed < minimumHealthRefreshInterval {
+                    let remaining = minimumHealthRefreshInterval - elapsed
+                    try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                }
+            }
+
+            lastHealthRefreshAt = Date()
             await processNewHealthData()
         }
     }
@@ -247,6 +293,18 @@ final class HealthKitManager: ObservableObject {
         let summary = try? await service.fetchTodaySummary()
         guard let data = summary else { return }
         let stepCount = Int(data.steps)
+        let snapshot = LiveHealthSnapshot(summary: data)
+
+        let shouldSkipProcessing = await MainActor.run { () -> Bool in
+            if lastProcessedSnapshot == snapshot {
+                return true
+            }
+
+            lastProcessedSnapshot = snapshot
+            return false
+        }
+
+        guard !shouldSkipProcessing else { return }
 
         await service.refreshWidget(using: data)
 

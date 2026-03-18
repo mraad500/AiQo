@@ -43,6 +43,10 @@
 	</array>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>يستخدم AiQo صلاحية المنبه لحفظ وقت الاستيقاظ الذكي كمنبه على جهازك.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>AiQo يقرأ بياناتك الصحية لتحديد مستواك وتتبع تقدمك اليومي</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>AiQo يسجّل بيانات التمارين والنبض لتحليل أدائك</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

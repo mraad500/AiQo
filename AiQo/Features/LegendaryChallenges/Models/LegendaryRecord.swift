@@ -90,7 +90,7 @@ extension LegendaryRecord {
             estimatedWeeks: 10,
             storyAr: "رقم قياسي عربي مسجّل بـ70 سكوات كاملة بدقيقة واحدة. يحتاج تناسق بين السرعة والعمق.",
             requirementsAr: ["لا تحتاج معدات", "مؤقت دقيقة واحدة"],
-            iconName: "figure.squat"
+            iconName: "figure.strengthtraining.functional"
         ),
         LegendaryRecord(
             id: "walk_24h",
