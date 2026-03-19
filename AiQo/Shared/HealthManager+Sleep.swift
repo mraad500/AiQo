@@ -153,6 +153,9 @@ extension HealthKitManager {
         )
     }
 
+    /// Maximum time to wait for a single sleep HealthKit query before giving up.
+    private static let sleepQueryTimeout: TimeInterval = 3
+
     private func fetchSleepStages(
         in queryWindow: DateInterval,
         sleepType: HKCategoryType
@@ -167,22 +170,34 @@ extension HealthKitManager {
         ]
 
         let store = HKHealthStore()
-        let samples: [HKCategorySample] = try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: sortDescriptors
-            ) { _, rawSamples, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
+        let samples: [HKCategorySample] = try await withThrowingTaskGroup(of: [HKCategorySample].self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    let query = HKSampleQuery(
+                        sampleType: sleepType,
+                        predicate: predicate,
+                        limit: HKObjectQueryNoLimit,
+                        sortDescriptors: sortDescriptors
+                    ) { _, rawSamples, error in
+                        if let error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        continuation.resume(returning: (rawSamples as? [HKCategorySample]) ?? [])
+                    }
+                    store.execute(query)
                 }
-
-                continuation.resume(returning: (rawSamples as? [HKCategorySample]) ?? [])
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(Self.sleepQueryTimeout * 1_000_000_000))
+                throw SleepStageFetchError.sleepAnalysisUnavailable
             }
 
-            store.execute(query)
+            guard let result = try await group.next() else {
+                throw SleepStageFetchError.sleepAnalysisUnavailable
+            }
+            group.cancelAll()
+            return result
         }
 
         let parsedSamples = samples.compactMap { parseSleepSample($0, constrainedTo: queryWindow) }

@@ -169,6 +169,15 @@ struct AppSettingsScreen: View {
                 #endif
             }
 
+            Section("referral.section".localized) {
+                ReferralSettingsRow()
+            }
+
+            Section("legal.section".localized) {
+                LegalLinksView()
+                    .padding(.vertical, 4)
+            }
+
             #if DEBUG
             Section("debug.preview.navigation".localized) {
                 Button {

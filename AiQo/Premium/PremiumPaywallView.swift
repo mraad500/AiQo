@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PremiumPaywallView: View {
     @StateObject private var premiumStore = PremiumStore.shared
+    @ObservedObject private var trialManager = FreeTrialManager.shared
 
     var onUnlocked: (() -> Void)? = nil
 
@@ -18,6 +19,13 @@ struct PremiumPaywallView: View {
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.70))
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // Free Trial Banner
+                if !trialManager.hasUsedTrial {
+                    freeTrialBanner
+                } else if trialManager.isTrialActive {
+                    trialActiveBanner
                 }
 
                 ForEach(PremiumPlan.allCases) { plan in
@@ -55,12 +63,78 @@ struct PremiumPaywallView: View {
         }
         .task {
             premiumStore.start()
+            AnalyticsService.shared.track(.paywallViewed)
         }
         .onChange(of: premiumStore.hasAnyPremiumAccess) {
             guard premiumStore.hasAnyPremiumAccess else { return }
             onUnlocked?()
         }
     }
+
+    // MARK: - Free Trial Banner
+
+    private var freeTrialBanner: some View {
+        Button {
+            trialManager.startTrialIfNeeded()
+            onUnlocked?()
+        } label: {
+            TribeGlassCard(cornerRadius: 24, padding: 16, tint: Color.green.opacity(0.08)) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("premium.trial.title".localized)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Text("premium.trial.subtitle".localized)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text("premium.trial.start".localized)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.green.opacity(0.85))
+                        )
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibleButton(
+            label: "premium.trial.title".localized,
+            hint: "premium.trial.subtitle".localized
+        )
+    }
+
+    private var trialActiveBanner: some View {
+        TribeGlassCard(cornerRadius: 24, padding: 16, tint: Color.blue.opacity(0.08)) {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.blue.opacity(0.8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("premium.trial.active.title".localized)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    Text(String(format: "premium.trial.active.days".localized, trialManager.daysRemaining))
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.68))
+                }
+
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: - Paywall Card
 
     private func paywallCard(for plan: PremiumPlan) -> some View {
         let product = premiumStore.product(for: plan)
@@ -77,9 +151,15 @@ struct PremiumPaywallView: View {
                         .foregroundStyle(.white.opacity(0.64))
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(product?.displayPrice ?? fallbackPrice(for: plan))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.82))
+                    HStack(spacing: 4) {
+                        Text(product?.displayPrice ?? fallbackPrice(for: plan))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+
+                        Text("premium.perMonth".localized)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.50))
+                    }
                 }
 
                 Spacer(minLength: 12)
@@ -111,12 +191,7 @@ struct PremiumPaywallView: View {
     }
 
     private func fallbackPrice(for plan: PremiumPlan) -> String {
-        switch plan {
-        case .individual:
-            return SubscriptionProductIDs.fallbackDisplayPrice(for: plan.canonicalProductID)
-        case .family:
-            return SubscriptionProductIDs.fallbackDisplayPrice(for: plan.canonicalProductID)
-        }
+        SubscriptionProductIDs.fallbackDisplayPrice(for: plan.canonicalProductID)
     }
 }
 

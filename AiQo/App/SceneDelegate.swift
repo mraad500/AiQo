@@ -9,6 +9,7 @@ private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
     static let didShowFirstAuthScreen = "didShowFirstAuthScreen"
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
+    static let didCompleteWalkthrough = "didCompleteWalkthrough"
 }
 
 @MainActor
@@ -16,6 +17,7 @@ final class AppFlowController: ObservableObject {
     static let shared = AppFlowController()
 
     enum RootScreen {
+        case welcome
         case login
         case profileSetup
         case legacy
@@ -30,6 +32,11 @@ final class AppFlowController: ObservableObject {
     private init() {
         QuestPersistenceController.shared.installQuestPersistence()
         currentScreen = Self.resolveCurrentScreen()
+    }
+
+    func didCompleteWalkthrough() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteWalkthrough)
+        transition(to: .login)
     }
 
     func didLoginSuccessfully() {
@@ -140,11 +147,13 @@ final class AppFlowController: ObservableObject {
     }
 
     private static func resolveCurrentScreen() -> RootScreen {
+        let didCompleteWalkthrough = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteWalkthrough)
         let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
         let isLoggedIn = SupabaseService.shared.client.auth.currentUser != nil
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
 
+        guard didCompleteWalkthrough else { return .welcome }
         guard didShowFirstAuthScreen else { return .login }
         guard isLoggedIn else { return .login }
 
@@ -189,6 +198,7 @@ struct AppRootView: View {
             rootScreen
                 .id(flow.refreshID)
         }
+        .withOfflineBanner()
         .animation(.easeInOut(duration: 0.4), value: flow.currentScreen)
         .modelContainer(QuestPersistenceController.shared.container)
         .onReceive(NotificationCenter.default.publisher(for: .appLanguageDidChange)) { _ in
@@ -202,6 +212,11 @@ struct AppRootView: View {
     @ViewBuilder
     private var rootScreen: some View {
         switch flow.currentScreen {
+        case .welcome:
+            OnboardingWalkthroughView {
+                flow.didCompleteWalkthrough()
+            }
+            .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading)))
         case .login:
             LoginScreenView()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))

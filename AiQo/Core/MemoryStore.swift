@@ -126,23 +126,24 @@ final class MemoryStore {
         guard isEnabled, let context else { return "" }
 
         do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
+            // جيب مشاريع نشطة أولاً (عددها قليل دايماً)
+            var projectDescriptor = FetchDescriptor<CaptainMemory>(
+                predicate: #Predicate { $0.category == "active_record_project" },
                 sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
             )
-            var memories = try context.fetch(descriptor)
+            projectDescriptor.fetchLimit = 5
+            let projectMemories = try context.fetch(projectDescriptor)
 
-            // رتّب بالأولوية: confidence * recency_weight
-            let now = Date()
-            memories.sort { a, b in
-                priorityScore(for: a, now: now) > priorityScore(for: b, now: now)
-            }
+            // جيب آخر 30 ذاكرة عامة — مرتبة بالثقة + الحداثة عبر SwiftData
+            var otherDescriptor = FetchDescriptor<CaptainMemory>(
+                predicate: #Predicate { $0.category != "active_record_project" },
+                sortBy: [SortDescriptor(\.confidence, order: .reverse), SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+            otherDescriptor.fetchLimit = 30
+            let otherMemories = try context.fetch(otherDescriptor)
 
             var lines: [String] = []
             var estimatedTokens = 0
-
-            // دايماً ضمّن معلومات المشروع النشط أولاً
-            let projectMemories = memories.filter { $0.category == "active_record_project" }
-            let otherMemories = memories.filter { $0.category != "active_record_project" }
 
             for memory in projectMemories + otherMemories {
                 let line = "- \(memory.key): \(memory.value)"
@@ -233,6 +234,169 @@ final class MemoryStore {
         }
     }
 
+    // MARK: - Chat History Persistence
+
+    private static let maxPersistedMessages = 200
+    private static nonisolated let chatFetchLimit = 50
+
+    /// حفظ رسالة محادثة جديدة — يُستدعى فوراً عند الإرسال أو الاستقبال
+    func persistMessage(_ chatMessage: ChatMessage, sessionID: UUID) {
+        guard let context else { return }
+
+        // تجاهل الرسائل المؤقتة (ephemeral) والفارغة
+        guard !chatMessage.isEphemeral,
+              !chatMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        do {
+            context.insert(PersistentChatMessage(chatMessage: chatMessage, sessionID: sessionID))
+            try context.save()
+            trimChatHistoryIfNeeded()
+        } catch {
+            logger.error("chat_persist_error id=\(chatMessage.id) error=\(error.localizedDescription)")
+        }
+    }
+
+    /// استرجاع رسائل جلسة محددة مرتبة من الأقدم للأحدث
+    func fetchMessages(for sessionID: UUID) -> [ChatMessage] {
+        guard let context else { return [] }
+
+        do {
+            let descriptor = FetchDescriptor<PersistentChatMessage>(
+                predicate: #Predicate { $0.sessionID == sessionID },
+                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+            )
+            return try context.fetch(descriptor).map { $0.toChatMessage() }
+        } catch {
+            logger.error("chat_fetch_session_error session=\(sessionID) error=\(error.localizedDescription)")
+            return []
+        }
+    }
+
+    /// استرجاع كل الجلسات مرتبة من الأحدث للأقدم — خفيف على الذاكرة
+    func fetchSessions() -> [ChatSession] {
+        guard let context else { return [] }
+
+        do {
+            // نجيب آخر 500 رسالة بس — كافي لعرض الجلسات الأخيرة بدون ما نثقل الذاكرة
+            var descriptor = FetchDescriptor<PersistentChatMessage>(
+                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+            )
+            descriptor.fetchLimit = 500
+
+            // بدل ما نخزن كل الـ objects، نمر عليهم مرة وحدة ونجمع metadata بس
+            struct SessionMeta {
+                var firstTimestamp: Date
+                var firstText: String
+                var firstUserText: String?
+                var count: Int
+            }
+
+            var metaMap: [UUID: SessionMeta] = [:]
+
+            // نستخدم enumeration بدل fetch عشان ما نحمّل الكل بالذاكرة
+            let messages = try context.fetch(descriptor)
+            for msg in messages {
+                if var meta = metaMap[msg.sessionID] {
+                    meta.count += 1
+                    if meta.firstUserText == nil && msg.isUser {
+                        meta.firstUserText = msg.text
+                    }
+                    metaMap[msg.sessionID] = meta
+                } else {
+                    metaMap[msg.sessionID] = SessionMeta(
+                        firstTimestamp: msg.timestamp,
+                        firstText: msg.text,
+                        firstUserText: msg.isUser ? msg.text : nil,
+                        count: 1
+                    )
+                }
+            }
+
+            // بناء الجلسات — نتخطى الجلسات اللي فيها رسالة وحدة بس (الترحيبية)
+            let sessions: [ChatSession] = metaMap.compactMap { sessionID, meta in
+                guard meta.count > 1 else { return nil }
+
+                let preview = meta.firstUserText ?? meta.firstText
+                let trimmed = preview.count > 60 ? String(preview.prefix(60)) + "…" : preview
+
+                return ChatSession(
+                    id: sessionID,
+                    preview: trimmed,
+                    timestamp: meta.firstTimestamp,
+                    messageCount: meta.count
+                )
+            }
+
+            return sessions.sorted { $0.timestamp > $1.timestamp }
+        } catch {
+            logger.error("chat_fetch_sessions_error error=\(error.localizedDescription)")
+            return []
+        }
+    }
+
+    /// استرجاع آخر 50 رسالة مرتبة من الأقدم للأحدث — يُستدعى مرة واحدة عند فتح الشاشة
+    func fetchRecentMessages(limit: Int = chatFetchLimit) -> [ChatMessage] {
+        guard let context else { return [] }
+
+        do {
+            // نجيب آخر N رسالة مرتبة بالأحدث أولاً
+            var descriptor = FetchDescriptor<PersistentChatMessage>(
+                sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            )
+            descriptor.fetchLimit = limit
+
+            let recent = try context.fetch(descriptor)
+            // نقلبها عشان تصير من الأقدم للأحدث للعرض
+            return recent.reversed().map { $0.toChatMessage() }
+        } catch {
+            logger.error("chat_fetch_error error=\(error.localizedDescription)")
+            return []
+        }
+    }
+
+    /// مسح كل محادثات الكابتن
+    func clearChatHistory() {
+        guard let context else { return }
+
+        do {
+            let descriptor = FetchDescriptor<PersistentChatMessage>()
+            let all = try context.fetch(descriptor)
+            for msg in all {
+                context.delete(msg)
+            }
+            try context.save()
+            logger.info("chat_history_cleared count=\(all.count)")
+        } catch {
+            logger.error("chat_clear_error error=\(error.localizedDescription)")
+        }
+    }
+
+    /// حذف الرسائل القديمة إذا تجاوزنا الحد الأقصى — "Zero Digital Pollution"
+    private func trimChatHistoryIfNeeded() {
+        guard let context else { return }
+
+        do {
+            let countDescriptor = FetchDescriptor<PersistentChatMessage>()
+            let total = try context.fetchCount(countDescriptor)
+            guard total > Self.maxPersistedMessages else { return }
+
+            let excess = total - Self.maxPersistedMessages
+            var oldestDescriptor = FetchDescriptor<PersistentChatMessage>(
+                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+            )
+            oldestDescriptor.fetchLimit = excess
+
+            let toDelete = try context.fetch(oldestDescriptor)
+            for msg in toDelete {
+                context.delete(msg)
+            }
+            try context.save()
+            logger.info("chat_trim removed=\(toDelete.count) total_was=\(total)")
+        } catch {
+            logger.error("chat_trim_error error=\(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Private
 
     private func priorityScore(for memory: CaptainMemory, now: Date) -> Double {
@@ -254,12 +418,12 @@ final class MemoryStore {
         guard let context else { return }
 
         do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
+            var descriptor = FetchDescriptor<CaptainMemory>(
                 predicate: #Predicate { $0.category != "active_record_project" },
                 sortBy: [SortDescriptor(\.confidence)]
             )
-            let all = try context.fetch(descriptor)
-            if let lowest = all.first {
+            descriptor.fetchLimit = 1
+            if let lowest = try context.fetch(descriptor).first {
                 context.delete(lowest)
             }
         } catch {

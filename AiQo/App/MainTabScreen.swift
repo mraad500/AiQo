@@ -31,6 +31,7 @@ struct MainTabScreen: View {
                     systemImage: "house.fill"
                 )
             }
+            .accessibilityHint(NSLocalizedString("tab.home.hint", value: "View daily health summary", comment: ""))
 
             NavigationStack {
                 GymView()
@@ -42,6 +43,7 @@ struct MainTabScreen: View {
                     systemImage: "figure.strengthtraining.traditional"
                 )
             }
+            .accessibilityHint(NSLocalizedString("tab.gym.hint", value: "Workouts and fitness challenges", comment: ""))
 
             NavigationStack {
                 CaptainScreen()
@@ -56,6 +58,7 @@ struct MainTabScreen: View {
                     systemImage: "wand.and.stars"
                 )
             }
+            .accessibilityHint(NSLocalizedString("tab.captain.hint", value: "Chat with your AI health coach", comment: ""))
         }
         .tint(appTint)
     }

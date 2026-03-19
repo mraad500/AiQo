@@ -2,10 +2,59 @@ import SwiftUI
 import UIKit
 internal import Combine
 
+// MARK: - Emara Tab Enum
+
+private enum EmaraTab: String, CaseIterable, Identifiable {
+    case global
+    case arena
+    case tribe
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .global: return "العالمية"
+        case .arena: return "الارينا"
+        case .tribe: return "القبيلة"
+        }
+    }
+}
+
+// MARK: - Tribe Ring Member
+
+private struct EmaraTribeMember: Identifiable {
+    let id = UUID()
+    let name: String
+    let username: String
+    let points: Int
+    let level: Int
+    let colorIndex: Int
+    let initials: String
+
+    static let tribeColors: [Color] = [
+        Color(hex: "B7E5D2"), // Mint
+        Color(hex: "EBCF97"), // Sand
+        Color(hex: "C5B8E8"), // Lavender
+        Color(hex: "F5C6AA"), // Peach
+        Color(hex: "A8D8EA")  // Sky
+    ]
+
+    static let mockMembers: [EmaraTribeMember] = [
+        EmaraTribeMember(name: "حمودي", username: "@mohammed", points: 38620, level: 18, colorIndex: 0, initials: "حم"),
+        EmaraTribeMember(name: "شُرى خالد", username: "@sora.world", points: 9420, level: 28, colorIndex: 1, initials: "شُخ"),
+        EmaraTribeMember(name: "سمر نادر", username: "@samar.n", points: 8980, level: 26, colorIndex: 2, initials: "سن"),
+        EmaraTribeMember(name: "Noah Reed", username: "@noah.reed", points: 8760, level: 25, colorIndex: 3, initials: "NR"),
+        EmaraTribeMember(name: "جود منصور", username: "@joud.rank", points: 8340, level: 24, colorIndex: 4, initials: "جم"),
+    ]
+}
+
+// MARK: - TribeView
+
 struct TribeView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = TribeViewModel()
+    @State private var selectedTab: EmaraTab = .global
     @State private var selectedUserID: String?
-    @State private var isProfilePresented = false
 
     private var selectedUser: TribeLeaderboardUser? {
         guard let selectedUserID else { return nil }
@@ -16,21 +65,21 @@ struct TribeView: View {
         ZStack {
             tribeBackground
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 22) {
-                    header
+            VStack(spacing: 0) {
+                screenTitle
+                    .padding(.top, 12)
 
-                    leaderboardSection
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 132)
+                topBar
+                    .padding(.top, 10)
+
+                tabContent
+                    .padding(.top, 8)
             }
         }
         .environment(\.layoutDirection, .rightToLeft)
         .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .navigationBarBackButtonHidden(true)
-        .aiqoProfileSheet(isPresented: $isProfilePresented)
         .task {
             viewModel.refreshCurrentUser()
         }
@@ -39,11 +88,6 @@ struct TribeView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .levelStoreDidChange)) { _ in
             viewModel.refreshCurrentUser()
-        }
-        .onChange(of: isProfilePresented) { _, isPresented in
-            if !isPresented {
-                viewModel.refreshCurrentUser()
-            }
         }
         .sheet(
             isPresented: Binding(
@@ -60,6 +104,148 @@ struct TribeView: View {
             }
         }
     }
+
+    // MARK: - Screen Title
+
+    private var screenTitle: some View {
+        Text("إمارة")
+            .font(.system(size: 30, weight: .bold, design: .rounded))
+            .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 20)
+    }
+
+    // MARK: - Top Bar (Back Button + Picker)
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            // Back button
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+                    .frame(width: 40, height: 40)
+                    .background {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .overlay {
+                                Circle()
+                                    .fill(Color.white.opacity(0.7))
+                            }
+                            .overlay {
+                                Circle()
+                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                            }
+                    }
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+
+            // Native segmented picker
+            Picker("", selection: $selectedTab) {
+                Text("العالمية").tag(EmaraTab.global)
+                Text("الارينا").tag(EmaraTab.arena)
+                Text("القبيلة").tag(EmaraTab.tribe)
+            }
+            .pickerStyle(.segmented)
+            .scaleEffect(y: 1.35)
+            .frame(height: 44)
+            .onAppear {
+                UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color(hex: "EBCF97"))
+                UISegmentedControl.appearance().setTitleTextAttributes([
+                    .font: UIFont.systemFont(ofSize: 14, weight: .bold)
+                ], for: .selected)
+                UISegmentedControl.appearance().setTitleTextAttributes([
+                    .font: UIFont.systemFont(ofSize: 14, weight: .medium)
+                ], for: .normal)
+            }
+        }
+        .padding(.horizontal, 16)
+        .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    // MARK: - Tab Content
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .global:
+            globalLeaderboardContent
+        case .arena:
+            arenaPlaceholderContent
+        case .tribe:
+            tribeRingContent
+        }
+    }
+
+    // MARK: - Global Leaderboard (Existing)
+
+    private var globalLeaderboardContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 22) {
+                leaderboardSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 132)
+        }
+    }
+
+    private var leaderboardSection: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(Array(viewModel.leaderboard.enumerated()), id: \.element.id) { index, user in
+                Button {
+                    selectedUserID = user.id
+                } label: {
+                    TribeUserRowCard(
+                        rank: index + 1,
+                        user: user
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Arena Placeholder
+
+    private var arenaPlaceholderContent: some View {
+        VStack {
+            Spacer()
+            Text("قريباً")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(TribeLeaderboardPalette.textSecondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Tribe Ring Content
+
+    private var tribeRingContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 24) {
+                EmaraTribeRingView(members: EmaraTribeMember.mockMembers)
+                    .padding(.top, 20)
+
+                tribeRingMemberCards
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 132)
+        }
+    }
+
+    private var tribeRingMemberCards: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(EmaraTribeMember.mockMembers) { member in
+                TribeRingMemberCard(member: member)
+            }
+        }
+    }
+
+    // MARK: - Background
 
     private var tribeBackground: some View {
         ZStack {
@@ -93,38 +279,157 @@ struct TribeView: View {
         }
         .ignoresSafeArea()
     }
+}
 
-    private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Text("القبيلة")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(TribeLeaderboardPalette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+// MARK: - Tribe Ring View
 
-            AiQoProfileButton {
-                isProfilePresented = true
+private struct EmaraTribeRingView: View {
+    let members: [EmaraTribeMember]
+
+    private let ringDiameter: CGFloat = 220
+    private let ringStroke: CGFloat = 18
+    private let segmentCount = 5
+    private let gapAngle: Double = 4
+
+    var body: some View {
+        ZStack {
+            // Ring segments
+            ForEach(0..<segmentCount, id: \.self) { index in
+                ringSegment(index: index)
             }
-            .scaleEffect(0.84)
+
+            // Center avatars in pentagon layout
+            ForEach(Array(members.prefix(segmentCount).enumerated()), id: \.element.id) { index, member in
+                let angle = pentagonAngle(for: index)
+                let radius: CGFloat = 48
+
+                EmaraRingAvatar(
+                    initials: member.initials,
+                    color: EmaraTribeMember.tribeColors[member.colorIndex]
+                )
+                .offset(
+                    x: cos(angle) * radius,
+                    y: sin(angle) * radius
+                )
+            }
         }
-        .environment(\.layoutDirection, .leftToRight)
+        .frame(width: ringDiameter, height: ringDiameter)
+        .frame(maxWidth: .infinity)
     }
 
-    private var leaderboardSection: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(Array(viewModel.leaderboard.enumerated()), id: \.element.id) { index, user in
-                Button {
-                    selectedUserID = user.id
-                } label: {
-                    TribeUserRowCard(
-                        rank: index + 1,
-                        user: user
-                    )
+    private func ringSegment(index: Int) -> some View {
+        let segmentAngle = 360.0 / Double(segmentCount)
+        let startAngle = Double(index) * segmentAngle + gapAngle / 2 - 90
+        let endAngle = startAngle + segmentAngle - gapAngle
+
+        return Circle()
+            .trim(
+                from: CGFloat(startAngle / 360.0),
+                to: CGFloat(endAngle / 360.0)
+            )
+            .stroke(
+                EmaraTribeMember.tribeColors[index],
+                style: StrokeStyle(lineWidth: ringStroke, lineCap: .round)
+            )
+            .frame(width: ringDiameter, height: ringDiameter)
+    }
+
+    private func pentagonAngle(for index: Int) -> Double {
+        let baseAngle = -Double.pi / 2 // Start from top
+        return baseAngle + Double(index) * (2 * .pi / Double(segmentCount))
+    }
+}
+
+private struct EmaraRingAvatar: View {
+    let initials: String
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(color.opacity(0.3))
+
+            Text(initials)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+        }
+        .frame(width: 40, height: 40)
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .stroke(color, lineWidth: 2.5)
+        }
+    }
+}
+
+// MARK: - Tribe Ring Member Card
+
+private struct TribeRingMemberCard: View {
+    let member: EmaraTribeMember
+    private var memberColor: Color {
+        EmaraTribeMember.tribeColors[member.colorIndex]
+    }
+
+    var body: some View {
+        TribeCardSurface(
+            tint: memberColor,
+            padding: 16,
+            cornerRadius: 20
+        ) {
+            HStack(spacing: 14) {
+                // Color dot
+                Circle()
+                    .fill(memberColor)
+                    .frame(width: 10, height: 10)
+
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(memberColor.opacity(0.3))
+                    Text(member.initials)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(TribeLeaderboardPalette.textPrimary)
                 }
-                .buttonStyle(.plain)
+                .frame(width: 42, height: 42)
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(memberColor, lineWidth: 2)
+                }
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(member.name)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+                        .lineLimit(1)
+
+                    Text(member.username)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(TribeLeaderboardPalette.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("\(member.points.formatted(.number.locale(.autoupdatingCurrent)))")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+
+                    Text("المستوى \(member.level.formatted(.number.locale(.autoupdatingCurrent)))")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(TribeLeaderboardPalette.textTertiary)
+                }
             }
         }
     }
 }
+
+// MARK: - Existing Components (Unchanged)
 
 private struct TribeUserRowCard: View {
     let rank: Int

@@ -101,6 +101,23 @@ final class PremiumStore: ObservableObject {
         isLoading = false
         products = purchaseManager.products
         statusMessage = message(for: outcome)
+
+        switch outcome {
+        case .success:
+            AnalyticsService.shared.track(.subscriptionStarted(
+                plan: plan.rawValue,
+                price: product.displayPrice
+            ))
+        case .failed(let msg):
+            AnalyticsService.shared.track(.subscriptionFailed(
+                plan: plan.rawValue,
+                error: msg
+            ))
+        case .cancelled:
+            AnalyticsService.shared.track(.subscriptionCancelled)
+        case .pending:
+            break
+        }
     }
 
     func restore() async {
@@ -109,6 +126,10 @@ final class PremiumStore: ObservableObject {
         isLoading = false
         products = purchaseManager.products
         statusMessage = message(for: outcome)
+
+        if case .success = outcome {
+            AnalyticsService.shared.track(.subscriptionRestored)
+        }
     }
 
     func product(for plan: PremiumPlan) -> Product? {

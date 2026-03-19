@@ -80,6 +80,13 @@ struct CaptainChatView: View {
         .fullScreenCover(isPresented: $globalBrain.showGratitudeSession) {
             GratitudeSessionView()
         }
+        .sheet(isPresented: $globalBrain.showChatHistory) {
+            ChatHistoryView()
+                .environmentObject(globalBrain)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
         }
@@ -106,6 +113,20 @@ private extension CaptainChatView {
             }
 
             Spacer()
+
+            Button {
+                globalBrain.showChatHistory = true
+            } label: {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.22), lineWidth: 0.7)
+                    )
+            }
 
             HStack(spacing: 6) {
                 Circle()

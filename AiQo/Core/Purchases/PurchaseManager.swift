@@ -169,6 +169,12 @@ final class PurchaseManager: ObservableObject {
                 await transaction.finish()
                 lastOutcome = .success
                 print("🛒 Purchase finished for \(transaction.productID). New expiry: \(entitlementStore.expiresAt?.description ?? "nil")")
+
+                // Server-side receipt validation (non-blocking)
+                Task.detached(priority: .utility) {
+                    _ = await ReceiptValidator.shared.validate(transaction: transaction)
+                }
+
                 return .success
             case .pending:
                 lastOutcome = .pending

@@ -197,7 +197,7 @@ struct TribeHubScreen: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("القبيلة")
+            Text("إمارة")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(usesPremiumSurface ? Color.white : Color.primary)
                 .onLongPressGesture(minimumDuration: 1.2) {

@@ -116,25 +116,34 @@ final class CaptainIntelligenceManager {
     }
 
     /// Fetches today's essential HealthKit metrics locally.
+    /// Each individual query is guarded by a 2-second timeout to prevent hanging continuations.
     func fetchTodayEssentialMetrics() async throws -> CaptainDailyHealthMetrics {
         try await requestHealthPermissions()
 
         let todayInterval = todayDateInterval()
 
-        async let stepsValue = fetchCumulativeQuantity(
-            .stepCount,
-            unit: .count(),
-            interval: todayInterval
-        )
-        async let activeEnergyValue = fetchCumulativeQuantity(
-            .activeEnergyBurned,
-            unit: .kilocalorie(),
-            interval: todayInterval
-        )
-        async let heartRateValue = fetchAverageOrCurrentHeartRate(interval: todayInterval)
-        async let sleepValue = fetchSleepHoursAttributedToToday()
+        async let stepsValue = withHealthKitTimeout(fallback: 0.0) { [self] in
+            try await fetchCumulativeQuantity(
+                .stepCount,
+                unit: .count(),
+                interval: todayInterval
+            )
+        }
+        async let activeEnergyValue = withHealthKitTimeout(fallback: 0.0) { [self] in
+            try await fetchCumulativeQuantity(
+                .activeEnergyBurned,
+                unit: .kilocalorie(),
+                interval: todayInterval
+            )
+        }
+        async let heartRateValue = withHealthKitTimeout(fallback: nil as Double?) { [self] in
+            try await fetchAverageOrCurrentHeartRate(interval: todayInterval)
+        }
+        async let sleepValue = withHealthKitTimeout(fallback: 0.0) { [self] in
+            try await fetchSleepHoursAttributedToToday()
+        }
 
-        return try await CaptainDailyHealthMetrics(
+        return await CaptainDailyHealthMetrics(
             stepCount: max(0, Int(stepsValue.rounded())),
             activeEnergyKilocalories: max(0, Int(activeEnergyValue.rounded())),
             averageOrCurrentHeartRateBPM: heartRateValue.map { max(0, Int($0.rounded())) },
@@ -719,6 +728,37 @@ final class CaptainIntelligenceManager {
     }
 #endif
 
+    // MARK: - HealthKit Timeout Helper
+
+    /// Maximum time to wait for a single HealthKit query before returning a default or throwing.
+    private static let healthKitQueryTimeout: TimeInterval = 2
+
+    /// Races a HealthKit async operation against a strict timeout. Returns the fallback on timeout.
+    private func withHealthKitTimeout<T: Sendable>(
+        fallback: T,
+        operation: @escaping @Sendable () async throws -> T
+    ) async -> T {
+        do {
+            return try await withThrowingTaskGroup(of: T.self) { group in
+                group.addTask {
+                    try await operation()
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(Self.healthKitQueryTimeout * 1_000_000_000))
+                    return fallback
+                }
+
+                guard let result = try await group.next() else {
+                    return fallback
+                }
+                group.cancelAll()
+                return result
+            }
+        } catch {
+            return fallback
+        }
+    }
+
     // MARK: - HealthKit Query Helpers
 
     private func requiredReadTypes() throws -> Set<HKObjectType> {
@@ -864,8 +904,8 @@ final class CaptainIntelligenceManager {
             let query = HKSampleQuery(
                 sampleType: sleepType,
                 predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
+                limit: 150,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
             ) { _, samples, error in
                 if let error {
                     continuation.resume(throwing: error)

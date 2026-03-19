@@ -1,4 +1,83 @@
 import Foundation
+import SwiftData
+
+// MARK: - Persistent Chat Message (SwiftData)
+
+/// نموذج SwiftData لحفظ رسائل المحادثة على القرص — يتحوّل من وإلى ChatMessage بدون ما يأثر على الـ UI
+@Model
+final class PersistentChatMessage {
+    var messageID: UUID
+    var text: String
+    var isUser: Bool
+    var timestamp: Date
+    /// JSON-encoded SpotifyRecommendation — nil if absent
+    var spotifyRecommendationData: Data?
+    /// معرّف الجلسة — كل فتحة تطبيق تنشئ جلسة جديدة
+    var sessionID: UUID = UUID()
+
+    init(
+        messageID: UUID,
+        text: String,
+        isUser: Bool,
+        timestamp: Date,
+        spotifyRecommendationData: Data? = nil,
+        sessionID: UUID = UUID()
+    ) {
+        self.messageID = messageID
+        self.text = text
+        self.isUser = isUser
+        self.timestamp = timestamp
+        self.spotifyRecommendationData = spotifyRecommendationData
+        self.sessionID = sessionID
+    }
+
+    /// تحويل من ChatMessage إلى PersistentChatMessage
+    @MainActor
+    convenience init(chatMessage msg: ChatMessage, sessionID: UUID) {
+        let spotifyData: Data? = {
+            guard let rec = msg.spotifyRecommendation else { return nil }
+            return try? JSONEncoder().encode(rec)
+        }()
+
+        self.init(
+            messageID: msg.id,
+            text: msg.text,
+            isUser: msg.isUser,
+            timestamp: msg.timestamp,
+            spotifyRecommendationData: spotifyData,
+            sessionID: sessionID
+        )
+    }
+
+    /// تحويل من PersistentChatMessage إلى ChatMessage خفيف للـ UI
+    @MainActor
+    func toChatMessage() -> ChatMessage {
+        let spotify: SpotifyRecommendation? = {
+            guard let data = spotifyRecommendationData else { return nil }
+            return try? JSONDecoder().decode(SpotifyRecommendation.self, from: data)
+        }()
+
+        return ChatMessage(
+            id: messageID,
+            text: text,
+            isUser: isUser,
+            timestamp: timestamp,
+            spotifyRecommendation: spotify
+        )
+    }
+}
+
+// MARK: - Chat Session (computed from PersistentChatMessage groups)
+
+/// يمثّل جلسة محادثة واحدة — مشتق من تجميع الرسائل بنفس الـ sessionID
+struct ChatSession: Identifiable, Sendable {
+    let id: UUID
+    let preview: String
+    let timestamp: Date
+    let messageCount: Int
+}
+
+// MARK: - Structured Response Models
 
 struct CaptainStructuredResponse: Codable, Sendable {
     let message: String

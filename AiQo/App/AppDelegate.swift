@@ -19,6 +19,7 @@ struct AiQoApp: App {
         do {
             let schema = Schema([
                 CaptainMemory.self,
+                PersistentChatMessage.self,
                 RecordProject.self,
                 WeeklyLog.self
             ])
@@ -58,7 +59,9 @@ struct AiQoApp: App {
             AppRootView()
                 .environmentObject(globalBrain)
                 .onOpenURL { url in
-                    _ = SpotifyVibeManager.shared.handleURL(url)
+                    if !DeepLinkRouter.shared.handle(url: url) {
+                        _ = SpotifyVibeManager.shared.handleURL(url)
+                    }
                 }
         }
         .modelContainer(for: [AiQoDailyRecord.self, WorkoutTask.self])
@@ -75,6 +78,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         let center = UNUserNotificationCenter.current()
         center.delegate = self
+
+        // Core services initialization
+        _ = CrashReporter.shared
+        _ = NetworkMonitor.shared
+        AnalyticsService.shared.track(.appLaunched)
+        FreeTrialManager.shared.refreshState()
 
         LocalizationManager.shared.applySavedLanguage()
         NotificationService.shared.requestPermissions()
@@ -125,6 +134,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        AnalyticsService.shared.track(.appBecameActive)
         PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
         reloadWidgetTimelines()
         clearAppBadge()
@@ -149,6 +159,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        AnalyticsService.shared.track(.appEnteredBackground)
         NotificationIntelligenceManager.shared.scheduleQueuedDeveloperWhisperIfNeeded()
 
         if AppSettingsStore.shared.notificationsEnabled {
@@ -215,6 +226,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        let notifType = (userInfo["source"] as? String) ?? response.notification.request.identifier
+        AnalyticsService.shared.track(.notificationTapped(type: notifType))
 
         if let source = userInfo["source"] as? String, source == "captain_hamoudi" {
             CaptainNotificationHandler.shared.handleIncomingNotification(userInfo: userInfo)

@@ -5,6 +5,56 @@
   Created by Mohammed Raad on 15/11/2025.
   
 */
+/* Onboarding */
+"onboarding.page1.title" = "Track Your Health Smartly";
+"onboarding.page1.subtitle" = "Steps, calories, sleep, heart rate — everything in one place with daily AI insights.";
+"onboarding.page2.title" = "Captain Hamoudi";
+"onboarding.page2.subtitle" = "Your personal AI coach. Get advice, workout plans, and meal plans tailored just for you.";
+"onboarding.page3.title" = "The Tribe";
+"onboarding.page3.subtitle" = "Challenge friends and family. Leaderboards, group challenges, and shared energy.";
+"onboarding.page4.title" = "Ready to Start Your Journey?";
+"onboarding.page4.subtitle" = "7 days free. No card needed. Start now and see the difference.";
+"onboarding.next" = "Next";
+"onboarding.skip" = "Skip";
+"onboarding.getStarted" = "Get Started";
+
+/* Errors & Offline */
+"offline.banner" = "No Internet Connection";
+"error.noInternet" = "No internet connection";
+"error.noInternet.recovery" = "Check your connection and try again.";
+"error.serverUnreachable" = "Cannot reach the server";
+"error.timeout" = "Connection timed out";
+"error.server" = "Server error (code %d)";
+"error.server.recovery" = "Try again in a moment.";
+"error.captainUnavailable" = "Captain is unavailable right now";
+"error.captainRateLimited" = "Too many requests. Wait a moment.";
+"error.captainResponseInvalid" = "Captain response was invalid";
+"error.captain.recovery" = "Try again or come back later.";
+"error.healthKitUnavailable" = "Health data is not available";
+"error.healthKitPermissionDenied" = "Health permissions required";
+"error.healthKit.recovery" = "Go to Settings > Privacy > Health and enable AiQo.";
+"error.purchaseFailed" = "Purchase failed: %@";
+"error.trialExpired" = "Your free trial has expired";
+"error.trialExpired.recovery" = "Subscribe to continue using premium features.";
+"error.tribeNotFound" = "Tribe not found";
+"error.tribeAccessDenied" = "You don't have access to this tribe";
+
+/* Legal */
+"legal.section" = "Legal";
+"legal.privacy.title" = "Privacy Policy";
+"legal.terms.title" = "Terms of Service";
+"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: March 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party Sharing\nWe do not share your personal data with any third party without your explicit consent.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
+"legal.terms.content" = "AiQo Terms of Service\n\nLast updated: March 2026\n\n1. Acceptance\nBy using AiQo, you agree to these terms.\n\n2. Service\nAiQo provides health tracking and AI-powered coaching. Content is not a substitute for professional medical advice.\n\n3. Subscriptions\n- Free trial: 7 days\n- Individual plan: $5.99/month\n- Family plan: $10.00/month (up to 5 people)\nSubscriptions do not auto-renew. Each cycle is 30 days.\n\n4. User Conduct\nYou are responsible for your use of the app and any content you post in the Tribe feature.\n\n5. Disclaimer\nAiQo does not provide medical advice. Consult your doctor before making health decisions based on app data.\n\n6. Changes\nWe reserve the right to modify these terms at any time.";
+
+/* Referral */
+"referral.section" = "Invite Friends";
+"referral.title" = "Share AiQo";
+"referral.subtitle" = "Invite a friend and get 3 extra free days!";
+"referral.yourCode" = "Your code: %@";
+"referral.earned" = "You earned %d bonus days";
+"referral.share" = "Share";
+"referral.shareText" = "Try AiQo — your AI health coach! Download it here: %@";
+
 "tab.home"    = "Home";
 "tab.gym"     = "Gym";
 "tab.kitchen" = "Kitchen";
@@ -1253,6 +1303,12 @@
 "premium.status.pending" = "Purchase is pending";
 "premium.status.cancelled" = "Purchase cancelled";
 "premium.status.failed" = "Purchase failed: %@";
+"premium.perMonth" = "/ month";
+"premium.trial.title" = "Try Free for 7 Days";
+"premium.trial.subtitle" = "Full access to all premium features. No card needed.";
+"premium.trial.start" = "Start";
+"premium.trial.active.title" = "Free Trial Active";
+"premium.trial.active.days" = "%d days remaining";
 
 /* Club */
 "club.tab.impact" = "Impact";

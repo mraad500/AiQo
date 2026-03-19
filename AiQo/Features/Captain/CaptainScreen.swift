@@ -256,6 +256,13 @@ struct CaptainScreen: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $viewModel.showChatHistory) {
+            ChatHistoryView()
+                .environmentObject(viewModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
         }
@@ -277,6 +284,17 @@ struct CaptainScreen: View {
                     .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
 
                 Spacer(minLength: 0)
+
+                Button {
+                    viewModel.showChatHistory = true
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundColor(theme.subtext)
+                        .frame(width: 34, height: 34)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
+                }
             }
             .environment(\.layoutDirection, .rightToLeft)
         }

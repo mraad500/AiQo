@@ -29,7 +29,20 @@ struct BrainOrchestrator: Sendable {
 
         switch route(for: routedRequest) {
         case .local:
-            baseReply = try await generateLocalReply(for: routedRequest)
+            do {
+                baseReply = try await generateLocalReply(for: routedRequest)
+            } catch let error as AppleIntelligenceSleepAgentError {
+                // Apple Intelligence مو متاح — نرسل ملخص النوم (أرقام مجمّعة فقط) للـ cloud
+                if case .modelUnavailable(let sleepSummary) = error {
+                    baseReply = try await generateCloudSleepReply(
+                        originalRequest: routedRequest,
+                        sleepSummary: sleepSummary,
+                        userName: userName
+                    )
+                } else {
+                    throw error
+                }
+            }
         case .cloud:
             do {
                 baseReply = try await cloudService.generateReply(
@@ -97,19 +110,11 @@ private extension BrainOrchestrator {
     }
 
     private func route(for request: HybridBrainRequest) -> Route {
-        if request.screenContext == .sleepAnalysis {
-            return .local
-        }
-
         switch request.screenContext {
-        case .gym, .kitchen, .peaks:
-            return .cloud
-        case .mainChat:
-            return requiresCloudPlanning(for: latestUserMessage(in: request)) ? .cloud : .local
-        case .myVibe:
-            return .cloud
         case .sleepAnalysis:
             return .local
+        case .gym, .kitchen, .peaks, .myVibe, .mainChat:
+            return .cloud
         }
     }
 
@@ -140,6 +145,52 @@ private extension BrainOrchestrator {
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation,
             rawText: reply.rawText
+        )
+    }
+
+    /// لمّا Apple Intelligence مو متاح، نرسل ملخص النوم المجمّع (بدون بيانات خام) للـ OpenAI API
+    func generateCloudSleepReply(
+        originalRequest: HybridBrainRequest,
+        sleepSummary: String,
+        userName: String?
+    ) async throws -> HybridBrainServiceReply {
+        // نستبدل رسالة المستخدم الأخيرة بالـ sleep context + طلب التحليل
+        // هيچي ما تضيع بالـ sanitizer أو الـ truncation
+        let sleepUserMessage = """
+        حلل نومي.
+
+        بيانات نومي:
+        \(sleepSummary)
+
+        اكتب 3 جمل بس بالعراقي. استخدم الأرقام الدقيقة من البيانات. لا تكتب أكثر من 3 جمل.
+        """
+
+        var modifiedConversation = originalRequest.conversation
+        // نشيل رسالة المستخدم الأخيرة ونحطها بدالها وحدة فيها الـ sleep data
+        if let lastUserIndex = modifiedConversation.lastIndex(where: { $0.role == .user }) {
+            modifiedConversation[lastUserIndex] = CaptainConversationMessage(
+                role: .user,
+                content: sleepUserMessage
+            )
+        } else {
+            modifiedConversation.append(CaptainConversationMessage(
+                role: .user,
+                content: sleepUserMessage
+            ))
+        }
+
+        let cloudRequest = HybridBrainRequest(
+            conversation: modifiedConversation,
+            screenContext: .mainChat,
+            language: originalRequest.language,
+            contextData: originalRequest.contextData,
+            userProfileSummary: originalRequest.userProfileSummary,
+            attachedImageData: nil
+        )
+
+        return try await cloudService.generateReply(
+            request: cloudRequest,
+            userName: userName
         )
     }
 

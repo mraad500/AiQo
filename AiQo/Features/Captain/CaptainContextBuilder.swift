@@ -1,10 +1,119 @@
 import Foundation
 
+// MARK: - Circadian Bio-Time Phase
+
+/// المرحلة البيولوجية الحالية — تدمج الساعة + النوم + النشاط لتحديد حالة الطاقة الحقيقية
+enum BioTimePhase: String, Sendable {
+    /// 5:00–9:59 — الجسم يصحى، الكورتيزول يرتفع
+    case awakening
+    /// 10:00–13:59 — ذروة الطاقة والتركيز
+    case energy
+    /// 14:00–17:59 — التركيز العميق، الإنتاج المستمر
+    case focus
+    /// 18:00–20:59 — الجسم يبدأ ينزل، استشفاء نشط
+    case recovery
+    /// 21:00–4:59 — الجهاز العصبي يهدأ، وقت الصمت الداخلي
+    case zen
+
+    /// حساب المرحلة من الساعة + جودة النوم + مستوى النشاط
+    static func current(
+        hour: Int,
+        sleepHours: Double,
+        steps: Int
+    ) -> BioTimePhase {
+        let sleepDeprived = sleepHours > 0 && sleepHours < 5.5
+
+        // نوم ضعيف + صبح مبكر = الجسم بعده بمرحلة zen مو awakening
+        if sleepDeprived && (5..<10).contains(hour) {
+            return .recovery
+        }
+
+        // نشاط عالي بالليل = الجسم بعده بـ energy مو zen
+        if hour >= 21 && steps > 8_000 {
+            return .recovery
+        }
+
+        switch hour {
+        case 5..<10:  return .awakening
+        case 10..<14: return .energy
+        case 14..<18: return .focus
+        case 18..<21: return .recovery
+        default:      return .zen
+        }
+    }
+
+    /// تعليمات اللهجة للـ LLM — سطر واحد فقط
+    var toneDirective: String {
+        switch self {
+        case .awakening:
+            return "Tone: gentle, clear, optimistic. The user just woke up — ease them in, don't overwhelm."
+        case .energy:
+            return "Tone: sharp, direct, high-output. Peak biological energy — match their drive."
+        case .focus:
+            return "Tone: steady, precise, minimal. Deep work hours — be efficient, don't break flow."
+        case .recovery:
+            return "Tone: warm, calm, encouraging. The body is winding down — be supportive, not pushy."
+        case .zen:
+            return "Tone: soft, philosophical, minimal. Late night — speak gently, encourage rest and reflection."
+        }
+    }
+
+    /// التعليمات بالعربي العراقي للـ system prompt
+    var toneDirectiveArabic: String {
+        switch self {
+        case .awakening:
+            return "النبرة: هادئة وواضحة. المستخدم لسه صاحي — خفف عليه، لا تثقل."
+        case .energy:
+            return "النبرة: حادة ومباشرة. ذروة الطاقة — جاريه بنفس السرعة."
+        case .focus:
+            return "النبرة: ثابتة ودقيقة. ساعات التركيز — كن مختصر ولا تقطع التدفق."
+        case .recovery:
+            return "النبرة: دافئة وهادئة. الجسم يرتاح — ادعمه بدون ضغط."
+        case .zen:
+            return "النبرة: ناعمة وتأملية. وقت متأخر — تكلم بهدوء وشجّع الراحة."
+        }
+    }
+}
+
+// MARK: - Context Data
+
 struct CaptainContextData: Sendable {
     let steps: Int
     let calories: Int
     let vibe: String
     let level: Int
+
+    // Bio-state enrichment
+    let sleepHours: Double
+    let heartRate: Int?
+    let timeOfDay: String
+    let toneHint: String
+    let stageTitle: String
+    let bioPhase: BioTimePhase
+
+    init(
+        steps: Int,
+        calories: Int,
+        vibe: String,
+        level: Int,
+        sleepHours: Double = 0,
+        heartRate: Int? = nil,
+        timeOfDay: String = "",
+        toneHint: String = "",
+        stageTitle: String = "",
+        bioPhase: BioTimePhase = .energy
+    ) {
+        self.steps = steps
+        self.calories = calories
+        self.vibe = vibe
+        self.level = level
+        self.sleepHours = sleepHours
+        self.heartRate = heartRate
+        self.timeOfDay = timeOfDay
+        self.toneHint = toneHint
+        self.stageTitle = stageTitle
+        self.bioPhase = bioPhase
+    }
 }
 
 struct CaptainSystemContextSnapshot: Sendable {
@@ -81,12 +190,24 @@ final class CaptainContextBuilder {
 
     func buildContextData() async -> CaptainContextData {
         let snapshot = await buildSystemContext()
+        let hour = calendar.component(.hour, from: Date())
+        let bioPhase = BioTimePhase.current(
+            hour: hour,
+            sleepHours: snapshot.sleepHours,
+            steps: snapshot.steps
+        )
 
         return CaptainContextData(
             steps: snapshot.steps,
             calories: snapshot.calories,
             vibe: snapshot.vibeTitle,
-            level: snapshot.level
+            level: snapshot.level,
+            sleepHours: snapshot.sleepHours,
+            heartRate: snapshot.heartRate,
+            timeOfDay: snapshot.timeOfDay,
+            toneHint: snapshot.toneHint,
+            stageTitle: snapshot.stageTitle,
+            bioPhase: bioPhase
         )
     }
 

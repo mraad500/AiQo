@@ -3,6 +3,12 @@ import SwiftUI
 import UIKit
 internal import Combine
 
+struct CaptainProcessingTimeoutError: LocalizedError {
+    var errorDescription: String? {
+        "Captain processing exceeded the maximum allowed time."
+    }
+}
+
 enum ChatMessageAccessory: Equatable, Sendable {
     case morningGratitude
 
@@ -88,10 +94,12 @@ final class CaptainViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var coachState: CoachCognitiveState = .idle
     @Published var showCustomization: Bool = false
+    @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
     @Published var showGratitudeSession: Bool = false
     @Published var customization: CaptainCustomization = .default
     @Published var feedbackTrigger: Int = 0
+    @Published var activeModule: ScreenContext = .mainChat
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -101,10 +109,18 @@ final class CaptainViewModel: ObservableObject {
     private let contextBuilder: CaptainContextBuilder
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let minimumLoadingStateDuration: TimeInterval = 0.8
+    private let globalProcessingTimeout: TimeInterval = 15
+    /// Sleep analysis runs entirely on-device (HealthKit + Foundation Models) and needs more time.
+    private let sleepProcessingTimeout: TimeInterval = 25
+
+    /// حد أقصى للرسائل بالذاكرة — الباقي محفوظ بـ SwiftData
+    private static let maxInMemoryMessages = 80
 
     private var responseTask: Task<Void, Never>?
     private var activeRequestID: UUID?
     private var messageCount = 0
+    /// كل فتحة تطبيق = جلسة جديدة
+    private(set) var currentSessionID = UUID()
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -124,7 +140,7 @@ final class CaptainViewModel: ObservableObject {
         self.contextBuilder = contextBuilder ?? .shared
         self.morningHabitOrchestrator = morningHabitOrchestrator ?? .shared
         loadCustomization()
-        addWelcomeMessage()
+        loadPersistedHistory()
     }
 
     deinit {
@@ -182,22 +198,28 @@ final class CaptainViewModel: ObservableObject {
         sendMessage(text: inputText)
     }
 
-    func sendMessage(_ rawText: String, context: ScreenContext = .mainChat) {
+    func sendMessage(_ rawText: String, context: ScreenContext? = nil) {
         sendMessage(text: rawText, context: context)
     }
 
     func sendMessage(
         text rawText: String,
         image: UIImage? = nil,
-        context: ScreenContext = .mainChat
+        context: ScreenContext? = nil
     ) {
+        let context = context ?? activeModule
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
+        guard !isLoading else { return }
+
+        AnalyticsService.shared.track(.captainMessageSent(length: trimmedText.count))
 
         responseTask?.cancel()
         feedbackTrigger += 1
         inputText = ""
-        messages.append(ChatMessage(text: trimmedText, isUser: true))
+        let userMessage = ChatMessage(text: trimmedText, isUser: true)
+        messages.append(userMessage)
+        MemoryStore.shared.persistMessage(userMessage, sessionID: currentSessionID)
         isLoading = true
         coachState = .readingMessage
 
@@ -227,7 +249,9 @@ final class CaptainViewModel: ObservableObject {
         let nickname = customization.calling.trimmingCharacters(in: .whitespacesAndNewlines)
         let summary = nickname.isEmpty ? "✅ تمام تم الحفظ" : "✅ تمام تم الحفظ - راح أناديك \(nickname)"
 
-        messages.append(ChatMessage(text: summary, isUser: false))
+        let confirmMessage = ChatMessage(text: summary, isUser: false)
+        messages.append(confirmMessage)
+        MemoryStore.shared.persistMessage(confirmMessage, sessionID: currentSessionID)
         showCustomization = false
     }
 
@@ -294,13 +318,36 @@ final class CaptainViewModel: ObservableObject {
         showGratitudeSession = true
     }
 
-    private func addWelcomeMessage() {
-        messages.append(
-            ChatMessage(
-                text: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
-                isUser: false
-            )
+    /// كل فتحة تطبيق تبدأ بمحادثة جديدة — المحادثات القديمة متاحة عبر زر التاريخ
+    private func loadPersistedHistory() {
+        startNewChat()
+    }
+
+    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية
+    func startNewChat() {
+        currentSessionID = UUID()
+        messages.removeAll()
+        messageCount = 0
+        currentWorkoutPlan = nil
+        currentMealPlan = nil
+
+        let welcome = ChatMessage(
+            text: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
+            isUser: false
         )
+        messages.append(welcome)
+        MemoryStore.shared.persistMessage(welcome, sessionID: currentSessionID)
+    }
+
+    /// يحمّل جلسة قديمة — يستبدل الرسائل الحالية برسائل الجلسة المختارة
+    func loadSession(_ session: ChatSession) {
+        currentSessionID = session.id
+        let stored = MemoryStore.shared.fetchMessages(for: session.id)
+        messages = stored
+        messageCount = stored.count
+        currentWorkoutPlan = nil
+        currentMealPlan = nil
+        showChatHistory = false
     }
 
     private func processMessage(
@@ -315,25 +362,35 @@ final class CaptainViewModel: ObservableObject {
             }
         }
 
-        let conversation = buildConversationHistory()
-        let promptRequest = await buildHybridRequest(
-            conversation: conversation,
-            screenContext: screenContext,
-            attachedImageData: attachedImageData
-        )
-
         do {
+            let conversation = buildConversationHistory()
+            let promptRequest = try await withGlobalTimeout(seconds: globalProcessingTimeout) {
+                await self.buildHybridRequest(
+                    conversation: conversation,
+                    screenContext: screenContext,
+                    attachedImageData: attachedImageData
+                )
+            }
+
             let startedAt = Date()
             let userName = captainReplyUserName()
-            let responseTask = Task<HybridBrainServiceReply, Error> { [orchestrator] in
-                try await orchestrator.processMessage(
+            let capturedOrchestrator = orchestrator
+            // Sleep analysis runs entirely on-device (HealthKit + Foundation Models) — give it more time.
+            // The orchestrator may reroute .mainChat → .sleepAnalysis internally if the message is sleep-related.
+            let latestUserText = conversation.last(where: { $0.role == .user })?.content ?? ""
+            let needsSleepTimeout = screenContext == .sleepAnalysis
+                || looksLikeSleepRequest(latestUserText)
+            let orchestratorTimeout = needsSleepTimeout
+                ? sleepProcessingTimeout
+                : globalProcessingTimeout
+            let reply = try await withGlobalTimeout(seconds: orchestratorTimeout) {
+                try await capturedOrchestrator.processMessage(
                     request: promptRequest,
                     userName: userName
                 )
             }
 
             try await runCognitiveTimeline(requestID: requestID)
-            let reply = try await responseTask.value
 
             let elapsed = Date().timeIntervalSince(startedAt)
             if elapsed < minimumLoadingStateDuration {
@@ -350,15 +407,21 @@ final class CaptainViewModel: ObservableObject {
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
             let assistantReply = reply.message
 
+            let replyMessage = ChatMessage(
+                text: assistantReply,
+                isUser: false,
+                spotifyRecommendation: reply.spotifyRecommendation
+            )
+
             withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
-                messages.append(
-                    ChatMessage(
-                        text: assistantReply,
-                        isUser: false,
-                        spotifyRecommendation: reply.spotifyRecommendation
-                    )
-                )
+                messages.append(replyMessage)
             }
+
+            MemoryStore.shared.persistMessage(replyMessage, sessionID: currentSessionID)
+            trimInMemoryMessagesIfNeeded()
+
+            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+            AnalyticsService.shared.track(.captainResponseReceived(latencyMs: latencyMs))
 
             // استخراج الذكريات بالخلفية
             messageCount += 1
@@ -375,14 +438,37 @@ final class CaptainViewModel: ObservableObject {
             return
         } catch {
             guard activeRequestID == requestID else { return }
+            AnalyticsService.shared.track(.captainResponseFailed(error: String(describing: error)))
             print("CaptainViewModel hybrid brain error:", error)
-            messages.append(
-                ChatMessage(
-                    text: fallbackMessage(for: error, screenContext: screenContext),
-                    isUser: false,
-                    spotifyRecommendation: fallbackSpotifyRecommendation(for: screenContext)
-                )
+            let errorMessage = ChatMessage(
+                text: fallbackMessage(for: error, screenContext: screenContext),
+                isUser: false,
+                spotifyRecommendation: fallbackSpotifyRecommendation(for: screenContext)
             )
+            messages.append(errorMessage)
+            MemoryStore.shared.persistMessage(errorMessage, sessionID: currentSessionID)
+        }
+    }
+
+    /// Races `operation` against a strict deadline. Throws `CaptainProcessingTimeoutError` if the deadline is exceeded.
+    private func withGlobalTimeout<T: Sendable>(
+        seconds: TimeInterval,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw CaptainProcessingTimeoutError()
+            }
+
+            guard let result = try await group.next() else {
+                throw CaptainProcessingTimeoutError()
+            }
+            group.cancelAll()
+            return result
         }
     }
 
@@ -410,8 +496,18 @@ final class CaptainViewModel: ObservableObject {
         )
     }
 
+    /// حذف الرسائل القديمة من الذاكرة إذا تجاوزنا الحد — SwiftData يحفظ الكل
+    private func trimInMemoryMessagesIfNeeded() {
+        guard messages.count > Self.maxInMemoryMessages else { return }
+        let excess = messages.count - Self.maxInMemoryMessages
+        messages.removeFirst(excess)
+    }
+
+    /// آخر 20 رسالة فقط — كافية للسياق بدون تضخم الـ payload
+    private static let maxConversationWindow = 20
+
     private func buildConversationHistory() -> [CaptainConversationMessage] {
-        messages.compactMap { message in
+        messages.suffix(Self.maxConversationWindow).compactMap { message in
             let trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedText.isEmpty else { return nil }
 
@@ -522,6 +618,19 @@ final class CaptainViewModel: ObservableObject {
         for error: Error,
         screenContext: ScreenContext
     ) -> String {
+        if error is CaptainProcessingTimeoutError {
+            if screenContext == .myVibe {
+                return localizedFallbackMessage(
+                    arabic: "الرد أخذ وقت أطول من المتوقع، فحطيتلك فايب احتياطي حتى ما ينقطع المود.",
+                    english: "The reply took longer than expected, so I queued a fallback vibe to keep the mood going."
+                )
+            }
+            return localizedFallbackMessage(
+                arabic: "الرد أخذ وقت أطول من المتوقع. جرّب مرة ثانية.",
+                english: "The reply took longer than expected. Try again."
+            )
+        }
+
         if let serviceError = error as? LocalBrainServiceError {
             switch serviceError {
             case .invalidStructuredResponse:
@@ -534,6 +643,11 @@ final class CaptainViewModel: ObservableObject {
                 return localizedFallbackMessage(
                     arabic: "الرد المحلي طلع بصيغة غير متوقعة. جرّب مرة ثانية.",
                     english: "The on-device reply came back in an unexpected format. Try again."
+                )
+            case .onDeviceTimeout:
+                return localizedFallbackMessage(
+                    arabic: "المحرك المحلي أخذ وقت أطول من المتوقع. جرّب مرة ثانية.",
+                    english: "The on-device model took longer than expected. Try again."
                 )
             case .missingUserMessage, .emptyConversation:
                 return localizedFallbackMessage(
@@ -683,5 +797,17 @@ private extension CaptainViewModel {
     static func preparedImageData(from image: UIImage?) -> Data? {
         guard let image else { return nil }
         return image.jpegData(compressionQuality: 0.74) ?? image.pngData()
+    }
+
+    /// Quick heuristic to detect sleep analysis requests so the global timeout can be extended.
+    /// Mirrors BrainOrchestrator's sleep detection patterns without needing access to the private extension.
+    func looksLikeSleepRequest(_ text: String) -> Bool {
+        let lowered = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let sleepKeywords = [
+            "حلل", "نوم", "نمت", "نومي",
+            "sleep", "slept", "analyze sleep", "sleep analysis",
+            "deep sleep", "rem"
+        ]
+        return sleepKeywords.contains { lowered.contains($0) }
     }
 }

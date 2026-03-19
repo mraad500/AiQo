@@ -183,7 +183,7 @@ struct TribeLeaderboardView: View {
 
     private var headerView: some View {
         HStack {
-            Text("القبيلة")
+            Text("إمارة")
                 .font(.system(size: 34, weight: .heavy))
                 .foregroundColor(Color(hex: "1A1A1A"))
 

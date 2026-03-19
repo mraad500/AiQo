@@ -43,6 +43,7 @@ enum LocalBrainServiceError: LocalizedError {
     case emptyConversation
     case missingUserMessage
     case invalidStructuredResponse
+    case onDeviceTimeout
 
     var errorDescription: String? {
         switch self {
@@ -52,6 +53,8 @@ enum LocalBrainServiceError: LocalizedError {
             return "Captain local generation requires a user message."
         case .invalidStructuredResponse:
             return "Captain local generation produced invalid structured JSON."
+        case .onDeviceTimeout:
+            return "Captain on-device model exceeded the allowed response time."
         }
     }
 }
@@ -194,11 +197,7 @@ private extension LocalBrainService {
                 currentSteps: payload.contextData.steps,
                 language: payload.language
             )
-            do {
-                message = try await onDeviceNotificationEngine.respond(to: latestUserMessage)
-            } catch {
-                message = fallback
-            }
+            message = await onDeviceReplyWithTimeout(for: latestUserMessage) ?? fallback
         }
 
         let normalized = normalizedNotificationMessage(
@@ -255,6 +254,8 @@ private extension LocalBrainService {
 
     func makeSleepAnalysisReply(payload: LocalAppIntentPayload) async throws -> LocalBrainServiceReply {
         let sleepSession = try await buildLatestSleepSession()
+        // No inner timeout — the global 25s timeout in processMessage() is the safety net.
+        // Foundation Models on-device inference for sleep analysis takes 12-20s on real hardware.
         let message = try await sleepAgent.analyze(session: sleepSession)
         let structuredResponse = CaptainStructuredResponse(
             message: message,
@@ -288,6 +289,8 @@ private extension LocalBrainService {
         let calories = payload.contextData.calories
         let vibe = payload.contextData.vibe
         let level = payload.contextData.level
+        let hasSpecificIntent = intent.wantsWorkoutPlan || intent.wantsMealPlan
+            || intent.wantsSleepGuidance || intent.wantsVibeGuidance || intent.wantsChallengeGuidance
 
         switch payload.language {
         case .arabic:
@@ -323,7 +326,16 @@ private extension LocalBrainService {
                 return "أنت هسه على لفل \(level)، فاختار هدف واحد measurable اليوم وكمّله للنهاية قبل ما تفتح جبهة ثانية."
             }
 
-            return "أنت اليوم على \(steps) خطوة و\(calories) سعرة فعالة، فخل نثبت اليوم بخطوة عملية وحدة تناسب مود \(vibe)."
+            // محادثة عامة — نجرب المحرك المحلي أولاً مع حد زمني، وإذا فشل نرد بشكل طبيعي
+            if !hasSpecificIntent {
+                if let onDeviceReply = await onDeviceReplyWithTimeout(for: userMessage),
+                   !onDeviceReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return onDeviceReply
+                }
+                return "هلا والله! شلونك؟ قوللي شنو تحتاج اليوم وأنا أرتبلك إياه."
+            }
+
+            return "هلا! قوللي شنو تبي اليوم وأنا أساعدك."
 
         case .english:
             if intent.wantsMealPlan && intent.wantsWorkoutPlan {
@@ -358,7 +370,16 @@ private extension LocalBrainService {
                 return "You are level \(level), so lock one measurable win today and finish it before you open a second front."
             }
 
-            return "You are at \(steps) steps and \(calories) active calories today, so anchor the day with one practical move that fits your current \(vibe) vibe."
+            // General conversation — try on-device engine first with timeout, then a natural fallback
+            if !hasSpecificIntent {
+                if let onDeviceReply = await onDeviceReplyWithTimeout(for: userMessage),
+                   !onDeviceReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return onDeviceReply
+                }
+                return "Hey! What's on your mind today? I'm here whenever you need me."
+            }
+
+            return "Hey! Tell me what you need today and I'll sort it out."
         }
     }
 
@@ -375,6 +396,34 @@ private extension LocalBrainService {
             currentVibe: payload.contextData.vibe,
             language: payload.language
         )
+    }
+
+    /// Maximum time to wait for the on-device Foundation Model before falling back to a hardcoded response.
+    static let onDeviceReplyTimeout: TimeInterval = 8
+
+    /// Races the on-device engine against a strict timeout.
+    /// Returns `nil` on timeout, cancellation, or any thrown error — the caller picks its own fallback.
+    func onDeviceReplyWithTimeout(for userMessage: String) async -> String? {
+        let engine = onDeviceNotificationEngine
+        do {
+            return try await withThrowingTaskGroup(of: String?.self) { group in
+                group.addTask {
+                    try await engine.respond(to: userMessage)
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(Self.onDeviceReplyTimeout * 1_000_000_000))
+                    return nil
+                }
+
+                guard let result = try await group.next() else {
+                    return nil
+                }
+                group.cancelAll()
+                return result
+            }
+        } catch {
+            return nil
+        }
     }
 
     func normalizedNotificationMessage(

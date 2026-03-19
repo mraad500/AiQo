@@ -24,11 +24,11 @@ final class AccessManager: ObservableObject {
     }
 
     var canAccessTribe: Bool {
-        entitlementSnapshot.hasTribeAccess
+        entitlementSnapshot.hasTribeAccess || FreeTrialManager.shared.isTrialActive
     }
 
     var canCreateTribe: Bool {
-        entitlementSnapshot.hasFamilyPlanAccess
+        entitlementSnapshot.hasFamilyPlanAccess || FreeTrialManager.shared.isTrialActive
     }
 
     var activePlan: PremiumPlan? {

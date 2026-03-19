@@ -20,6 +20,7 @@ final class MainTabRouter: ObservableObject {
 
     func navigate(to tab: Tab) {
         if tab == .kitchen {
+            AnalyticsService.shared.track(.tabSelected("kitchen"))
             if selectedTab != .home {
                 selectedTab = .home
             }
@@ -30,7 +31,20 @@ final class MainTabRouter: ObservableObject {
         }
 
         guard selectedTab != tab else { return }
+        AnalyticsService.shared.track(.tabSelected(tab.analyticsName))
         selectedTab = tab
+    }
+}
+
+extension MainTabRouter.Tab {
+    var analyticsName: String {
+        switch self {
+        case .home: return "home"
+        case .gym: return "gym"
+        case .tribe: return "tribe"
+        case .kitchen: return "kitchen"
+        case .captain: return "captain"
+        }
     }
 }
 

@@ -5,12 +5,62 @@
   Created by Mohammed Raad on 15/11/2025.
   
 */
+/* Onboarding */
+"onboarding.page1.title" = "تابع صحتك بذكاء";
+"onboarding.page1.subtitle" = "خطوات، سعرات، نوم، نبض القلب — كلشي بمكان واحد مع تحليل ذكي يومي.";
+"onboarding.page2.title" = "كابتن حمّودي";
+"onboarding.page2.subtitle" = "مدربك الشخصي بالذكاء الاصطناعي. يعطيك نصائح، خطط تمارين، وخطط أكل مخصصة إلك.";
+"onboarding.page3.title" = "القبيلة";
+"onboarding.page3.subtitle" = "تحدّى أصدقائك وعائلتك. لوحة متصدرين، تحديات جماعية، وطاقة مشتركة.";
+"onboarding.page4.title" = "مستعد تبدأ رحلتك؟";
+"onboarding.page4.subtitle" = "7 أيام مجانية. بدون بطاقة. ابدأ الحين وشوف الفرق.";
+"onboarding.next" = "التالي";
+"onboarding.skip" = "تخطي";
+"onboarding.getStarted" = "يلا نبدأ";
+
+/* Errors & Offline */
+"offline.banner" = "لا يوجد اتصال بالإنترنت";
+"error.noInternet" = "لا يوجد اتصال بالإنترنت";
+"error.noInternet.recovery" = "تحقق من اتصالك وحاول مرة ثانية.";
+"error.serverUnreachable" = "تعذر الاتصال بالسيرفر";
+"error.timeout" = "انتهت مهلة الاتصال";
+"error.server" = "خطأ من السيرفر (كود %d)";
+"error.server.recovery" = "حاول مرة ثانية بعد شوي.";
+"error.captainUnavailable" = "الكابتن غير متاح حالياً";
+"error.captainRateLimited" = "طلبات كثيرة. انتظر شوي.";
+"error.captainResponseInvalid" = "رد الكابتن غير صالح";
+"error.captain.recovery" = "حاول مرة ثانية أو جرب لاحقاً.";
+"error.healthKitUnavailable" = "بيانات الصحة غير متاحة";
+"error.healthKitPermissionDenied" = "تحتاج تفعّل صلاحيات الصحة";
+"error.healthKit.recovery" = "روح الإعدادات > الخصوصية > الصحة وفعّل AiQo.";
+"error.purchaseFailed" = "فشل الشراء: %@";
+"error.trialExpired" = "انتهت فترة التجربة المجانية";
+"error.trialExpired.recovery" = "اشترك بالباقة المدفوعة لمتابعة الاستخدام.";
+"error.tribeNotFound" = "القبيلة غير موجودة";
+"error.tribeAccessDenied" = "ما عندك صلاحية لهذي القبيلة";
+
+/* Legal */
+"legal.section" = "القانونية";
+"legal.privacy.title" = "سياسة الخصوصية";
+"legal.terms.title" = "شروط الاستخدام";
+"legal.privacy.content" = "سياسة الخصوصية لتطبيق AiQo\n\nآخر تحديث: مارس 2026\n\n1. البيانات التي نجمعها\nنحن نجمع بيانات الصحة (الخطوات، السعرات، النوم، نبض القلب) من Apple HealthKit بإذنك. نحن أيضاً نجمع معلومات الملف الشخصي التي تقدمها (الاسم، العمر، الطول، الوزن).\n\n2. كيف نستخدم بياناتك\nبيانات الصحة تُستخدم فقط لتقديم تحليلات ونصائح مخصصة داخل التطبيق. لا نبيع بياناتك أبداً لأي طرف ثالث.\n\n3. تخزين البيانات\nبيانات الصحة تُخزن محلياً على جهازك. البيانات المُرسلة لخدمة الذكاء الاصطناعي تُعالج بدون تخزين دائم.\n\n4. المشاركة مع أطراف ثالثة\nلا نشارك بياناتك الشخصية مع أي طرف ثالث إلا بإذنك الصريح.\n\n5. حقوقك\nيمكنك حذف بياناتك في أي وقت من إعدادات التطبيق. يمكنك سحب إذن HealthKit من إعدادات الجهاز.\n\n6. اتصل بنا\nلأي استفسارات حول الخصوصية، تواصل معنا عبر التطبيق.";
+"legal.terms.content" = "شروط استخدام تطبيق AiQo\n\nآخر تحديث: مارس 2026\n\n1. القبول\nباستخدام تطبيق AiQo، أنت توافق على هذه الشروط.\n\n2. الخدمة\nAiQo يقدم تتبع صحي ونصائح بالذكاء الاصطناعي. المحتوى ليس بديلاً عن المشورة الطبية المتخصصة.\n\n3. الاشتراكات\n- التجربة المجانية: 7 أيام\n- الاشتراك الفردي: $5.99/شهر\n- الاشتراك العائلي: $10.00/شهر (حتى 5 أشخاص)\nالاشتراكات لا تتجدد تلقائياً. كل دورة 30 يوم.\n\n4. سلوك المستخدم\nأنت مسؤول عن استخدامك للتطبيق وأي محتوى تنشره في ميزة القبيلة.\n\n5. إخلاء المسؤولية\nAiQo لا يقدم نصائح طبية. استشر طبيبك قبل اتخاذ أي قرارات صحية بناءً على بيانات التطبيق.\n\n6. التعديلات\nنحتفظ بحق تعديل هذه الشروط في أي وقت.";
+
+/* Referral */
+"referral.section" = "ادعُ أصدقائك";
+"referral.title" = "شارك AiQo";
+"referral.subtitle" = "ادعُ صديقك واحصل على 3 أيام مجانية إضافية!";
+"referral.yourCode" = "كودك: %@";
+"referral.earned" = "ربحت %d يوم إضافي";
+"referral.share" = "مشاركة";
+"referral.shareText" = "جرّب تطبيق AiQo — مدرب صحي بالذكاء الاصطناعي! حمّله من هنا: %@";
+
 "tab.home"    = "الرئيسية";
 "tab.gym"     = "النادي";
 "tab.kitchen" = "المطبخ";
 "tab.captain" = "الكابتن";
 "screen.home.title" = "الرئيسية";
-"screen.home.tribe" = "القبيلة";
+"screen.home.tribe" = "إمارة";
 "metric.steps.title" = "الخطوات";
 "metric.calories.title" = "السعرات";
 "metric.stand.title" = "الوقوف";
@@ -509,7 +559,7 @@
 "gym.metric.elevation" = "الارتفاع";
 
 /* Tribe */
-"tribe.title" = "القبيلة";
+"tribe.title" = "إمارة";
 "tribe.segment.global" = "العالمي";
 "tribe.segment.region" = "Arena";
 "tribe.segment.friends" = "الأصدقاء";
@@ -1066,7 +1116,7 @@
 "debug.preview.banner" = "وضع المعاينة";
 "debug.preview.settingsHint" = "فتح القبيلة ببيانات وهمية في وضع Debug فقط.";
 
-"tribe.screen.title" = "القبيلة";
+"tribe.screen.title" = "إمارة";
 "tribe.screen.subtitle" = "مساحة هادئة للتقدم المشترك.";
 "tribe.presentationMode" = "وضع العرض";
 "tribe.tab.hub" = "المركز";
@@ -1252,6 +1302,12 @@
 "premium.status.pending" = "الشراء قيد الانتظار";
 "premium.status.cancelled" = "تم إلغاء الشراء";
 "premium.status.failed" = "فشل الشراء: %@";
+"premium.perMonth" = "/ شهر";
+"premium.trial.title" = "جرّب مجاناً 7 أيام";
+"premium.trial.subtitle" = "استخدم كل الميزات المدفوعة مجاناً. بدون بطاقة.";
+"premium.trial.start" = "ابدأ";
+"premium.trial.active.title" = "التجربة المجانية نشطة";
+"premium.trial.active.days" = "باقي %d يوم";
 
 /* Club */
 "club.tab.impact" = "الأثر";
