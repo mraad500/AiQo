@@ -60,8 +60,10 @@ actor CaptainOnDeviceChatEngine {
             let liveContext = await fetchLiveHealthContext()
             let instructions = buildDynamicSystemPrompt(with: liveContext)
 
+            #if DEBUG
             print("--- AIQO DEBUG: Live Data - Steps: \(liveContext.currentSteps) ---")
             print("--- AIQO DEBUG: Live Data - HR: \(liveContext.currentHeartRateBPM) Calories: \(liveContext.currentCalories) ---")
+            #endif
             logger.notice("captain_on_device_started")
 
             do {
@@ -226,7 +228,7 @@ actor CaptainOnDeviceChatEngine {
     }
 
     private func replaceWholeWord(_ word: String, with replacement: String, in text: String) -> String {
-        let pattern = "(?<!\\\\p{L})\(NSRegularExpression.escapedPattern(for: word))(?!\\\\p{L})"
+        let pattern = "(?<!\\p{L})\(NSRegularExpression.escapedPattern(for: word))(?!\\p{L})"
 
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return text

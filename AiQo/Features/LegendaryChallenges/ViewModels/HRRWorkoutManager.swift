@@ -1,7 +1,7 @@
 import Foundation
 import HealthKit
 import Observation
-internal import Combine
+import Combine
 
 // MARK: - Recovery Level
 

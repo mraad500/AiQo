@@ -1,7 +1,7 @@
 import SwiftUI
 import HealthKit
 import UIKit
-internal import Combine
+import Combine
 
 struct LegacyCalculationScreenView: View {
     @StateObject private var viewModel = LegacyCalculationViewModel()
@@ -39,32 +39,32 @@ struct LegacyCalculationScreenView: View {
                 // Logo
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
-                        .foregroundColor(AuthFlowTheme.mint)
+                        .foregroundStyle(AuthFlowTheme.mint)
                         .font(.system(size: 20, weight: .medium, design: .rounded))
                     Text("AiQo")
                         .font(.system(size: 36, weight: .black, design: .rounded))
                 }
 
                 VStack(spacing: 12) {
-                    Text("\(viewModel.userName)، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.")
+                    Text(String(format: NSLocalizedString("legacy.intro.body", value: "%@، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.", comment: ""), viewModel.userName))
                         .font(.system(size: 17, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.primary.opacity(0.85))
+                        .foregroundStyle(.primary.opacity(0.85))
                         .lineSpacing(6)
 
-                    Text("إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.")
+                    Text(NSLocalizedString("legacy.intro.tagline", value: "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.", comment: ""))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(AuthFlowTheme.mint)
+                        .foregroundStyle(AuthFlowTheme.mint)
                         .multilineTextAlignment(.center)
                 }
 
                 AuthPrimaryButton(
-                    title: "متابعة",
+                    title: NSLocalizedString("legacy.continue", value: "متابعة", comment: ""),
                     isEnabled: true,
                     action: { viewModel.primaryButtonTapped() }
                 )
 
-                AuthSecondaryButton(title: "ليس الآن") {
+                AuthSecondaryButton(title: NSLocalizedString("legacy.skip", value: "ليس الآن", comment: "")) {
                     viewModel.skipToHome()
                 }
             }
@@ -105,12 +105,12 @@ struct LegacyCalculationScreenView: View {
                 // Title + Level
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("المستوى")
+                        Text(NSLocalizedString("legacy.result.level", value: "المستوى", comment: ""))
                             .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(model.level)")
                             .font(.system(size: 64, weight: .black, design: .rounded))
-                            .foregroundColor(AuthFlowTheme.mint)
+                            .foregroundStyle(AuthFlowTheme.mint)
                     }
 
                     Spacer()
@@ -121,7 +121,7 @@ struct LegacyCalculationScreenView: View {
 
                         Text("\(viewModel.userName)، \(model.description)")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.trailing)
                             .lineSpacing(4)
                     }
@@ -144,7 +144,7 @@ struct LegacyCalculationScreenView: View {
                 // Total
                 HStack {
                     Spacer()
-                    Text("المجموع: \(model.totalPoints.formatted()) نقطة")
+                    Text(String(format: NSLocalizedString("legacy.result.total", value: "المجموع: %@ نقطة", comment: ""), model.totalPoints.formatted()))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                 }
 
@@ -152,29 +152,29 @@ struct LegacyCalculationScreenView: View {
                 VStack(spacing: 10) {
                     AuthMetricRow(
                         symbol: "figure.walk",
-                        title: "الخطوات",
+                        title: NSLocalizedString("legacy.metric.steps", value: "الخطوات", comment: ""),
                         value: model.totalSteps.formatted(),
                         points: model.stepsPoints,
                         color: AuthFlowTheme.mint
                     )
                     AuthMetricRow(
                         symbol: "flame.fill",
-                        title: "السعرات",
+                        title: NSLocalizedString("legacy.metric.calories", value: "السعرات", comment: ""),
                         value: model.totalCalories.formatted(),
                         points: model.caloriesPoints,
                         color: AuthFlowTheme.sand
                     )
                     AuthMetricRow(
                         symbol: "location.fill",
-                        title: "المسافة",
-                        value: "\(String(format: "%.1f", model.totalDistanceKM)) كم",
+                        title: NSLocalizedString("legacy.metric.distance", value: "المسافة", comment: ""),
+                        value: "\(String(format: "%.1f", model.totalDistanceKM)) \(NSLocalizedString("unit.km", value: "كم", comment: ""))",
                         points: model.distancePoints,
                         color: AuthFlowTheme.mint
                     )
                     AuthMetricRow(
                         symbol: "moon.fill",
-                        title: "النوم",
-                        value: "\(String(format: "%.1f", model.totalSleepHours)) س",
+                        title: NSLocalizedString("legacy.metric.sleep", value: "النوم", comment: ""),
+                        value: "\(String(format: "%.1f", model.totalSleepHours)) \(NSLocalizedString("unit.hours.short", value: "س", comment: ""))",
                         points: model.sleepPoints,
                         color: AuthFlowTheme.sand
                     )
@@ -183,7 +183,7 @@ struct LegacyCalculationScreenView: View {
 
                     AuthMetricRow(
                         symbol: "sparkles",
-                        title: "المجموع",
+                        title: NSLocalizedString("legacy.metric.total", value: "المجموع", comment: ""),
                         value: "—",
                         points: model.totalPoints,
                         color: AuthFlowTheme.mint
@@ -192,7 +192,7 @@ struct LegacyCalculationScreenView: View {
 
                 // Go home button
                 AuthPrimaryButton(
-                    title: "الذهاب إلى الرئيسية",
+                    title: NSLocalizedString("legacy.goHome", value: "الذهاب إلى الرئيسية", comment: ""),
                     isEnabled: true,
                     action: { viewModel.goHome() }, icon: "house.fill"
                 )
@@ -224,11 +224,6 @@ final class LegacyCalculationViewModel: ObservableObject {
         case unauthorized
     }
 
-    private enum HealthFetchOutcome {
-        case data(steps: Double, calories: Double, distanceKm: Double, sleepHours: Double)
-        case timeout
-    }
-
     // MARK: - LevelResult
 
     struct LevelResult {
@@ -253,8 +248,8 @@ final class LegacyCalculationViewModel: ObservableObject {
     }
 
     @Published var state: State = .intro
-    @Published var loadingTitle = "نطلب Apple Health"
-    @Published var loadingSubtitle = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل"
+    @Published var loadingTitle = NSLocalizedString("legacy.loading.permissions.title", value: "نطلب Apple Health", comment: "")
+    @Published var loadingSubtitle = NSLocalizedString("legacy.loading.permissions.subtitle", value: "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل", comment: "")
 
     let userName: String = {
         let profile = UserProfileStore.shared.current
@@ -268,18 +263,28 @@ final class LegacyCalculationViewModel: ObservableObject {
             return trimmedUsername
         }
 
-        return "أنت"
+        return NSLocalizedString("legacy.fallbackName", value: "أنت", comment: "Fallback when no name set")
     }()
     private let healthStore = HKHealthStore()
+    private let syncEngine = HistoricalHealthSyncEngine()
     private var didPresentResult = false
 
     // MARK: - Actions
 
     func primaryButtonTapped() {
         guard case .intro = state else { return }
-        state = .loading
-        Task(priority: .userInitiated) {
-            await startCalculationFlow()
+        // Request HealthKit authorization WHILE STILL ON THE INTRO SCREEN.
+        // This ensures the permission sheet presents over a stable view hierarchy
+        // (fixes "whose view is not in the window hierarchy" error).
+        // Only AFTER auth completes (or times out) do we transition to .loading.
+        Task(priority: .userInitiated) { @MainActor in
+            print("▶️ primaryButtonTapped — requesting auth on intro screen")
+            let authorized = await requestHealthAuthorizationIfNeeded()
+            print("▶️ auth returned: \(authorized)")
+
+            // NOW transition to loading and start data fetch
+            state = .loading
+            await startCalculationFlow(authorized: authorized)
         }
     }
 
@@ -293,31 +298,36 @@ final class LegacyCalculationViewModel: ObservableObject {
 
     // MARK: - Flow
 
-    private func startCalculationFlow() async {
+    @MainActor
+    private func startCalculationFlow(authorized: Bool) async {
         let startedAt = Date()
-        setLoadingPhase(.permissions)
 
-        let authorized = await requestHealthAuthorizationIfNeeded()
-        let levelResult: LevelResult
+        let syncResult: HistoricalHealthSyncResult
 
         if authorized {
-            let totals = await fetchHealthTotalsWithTimeout()
-            levelResult = calculateLevel(
-                steps: totals.steps,
-                calories: totals.calories,
-                distanceKM: totals.distanceKm,
-                sleepHours: totals.sleepHours
-            )
+            setLoadingPhase(.aggregating)
+            print("▶️ starting fetchWithTimeout")
+            syncResult = await fetchWithTimeout()
+            print("▶️ fetchWithTimeout returned")
         } else {
             setLoadingPhase(.unauthorized)
-            levelResult = calculateLevel(steps: 0, calories: 0, distanceKM: 0, sleepHours: 0)
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            syncResult = Self.emptySyncResult
         }
 
-        // Store level
+        // Build the display-ready LevelResult from the sync aggregates
+        let levelResult = buildLevelResult(from: syncResult)
+
+        // ZDP: Only save the 4 aggregate numbers + computed XP & Level — no raw samples
         UserDefaults.standard.set(levelResult.level, forKey: LevelStorageKeys.currentLevel)
         let progress = min(Double(levelResult.level) / 50.0, 1.0)
         UserDefaults.standard.set(progress, forKey: LevelStorageKeys.currentLevelProgress)
         UserDefaults.standard.set(levelResult.totalPoints, forKey: LevelStorageKeys.legacyTotalPoints)
+
+        // Apply XP to the central LevelStore
+        if syncResult.aiqoPoints > 0 {
+            syncEngine.applyToLevelStore(syncResult)
+        }
 
         // Ensure minimum display time for loading
         let elapsed = Date().timeIntervalSince(startedAt)
@@ -330,6 +340,42 @@ final class LegacyCalculationViewModel: ObservableObject {
         presentResult(levelResult)
     }
 
+    /// Empty result constant — used for timeouts and unauthorized states
+    private static let emptySyncResult = HistoricalHealthSyncResult(
+        totalSteps: 0, totalActiveCalories: 0,
+        totalDistanceKm: 0, totalSleepHours: 0,
+        aiqoPoints: 0, startingLevel: 1,
+        shieldTier: .wood, hasRealData: false
+    )
+
+    /// Races syncEngine.sync() against a 12-second timeout.
+    /// CRITICAL: Does NOT use `withTaskGroup` because task groups wait for ALL
+    /// child tasks to complete — even after cancelAll(). If a HealthKit query
+    /// never calls its completion handler, the group hangs forever.
+    /// Instead, we use `withCheckedContinuation` + two fire-and-forget Tasks,
+    /// guarded by an actor to ensure the continuation is resumed exactly once.
+    private func fetchWithTimeout() async -> HistoricalHealthSyncResult {
+        let engine = syncEngine
+
+        return await withCheckedContinuation { continuation in
+            let guard_ = ContinuationGuard(continuation: continuation)
+
+            // Work task — fire and forget
+            Task {
+                let result = await engine.sync()
+                print("▶️ syncEngine.sync() completed")
+                await guard_.resumeIfFirst(with: result)
+            }
+
+            // Timeout task — fire and forget
+            Task {
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                print("⏱️ sync timed out (12s)")
+                await guard_.resumeIfFirst(with: Self.emptySyncResult)
+            }
+        }
+    }
+
     @MainActor
     private func presentResult(_ result: LevelResult) {
         guard !didPresentResult else { return }
@@ -340,23 +386,66 @@ final class LegacyCalculationViewModel: ObservableObject {
 
     // MARK: - HealthKit Authorization
 
-    @MainActor
+    /// Requests HealthKit authorization with a 5-second safety timeout.
+    /// CRITICAL: Does NOT use `withTaskGroup` because task groups wait for ALL
+    /// child tasks — even after cancelAll(). If HealthKit auth hangs (can't present
+    /// permission sheet, already granted, etc.), the group blocks forever.
+    /// Instead uses `withCheckedContinuation` + fire-and-forget Tasks with ContinuationGuard.
     private func requestHealthAuthorizationIfNeeded() async -> Bool {
-        guard HKHealthStore.isHealthDataAvailable() else { return false }
-
-        guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount),
-              let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
-              let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
-              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            print("⚠️ HealthKit not available on this device")
             return false
         }
 
+        let store = healthStore
+
+        // Build type sets synchronously BEFORE the continuation — no concurrency issues
+        var readTypes = Set<HKObjectType>()
+        let quantityReadIDs: [HKQuantityTypeIdentifier] = [
+            .stepCount, .activeEnergyBurned, .distanceWalkingRunning,
+            .heartRate, .restingHeartRate, .heartRateVariabilitySDNN,
+            .walkingHeartRateAverage, .bodyMass, .dietaryWater, .vo2Max
+        ]
+        for id in quantityReadIDs {
+            if let t = HKObjectType.quantityType(forIdentifier: id) { readTypes.insert(t) }
+        }
+        if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            readTypes.insert(sleep)
+        }
+        readTypes.insert(HKObjectType.workoutType())
+        readTypes.insert(HKObjectType.activitySummaryType())
+
+        var writeTypes = Set<HKSampleType>()
+        for id: HKQuantityTypeIdentifier in [.dietaryWater, .bodyMass, .distanceWalkingRunning] {
+            if let t = HKQuantityType.quantityType(forIdentifier: id) { writeTypes.insert(t) }
+        }
+        writeTypes.insert(HKObjectType.workoutType())
+
         return await withCheckedContinuation { continuation in
-            healthStore.requestAuthorization(
-                toShare: nil,
-                read: [stepType, energyType, distanceType, sleepType]
-            ) { success, _ in
-                continuation.resume(returning: success)
+            let guard_ = ContinuationGuard(continuation: continuation)
+
+            // Auth task — runs on @MainActor so HealthKit can present its permission sheet
+            // in the window hierarchy. Uses `Task` (NOT `Task.detached`) to inherit the
+            // main actor context from the caller (startCalculationFlow is @MainActor).
+            // The native async `requestAuthorization` SUSPENDS (does not block) the main
+            // actor, so HealthKit can still present its UI.
+            Task { @MainActor in
+                do {
+                    print("🔐 Requesting HealthKit authorization...")
+                    try await store.requestAuthorization(toShare: writeTypes, read: readTypes)
+                    print("✅ HealthKit authorization completed")
+                    await guard_.resumeIfFirst(with: true)
+                } catch {
+                    print("❌ HealthKit authorization error: \(error.localizedDescription)")
+                    await guard_.resumeIfFirst(with: false)
+                }
+            }
+
+            // Timeout task — fire and forget (15s to give user time to interact with the sheet)
+            Task {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                print("⏱️ HealthKit authorization timed out (15s) — proceeding optimistically")
+                await guard_.resumeIfFirst(with: true)
             }
         }
     }
@@ -365,167 +454,57 @@ final class LegacyCalculationViewModel: ObservableObject {
     private func setLoadingPhase(_ phase: LoadingPhase) {
         switch phase {
         case .permissions:
-            loadingTitle = "نطلب Apple Health"
-            loadingSubtitle = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل"
+            loadingTitle = NSLocalizedString("legacy.loading.permissions.title", value: "نطلب Apple Health", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.permissions.subtitle", value: "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل", comment: "")
         case .locatingHistory:
-            loadingTitle = "نحدد أول سجل"
-            loadingSubtitle = "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك"
+            loadingTitle = NSLocalizedString("legacy.loading.locating.title", value: "نحدد أول سجل", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.locating.subtitle", value: "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك", comment: "")
         case .aggregating:
-            loadingTitle = "نجمع تاريخك الكامل"
-            loadingSubtitle = "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح"
+            loadingTitle = NSLocalizedString("legacy.loading.aggregating.title", value: "نجمع تاريخك الكامل", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.aggregating.subtitle", value: "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح", comment: "")
         case .finalizing:
-            loadingTitle = "نشكّل مستواك"
-            loadingSubtitle = "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي"
+            loadingTitle = NSLocalizedString("legacy.loading.finalizing.title", value: "نشكّل مستواك", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.finalizing.subtitle", value: "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي", comment: "")
         case .timeout:
-            loadingTitle = "أخذت البيانات وقتاً أطول"
-            loadingSubtitle = "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة"
+            loadingTitle = NSLocalizedString("legacy.loading.timeout.title", value: "أخذت البيانات وقتاً أطول", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.timeout.subtitle", value: "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة", comment: "")
         case .unauthorized:
-            loadingTitle = "لم تُمنح الصلاحية"
-            loadingSubtitle = "يمكنك تفعيل Apple Health لاحقاً من الإعدادات"
+            loadingTitle = NSLocalizedString("legacy.loading.unauthorized.title", value: "لم تُمنح الصلاحية", comment: "")
+            loadingSubtitle = NSLocalizedString("legacy.loading.unauthorized.subtitle", value: "يمكنك تفعيل Apple Health لاحقاً من الإعدادات", comment: "")
         }
     }
 
-    // MARK: - Fetch Data with Timeout
+    // MARK: - ContinuationGuard
 
-    private func fetchHealthTotalsWithTimeout() async -> (steps: Double, calories: Double, distanceKm: Double, sleepHours: Double) {
-        await withTaskGroup(of: HealthFetchOutcome.self) { group in
-            group.addTask {
-                let totals = await self.fetchHealthTotals()
-                return .data(
-                    steps: totals.steps,
-                    calories: totals.calories,
-                    distanceKm: totals.distanceKm,
-                    sleepHours: totals.sleepHours
-                )
-            }
+    /// Thread-safe actor that ensures a `CheckedContinuation` is resumed exactly once.
+    /// Used to race two fire-and-forget Tasks (work vs timeout) without `withTaskGroup`,
+    /// which hangs forever if any child task never completes.
+    private actor ContinuationGuard<T> {
+        private var continuation: CheckedContinuation<T, Never>?
 
-            group.addTask {
-                try? await Task.sleep(nanoseconds: 12_000_000_000)
-                return .timeout
-            }
+        init(continuation: CheckedContinuation<T, Never>) {
+            self.continuation = continuation
+        }
 
-            let firstOutcome = await group.next() ?? .timeout
-            group.cancelAll()
-
-            switch firstOutcome {
-            case .data(let steps, let calories, let distanceKm, let sleepHours):
-                return (steps: steps, calories: calories, distanceKm: distanceKm, sleepHours: sleepHours)
-            case .timeout:
-                setLoadingPhase(.timeout)
-                return (steps: 0, calories: 0, distanceKm: 0, sleepHours: 0)
-            }
+        func resumeIfFirst(with value: T) {
+            guard let c = continuation else { return }
+            continuation = nil
+            c.resume(returning: value)
         }
     }
 
-    private func fetchHealthTotals() async -> (steps: Double, calories: Double, distanceKm: Double, sleepHours: Double) {
-        setLoadingPhase(.locatingHistory)
-        let startDate = await fetchEarliestHealthRecordDate()
-        setLoadingPhase(.aggregating)
+    // MARK: - Build LevelResult from Sync Aggregates
 
-        async let steps = fetchCumulativeQuantity(for: .stepCount, unit: .count(), startDate: startDate)
-        async let calories = fetchCumulativeQuantity(for: .activeEnergyBurned, unit: .kilocalorie(), startDate: startDate)
-        async let distanceMeters = fetchCumulativeQuantity(for: .distanceWalkingRunning, unit: .meter(), startDate: startDate)
-        async let sleepHours = fetchSleepHours(startDate: startDate)
+    /// Converts the 4 aggregate numbers from HistoricalHealthSyncEngine into a
+    /// display-ready LevelResult with weighted scoring and Arabic titles.
+    /// Formula: steps/200 + calories/25 + distance*10 + sleep*5 → totalXP
+    /// Level = lookup table (progressive thresholds up to Level 50)
+    private func buildLevelResult(from sync: HistoricalHealthSyncResult) -> LevelResult {
+        let steps = Double(sync.totalSteps)
+        let calories = Double(sync.totalActiveCalories)
+        let distanceKM = sync.totalDistanceKm
+        let sleepHours = sync.totalSleepHours
 
-        let resolvedDistanceKm = (await distanceMeters) / 1000.0
-
-        return (
-            steps: await steps,
-            calories: await calories,
-            distanceKm: resolvedDistanceKm,
-            sleepHours: await sleepHours
-        )
-    }
-
-    private func fetchEarliestHealthRecordDate() async -> Date {
-        let fallbackDate = Calendar.current.date(byAdding: .year, value: -10, to: Date()) ?? .distantPast
-
-        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount),
-              let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
-              let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
-              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            return fallbackDate
-        }
-
-        let stepDate = await fetchEarliestSampleStartDate(for: stepType)
-        let energyDate = await fetchEarliestSampleStartDate(for: energyType)
-        let distanceDate = await fetchEarliestSampleStartDate(for: distanceType)
-        let sleepDate = await fetchEarliestSampleStartDate(for: sleepType)
-
-        return [stepDate, energyDate, distanceDate, sleepDate].compactMap { $0 }.min() ?? fallbackDate
-    }
-
-    private func fetchEarliestSampleStartDate(for sampleType: HKSampleType) async -> Date? {
-        await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sampleType,
-                predicate: nil,
-                limit: 1,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-            ) { _, samples, _ in
-                continuation.resume(returning: samples?.first?.startDate)
-            }
-
-            self.healthStore.execute(query)
-        }
-    }
-
-    private func fetchCumulativeQuantity(for identifier: HKQuantityTypeIdentifier, unit: HKUnit, startDate: Date) async -> Double {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return 0 }
-
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: .strictStartDate)
-
-        return await withCheckedContinuation { continuation in
-            let query = HKStatisticsQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, stats, _ in
-                // Always resume — even if stats is nil, return 0
-                let value = stats?.sumQuantity()?.doubleValue(for: unit) ?? 0
-                continuation.resume(returning: value)
-            }
-            self.healthStore.execute(query)
-        }
-    }
-
-    private func fetchSleepHours(startDate: Date) async -> Double {
-        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return 0 }
-
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: .strictStartDate)
-        let asleepValues: Set<Int> = [
-            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
-            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-            HKCategoryValueSleepAnalysis.asleepREM.rawValue
-        ]
-
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, _ in
-                guard let sleepSamples = samples as? [HKCategorySample], !sleepSamples.isEmpty else {
-                    continuation.resume(returning: 0)
-                    return
-                }
-
-                var totalSeconds: TimeInterval = 0
-                for sample in sleepSamples where asleepValues.contains(sample.value) {
-                    totalSeconds += sample.endDate.timeIntervalSince(sample.startDate)
-                }
-
-                continuation.resume(returning: totalSeconds / 3600.0)
-            }
-            self.healthStore.execute(query)
-        }
-    }
-
-    // MARK: - Scoring System
-
-    func calculateLevel(steps: Double, calories: Double, distanceKM: Double, sleepHours: Double) -> LevelResult {
         let stepsPoints = Int(steps / 200.0)
         let caloriesPoints = Int(calories / 25.0)
         let distancePoints = Int(distanceKM * 10.0)
@@ -533,7 +512,7 @@ final class LegacyCalculationViewModel: ObservableObject {
 
         let totalPoints = stepsPoints + caloriesPoints + distancePoints + sleepPoints
 
-        // Level table — progressive
+        // Level table — progressive thresholds
         let level: Int
         switch totalPoints {
         case 0..<200:           level = 1
@@ -588,43 +567,43 @@ final class LegacyCalculationViewModel: ObservableObject {
         default:                level = 50
         }
 
-        // Titles
+        // Level titles — localized
         let title: String
         let description: String
         switch level {
         case 1...5:
-            title = "البداية"
-            description = "كل رحلة تبدأ بخطوة. AiQo معك من هنا."
+            title = NSLocalizedString("legacy.rank.1.title", value: "البداية", comment: "")
+            description = NSLocalizedString("legacy.rank.1.desc", value: "كل رحلة تبدأ بخطوة. AiQo معك من هنا.", comment: "")
         case 6...10:
-            title = "المتحرّك"
-            description = "بدأت تتحرك وتبني عادات. استمر!"
+            title = NSLocalizedString("legacy.rank.2.title", value: "المتحرّك", comment: "")
+            description = NSLocalizedString("legacy.rank.2.desc", value: "بدأت تتحرك وتبني عادات. استمر!", comment: "")
         case 11...15:
-            title = "النشيط"
-            description = "جسمك يشكرك. مستواك يرتفع بثبات."
+            title = NSLocalizedString("legacy.rank.3.title", value: "النشيط", comment: "")
+            description = NSLocalizedString("legacy.rank.3.desc", value: "جسمك يشكرك. مستواك يرتفع بثبات.", comment: "")
         case 16...20:
-            title = "المنضبط"
-            description = "التزامك واضح. أنت فوق المعدّل."
+            title = NSLocalizedString("legacy.rank.4.title", value: "المنضبط", comment: "")
+            description = NSLocalizedString("legacy.rank.4.desc", value: "التزامك واضح. أنت فوق المعدّل.", comment: "")
         case 21...25:
-            title = "القوي"
-            description = "بيانات قوية. جسمك يتكلم وأنت تسمع."
+            title = NSLocalizedString("legacy.rank.5.title", value: "القوي", comment: "")
+            description = NSLocalizedString("legacy.rank.5.desc", value: "بيانات قوية. جسمك يتكلم وأنت تسمع.", comment: "")
         case 26...30:
-            title = "المحارب"
-            description = "قليلين يوصلون هنا. أنت محارب حقيقي."
+            title = NSLocalizedString("legacy.rank.6.title", value: "المحارب", comment: "")
+            description = NSLocalizedString("legacy.rank.6.desc", value: "قليلين يوصلون هنا. أنت محارب حقيقي.", comment: "")
         case 31...35:
-            title = "البطل"
-            description = "أرقامك تتكلم عنك. بطل بكل المقاييس."
+            title = NSLocalizedString("legacy.rank.7.title", value: "البطل", comment: "")
+            description = NSLocalizedString("legacy.rank.7.desc", value: "أرقامك تتكلم عنك. بطل بكل المقاييس.", comment: "")
         case 36...40:
-            title = "الأسطورة الرياضية"
-            description = "أرقامك تبيّن إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي."
+            title = NSLocalizedString("legacy.rank.8.title", value: "الأسطورة الرياضية", comment: "")
+            description = NSLocalizedString("legacy.rank.8.desc", value: "أرقامك تبيّن إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي.", comment: "")
         case 41...45:
-            title = "الخارق"
-            description = "مستوى لا يُصدَّق. أنت تتحدى الحدود."
+            title = NSLocalizedString("legacy.rank.9.title", value: "الخارق", comment: "")
+            description = NSLocalizedString("legacy.rank.9.desc", value: "مستوى لا يُصدَّق. أنت تتحدى الحدود.", comment: "")
         case 46...50:
-            title = "الأسطورة الحيّة"
-            description = "أنت في القمة المطلقة. تاريخك الصحي استثنائي."
+            title = NSLocalizedString("legacy.rank.10.title", value: "الأسطورة الحيّة", comment: "")
+            description = NSLocalizedString("legacy.rank.10.desc", value: "أنت في القمة المطلقة. تاريخك الصحي استثنائي.", comment: "")
         default:
-            title = "المبتدئ"
-            description = "يلا نبدأ!"
+            title = NSLocalizedString("legacy.rank.0.title", value: "المبتدئ", comment: "")
+            description = NSLocalizedString("legacy.rank.0.desc", value: "يلا نبدأ!", comment: "")
         }
 
         return LevelResult(

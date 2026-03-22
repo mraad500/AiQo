@@ -1,10 +1,12 @@
 import Foundation
-internal import Combine
+import os.log
+import Combine
 import StoreKit
 
 @MainActor
 final class PurchaseManager: ObservableObject {
     static let shared = PurchaseManager()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "PurchaseManager")
 
     #if DEBUG
     let useLocalStoreKitConfig = true
@@ -151,9 +153,9 @@ final class PurchaseManager: ObservableObject {
         productLoadDebugDetails = nil
         lastOutcome = nil
         PremiumExpiryNotifier.clearScheduledNotifications()
-        print("🛒 DEBUG premium data cleared. Local entitlement and scheduled premium notifications were removed.")
+        logger.debug("debug_premium_data_cleared")
 #else
-        print("🛒 DEBUG premium reset is unavailable in non-DEBUG builds.")
+        logger.warning("debug_premium_reset_unavailable_in_release")
 #endif
     }
 
@@ -168,7 +170,7 @@ final class PurchaseManager: ObservableObject {
                 scheduleNotificationsIfNeeded()
                 await transaction.finish()
                 lastOutcome = .success
-                print("🛒 Purchase finished for \(transaction.productID). New expiry: \(entitlementStore.expiresAt?.description ?? "nil")")
+                logger.info("purchase_finished product=\(transaction.productID, privacy: .public)")
 
                 // Server-side receipt validation (non-blocking)
                 Task.detached(priority: .utility) {
@@ -178,22 +180,22 @@ final class PurchaseManager: ObservableObject {
                 return .success
             case .pending:
                 lastOutcome = .pending
-                print("🛒 Purchase is pending for \(product.id).")
+                logger.info("purchase_pending product=\(product.id, privacy: .public)")
                 return .pending
             case .userCancelled:
                 lastOutcome = .cancelled
-                print("🛒 Purchase cancelled for \(product.id).")
+                logger.info("purchase_cancelled product=\(product.id, privacy: .public)")
                 return .cancelled
             @unknown default:
                 let message = "Unknown StoreKit purchase state."
                 lastOutcome = .failed(message)
-                print("🛒 \(message)")
+                logger.warning("purchase_unknown_state message=\(message, privacy: .public)")
                 return .failed(message)
             }
         } catch {
             let message = error.localizedDescription
             lastOutcome = .failed(message)
-            print("🛒 Purchase failed for \(product.id): \(message)")
+            logger.error("purchase_failed product=\(product.id, privacy: .public) error=\(message, privacy: .public)")
             return .failed(message)
         }
     }
@@ -204,12 +206,12 @@ final class PurchaseManager: ObservableObject {
             try await AppStore.sync()
             _ = await refreshEntitlements()
             lastOutcome = .success
-            print("🛒 Restore completed. Active product: \(entitlementStore.activeProductId ?? "nil"), expiresAt: \(entitlementStore.expiresAt?.description ?? "nil")")
+            logger.info("restore_completed product=\(self.entitlementStore.activeProductId ?? "nil", privacy: .public)")
             return .success
         } catch {
             let message = error.localizedDescription
             lastOutcome = .failed(message)
-            print("🛒 Restore failed: \(message)")
+            logger.error("restore_failed error=\(message, privacy: .public)")
             return .failed(message)
         }
     }
@@ -220,12 +222,12 @@ final class PurchaseManager: ObservableObject {
 
         if state.productId == nil, state.expiresAt == nil {
             entitlementStore.clear()
-            print("🛒 Cleared local entitlement because no verified purchases were found.")
+            logger.info("entitlement_cleared — no verified purchases found")
             return
         }
 
         entitlementStore.setEntitlement(productId: state.productId, expiresAt: state.expiresAt)
-        print("🛒 Refreshed entitlement from StoreKit history. productId=\(state.productId ?? "nil"), expiresAt=\(state.expiresAt?.description ?? "nil")")
+        logger.info("entitlement_refreshed product=\(state.productId ?? "nil", privacy: .public)")
     }
 
     private func applySuccessfulPurchase(productId: String) {
@@ -261,7 +263,7 @@ final class PurchaseManager: ObservableObject {
 
                     await self.handleBackgroundTransactionUpdate(productId: transaction.productID)
                 } catch {
-                    print("🛒 Ignored unverified transaction update: \(error.localizedDescription)")
+                    self.logger.warning("unverified_transaction_update error=\(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -269,11 +271,11 @@ final class PurchaseManager: ObservableObject {
 
     private func handleBackgroundTransactionUpdate(productId: String) async {
         _ = await refreshEntitlements()
-        print("🛒 Processed StoreKit transaction update for \(productId).")
+        logger.info("transaction_update_processed product=\(productId, privacy: .public)")
     }
 
     private func appendProductLoadDiagnostic(_ line: String) {
-        print("🛒 \(line)")
+        logger.debug("\(line, privacy: .public)")
 
         if let currentDetails = productLoadDebugDetails, !currentDetails.isEmpty {
             productLoadDebugDetails = currentDetails + "\n" + line
@@ -296,7 +298,7 @@ final class PurchaseManager: ObservableObject {
 
 #if DEBUG
         if !didInspectLocalStoreKitConfig {
-            print("🛒 Using StoreKit Configuration AiQo_Test.storekit. Ensure scheme is configured.")
+            logger.debug("using_local_storekit_config AiQo_Test.storekit")
         }
 #endif
 
@@ -311,10 +313,10 @@ final class PurchaseManager: ObservableObject {
         let fileStem = String(localStoreKitConfigurationName.dropLast(".storekit".count))
 
         if Bundle.main.url(forResource: fileStem, withExtension: "storekit") != nil {
-            print("🛒 \(localStoreKitConfigurationName) is bundled. Run the app from Xcode with the StoreKit configuration enabled for local testing.")
+            logger.debug("storekit_config_bundled name=\(self.localStoreKitConfigurationName, privacy: .public)")
         } else {
             let context = isPreview ? "Preview" : "Simulator"
-            print("🛒 \(context) detected. \(localStoreKitConfigurationName) is not bundled. If products fail to load locally, set Scheme > Run > Options > StoreKit Configuration to AiQo/Resources/\(localStoreKitConfigurationName).")
+            logger.debug("storekit_config_not_bundled context=\(context, privacy: .public) name=\(self.localStoreKitConfigurationName, privacy: .public)")
         }
     }
 
@@ -328,7 +330,7 @@ final class PurchaseManager: ObservableObject {
                 guard transaction.revocationDate == nil else { continue }
                 transactions.append(transaction)
             } catch {
-                print("🛒 Skipping unverified historical transaction: \(error.localizedDescription)")
+                logger.warning("skipping_unverified_transaction error=\(error.localizedDescription, privacy: .public)")
             }
         }
 

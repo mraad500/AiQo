@@ -504,15 +504,20 @@ struct SleepDetailCardView: View {
         date.formatted(date: .omitted, time: .shortened)
     }
 
+    private static let durationFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.maximumUnitCount = 2
+        formatter.zeroFormattingBehavior = .dropLeading
+        return formatter
+    }()
+
     private func formattedDuration(
         _ duration: TimeInterval,
         unitsStyle: DateComponentsFormatter.UnitsStyle
     ) -> String {
-        let formatter = DateComponentsFormatter()
+        let formatter = Self.durationFormatter
         formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute]
         formatter.unitsStyle = unitsStyle
-        formatter.maximumUnitCount = 2
-        formatter.zeroFormattingBehavior = .dropLeading
         return formatter.string(from: duration) ?? "0m"
     }
 

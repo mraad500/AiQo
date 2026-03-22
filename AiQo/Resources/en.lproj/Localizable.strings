@@ -10,8 +10,8 @@
 "onboarding.page1.subtitle" = "Steps, calories, sleep, heart rate — everything in one place with daily AI insights.";
 "onboarding.page2.title" = "Captain Hamoudi";
 "onboarding.page2.subtitle" = "Your personal AI coach. Get advice, workout plans, and meal plans tailored just for you.";
-"onboarding.page3.title" = "The Tribe";
-"onboarding.page3.subtitle" = "Challenge friends and family. Leaderboards, group challenges, and shared energy.";
+"onboarding.page3.title" = "Emirate";
+"onboarding.page3.subtitle" = "Create a tribe with friends and compete.";
 "onboarding.page4.title" = "Ready to Start Your Journey?";
 "onboarding.page4.subtitle" = "7 days free. No card needed. Start now and see the difference.";
 "onboarding.next" = "Next";
@@ -38,6 +38,8 @@
 "error.trialExpired.recovery" = "Subscribe to continue using premium features.";
 "error.tribeNotFound" = "Tribe not found";
 "error.tribeAccessDenied" = "You don't have access to this tribe";
+"error.tribeFull" = "This tribe is full (max 5 members)";
+"error.tribeAlreadyJoined" = "You are already a member of this tribe";
 
 /* Legal */
 "legal.section" = "Legal";
@@ -1309,6 +1311,9 @@
 "premium.trial.start" = "Start";
 "premium.trial.active.title" = "Free Trial Active";
 "premium.trial.active.days" = "%d days remaining";
+"premium.active" = "Premium Active";
+"premium.expired" = "Premium Expired";
+"premium.expires.date" = "Expires: %@";
 
 /* Club */
 "club.tab.impact" = "Impact";
@@ -1344,3 +1349,178 @@
 "impact_summary" = "Summary";
 "impact_achievements" = "Achievements";
 "club_top_tabs_accessibility" = "Club top tabs";
+
+/* Weekly Report */
+"screen.profile.weeklyReport.title" = "Weekly Report";
+"screen.profile.weeklyReport.subtitle" = "Your weekly activity summary";
+
+/* Progress Photos */
+"screen.profile.progressPhotos.title" = "Progress Photos";
+"screen.profile.progressPhotos.subtitle" = "Track your body transformation";
+
+/* Accessibility */
+"tab.home.hint" = "View daily health summary";
+"tab.gym.hint" = "Workouts and fitness challenges";
+"tab.captain.hint" = "Talk to Captain Hamoudi";
+"accessibility.steps" = "Steps";
+"accessibility.calories" = "Calories burned";
+"accessibility.sleep" = "Sleep hours";
+"accessibility.water" = "Water intake";
+"accessibility.distance" = "Distance";
+"accessibility.stand" = "Standing hours";
+"accessibility.workout.start" = "Start workout";
+"accessibility.workout.pause" = "Pause workout";
+"accessibility.workout.stop" = "End workout";
+
+/* Vibe */
+"vibe.title" = "My Vibe";
+"vibe.audioSource" = "Audio Source";
+"vibe.aiqoSounds" = "AiQo Sounds";
+"vibe.spotify" = "Spotify";
+"vibe.soundControls" = "Sound Controls";
+"vibe.mixAudio" = "Mix with other audio";
+"vibe.intensity" = "Intensity";
+"vibe.djPick" = "DJ Hamoudi Pick";
+"vibe.openSpotify" = "Open in Spotify";
+
+/* Fridge */
+"fridge.addOne" = "Add one";
+"fridge.useOne" = "Use one";
+"fridge.remove" = "Remove";
+"fridge.addToFridge" = "Add to fridge";
+"fridge.tapAnyItem" = "Tap any item";
+"fridge.add" = "Add";
+
+/* Paywall */
+"paywall.duration" = "Duration is 30 days and expires automatically. Renewal is your choice.";
+"paywall.plans" = "Plans";
+"paywall.retry" = "Retry";
+"paywall.restore" = "Restore";
+"paywall.buy" = "Buy";
+"paywall.status" = "Status";
+"paywall.thirtyDays" = "30 days";
+"paywall.status.synced" = "Subscription synced successfully.";
+"paywall.status.pending" = "Purchase is pending from Apple.";
+"paywall.status.cancelled" = "Purchase was cancelled.";
+"paywall.status.failed" = "Could not complete the operation: %@";
+"paywall.status.currentPlan" = "Current plan: %@. Expires on %@.";
+"paywall.status.canCreateTribe" = "You can create a tribe now.";
+"paywall.plan.familyDescription" = "This plan is for the family and activates tribe creation for the full 30 days.";
+"paywall.plan.individualDescription" = "Individual access for 30 days. Expires automatically with no auto-renewal.";
+"paywall.debug.testing" = "Testing";
+"paywall.debug.resetPremium" = "Reset premium data";
+"paywall.debug.resetDone" = "Premium data has been reset locally for testing subscription expiry.";
+"paywall.debug.setupTitle" = "Test Setup";
+"paywall.debug.ok" = "OK";
+"paywall.debug.setupMessage" = "Open Scheme > Run > Options > StoreKit Configuration, then select AiQo_Test.storekit and restart the app.";
+
+/* Captain Welcome */
+"captain.welcome" = "Hey! I'm Captain Hamoudi. What's your goal today?";
+
+/* Profile Setup - Privacy */
+"profile.privacy.public" = "Public";
+"profile.privacy.private" = "Private";
+"profile.privacy.publicAccount" = "Public Account";
+"profile.privacy.arenaHint" = "For competing in the Arena";
+"profile.privacy.changeHint" = "You can hide your name later and make it private whenever you want.";
+
+/* Units */
+"unit.kg" = "kg";
+"unit.cm" = "cm";
+"unit.km" = "km";
+"unit.hours.short" = "h";
+
+/* Legacy Calculation - Intro */
+"legacy.intro.body" = "%@, AiQo determines your level based on your complete health history stored on your device — every step you walked, every hour you slept, and every effort over the years.";
+"legacy.intro.tagline" = "You're not starting from zero — you're coming with a history.";
+"legacy.continue" = "Continue";
+"legacy.skip" = "Not Now";
+"legacy.goHome" = "Go to Home";
+"legacy.fallbackName" = "You";
+
+/* Legacy Calculation - Result */
+"legacy.result.level" = "Level";
+"legacy.result.total" = "Total: %@ points";
+"legacy.metric.steps" = "Steps";
+"legacy.metric.calories" = "Calories";
+"legacy.metric.distance" = "Distance";
+"legacy.metric.sleep" = "Sleep";
+"legacy.metric.total" = "Total";
+
+/* Legacy Calculation - Loading Phases */
+"legacy.loading.permissions.title" = "Requesting Apple Health";
+"legacy.loading.permissions.subtitle" = "One-time access to your complete health history";
+"legacy.loading.locating.title" = "Finding first record";
+"legacy.loading.locating.subtitle" = "Searching for the oldest health data on your device";
+"legacy.loading.aggregating.title" = "Gathering your full history";
+"legacy.loading.aggregating.subtitle" = "Steps, calories, distance and sleep from the first available day";
+"legacy.loading.finalizing.title" = "Calculating your level";
+"legacy.loading.finalizing.subtitle" = "Turning your health history into a clear, personal level";
+"legacy.loading.timeout.title" = "Data took longer than expected";
+"legacy.loading.timeout.subtitle" = "We'll continue with available data so the screen doesn't hang";
+"legacy.loading.unauthorized.title" = "Permission not granted";
+"legacy.loading.unauthorized.subtitle" = "You can enable Apple Health later from Settings";
+
+/* Legacy Calculation - Rank Titles */
+"legacy.rank.0.title" = "Beginner";
+"legacy.rank.0.desc" = "Let's get started!";
+"legacy.rank.1.title" = "The Beginning";
+"legacy.rank.1.desc" = "Every journey starts with a step. AiQo is with you from here.";
+"legacy.rank.2.title" = "The Mover";
+"legacy.rank.2.desc" = "You started moving and building habits. Keep going!";
+"legacy.rank.3.title" = "The Active";
+"legacy.rank.3.desc" = "Your body thanks you. Your level is rising steadily.";
+"legacy.rank.4.title" = "The Disciplined";
+"legacy.rank.4.desc" = "Your commitment is clear. You're above average.";
+"legacy.rank.5.title" = "The Strong";
+"legacy.rank.5.desc" = "Strong data. Your body speaks and you listen.";
+"legacy.rank.6.title" = "The Warrior";
+"legacy.rank.6.desc" = "Few reach here. You're a true warrior.";
+"legacy.rank.7.title" = "The Champion";
+"legacy.rank.7.desc" = "Your numbers speak for you. A champion by all standards.";
+"legacy.rank.8.title" = "The Athletic Legend";
+"legacy.rank.8.desc" = "Your numbers show you take health seriously. AiQo is now your official partner.";
+"legacy.rank.9.title" = "The Superhuman";
+"legacy.rank.9.desc" = "Unbelievable level. You're pushing limits.";
+"legacy.rank.10.title" = "The Living Legend";
+"legacy.rank.10.desc" = "You're at the absolute peak. Your health history is exceptional.";
+
+/* Profile Setup - Dating fields */
+"dating.title" = "Complete Your Profile";
+"dating.subtitle" = "Let's set up your account";
+"dating.name" = "Name";
+"dating.username" = "Username";
+"dating.birthDate" = "Date of Birth";
+"dating.gender" = "Gender";
+"dating.weight" = "Weight";
+"dating.height" = "Height";
+"dating.continue" = "Continue";
+
+/* Captain Chat Timestamps */
+"time.now" = "Now";
+"time.minutesAgo" = "%d min ago";
+"time.yesterday" = "Yesterday";
+
+/* Home — Emirate Card */
+"home.emirate.title" = "Emirate 🏆";
+"home.emirate.subtitle" = "Level %d · %@ points";
+
+/* Tribe — Join */
+"tribe.join.tooShort" = "Code must be in AQ-XXXX format";
+"tribe.join.invalidCode" = "Invalid code, please check and try again";
+"tribe.join.error" = "Could not connect to the tribe right now. Try again.";
+
+/* Tribe — Create */
+"tribe.create.error" = "Could not create the tribe right now. Try again.";
+
+/* Tribe — Invite / Share */
+"tribe.invite.shareText" = "Join my tribe on AiQo! 💪\nCode: %@\nhttps://aiqo.app/tribe/%@";
+"tribe.invite.subject" = "AiQo Tribe Invite";
+"tribe.invite.message" = "Join my tribe on AiQo! 💪";
+
+/* Leaderboard */
+"leaderboard.yourRank" = "Your rank: #%d globally";
+"leaderboard.startWalking" = "Start walking and earn your first points 🚀";
+
+/* Level Up */
+"levelUp.celebration" = "You reached level %d 🎉";

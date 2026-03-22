@@ -93,11 +93,11 @@ struct RewardsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Rewards")
                 .font(.system(size: 28, weight: .heavy))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             
             Text("Unlock rewards by staying consistent ✨")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.top, 18)
         .padding(.horizontal, 4)
@@ -128,7 +128,7 @@ struct RewardCardView: View {
                         
                         Image(systemName: item.icon)
                             .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(item.tint)
+                            .foregroundStyle(item.tint)
                     }
                     
                     Spacer()
@@ -136,7 +136,7 @@ struct RewardCardView: View {
                     // Lock/Check Icon
                     Image(systemName: item.isLocked ? "lock.fill" : "checkmark.seal.fill")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(item.isLocked ? .secondary : item.tint)
+                        .foregroundStyle(item.isLocked ? .secondary : item.tint)
                 }
                 .padding(.top, 14)
                 .padding(.horizontal, 14)
@@ -145,12 +145,12 @@ struct RewardCardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.system(size: 16, weight: .heavy))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                     
                     Text(item.subtitle)
                         .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 .padding(.top, 10)
@@ -204,16 +204,16 @@ struct FeaturedRewardCard: View {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: icon)
                         .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(tint)
+                        .foregroundStyle(tint)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(title)
                             .font(.system(size: 18, weight: .heavy))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         
                         Text(subtitle)
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
                     

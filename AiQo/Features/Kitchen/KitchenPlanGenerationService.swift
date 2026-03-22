@@ -149,6 +149,9 @@ struct KitchenPlanGenerationService {
               "title": "Meal title",
               "calories": 450,
               "protein": 30,
+              "carbs": 45,
+              "fat": 15,
+              "fiber": 5,
               "ingredients": [
                 {
                   "name": "ingredient",
@@ -218,6 +221,9 @@ struct KitchenPlanGenerationService {
                     title: title,
                     calories: rawMeal.calories,
                     protein: rawMeal.protein,
+                    carbs: rawMeal.carbs,
+                    fat: rawMeal.fat,
+                    fiber: rawMeal.fiber,
                     ingredients: resolvedIngredients
                 )
             )
@@ -411,6 +417,9 @@ private struct GeneratedMealPayload: Decodable {
     let title: String
     let calories: Int?
     let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    let fiber: Double?
     let ingredients: [GeneratedIngredientPayload]?
 }
 

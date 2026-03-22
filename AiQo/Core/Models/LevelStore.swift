@@ -1,10 +1,11 @@
 import Foundation
 import SwiftUI
-internal import Combine
+import Combine
 
 // MARK: - Notification Name
 extension Notification.Name {
     static let levelStoreDidChange = Notification.Name("AiQoLevelStoreDidChange")
+    static let levelDidLevelUp = Notification.Name("AiQoLevelDidLevelUp")
 }
 
 // MARK: - Shield Tier Enum (أنواع الدروع)
@@ -82,6 +83,13 @@ final class LevelStore: ObservableObject {
         totalXP += amount
         checkForLevelUp()
         save()
+
+        // Sync to Supabase profiles — non-blocking
+        let syncXP = totalXP
+        let syncLevel = level
+        Task { @MainActor in
+            await SupabaseArenaService.shared.syncUserStats(totalPoints: syncXP, level: syncLevel)
+        }
     }
     
     private func checkForLevelUp() {
@@ -150,6 +158,12 @@ final class LevelStore: ObservableObject {
             // تشغيل Haptics عند رفع المستوى
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
+
+            NotificationCenter.default.post(
+                name: .levelDidLevelUp,
+                object: nil,
+                userInfo: ["newLevel": level]
+            )
         }
     }
     

@@ -67,6 +67,7 @@ struct BrainOrchestrator: Sendable {
         )
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
+            quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation
@@ -140,7 +141,8 @@ private extension BrainOrchestrator {
 
         let reply = try await localService.generateReply(request: localRequest)
         return HybridBrainServiceReply(
-            message: reply.message,
+            message: CaptainPersonaBuilder.sanitizeResponse(reply.message),
+            quickReplies: nil,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation,
@@ -210,6 +212,7 @@ private extension BrainOrchestrator {
 
         let structuredResponse = CaptainStructuredResponse(
             message: personalizedMessage,
+            quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation
@@ -218,6 +221,7 @@ private extension BrainOrchestrator {
 
         return HybridBrainServiceReply(
             message: structuredResponse.message,
+            quickReplies: structuredResponse.quickReplies,
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,

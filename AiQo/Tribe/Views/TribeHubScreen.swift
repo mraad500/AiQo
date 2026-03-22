@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 private enum TribeHubSection: String, CaseIterable, Identifiable {
     case core

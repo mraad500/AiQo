@@ -48,7 +48,7 @@ enum LevelSystem {
         case .bronze:   return "shield.fill"
         case .silver:   return "shield.checkerboard"
         case .gold:     return "shield.righthalf.filled" // مثال لتنويع الأشكال
-        case .platinum: return "star.shield.fill"
+        case .platinum: return "checkmark.shield.fill"
         case .diamond:  return "diamond.fill" // أو shield specific
         case .master:   return "crown.fill"
         }

@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 import SwiftUI
-internal import Combine
+import Combine
 
 protocol CoachBrainTranslating: Sendable {
     func translate(_ text: String, systemPrompt: String) async throws -> String
@@ -224,6 +224,7 @@ final class CoachBrainMiddleware: ObservableObject {
     private let translator: any CoachBrainTranslating
     private let intelligenceManager: CaptainIntelligenceManager
     private let contextBuilder: CaptainContextBuilder
+    private let sanitizer = PrivacySanitizer()
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CoachBrainMiddleware"
@@ -355,8 +356,10 @@ final class CoachBrainMiddleware: ObservableObject {
         await transition(to: .translatingInput, minimumDuration: 0)
         logger.notice("translation_started stage=input")
 
+        // Privacy-first: sanitize user text before sending to external translation API
+        let sanitizedInput = sanitizer.sanitizeText(rawMessage, knownUserName: nil)
         let translated = try await translator.translate(
-            rawMessage,
+            sanitizedInput,
             systemPrompt: inputTranslationPrompt
         )
         let normalized = translated.trimmingCharacters(in: .whitespacesAndNewlines)

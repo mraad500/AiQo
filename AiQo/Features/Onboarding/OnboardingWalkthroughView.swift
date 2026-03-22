@@ -1,184 +1,295 @@
 import SwiftUI
 
-/// شاشات الترحيب — تعرض مرة واحدة فقط قبل تسجيل الدخول
+/// شاشة شرح النقاط — تعرض بعد اختيار اللغة وقبل تسجيل الدخول
 struct OnboardingWalkthroughView: View {
-    @State private var currentPage = 0
     let onComplete: () -> Void
 
-    private let pages: [OnboardingPage] = [
-        OnboardingPage(
-            icon: "figure.run",
-            titleKey: "onboarding.page1.title",
-            subtitleKey: "onboarding.page1.subtitle",
-            gradient: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)]
-        ),
-        OnboardingPage(
-            icon: "wand.and.stars",
-            titleKey: "onboarding.page2.title",
-            subtitleKey: "onboarding.page2.subtitle",
-            gradient: [Color.purple.opacity(0.3), Color.pink.opacity(0.2)]
-        ),
-        OnboardingPage(
-            icon: "person.3.fill",
-            titleKey: "onboarding.page3.title",
-            subtitleKey: "onboarding.page3.subtitle",
-            gradient: [Color.orange.opacity(0.3), Color.red.opacity(0.2)]
-        ),
-        OnboardingPage(
-            icon: "sparkles",
-            titleKey: "onboarding.page4.title",
-            subtitleKey: "onboarding.page4.subtitle",
-            gradient: [Color.green.opacity(0.3), Color.teal.opacity(0.2)]
-        )
-    ]
+    @State private var appeared = false
+
+    private var isArabic: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                TabView(selection: $currentPage) {
-                    ForEach(pages.indices, id: \.self) { index in
-                        pageView(pages[index])
-                            .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: currentPage)
-
-                bottomSection
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 40)
-            }
-        }
-        .onAppear {
-            AnalyticsService.shared.track(.onboardingStepViewed(0))
-        }
-        .onChange(of: currentPage) { _, newValue in
-            AnalyticsService.shared.track(.onboardingStepViewed(newValue))
-        }
-    }
-
-    // MARK: - Page View
-
-    private func pageView(_ page: OnboardingPage) -> some View {
-        VStack(spacing: 32) {
-            Spacer()
-
+        GeometryReader { geo in
             ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: page.gradient,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 160, height: 160)
-                    .blur(radius: 30)
+                // Full-screen design image as background
+                Image("22")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .ignoresSafeArea()
 
-                Image(systemName: page.icon)
-                    .font(.system(size: 72, weight: .light))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .symbolEffect(.pulse, options: .repeating)
-            }
+                // Overlay text & buttons
+                VStack(spacing: 0) {
+                    Spacer()
+                        .frame(height: 60)
 
-            VStack(spacing: 14) {
-                Text(page.titleKey.localized)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
+                    // AiQo title
+                    Text("AiQo")
+                        .font(.aiqoDisplay(40))
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : -15)
 
-                Text(page.subtitleKey.localized)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.65))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 32)
-            }
+                    Divider()
+                        .padding(.horizontal, 60)
+                        .padding(.top, 8)
 
-            Spacer()
-            Spacer()
-        }
-    }
+                    Spacer()
+                        .frame(height: 14)
 
-    // MARK: - Bottom Section
+                    // Subtitle
+                    Text(isArabic
+                         ? "تاريخك الصحي يتحوّل إلى مستوى حقيقي"
+                         : "Your health history becomes a real level")
+                        .font(.aiqoHeading(19))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .opacity(appeared ? 1 : 0)
 
-    private var bottomSection: some View {
-        VStack(spacing: 20) {
-            // Page indicators
-            HStack(spacing: 8) {
-                ForEach(pages.indices, id: \.self) { index in
-                    Capsule()
-                        .fill(index == currentPage ? Color.white : Color.white.opacity(0.25))
-                        .frame(width: index == currentPage ? 24 : 8, height: 8)
-                        .animation(.spring(response: 0.3), value: currentPage)
-                }
-            }
+                    Spacer()
+                        .frame(height: 8)
 
-            // Buttons
-            HStack(spacing: 16) {
-                if currentPage > 0 {
+                    // Section title
+                    Text(isArabic
+                         ? "كيف يُحسب مستواك؟"
+                         : "How is your level calculated?")
+                        .font(.aiqoHeading(18))
+                        .foregroundStyle(Color(hex: "2AA88E"))
+                        .opacity(appeared ? 1 : 0)
+
+                    Spacer()
+                        .frame(height: 20)
+
+                    // Points explanation card
+                    pointsCard
+                        .padding(.horizontal, 32)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+
+                    Spacer()
+                        .frame(height: 20)
+
+                    // Level progress indicator
+                    levelProgressBar
+                        .padding(.horizontal, 32)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 15)
+
+                    Spacer()
+                        .frame(height: 24)
+
+                    // Motivational text
+                    Text(isArabic
+                         ? "إنت مو شخص يبدأ من صفر — إنت جاي وياك تاريخ."
+                         : "You're not starting from zero — you come with history.")
+                        .font(.aiqoBody(15))
+                        .foregroundStyle(Color(hex: "1D7A65"))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .opacity(appeared ? 1 : 0)
+
+                    Spacer()
+
+                    // Continue button
                     Button {
-                        withAnimation { currentPage -= 1 }
+                        HapticEngine.selection()
+                        AnalyticsService.shared.track(.onboardingCompleted)
+                        onComplete()
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 56, height: 56)
+                        HStack(spacing: 10) {
+                            if !isArabic {
+                                Text("Continue")
+                                    .font(.aiqoHeading(18))
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 16, weight: .bold))
+                            } else {
+                                Image(systemName: "arrow.left")
+                                    .font(.system(size: 16, weight: .bold))
+                                Text("متابعة")
+                                    .font(.aiqoHeading(18))
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "5ECDB7"), Color(hex: "2AA88E")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: Color(hex: "2AA88E").opacity(0.3), radius: 10, y: 5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 32)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 15)
+
+                    Spacer()
+                        .frame(height: 12)
+
+                    // Not now button
+                    Button {
+                        AnalyticsService.shared.track(.onboardingSkipped)
+                        onComplete()
+                    } label: {
+                        Text(isArabic ? "ليس الآن" : "Not now")
+                            .font(.aiqoBody(15))
+                            .foregroundStyle(.primary.opacity(0.6))
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 12)
                             .background(
-                                Circle()
-                                    .fill(Color.white.opacity(0.08))
+                                Capsule()
+                                    .fill(AuthFlowTheme.sand.opacity(0.3))
                             )
                     }
                     .buttonStyle(.plain)
-                }
+                    .opacity(appeared ? 1 : 0)
 
-                Button {
-                    if currentPage < pages.count - 1 {
-                        withAnimation { currentPage += 1 }
-                    } else {
-                        AnalyticsService.shared.track(.onboardingCompleted)
-                        onComplete()
-                    }
-                } label: {
-                    Text(currentPage < pages.count - 1
-                         ? "onboarding.next".localized
-                         : "onboarding.getStarted".localized)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(Color.white.opacity(0.92))
-                        )
+                    Spacer()
+                        .frame(height: geo.safeAreaInsets.bottom + 30)
                 }
-                .buttonStyle(.plain)
             }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.15)) {
+                appeared = true
+            }
+            AnalyticsService.shared.track(.onboardingStepViewed(0))
+        }
+    }
 
-            if currentPage < pages.count - 1 {
-                Button {
-                    AnalyticsService.shared.track(.onboardingSkipped)
-                    onComplete()
-                } label: {
-                    Text("onboarding.skip".localized)
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.45))
-                }
-                .buttonStyle(.plain)
+    // MARK: - Points Card
+
+    private var pointsCard: some View {
+        AuthFlowCard {
+            VStack(spacing: 12) {
+                pointRow(
+                    icon: "figure.walk",
+                    iconColor: Color(hex: "2AA88E"),
+                    points: isArabic ? "١ نقطة" : "1 pt",
+                    description: isArabic ? "كل ١٠٠ خطوة" : "Every 100 steps"
+                )
+
+                Divider().opacity(0.3)
+
+                pointRow(
+                    icon: "drop.fill",
+                    iconColor: Color(hex: "5ECDB7"),
+                    points: isArabic ? "١ نقطة" : "1 pt",
+                    description: isArabic ? "كل ١٠ سعرة" : "Every 10 calories"
+                )
+
+                Divider().opacity(0.3)
+
+                pointRow(
+                    icon: "moon.fill",
+                    iconColor: Color(hex: "9ABFB0"),
+                    points: isArabic ? "١٠ نقطة" : "10 pts",
+                    description: isArabic ? "كل ساعة نوم" : "Every hour of sleep"
+                )
             }
         }
     }
-}
 
-// MARK: - Model
+    private func pointRow(
+        icon: String,
+        iconColor: Color,
+        points: String,
+        description: String
+    ) -> some View {
+        HStack(spacing: 12) {
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(iconColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
 
-private struct OnboardingPage {
-    let icon: String
-    let titleKey: String
-    let subtitleKey: String
-    let gradient: [Color]
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(iconColor)
+            }
+
+            // Description
+            Text(description)
+                .font(.aiqoBody(14))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text("=")
+                .font(.aiqoBody(14))
+                .foregroundStyle(.tertiary)
+
+            // Points badge
+            Text(points)
+                .font(.aiqoLabel(13))
+                .foregroundStyle(Color(hex: "2AA88E"))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color(hex: "2AA88E").opacity(0.1))
+                )
+        }
+    }
+
+    // MARK: - Level Progress Bar
+
+    private var levelProgressBar: some View {
+        HStack(spacing: 6) {
+            Text(isArabic ? "١٠٠ نقطة" : "100 pts")
+                .font(.aiqoCaption(12))
+                .foregroundStyle(.secondary)
+
+            Image(systemName: isArabic ? "arrow.left" : "arrow.right")
+                .font(.system(size: 9))
+                .foregroundStyle(AuthFlowTheme.mint.opacity(0.5))
+
+            // Level badge
+            Text(isArabic ? "مستوى ١" : "Level 1")
+                .font(.aiqoLabel(14))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "2AA88E"), Color(hex: "5ECDB7")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+
+            Image(systemName: isArabic ? "arrow.left" : "arrow.right")
+                .font(.system(size: 9))
+                .foregroundStyle(AuthFlowTheme.mint.opacity(0.5))
+
+            Text(isArabic ? "٣٠٠ نقطة" : "300 pts")
+                .font(.aiqoCaption(12))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AuthFlowTheme.mint.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(AuthFlowTheme.mint.opacity(0.15), lineWidth: 1)
+                )
+        )
+    }
 }
 
 #Preview {

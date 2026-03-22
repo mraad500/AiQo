@@ -16,9 +16,15 @@ struct CloudBrainService: Sendable {
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
+        // Fetch cloud-safe memories on MainActor before sanitizing
+        let cloudSafeMemories = await MainActor.run {
+            MemoryStore.shared.buildCloudSafeContext(maxTokens: 400)
+        }
+
         let sanitizedRequest = sanitizer.sanitizeForCloud(
             request,
-            knownUserName: userName
+            knownUserName: userName,
+            cloudSafeMemories: cloudSafeMemories
         )
 
         return try await transport.generateReply(request: sanitizedRequest)

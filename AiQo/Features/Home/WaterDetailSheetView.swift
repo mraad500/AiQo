@@ -110,7 +110,7 @@ struct WaterDetailSheetView: View {
         Button(action: addWater) {
             Text("+ 0.25 L")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 200, height: 55)
                 .background(waterBlue)
                 .clipShape(Capsule())

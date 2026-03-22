@@ -24,6 +24,11 @@ enum AiQoError: LocalizedError {
     // Tribe
     case tribeNotFound
     case tribeAccessDenied
+    case tribeFull
+    case tribeAlreadyJoined
+
+    // Auth
+    case notAuthenticated
 
     // General
     case unknown(underlying: Error)
@@ -56,6 +61,12 @@ enum AiQoError: LocalizedError {
             return "error.tribeNotFound".localized
         case .tribeAccessDenied:
             return "error.tribeAccessDenied".localized
+        case .tribeFull:
+            return "error.tribeFull".localized
+        case .tribeAlreadyJoined:
+            return "error.tribeAlreadyJoined".localized
+        case .notAuthenticated:
+            return "error.notAuthenticated".localized
         case .unknown(let error):
             return error.localizedDescription
         }

@@ -245,7 +245,7 @@ actor QuestHealthKitDataSource: HealthKitDataSource {
 
 struct QuestCameraVisionPlaceholderDataSource: CameraVisionDataSource {
     func runSession() async -> (reps: Int, accuracy: Double) {
-        // TODO: Real execution is driven by QuestPushupChallengeView + Vision pipeline.
+        // MARK: V2 - Post Launch — Real execution is driven by QuestPushupChallengeView + Vision pipeline.
         return (0, 0)
     }
 }
@@ -415,7 +415,7 @@ final class QuestSocialArenaDataSource: SocialArenaDataSource {
         entries.append(.init(date: date, count: count))
         saveEntries(entries)
 
-        // TODO: Hook this to real Arena interactions when Arena event stream exists.
+        // MARK: V2 - Post Launch — Hook this to real Arena interactions when Arena event stream exists.
     }
 
     func fetchDailyInteractions(date: Date) -> Int {

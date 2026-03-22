@@ -1,5 +1,5 @@
 import Foundation
-internal import Combine
+import Combine
 
 struct ArenaLeaderboardEntry: Identifiable {
     let id: String

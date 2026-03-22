@@ -7,6 +7,8 @@ struct CaptainPromptBuilder: Sendable {
     func build(for request: HybridBrainRequest) -> String {
         [
             layerCorePersona(language: request.language),
+            CaptainPersonaBuilder.bannedPhrasesDirective(),
+            CaptainPersonaBuilder.responseLengthRules(),
             layerLongTermMemory(profileSummary: request.userProfileSummary),
             layerBioState(data: request.contextData),
             layerCircadianTone(data: request.contextData, language: request.language),
@@ -163,8 +165,9 @@ struct CaptainPromptBuilder: Sendable {
     private func layerOutputContract(screenContext: ScreenContext) -> String {
         """
         === OUTPUT FORMAT ===
-        Return valid JSON only. Schema: { message, workoutPlan, mealPlan, spotifyRecommendation }
+        Return valid JSON only. Schema: { message, quickReplies, workoutPlan, mealPlan, spotifyRecommendation }
         - message: Your natural reply. This is what the user reads. Make it human.
+        - quickReplies: Array of 2-3 short follow-up suggestions in the user's language. Keep each under 25 chars. These appear as tappable chips.
         - workoutPlan: null unless user asks for training.
         - mealPlan: null unless user asks for food/nutrition.
         - spotifyRecommendation: null unless in myVibe or user asks for music.\(screenContext == .myVibe ? "\n- spotifyRecommendation MUST NOT be null when user asks for music/playlist/vibe." : "")

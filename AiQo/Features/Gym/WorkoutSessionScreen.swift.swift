@@ -525,7 +525,7 @@ struct StatCard: View {
                 .fontWeight(.bold)
                 .opacity(0.8)
         }
-        .foregroundColor(textColor)
+        .foregroundStyle(textColor)
         .padding(20)
         .frame(height: 130)
         .background(color)

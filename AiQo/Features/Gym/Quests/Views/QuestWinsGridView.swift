@@ -8,10 +8,10 @@ struct QuestWinsGridView: View {
         GridItem(.flexible(), spacing: 0)
     ]
     private let railScrollOffsetSpaceName = "QuestWinsRailScroll"
+    @State private var questAchievements: [QuestEarnedAchievement] = []
 
     var body: some View {
         let visibleWins = winsStore.wins.filter { !isHiddenWin($0) }
-        let questAchievements = QuestAchievementStore.load().sorted(by: { $0.earnedDate > $1.earnedDate })
 
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
@@ -46,19 +46,22 @@ struct QuestWinsGridView: View {
         .onPreferenceChange(RailScrollOffsetPreferenceKey.self) { offset in
             onScrollOffsetChange?(offset)
         }
+        .task {
+            questAchievements = QuestAchievementStore.load().sorted(by: { $0.earnedDate > $1.earnedDate })
+        }
     }
 
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "trophy")
                 .font(.system(size: 48))
-                .foregroundColor(Color(hex: "DDDDDD"))
+                .foregroundStyle(Color(hex: "DDDDDD"))
             Text("ما عندك إنجازات بعد")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(Color(hex: "999999"))
+                .foregroundStyle(Color(hex: "999999"))
             Text("أكمل تحديات قِمَم عشان تحصل على جوائز")
                 .font(.system(size: 13, weight: .regular))
-                .foregroundColor(Color(hex: "AAAAAA"))
+                .foregroundStyle(Color(hex: "AAAAAA"))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
@@ -207,15 +210,15 @@ private struct QuestAchievementCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(achievement.questName)
                     .font(.system(size: 16, weight: .heavy, design: .rounded))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
 
                 Text("المرحلة \(achievement.stageNumber)")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "666666"))
+                    .foregroundStyle(Color(hex: "666666"))
 
                 Text(achievement.formattedDate)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "999999"))
+                    .foregroundStyle(Color(hex: "999999"))
             }
 
             Spacer()
@@ -223,7 +226,7 @@ private struct QuestAchievementCard: View {
             // Checkmark
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 22))
-                .foregroundColor(Color(hex: "B7E5D2"))
+                .foregroundStyle(Color(hex: "B7E5D2"))
         }
         .padding(16)
         .background(

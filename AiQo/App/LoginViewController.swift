@@ -3,7 +3,7 @@ import AuthenticationServices
 import CryptoKit
 import Supabase
 import Auth
-internal import Combine
+import Combine
 
 struct LoginScreenView: View {
     @StateObject private var viewModel = LoginScreenViewModel()
@@ -19,7 +19,7 @@ struct LoginScreenView: View {
                 // Logo
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
-                        .foregroundColor(AuthFlowTheme.mint)
+                        .foregroundStyle(AuthFlowTheme.mint)
                         .font(.system(size: 24, weight: .medium, design: .rounded))
                     Text("AiQo")
                         .font(.system(size: 48, weight: .black, design: .rounded))
@@ -38,13 +38,13 @@ struct LoginScreenView: View {
                             fallback: "أنشئ حسابك حتى نحفظ تقدمك الصحي ونزامن بياناتك بأمان."
                         ))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 8)
 
                         Text(localized("login.apple.hint", fallback: "التسجيل يتم فقط باستخدام Apple"))
                             .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundColor(AuthFlowTheme.mint)
+                            .foregroundStyle(AuthFlowTheme.mint)
 
                         SignInWithAppleButton(.signUp) { request in
                             viewModel.prepareAppleSignInRequest(request)
@@ -65,7 +65,7 @@ struct LoginScreenView: View {
                         if let error = viewModel.errorMessage {
                             Text(error)
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundColor(.red.opacity(0.9))
+                                .foregroundStyle(.red.opacity(0.9))
                                 .multilineTextAlignment(.center)
                         }
                     }

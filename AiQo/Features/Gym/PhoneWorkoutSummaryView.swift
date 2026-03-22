@@ -6,7 +6,7 @@ import Charts
 import FoundationModels
 #endif
 
-internal import Combine
+import Combine
 
 // ===============================
 // File: PhoneWorkoutSummaryView.swift

@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 class CoinManager: ObservableObject {
     static let shared = CoinManager()

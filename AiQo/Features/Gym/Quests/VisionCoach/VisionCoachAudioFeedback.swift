@@ -1,5 +1,5 @@
 import AVFoundation
-internal import Combine
+import Combine
 import Foundation
 
 final class VisionCoachAudioFeedback: ObservableObject {

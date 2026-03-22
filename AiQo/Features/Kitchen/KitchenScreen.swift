@@ -18,6 +18,9 @@ struct KitchenScreen: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .trailing, spacing: 24) {
+                        // ملخص التغذية اليومي
+                        DailyFoodLogView(kitchenStore: kitchenStore)
+
                         mealSection(titleKey: "screen.kitchen.breakfast", type: .breakfast)
                         mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
                         mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
@@ -41,6 +44,7 @@ struct KitchenScreen: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(.ultraThinMaterial)
+                    .presentationCornerRadius(28)
             } else {
                 MealDetailSheet(
                     meal: meal,
@@ -48,6 +52,7 @@ struct KitchenScreen: View {
                 )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(28)
             }
         }
     }
@@ -58,16 +63,16 @@ private extension KitchenScreen {
         VStack(alignment: .leading, spacing: 6) {
             Text("screen.kitchen.title".localized)
                 .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             HStack(spacing: 6) {
                 Text(formattedDate())
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Image(systemName: "calendar")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,7 +84,7 @@ private extension KitchenScreen {
         VStack(alignment: .trailing, spacing: 12) {
             Text(titleKey.localized)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             if let meal = displayedMeal(type: type) {
                 AnimatedMealButton(meal: meal) {
@@ -88,7 +93,7 @@ private extension KitchenScreen {
             } else {
                 Text("screen.kitchen.noMeals".localized)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
@@ -163,7 +168,7 @@ private extension KitchenScreen {
             } label: {
                 Text("screen.kitchen.regenerate".localized)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(.black)
+                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 48)
                     .background(
@@ -197,7 +202,7 @@ private extension KitchenScreen {
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .lineLimit(1)
             }
-            .foregroundColor(.primary)
+            .foregroundStyle(.primary)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
             .background(
@@ -208,11 +213,15 @@ private extension KitchenScreen {
         .contentShape(Rectangle())
     }
 
-    func formattedDate() -> String {
+    private static let headerDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = .current
         formatter.dateFormat = "d/M"
-        return formatter.string(from: Date())
+        return formatter
+    }()
+
+    func formattedDate() -> String {
+        Self.headerDateFormatter.string(from: Date())
     }
 
     func activePinnedPlanMeal(for type: MealType) -> KitchenPlannedMeal? {
@@ -298,13 +307,13 @@ struct MealDetailSheet: View {
                                     HStack(spacing: 8) {
                                         Text(ingredient.name)
                                             .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                             .multilineTextAlignment(.leading)
 
                                         if ingredient.count > 1 {
                                             Text("×\(ingredient.count)")
                                                 .font(.system(size: 12, weight: .bold, design: .rounded))
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
                                                 .background(
@@ -317,7 +326,7 @@ struct MealDetailSheet: View {
                                     if let quantityText = ingredient.quantityText {
                                         Text(quantityText)
                                             .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
 
@@ -344,10 +353,10 @@ struct MealDetailSheet: View {
         VStack(spacing: 6) {
             Text(title)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             Text(subtitle)
                 .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -389,6 +398,7 @@ struct AnimatedMealButton: View {
                     action()
                 }
             }
+            .aiQoPressEffect()
     }
 
     private func triggerWaveAnimation() {

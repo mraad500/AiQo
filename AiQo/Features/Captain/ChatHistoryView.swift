@@ -43,7 +43,7 @@ struct ChatHistoryView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(theme.subtext)
+                            .foregroundStyle(theme.subtext)
                             .frame(width: 32, height: 32)
                             .background(Circle().fill(theme.fieldBackground))
                             .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
@@ -68,7 +68,7 @@ private extension ChatHistoryView {
 
             Text("ما عندك محادثات سابقة")
                 .font(.system(size: 17, weight: .medium, design: .rounded))
-                .foregroundColor(theme.subtext)
+                .foregroundStyle(theme.subtext)
         }
     }
 
@@ -103,20 +103,20 @@ private extension ChatHistoryView {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.preview.isEmpty ? "محادثة" : session.preview)
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                         .lineLimit(1)
 
                     HStack(spacing: 8) {
                         Text(formattedDate(session.timestamp))
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(theme.subtext)
+                            .foregroundStyle(theme.subtext)
 
                         Text("·")
-                            .foregroundColor(theme.subtext.opacity(0.5))
+                            .foregroundStyle(theme.subtext.opacity(0.5))
 
                         Text("\(session.messageCount) رسالة")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(theme.subtext)
+                            .foregroundStyle(theme.subtext)
                     }
                 }
 
@@ -124,7 +124,7 @@ private extension ChatHistoryView {
 
                 Image(systemName: "chevron.left")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(theme.subtext.opacity(0.4))
+                    .foregroundStyle(theme.subtext.opacity(0.4))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

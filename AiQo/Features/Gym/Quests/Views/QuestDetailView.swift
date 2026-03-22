@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 struct QuestDetailView: View {
     let quest: QuestDefinition

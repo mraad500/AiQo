@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 import UIKit
-internal import Combine
+import Combine
 
 @MainActor
 final class AiQoAudioManager: ObservableObject {

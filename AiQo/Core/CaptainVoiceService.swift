@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 import os.log
-internal import Combine
+import Combine
 
 #if canImport(FoundationModels)
 import FoundationModels

@@ -129,7 +129,9 @@ struct HealthKitMemoryBridge {
             end: Date(),
             options: .strictEndDate
         )
-        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            return nil
+        }
 
         return await withCheckedContinuation { continuation in
             let query = HKSampleQuery(

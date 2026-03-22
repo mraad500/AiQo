@@ -224,6 +224,13 @@ struct ProfileScreen: View {
     @State private var showMailComposer = false
     @State private var showLevelInfo = false
     @State private var showBioMetricsSheet = false
+    @State private var showWeeklyReport = false
+    @State private var showProgressPhotos = false
+
+    // Privacy
+    @State private var isProfilePublic: Bool = UserProfileStore.shared.tribePrivacyMode == .public
+    @State private var isSyncingPrivacy = false
+    @State private var privacySyncFailed = false
 
     var body: some View {
         ZStack {
@@ -250,6 +257,10 @@ struct ProfileScreen: View {
                             showLevelInfo = true
                         }
                     )
+
+                    // بطاقة الـ Streak
+                    StreakDetailCard()
+                        .padding(.bottom, 4)
 
                     profileSection(
                         title: NSLocalizedString(
@@ -311,6 +322,15 @@ struct ProfileScreen: View {
                         PreferenceSelectorCard(selection: genderBinding)
                     }
 
+                    // MARK: - Privacy Visibility Card
+                    ProfileVisibilityCard(
+                        isPublic: $isProfilePublic,
+                        isSyncing: isSyncingPrivacy,
+                        syncFailed: privacySyncFailed
+                    ) { newValue in
+                        toggleVisibility(newValue)
+                    }
+
                     profileSection(
                         title: NSLocalizedString(
                             "screen.profile.section.app",
@@ -319,6 +339,40 @@ struct ProfileScreen: View {
                         )
                     ) {
                         VStack(spacing: 10) {
+                            AppActionRow(
+                                icon: "chart.bar.doc.horizontal.fill",
+                                iconFill: Color.blue.opacity(0.2),
+                                title: NSLocalizedString(
+                                    "screen.profile.weeklyReport.title",
+                                    value: "Weekly Report",
+                                    comment: ""
+                                ),
+                                subtitle: NSLocalizedString(
+                                    "screen.profile.weeklyReport.subtitle",
+                                    value: "Your weekly activity summary",
+                                    comment: ""
+                                )
+                            ) {
+                                showWeeklyReport = true
+                            }
+
+                            AppActionRow(
+                                icon: "camera.viewfinder",
+                                iconFill: ProfilePalette.sand.opacity(0.3),
+                                title: NSLocalizedString(
+                                    "screen.profile.progressPhotos.title",
+                                    value: "Progress Photos",
+                                    comment: ""
+                                ),
+                                subtitle: NSLocalizedString(
+                                    "screen.profile.progressPhotos.subtitle",
+                                    value: "Track your body transformation",
+                                    comment: ""
+                                )
+                            ) {
+                                showProgressPhotos = true
+                            }
+
                             AppActionRow(
                                 icon: "gearshape.fill",
                                 iconFill: ProfilePalette.mint.opacity(0.34),
@@ -429,6 +483,15 @@ struct ProfileScreen: View {
             .presentationDetents([.medium, .large])
             .presentationBackground(.ultraThinMaterial)
             .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+        }
+        .sheet(isPresented: $showWeeklyReport) {
+            WeeklyReportView()
+                .aiQoSheetStyle()
+        }
+        .sheet(isPresented: $showProgressPhotos) {
+            ProgressPhotosView()
+                .aiQoSheetStyle()
         }
         .sheet(isPresented: $showSettingsSheet) {
             NavigationStack {
@@ -436,6 +499,8 @@ struct ProfileScreen: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+            .presentationBackground(.ultraThinMaterial)
         }
         .sheet(isPresented: $showMailComposer) {
             SupportMailComposer(
@@ -631,6 +696,7 @@ struct ProfileScreen: View {
     private func refreshProfileState() {
         profile = UserProfileStore.shared.current
         avatarImage = UserProfileStore.shared.loadAvatar()
+        isProfilePublic = UserProfileStore.shared.tribePrivacyMode == .public
     }
 
     private func refreshLevelSummary() {
@@ -692,12 +758,205 @@ struct ProfileScreen: View {
         UIApplication.shared.open(url)
     }
 
+    // MARK: - Privacy Toggle
+
+    private func toggleVisibility(_ newValue: Bool) {
+        let previousValue = isProfilePublic
+
+        // Optimistic UI update
+        isProfilePublic = newValue
+        isSyncingPrivacy = true
+        privacySyncFailed = false
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        // Persist locally
+        UserProfileStore.shared.setTribePrivacyMode(newValue ? .public : .private)
+
+        // Sync to Supabase
+        Task {
+            do {
+                try await SupabaseArenaService.shared.updateProfileVisibility(isPublic: newValue)
+                await MainActor.run {
+                    isSyncingPrivacy = false
+                }
+            } catch {
+                // Revert on failure
+                await MainActor.run {
+                    isProfilePublic = previousValue
+                    UserProfileStore.shared.setTribePrivacyMode(previousValue ? .public : .private)
+                    isSyncingPrivacy = false
+                    privacySyncFailed = true
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
+
+                // Auto-dismiss error after 3 seconds
+                try? await Task.sleep(for: .seconds(3))
+                await MainActor.run {
+                    privacySyncFailed = false
+                }
+            }
+        }
+    }
+
     private static let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = true
         return formatter
     }()
+}
+
+// MARK: - Profile Visibility Card
+
+private struct ProfileVisibilityCard: View {
+    @Binding var isPublic: Bool
+    let isSyncing: Bool
+    let syncFailed: Bool
+    let onToggle: (Bool) -> Void
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var isRTL: Bool { layoutDirection == .rightToLeft }
+
+    private var accentColor: Color {
+        isPublic ? ProfilePalette.mint : ProfilePalette.sand
+    }
+
+    private var statusIcon: String {
+        isPublic ? "eye.fill" : "eye.slash.fill"
+    }
+
+    private var statusText: String {
+        isPublic ? "عام" : "خاص"
+    }
+
+    var body: some View {
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 0) {
+            // Section header
+            ProfileSectionHeader(
+                title: NSLocalizedString(
+                    "screen.profile.section.visibility",
+                    value: "Visibility",
+                    comment: ""
+                )
+            )
+            .padding(.bottom, 10)
+
+            // Card
+            VStack(spacing: 14) {
+                // Top row: icon + title + toggle
+                HStack(spacing: 12) {
+                    if isRTL { toggleSwitch }
+
+                    VStack(alignment: isRTL ? .trailing : .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            if !isRTL { statusBadge }
+
+                            Text("حساب عام")
+                                .font(.system(size: 15.5, weight: .black, design: .rounded))
+                                .foregroundStyle(ProfilePalette.textPrimary)
+
+                            if isRTL { statusBadge }
+                        }
+
+                        Text("تظهر للقبائل والارينا")
+                            .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                            .foregroundStyle(ProfilePalette.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: isRTL ? .trailing : .leading)
+
+                    if !isRTL { toggleSwitch }
+                }
+
+                // Divider
+                Rectangle()
+                    .fill(ProfilePalette.stroke)
+                    .frame(height: 1)
+                    .padding(.horizontal, 4)
+
+                // Sub-label
+                HStack(spacing: 8) {
+                    if !isRTL { privacyInfoIcon }
+
+                    Text("إيقاف هذا الخيار سيخفي اسمك الصريح ويعرض أحرفك الأولى فقط في لوحة الصدارة")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(ProfilePalette.textTertiary)
+                        .multilineTextAlignment(isRTL ? .trailing : .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if isRTL { privacyInfoIcon }
+                }
+
+                // Error banner
+                if syncFailed {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("فشل التحديث — حاول مرة أخرى")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(.red.opacity(0.8))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(.red.opacity(0.08))
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background {
+                ProfileSurface(tone: .pearl, cornerRadius: 22)
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: isPublic)
+        .animation(.easeInOut(duration: 0.25), value: syncFailed)
+    }
+
+    // MARK: - Sub-components
+
+    private var toggleSwitch: some View {
+        ZStack {
+            if isSyncing {
+                ProgressView()
+                    .tint(accentColor)
+                    .scaleEffect(0.8)
+                    .frame(width: 51, height: 31)
+            } else {
+                Toggle("", isOn: Binding(
+                    get: { isPublic },
+                    set: { onToggle($0) }
+                ))
+                .toggleStyle(SwitchToggleStyle(tint: Color(hex: "B7E3CA")))
+                .labelsHidden()
+                .frame(width: 51)
+            }
+        }
+    }
+
+    private var statusBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: statusIcon)
+                .font(.system(size: 9, weight: .bold))
+            Text(statusText)
+                .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+        }
+        .foregroundStyle(isPublic ? Color(hex: "3BA87A") : ProfilePalette.textTertiary)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3.5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(accentColor.opacity(0.22))
+        )
+    }
+
+    private var privacyInfoIcon: some View {
+        Image(systemName: "info.circle")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(ProfilePalette.textTertiary)
+    }
 }
 
 private struct ProfileBackdrop: View {

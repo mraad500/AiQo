@@ -2,7 +2,7 @@
 // challenge highlights, and spark mutations here instead of mutating the view directly.
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 @MainActor
 final class GalaxyStore: ObservableObject {

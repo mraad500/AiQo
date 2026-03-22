@@ -16,27 +16,38 @@ struct AiQoApp: App {
 
     /// ModelContainer منفصل لذاكرة الكابتن ومشاريع كسر الأرقام — store مخصص عشان ما يتعارض مع الـ containers الثانية
     private let captainContainer: ModelContainer = {
+        let schema = Schema([
+            CaptainMemory.self,
+            PersistentChatMessage.self,
+            RecordProject.self,
+            WeeklyLog.self
+        ])
+
+        // مسار مخصص منفصل عن default.store
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            do {
+                try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+                let storeURL = appSupport.appending(path: "captain_memory.store")
+
+                let config = ModelConfiguration(
+                    "CaptainMemoryStore",
+                    schema: schema,
+                    url: storeURL
+                )
+                return try ModelContainer(for: schema, configurations: [config])
+            } catch {
+                #if DEBUG
+                print("[AppDelegate] Failed to create CaptainMemory ModelContainer: \(error). Falling back to in-memory store.")
+                #endif
+            }
+        }
+
+        // Fallback to in-memory container to prevent crash
         do {
-            let schema = Schema([
-                CaptainMemory.self,
-                PersistentChatMessage.self,
-                RecordProject.self,
-                WeeklyLog.self
-            ])
-
-            // مسار مخصص منفصل عن default.store
-            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-            let storeURL = appSupport.appending(path: "captain_memory.store")
-
-            let config = ModelConfiguration(
-                "CaptainMemoryStore",
-                schema: schema,
-                url: storeURL
-            )
-            return try ModelContainer(for: schema, configurations: [config])
+            return try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
         } catch {
-            fatalError("Failed to create CaptainMemory ModelContainer: \(error)")
+            // Last resort — this should never fail for an in-memory store
+            fatalError("Failed to create even an in-memory ModelContainer: \(error)")
         }
     }()
 
@@ -64,7 +75,16 @@ struct AiQoApp: App {
                     }
                 }
         }
-        .modelContainer(for: [AiQoDailyRecord.self, WorkoutTask.self])
+        .modelContainer(for: [
+            AiQoDailyRecord.self,
+            WorkoutTask.self,
+            ArenaTribe.self,
+            ArenaTribeMember.self,
+            ArenaWeeklyChallenge.self,
+            ArenaTribeParticipation.self,
+            ArenaEmirateLeaders.self,
+            ArenaHallOfFameEntry.self,
+        ])
     }
 }
 
@@ -113,6 +133,17 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             AiQoWorkoutShortcuts.updateAppShortcutParameters()
         }
 
+        // تسجيل Siri Shortcuts
+        SiriShortcutsManager.shared.donateAllShortcuts()
+
+        // إشعارات ذكية
+        if AppSettingsStore.shared.notificationsEnabled {
+            SmartNotificationScheduler.shared.scheduleSmartNotifications()
+        }
+
+        // تحقق من الـ Streak
+        StreakManager.shared.checkStreakContinuity()
+
         return true
     }
 
@@ -131,6 +162,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         #if DEBUG
         ActivityNotificationEngine.shared.printPendingNotifications()
         #endif
+    }
+
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        return SiriShortcutsManager.shared.handle(activity: userActivity)
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {

@@ -131,8 +131,9 @@ final class LocalAnalyticsProvider: AnalyticsProvider {
     private let maxEvents = 5000
 
     init() {
-        let docs = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = docs.appendingPathComponent("Analytics", isDirectory: true)
+        let baseDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = baseDir.appendingPathComponent("Analytics", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("events.jsonl")
     }

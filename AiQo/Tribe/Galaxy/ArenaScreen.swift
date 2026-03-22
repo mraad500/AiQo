@@ -6,6 +6,8 @@ import SwiftUI
 struct ArenaScreen: View {
     @StateObject private var arenaViewModel: ArenaViewModel
     @StateObject private var galaxyViewModel: GalaxyViewModel
+    @State private var selectedChallenge: TribeChallenge?
+    @State private var showChallengeDetail = false
 
     init() {
         let arena = ArenaViewModel()
@@ -27,6 +29,16 @@ struct ArenaScreen: View {
 
             GalaxyExperienceCard(viewModel: galaxyViewModel)
 
+            // ⚡️ تحديات سريعة
+            ArenaQuickChallengesView(viewModel: arenaViewModel) { template in
+                arenaViewModel.createScope = .personal
+                arenaViewModel.createCadence = .daily
+                arenaViewModel.createGoalType = template.metricType
+                arenaViewModel.customTitle = template.title
+                arenaViewModel.createChallenge()
+                syncHeroState(focusing: arenaViewModel.challenges.first)
+            }
+
             ForEach(ChallengeCadence.allCases) { cadence in
                 ArenaChallengeGroupCard(
                     title: cadence.sectionTitle,
@@ -36,16 +48,26 @@ struct ArenaScreen: View {
                         arenaViewModel.select(challenge)
                         syncHeroState(focusing: challenge)
                         galaxyViewModel.activateChallenge(challenge)
+                        // فتح التفاصيل
+                        selectedChallenge = challenge
+                        showChallengeDetail = true
                     },
                     onContribute: { challenge in
                         arenaViewModel.contribute(to: challenge)
                         syncHeroState(focusing: arenaViewModel.challenges.first(where: { $0.id == challenge.id }))
                         if let refreshedChallenge = arenaViewModel.challenges.first(where: { $0.id == challenge.id }) {
                             galaxyViewModel.presentContribution(for: refreshedChallenge)
+                            // تسجيل الإنجاز إذا اكتمل
+                            if refreshedChallenge.progressValue >= refreshedChallenge.targetValue {
+                                ChallengeHistoryStore.shared.recordCompletion(challenge: refreshedChallenge)
+                            }
                         }
                     }
                 )
             }
+
+            // 🏆 سجل الإنجازات
+            ArenaChallengeHistoryView()
 
             ArenaComposerCard(viewModel: arenaViewModel) {
                 arenaViewModel.createChallenge()
@@ -53,6 +75,26 @@ struct ArenaScreen: View {
             }
         }
         .animation(.spring(response: 0.36, dampingFraction: 0.88), value: arenaViewModel.message)
+        .fullScreenCover(isPresented: $showChallengeDetail) {
+            if let challenge = selectedChallenge {
+                ArenaChallengeDetailView(
+                    challenge: challenge,
+                    members: [],
+                    onContribute: {
+                        arenaViewModel.contribute(to: challenge)
+                        if let refreshed = arenaViewModel.challenges.first(where: { $0.id == challenge.id }) {
+                            selectedChallenge = refreshed
+                            if refreshed.progressValue >= refreshed.targetValue {
+                                ChallengeHistoryStore.shared.recordCompletion(challenge: refreshed)
+                            }
+                        }
+                    },
+                    onDismiss: {
+                        showChallengeDetail = false
+                    }
+                )
+            }
+        }
     }
 
     private func syncHeroState(focusing challenge: TribeChallenge?) {

@@ -4,6 +4,8 @@ import SwiftData
 /// نموذج ذاكرة الكابتن حمّودي — يحفظ المعلومات اللي يتذكرها عبر الجلسات
 @Model
 final class CaptainMemory {
+    #Index<CaptainMemory>([\.category], [\.key])
+
     var id: UUID
     /// تصنيف الذاكرة: identity, goal, body, preference, mood, injury, nutrition, workout_history, sleep, insight, active_record_project
     var category: String

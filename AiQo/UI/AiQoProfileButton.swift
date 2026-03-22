@@ -1,10 +1,10 @@
 import SwiftUI
 
 enum AiQoProfileButtonLayout {
-    static let visualDiameter: CGFloat = 65
-    static let hitTargetDiameter: CGFloat = 65
-    static let symbolPointSize: CGFloat = 30
-    static let reservedLaneWidth: CGFloat = 72
+    static let visualDiameter: CGFloat = 50
+    static let hitTargetDiameter: CGFloat = 54
+    static let symbolPointSize: CGFloat = 24
+    static let reservedLaneWidth: CGFloat = 58
     static let shadowRadius: CGFloat = 16
     static let shadowYOffset: CGFloat = 7
 }
@@ -58,9 +58,10 @@ struct AiQoProfileButton: View {
                 Circle()
                     .strokeBorder(borderTint, lineWidth: 0.8)
 
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: AiQoProfileButtonLayout.symbolPointSize, weight: .semibold, design: .rounded))
-                    .foregroundStyle(iconTint)
+                Image("Profile-icon")
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(Circle())
             }
             .frame(
                 width: AiQoProfileButtonLayout.visualDiameter,

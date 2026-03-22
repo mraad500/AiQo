@@ -72,7 +72,7 @@ struct GuinnessEncyclopediaView: View {
 
                     Text("GUINNESS RECORDS-AiQo")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
 
@@ -172,7 +172,7 @@ struct GuinnessChatView: View {
 
                     Text("كابتن حمّودي")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
 
                     Image("Hammoudi5")
                         .resizable()
@@ -218,7 +218,7 @@ struct GuinnessChatView: View {
         HStack(spacing: 10) {
             TextField("اكتب رسالتك…", text: $inputText)
                 .focused($isFocused)
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 14)
                 .background(
@@ -233,7 +233,7 @@ struct GuinnessChatView: View {
             Button { send() } label: {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
+                    .foregroundStyle(.black)
                     .frame(width: 48, height: 48)
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -308,7 +308,7 @@ struct GuinnessBubble: View {
 
             Text(message.text)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
                 .background(

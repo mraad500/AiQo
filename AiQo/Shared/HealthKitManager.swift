@@ -5,7 +5,8 @@
 
 import Foundation
 import HealthKit
-internal import Combine
+import os.log
+import Combine
 
 final class HealthKitManager: ObservableObject {
     private struct LiveHealthSnapshot: Equatable {
@@ -51,7 +52,10 @@ final class HealthKitManager: ObservableObject {
     @MainActor private var lastHealthRefreshAt: Date?
     @MainActor private var lastProcessedSnapshot: LiveHealthSnapshot?
 
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "HealthKitManager")
     private let minimumHealthRefreshInterval: TimeInterval = 3
+    private var lastObserverCallbackAt: Date = .distantPast
+    private let observerThrottleInterval: TimeInterval = 60
     
     private init() {}
 
@@ -70,22 +74,21 @@ final class HealthKitManager: ObservableObject {
             HKQuantityType.workoutType()
         ]
         
-        // Types to read
-        let typesToRead: Set<HKObjectType> = [
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceCycling)!,
-            HKQuantityType.quantityType(forIdentifier: .stepCount)!,
-            HKQuantityType.quantityType(forIdentifier: .bodyMass)!,
-            HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!,
-            HKQuantityType.quantityType(forIdentifier: .leanBodyMass)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-            HKObjectType.activitySummaryType()
+        // Types to read — safely unwrapped to avoid crashes on unsupported devices
+        let readIdentifiers: [HKQuantityTypeIdentifier] = [
+            .heartRate, .activeEnergyBurned, .distanceWalkingRunning,
+            .distanceCycling, .stepCount, .bodyMass, .bodyFatPercentage, .leanBodyMass
         ]
+        var typesToRead: Set<HKObjectType> = Set(
+            readIdentifiers.compactMap { HKQuantityType.quantityType(forIdentifier: $0) }
+        )
+        if let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            typesToRead.insert(sleepType)
+        }
+        typesToRead.insert(HKObjectType.activitySummaryType())
         
         store.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 completion(success, error)
             }
         }
@@ -120,17 +123,14 @@ final class HealthKitManager: ObservableObject {
         // Call the Apple API to wake the Watch app
         // This is the KEY API that wakes the Watch even from suspended/background state
         store.startWatchApp(with: configuration) { success, error in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if let error = error {
-                    print("❌ [HealthKitManager] startWatchApp failed: \(error.localizedDescription)")
                     completion(false, error)
                 } else if success {
-                    print("✅ [HealthKitManager] Watch app launched successfully with config: \(activityType.rawValue)")
                     completion(true, nil)
                 } else {
                     let error = NSError(domain: "HealthKit", code: -2,
                         userInfo: [NSLocalizedDescriptionKey: "startWatchApp returned false without error"])
-                    print("⚠️ [HealthKitManager] startWatchApp returned false")
                     completion(false, error)
                 }
             }
@@ -150,12 +150,10 @@ final class HealthKitManager: ObservableObject {
         }
         
         store.startWatchApp(with: workoutConfiguration) { success, error in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if let error = error {
-                    print("❌ [HealthKitManager] startWatchApp failed: \(error.localizedDescription)")
                     completion(false, error)
                 } else {
-                    print("✅ [HealthKitManager] Watch app launched: \(success)")
                     completion(success, nil)
                 }
             }
@@ -170,22 +168,34 @@ final class HealthKitManager: ObservableObject {
         
         guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
         
-        store.enableBackgroundDelivery(for: type, frequency: .immediate) { success, error in
+        store.enableBackgroundDelivery(for: type, frequency: .hourly) { [weak self] success, error in
             if let error = error {
-                print("❌ [AiQo HK] Bg Delivery Error: \(error)")
+                self?.logger.error("background_delivery_failed error=\(error.localizedDescription, privacy: .public)")
             } else {
-                print("✅ [AiQo HK] Background Delivery Enabled")
+                self?.logger.info("background_delivery_enabled frequency=hourly")
             }
         }
-        
+
         let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completionHandler, error in
             if let error = error {
-                print("❌ [AiQo HK] Observer Error: \(error)")
+                self?.logger.error("observer_query_error error=\(error.localizedDescription, privacy: .public)")
                 completionHandler()
                 return
             }
-            
-            print("👣 [AiQo HK] Steps changed detected!")
+
+            // Throttle: skip callbacks that arrive within 60 seconds of the last processed one
+            guard let self else {
+                completionHandler()
+                return
+            }
+            let now = Date()
+            let elapsed = now.timeIntervalSince(self.lastObserverCallbackAt)
+            guard elapsed >= self.observerThrottleInterval else {
+                completionHandler()
+                return
+            }
+            self.lastObserverCallbackAt = now
+
             Task { @MainActor [weak self] in
                 await self?.enqueueHealthDataRefresh()
                 completionHandler()
@@ -319,7 +329,7 @@ final class HealthKitManager: ObservableObject {
         }
         lastObservedSteps = stepCount
 
-        print("📊 [AiQo HK] Updated: \(stepCount) steps")
+        logger.debug("health_data_updated steps=\(stepCount)")
 
         calculateAndAwardCoins(
             currentSteps: stepCount,
@@ -330,12 +340,15 @@ final class HealthKitManager: ObservableObject {
         let appLanguage = AppSettingsStore.shared.appLanguage
         let notifLanguage: ActivityNotificationLanguage = appLanguage == .english ? .english : .arabic
 
+        let gender = UserProfileStore.shared.current.gender ?? .male
+
+        let goals = GoalsStore.shared.current
         ActivityNotificationEngine.shared.evaluateAndSendIfNeeded(
             steps: stepCount,
             calories: data.activeKcal,
-            stepsGoal: 10000,
-            caloriesGoal: 500,
-            gender: .male,
+            stepsGoal: goals.steps,
+            caloriesGoal: goals.activeCalories,
+            gender: gender,
             language: notifLanguage
         )
 
@@ -374,7 +387,7 @@ final class HealthKitManager: ObservableObject {
         if deltaCoins > 0 {
             CoinManager.shared.addCoins(deltaCoins)
             defaults.set(totalCoins, forKey: lastAwardedCoinsKey)
-            print("💰 Earned \(deltaCoins) coins (total today: \(totalCoins))")
+            logger.debug("coins_awarded delta=\(deltaCoins) total_today=\(totalCoins)")
         }
     }
 

@@ -78,7 +78,7 @@ struct AuthFlowBrandHeader: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
-                .foregroundColor(AuthFlowTheme.mint)
+                .foregroundStyle(AuthFlowTheme.mint)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
             Text("AiQo")
                 .font(.aiqoDisplay(24))
@@ -171,7 +171,7 @@ struct AuthFlowTextField: View {
             if let suffix = suffix {
                 Text(suffix)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             TextField(title, text: $text)
                 .keyboardType(keyboardType)
@@ -182,11 +182,11 @@ struct AuthFlowTextField: View {
             if let prefix = prefix {
                 Text(prefix)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             if let icon = icon {
                 Image(systemName: icon)
-                    .foregroundColor(AuthFlowTheme.sand)
+                    .foregroundStyle(AuthFlowTheme.sand)
                     .font(.system(size: 16))
             }
         }
@@ -220,7 +220,7 @@ struct AuthFlowFieldPanel<Content: View>: View {
             Spacer()
             Text(title)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(16)
         .background(
@@ -251,7 +251,7 @@ struct AuthPrimaryButton: View {
                 Text(title)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
             }
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
@@ -281,7 +281,7 @@ struct AuthSecondaryButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.primary.opacity(0.6))
+                .foregroundStyle(.primary.opacity(0.6))
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .background(
@@ -306,12 +306,12 @@ struct AuthMetricRow: View {
         HStack {
             Text("+\(points.formatted())")
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 80, alignment: .leading)
 
             Text(value)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Spacer()
 
@@ -319,7 +319,7 @@ struct AuthMetricRow: View {
                 Text(title)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                 Image(systemName: symbol)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                     .font(.system(size: 14))
             }
         }
@@ -343,7 +343,7 @@ struct GenderButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundStyle(isSelected ? .white : .primary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
@@ -398,7 +398,7 @@ struct AnalysisLoadingView: View {
 
                 Image(systemName: "sparkles")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(AuthFlowTheme.mint)
+                    .foregroundStyle(AuthFlowTheme.mint)
             }
 
             VStack(spacing: 8) {
@@ -407,7 +407,7 @@ struct AnalysisLoadingView: View {
 
                 Text(subtitle)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }

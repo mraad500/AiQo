@@ -65,7 +65,7 @@ private extension SpotifyVibeCard {
             .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("DJ Hamoudi Pick")
+                Text("vibe.djPick".localized)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .tracking(0.8)
                     .textCase(.uppercase)
@@ -105,7 +105,7 @@ private extension SpotifyVibeCard {
                     Image(systemName: "music.note.list")
                         .font(.system(size: 13, weight: .semibold))
 
-                    Text("Open in Spotify")
+                    Text("vibe.openSpotify".localized)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
                 .foregroundStyle(Color.black.opacity(0.78))
@@ -128,7 +128,7 @@ private extension SpotifyVibeCard {
                     Image(systemName: "music.note.list")
                         .font(.system(size: 13, weight: .semibold))
 
-                    Text("Open in Spotify")
+                    Text("vibe.openSpotify".localized)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
                 .foregroundStyle(Color.black.opacity(0.78))

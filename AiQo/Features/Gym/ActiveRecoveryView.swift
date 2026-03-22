@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 struct ActiveRecoveryView: View {
     @ObservedObject var session: LiveWorkoutSession
@@ -79,7 +79,7 @@ struct ActiveRecoveryView: View {
                 if showRewardCaption {
                     Text("مو القوة إنك تعلي النبض...\nالقوة إنك ترجع تسيطر عليه.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }

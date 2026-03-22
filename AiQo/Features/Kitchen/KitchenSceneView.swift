@@ -23,14 +23,14 @@ struct KitchenSceneView: View {
                     hotspots(in: proxy.size)
                     sceneActionBadges(in: proxy.size)
                 } else {
-                    // TODO: Add imageKitchenHamoudi to Assets.xcassets with this exact name.
+                    // MARK: V2 - Post Launch — Add imageKitchenHamoudi to Assets.xcassets with this exact name.
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(Color(.secondarySystemBackground))
                         .overlay(
                             Text("kitchen.scene.missingAsset".localized)
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
                                 .multilineTextAlignment(.center)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.horizontal, 24)
                         )
                         .frame(width: min(proxy.size.width - 32, 420), height: min(proxy.size.height - 140, 640))

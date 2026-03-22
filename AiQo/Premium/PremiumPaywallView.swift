@@ -53,6 +53,24 @@ struct PremiumPaywallView: View {
                 }
                 .buttonStyle(.plain)
 
+                if let expiresAt = EntitlementStore.shared.expiresAt {
+                    TribeGlassCard(cornerRadius: 18, padding: 12, tint: Color.white.opacity(0.04)) {
+                        HStack(spacing: 8) {
+                            Image(systemName: EntitlementStore.shared.isActive ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                                .foregroundStyle(EntitlementStore.shared.isActive ? .green.opacity(0.8) : .orange.opacity(0.8))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(EntitlementStore.shared.isActive ? "premium.active".localized : "premium.expired".localized)
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Text(String(format: "premium.expires.date".localized, Self.expiryFormatter.string(from: expiresAt)))
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+
                 if let statusMessage = premiumStore.statusMessage {
                     Text(statusMessage)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -193,6 +211,13 @@ struct PremiumPaywallView: View {
     private func fallbackPrice(for plan: PremiumPlan) -> String {
         SubscriptionProductIDs.fallbackDisplayPrice(for: plan.canonicalProductID)
     }
+
+    private static let expiryFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
 }
 
 #Preview {

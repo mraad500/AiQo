@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 // MARK: - PeaksRecordsView (قِمَم — الأرقام القياسية فقط)
 
@@ -21,6 +21,7 @@ struct PeaksRecordsView: View {
                         RecordCardVertical(record: record, index: index)
                     }
                     .buttonStyle(.plain)
+                    .aiQoPressEffect()
                 }
             }
             .padding(.top, 4)
@@ -76,6 +77,7 @@ struct BattleChallengesView: View {
                                 questSheetDetent = .fraction(0.5)
                                 selectedQuest = quest
                             }
+                            .aiQoPressEffect()
                         }
                     } else {
                         lockedStageMessage
@@ -174,17 +176,17 @@ struct BattleChallengesView: View {
                             if isLocked {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.gray.opacity(0.4))
+                                    .foregroundStyle(.gray.opacity(0.4))
                             } else {
-                                Text("\(stage.id)")
+                                Text(stage.id.arabicFormatted)
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(isSelected ? .white : .gray.opacity(0.7))
+                                    .foregroundStyle(isSelected ? .white : .gray.opacity(0.7))
                             }
                         }
 
                         Text(questLocalizedText(stage.tabTitleKey))
                             .font(.system(size: 7, weight: .medium, design: .rounded))
-                            .foregroundColor(isSelected ? .primary : .secondary.opacity(0.6))
+                            .foregroundStyle(isSelected ? Color.primary : Color.secondary.opacity(0.6))
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                     }
@@ -192,7 +194,7 @@ struct BattleChallengesView: View {
                     .opacity(isLocked ? 0.5 : 1)
                 }
                 .disabled(isLocked)
-                .accessibilityLabel("المرحلة \(stage.id)")
+                .accessibilityLabel("المرحلة \(stage.id.arabicFormatted)")
             }
         }
         .padding(.vertical, 8)
@@ -213,9 +215,9 @@ struct BattleChallengesView: View {
 
     private var stageHeader: some View {
         VStack(spacing: 4) {
-            Text("المرحلة \(selectedStageID)")
+            Text("المرحلة \(selectedStageID.arabicFormatted)")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Text(stageDisplayTitle)
                 .font(.system(size: 28, weight: .black, design: .rounded))
@@ -233,15 +235,15 @@ struct BattleChallengesView: View {
         VStack(spacing: 16) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 36, design: .rounded))
-                .foregroundColor(Color(hex: "CCCCCC"))
+                .foregroundStyle(Color(hex: "CCCCCC"))
 
             Text("المرحلة مقفلة")
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundColor(Color(hex: "999999"))
+                .foregroundStyle(Color(hex: "999999"))
 
             Text("أكمل جميع تحديات المرحلة السابقة لفتح هذه المرحلة")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(Color(hex: "AAAAAA"))
+                .foregroundStyle(Color(hex: "AAAAAA"))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -344,7 +346,7 @@ struct BattleChallengesView: View {
         guard center > 0 else { return }
         centerToastHideTask?.cancel()
         withAnimation(.easeInOut(duration: 0.22)) {
-            centerToastMessage = "ترقيت إلى مركز \(center)"
+            centerToastMessage = "ترقيت إلى مركز \(center.arabicFormatted)"
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
@@ -373,7 +375,7 @@ struct RecordCardVertical: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(record.category.rawValue)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.7))
+                    .foregroundStyle(.primary.opacity(0.7))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Color.black.opacity(0.08))
@@ -382,22 +384,22 @@ struct RecordCardVertical: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(record.unit)
                         .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(record.formattedTarget)
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                 }
 
                 Text(record.titleAr)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.85))
+                    .foregroundStyle(.primary.opacity(0.85))
 
                 HStack(spacing: 4) {
                     Text("•••")
                         .font(.system(size: 9, design: .rounded))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundStyle(.secondary.opacity(0.4))
                     Text("صاحب الرقم: \(record.recordHolderAr)")
                         .font(.system(size: 11, weight: .regular, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(record.country)
                         .font(.system(size: 13))
                 }
@@ -409,7 +411,7 @@ struct RecordCardVertical: View {
             // أيقونة التمرين
             Image(systemName: record.iconName)
                 .font(.system(size: 20, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(width: 44, height: 44)
                 .background(Color.white.opacity(0.5))
                 .clipShape(Circle())

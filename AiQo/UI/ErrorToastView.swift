@@ -78,6 +78,7 @@ struct ErrorToastModifier: ViewModifier {
         }
         .onChange(of: error != nil) { _, hasError in
             if hasError {
+                HapticEngine.error()
                 withAnimation(.spring(response: 0.35)) {
                     showToast = true
                 }

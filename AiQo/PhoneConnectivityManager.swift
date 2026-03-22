@@ -6,7 +6,7 @@
 import Foundation
 import WatchConnectivity
 import HealthKit
-internal import Combine
+import Combine
 
 @MainActor
 final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDelegate, HKWorkoutSessionDelegate, ConnectivityDebugProviding {

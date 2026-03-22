@@ -33,7 +33,10 @@ private struct AiQoWatchWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: AiQoWatchEntry
 
-    private let moveGoal = 1600
+    private var moveGoal: Int {
+        let stored = UserDefaults(suiteName: "group.aiqo")?.integer(forKey: "widget_calories_goal") ?? 0
+        return stored > 0 ? stored : 1600
+    }
     private let exerciseGoal = 45
     private let standGoal = 13
 

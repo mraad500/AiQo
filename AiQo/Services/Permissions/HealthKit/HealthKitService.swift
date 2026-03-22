@@ -826,7 +826,7 @@ actor HealthKitService {
         let cal = Calendar.current
         let now = Date()
         let start = cal.startOfDay(for: now)
-        let end = cal.date(byAdding: .day, value: 1, to: start)!
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86400)
         return (start, end)
     }
 

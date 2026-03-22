@@ -2,7 +2,7 @@ import SwiftUI
 
 /// صف الإحالة بشاشة الإعدادات
 struct ReferralSettingsRow: View {
-    @ObservedObject private var referralManager = ReferralManager.shared
+    @StateObject private var referralManager = ReferralManager.shared
     @State private var showShareSheet = false
 
     var body: some View {

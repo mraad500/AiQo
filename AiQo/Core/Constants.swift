@@ -1,41 +1,56 @@
 import Foundation
+import os.log
 
 // MARK: - Supabase
 
 enum K {
     enum Supabase {
-        private static let defaultURLString = "https://zidbsrepqpbucqzxnwgk.supabase.co"
-        private static let defaultAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M"
+        private static let logger = Logger(
+            subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+            category: "K.Supabase"
+        )
+
         private static let infoURLKey = "SUPABASE_URL"
         private static let infoAnonKeyKey = "SUPABASE_ANON_KEY"
 
-        static let url: String = resolvedBaseURL().absoluteString
-
-        static let anonKey: String = {
-            resolvedValue(for: infoAnonKeyKey, defaultValue: defaultAnonKey)
+        static let url: String = {
+            guard let resolved = resolvedBaseURL() else {
+                logger.fault("supabase_url_missing — configure SUPABASE_URL in Secrets.xcconfig")
+                return ""
+            }
+            return resolved.absoluteString
         }()
 
-        static let functionsURL: URL = {
-            guard var components = URLComponents(url: resolvedBaseURL(), resolvingAgainstBaseURL: false),
+        static let anonKey: String = {
+            guard let key = resolvedValue(for: infoAnonKeyKey) else {
+                logger.fault("supabase_anon_key_missing — configure SUPABASE_ANON_KEY in Secrets.xcconfig")
+                return ""
+            }
+            return key
+        }()
+
+        static let functionsURL: URL? = {
+            guard let base = resolvedBaseURL(),
+                  var components = URLComponents(url: base, resolvingAgainstBaseURL: false),
                   let host = components.host,
                   host.hasSuffix(".supabase.co")
             else {
-                return URL(string: "https://zidbsrepqpbucqzxnwgk.functions.supabase.co")!
+                return nil
             }
 
             components.host = host.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
-            return components.url ?? URL(string: "https://zidbsrepqpbucqzxnwgk.functions.supabase.co")!
+            return components.url
         }()
 
-        private static func resolvedBaseURL() -> URL {
-            let configuredValue = resolvedValue(for: infoURLKey, defaultValue: defaultURLString)
-            return URL(string: configuredValue) ?? URL(string: defaultURLString)!
+        private static func resolvedBaseURL() -> URL? {
+            guard let configuredValue = resolvedValue(for: infoURLKey) else { return nil }
+            return URL(string: configuredValue)
         }
 
-        private static func resolvedValue(for key: String, defaultValue: String) -> String {
+        private static func resolvedValue(for key: String) -> String? {
             let environment = normalized(ProcessInfo.processInfo.environment[key])
             let info = normalized(Bundle.main.object(forInfoDictionaryKey: key) as? String)
-            return environment ?? info ?? defaultValue
+            return environment ?? info
         }
 
         private static func normalized(_ value: String?) -> String? {

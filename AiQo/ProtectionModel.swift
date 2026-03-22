@@ -2,12 +2,14 @@ import Foundation
 import FamilyControls
 import DeviceActivity
 import ManagedSettings
-internal import Combine
+import os.log
+import Combine
 
 @MainActor
 final class ProtectionModel: ObservableObject {
 
     static let shared = ProtectionModel()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "ProtectionModel")
 
     @Published var selection = FamilyActivitySelection()
     @Published private(set) var isAuthorized: Bool = false
@@ -79,19 +81,16 @@ final class ProtectionModel: ObservableObject {
         unlockTimer?.invalidate()
     }
     
-    // MARK: - 🔓 الميزة الجديدة: الفتح المؤقت
+    // MARK: - الفتح المؤقت
     func unlockTemporarily(minutes: Int) {
-        // 1. نوقف الحماية (نفتح التطبيقات)
         disable()
-        
-        print("🔓 AiQo: Unlocking for \(minutes) minutes...")
-        
-        // 2. نشغل مؤقت يرجع يقفلها بعد الوقت المحدد
-        // ملاحظة: هذا المؤقت يشتغل والتطبيق بالخلفية لفترة قصيرة
-        // لتطوير مستقبلي اقوى نستخدم Background Tasks
+
+        logger.info("unlock_temporarily duration=\(minutes)m")
+
         unlockTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(minutes * 60), repeats: false) { [weak self] _ in
-            DispatchQueue.main.async { [weak self] in
-                print("🔒 Time is up! Locking again.")
+            // Already @MainActor-scoped class — no DispatchQueue.main.async needed
+            Task { @MainActor [weak self] in
+                self?.logger.info("temporary_unlock_expired — re-enabling protection")
                 self?.enable()
             }
         }

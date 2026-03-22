@@ -22,17 +22,18 @@ struct HistoricalHealthSyncResult: Sendable {
 // MARK: - Scoring
 
 /// خوارزمية التسجيل — "Zero Digital Pollution": حسابات بسيطة بدون allocations
+/// Aligned with LegacyCalculationViewController formula: steps/200 + cal/25 + dist*10 + sleep*5
 enum HistoricalHealthScoring {
-    /// 1000 خطوة = 1 نقطة، 1000 كالوري = 10 نقاط، 1 كم = 2 نقطة، 1 ساعة نوم = 5 نقاط
+    /// 200 خطوة = 1 نقطة، 25 كالوري = 1 نقطة، 1 كم = 10 نقاط، 1 ساعة نوم = 5 نقاط
     static func calculatePoints(
         steps: Int,
         activeCalories: Int,
         distanceKm: Double,
         sleepHours: Double
     ) -> Int {
-        let stepPoints = steps / 1000
-        let caloriePoints = (activeCalories / 1000) * 10
-        let distancePoints = Int(distanceKm) * 2
+        let stepPoints = steps / 200
+        let caloriePoints = activeCalories / 25
+        let distancePoints = Int(distanceKm * 10)
         let sleepPoints = Int(sleepHours) * 5
         return stepPoints + caloriePoints + distancePoints + sleepPoints
     }

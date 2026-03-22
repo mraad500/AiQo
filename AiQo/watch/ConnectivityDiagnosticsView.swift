@@ -63,7 +63,7 @@ struct ConnectivityDiagnosticsView: View {
             Section("Last Error") {
                 Text(manager.lastError)
                     .font(.footnote)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
             }
 
             Section("Recent Events") {

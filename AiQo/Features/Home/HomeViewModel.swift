@@ -8,7 +8,7 @@
 //
 
 import Foundation
-internal import Combine
+import Combine
 import HealthKit
 
 // MARK: - Extensions for Existing Types (SwiftUI Conformances)
@@ -325,13 +325,18 @@ final class HomeViewModel: ObservableObject {
         
         currentSummary = summary
         currentWaterLiters = summary.waterML / 1000.0
-        
-        updateMetricCard(.steps, displayValue: format(summary.steps))
-        updateMetricCard(.calories, displayValue: format(summary.activeKcal))
-        updateMetricCard(.stand, displayValue: format(summary.standPercent))
-        updateMetricCard(.water, displayValue: String(format: "%.1f L", summary.waterML / 1000.0))
-        updateMetricCard(.sleep, displayValue: String(format: "%.1f", summary.sleepHours))
-        updateMetricCard(.distance, displayValue: String(format: "%.2f", summary.distanceMeters / 1000.0))
+
+        updateMetricCard(.steps, displayValue: Int(summary.steps).arabicFormatted)
+        updateMetricCard(.calories, displayValue: Int(summary.activeKcal).arabicFormatted)
+        updateMetricCard(.stand, displayValue: Int(summary.standPercent).arabicFormatted)
+        updateMetricCard(.water, displayValue: (summary.waterML / 1000.0).arabicFormatted + " L")
+        updateMetricCard(.sleep, displayValue: summary.sleepHours.arabicFormatted)
+        updateMetricCard(.distance, displayValue: (summary.distanceMeters / 1000.0).arabicFormatted)
+
+        // تحديث الـ Streak — إذا حقق 5000+ خطوات أو 300+ سعرة
+        if summary.steps >= 5000 || summary.activeKcal >= 300 {
+            StreakManager.shared.markTodayAsActive()
+        }
     }
 
     private func applyLiveMetrics(steps: Int, calories: Double, distanceKm: Double) {
@@ -352,12 +357,12 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func clearAllMetrics() {
-        updateMetricCard(.steps, displayValue: format(0))
-        updateMetricCard(.calories, displayValue: format(0))
-        updateMetricCard(.stand, displayValue: format(0))
-        updateMetricCard(.water, displayValue: String(format: "%.1f", 0.0))
-        updateMetricCard(.sleep, displayValue: String(format: "%.1f", 0.0))
-        updateMetricCard(.distance, displayValue: String(format: "%.2f", 0.0))
+        updateMetricCard(.steps, displayValue: 0.arabicFormatted)
+        updateMetricCard(.calories, displayValue: 0.arabicFormatted)
+        updateMetricCard(.stand, displayValue: 0.arabicFormatted)
+        updateMetricCard(.water, displayValue: Double(0.0).arabicFormatted)
+        updateMetricCard(.sleep, displayValue: Double(0.0).arabicFormatted)
+        updateMetricCard(.distance, displayValue: Double(0.0).arabicFormatted)
     }
     
     private func updateMetricCard(_ kind: MetricKind, displayValue: String) {
@@ -402,26 +407,26 @@ final class HomeViewModel: ObservableObject {
     }
     
     // MARK: - Formatting Helpers
-    
-    private nonisolated func format(_ value: Double, digits: Int = 0) -> String {
+
+    private static func format(_ value: Double, digits: Int = 0) -> String {
         let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = digits
         formatter.minimumFractionDigits = digits
-        formatter.numberStyle = .decimal
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
     
     /// Format header value for metric detail view
     func formattedHeader(for kind: MetricKind) -> String {
         guard let summary = currentSummary else { return "—" }
-        
+
         switch kind {
-        case .steps:    return format(summary.steps)
-        case .calories: return format(summary.activeKcal)
-        case .stand:    return format(summary.standPercent) + "%"
-        case .water:    return String(format: "%.1f L", summary.waterML / 1000.0)
-        case .sleep:    return String(format: "%.1f h", summary.sleepHours)
-        case .distance: return String(format: "%.2f km", summary.distanceMeters / 1000.0)
+        case .steps:    return Int(summary.steps).arabicFormatted
+        case .calories: return Int(summary.activeKcal).arabicFormatted
+        case .stand:    return Int(summary.standPercent).arabicFormatted + "%"
+        case .water:    return (summary.waterML / 1000.0).arabicFormatted + " L"
+        case .sleep:    return summary.sleepHours.arabicFormatted + " h"
+        case .distance: return (summary.distanceMeters / 1000.0).arabicFormatted + " km"
         }
     }
     
@@ -492,8 +497,8 @@ final class HomeViewModel: ObservableObject {
 
         switch kind {
         case .steps:
-            await loadHealthServiceQuantitySeries(kind: .steps, .stepCount, unit: .count(), scope: scope) { [weak self] values, total in
-                ChartSeriesData(values: values, headerText: self?.format(total) ?? "—")
+            await loadHealthServiceQuantitySeries(kind: .steps, .stepCount, unit: .count(), scope: scope) { values, total in
+                ChartSeriesData(values: values, headerText: String(format: "%.0f", total))
             }
             
         case .calories:
@@ -501,14 +506,14 @@ final class HomeViewModel: ObservableObject {
             guard shouldApplyChartResult(for: kind, scope: scope) else { return }
             chartData = ChartSeriesData(
                 values: series.values,
-                headerText: format(series.total)
+                headerText: Self.format(series.total)
             )
             
         case .distance:
-            await loadHealthServiceQuantitySeries(kind: .distance, .distanceWalkingRunning, unit: .meter(), scope: scope) { [weak self] values, total in
+            await loadHealthServiceQuantitySeries(kind: .distance, .distanceWalkingRunning, unit: .meter(), scope: scope) { values, total in
                 let km = total / 1000.0
                 let kmValues = values.map { $0 / 1000.0 }
-                return ChartSeriesData(values: kmValues, headerText: self?.format(km, digits: 2) ?? "—")
+                return ChartSeriesData(values: kmValues, headerText: String(format: "%.2f", km))
             }
             
         case .water:
@@ -878,20 +883,20 @@ final class HomeViewModel: ObservableObject {
         switch scope {
         case .day:
             let components = calendar.dateComponents([.year, .month, .day, .hour], from: date)
-            return calendar.date(from: components)!
-            
+            return calendar.date(from: components) ?? date
+
         case .week, .month:
             return calendar.startOfDay(for: date)
-            
+
         default:
             let components = calendar.dateComponents([.year, .month], from: date)
-            return calendar.date(from: components)!
+            return calendar.date(from: components) ?? date
         }
     }
 
     private nonisolated func monthBucketKey(for date: Date, calendar: Calendar) -> Date {
         let components = calendar.dateComponents([.year, .month], from: date)
-        return calendar.date(from: components)!
+        return calendar.date(from: components) ?? date
     }
 
     private nonisolated func daysBetween(start: Date, end: Date) -> Int {

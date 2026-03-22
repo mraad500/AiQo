@@ -64,7 +64,7 @@ private extension FridgeInventoryView {
         Section("kitchen.fridge.inventory".localized) {
             if kitchenStore.fridgeItems.isEmpty {
                 Text("kitchen.fridge.empty".localized)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             } else {
                 ForEach(kitchenStore.fridgeItems) { item in
                     HStack(spacing: 12) {
@@ -79,11 +79,11 @@ private extension FridgeInventoryView {
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                             Text(formattedQuantity(item.quantity, unit: item.unit))
                                 .font(.system(size: 14, weight: .regular, design: .rounded))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             if let alchemyNote = item.localizedAlchemyNote {
                                 Text(alchemyNote)
                                     .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.19, green: 0.49, blue: 0.90))
+                                    .foregroundStyle(Color(red: 0.19, green: 0.49, blue: 0.90))
                             }
                         }
 

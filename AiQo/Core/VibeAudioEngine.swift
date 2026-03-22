@@ -2,7 +2,7 @@ import Foundation
 import AVFoundation
 import MediaPlayer
 import UIKit
-internal import Combine
+import Combine
 
 enum VibeDayPart: String, CaseIterable, Codable, Identifiable {
     case morning

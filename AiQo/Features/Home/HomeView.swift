@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 // MARK: - HomeView
 
@@ -27,6 +27,8 @@ struct HomeView: View {
     
     @State private var isProfileSheetPresented: Bool = false
     @State private var showVibeSheet: Bool = false
+    @State private var showTribeScreen: Bool = false
+    @State private var appeared: Bool = false
     // MARK: - Body
     
     var body: some View {
@@ -44,6 +46,7 @@ struct HomeView: View {
 
                     // Kitchen Section
                     kitchenSection
+
                 }
                 .padding(.top, 6)
                 .padding(.bottom, 4)
@@ -88,8 +91,9 @@ struct HomeView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .presentationBackground(.ultraThinMaterial) // Transparent paper effect
+            .presentationCornerRadius(28)
         }
-        
+
         .sheet(isPresented: $showVibeSheet) {
             VibeControlSheet(viewModel: vibeControlViewModel)
                 .presentationDetents([.fraction(0.6), .large])
@@ -100,8 +104,14 @@ struct HomeView: View {
         // MARK: - Other Destination Sheets
         .sheet(item: $viewModel.activeDestination) { destination in
             destinationView(for: destination)
+                .aiQoSheetStyle()
         }
         .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
+        .fullScreenCover(isPresented: $showTribeScreen) {
+            NavigationStack {
+                TribeView()
+            }
+        }
     }
     
     // MARK: - Header View
@@ -117,6 +127,8 @@ struct HomeView: View {
                 }
 
                 Spacer(minLength: 0)
+
+                StreakBadgeView()
             }
         }
     }
@@ -132,10 +144,12 @@ struct HomeView: View {
     }
     
     private var metricsGrid: some View {
-        VStack(spacing: 8) {
-            ForEach(Array(viewModel.gridRows.enumerated()), id: \.offset) { _, row in
+        let allRows = Array(viewModel.gridRows.enumerated())
+        return VStack(spacing: 8) {
+            ForEach(allRows, id: \.offset) { rowIndex, row in
                 HStack(spacing: 14) {
-                    ForEach(row) { cardData in
+                    ForEach(Array(row.enumerated()), id: \.element.id) { colIndex, cardData in
+                        let flatIndex = allRows.prefix(rowIndex).reduce(0) { $0 + $1.element.count } + colIndex
                         if viewModel.expandedMetric == cardData.kind {
                             // Show expanded card
                             ExpandedStatCard(
@@ -154,8 +168,17 @@ struct HomeView: View {
                         } else {
                             // Show normal card
                             HomeStatCard(data: cardData) {
+                                HapticEngine.light()
                                 viewModel.handleMetricTap(cardData.kind)
                             }
+                            .aiQoPressEffect()
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 12)
+                            .animation(
+                                .spring(response: 0.4, dampingFraction: 0.8)
+                                .delay(Double(flatIndex) * 0.06),
+                                value: appeared
+                            )
                             .transition(.scale.combined(with: .opacity))
                         }
                     }
@@ -164,6 +187,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 14)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.expandedMetric)
+        .onAppear { appeared = true }
     }
     
     // MARK: - Kitchen Section
@@ -183,6 +207,57 @@ struct HomeView: View {
                 .padding(.top, -4)
         }
         .frame(height: 112)
+    }
+
+    // MARK: - Emirate Card
+
+    private var emirateCard: some View {
+        let level = LevelStore.shared.level
+        let points = LevelStore.shared.totalXP
+
+        return Button {
+            showTribeScreen = true
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(NSLocalizedString("home.emirate.title", value: "إمارة 🏆", comment: ""))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: "162026"))
+
+                    Text(String(format: NSLocalizedString("home.emirate.subtitle", value: "المستوى %@ · %@ نقطة", comment: ""), level.arabicFormatted, points.arabicFormatted))
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(hex: "56636D"))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color(hex: "75808A"))
+            }
+            .padding(16)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(hex: "FFFDF8"))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "6FD7B4").opacity(0.2), Color(hex: "EDB45D").opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    }
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+            }
+        }
+        .buttonStyle(.plain)
+        .aiQoPressEffect()
     }
 
     // MARK: - Destination Views
@@ -249,6 +324,8 @@ private struct HomeKitchenSheetView: View {
         }
         .presentationDetents([.fraction(0.75), .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+        .presentationBackground(.ultraThinMaterial)
         .onAppear {
             selectedDetent = .fraction(0.75)
         }
@@ -351,7 +428,7 @@ struct MetricDetailSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(kind.title)
                             .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary.opacity(0.7))
+                            .foregroundStyle(.primary.opacity(0.7))
 
                         Text(resolvedHeaderValue)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -401,56 +478,52 @@ struct MetricDetailSheet: View {
     }
 }
 
-// MARK: - Profile Sheet View (Placeholder - kept for backwards compatibility)
+// MARK: - Profile Sheet View
 
-struct ProfileSheetView: View {
-    var onDismiss: (() -> Void)?
-    
+private struct ProfileSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         NavigationStack {
-            VStack {
-                Text("Profile")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                Text("Profile content goes here")
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { onDismiss?() }
+            ProfileScreen()
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
-            }
         }
     }
 }
 
-// MARK: - Tribe Ranking Sheet View (Placeholder - kept for backwards compatibility)
+// MARK: - Tribe Ranking Sheet View
 
-struct TribeRankingSheetView: View {
-    var onDismiss: (() -> Void)?
-    
+private struct TribeRankingSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         NavigationStack {
-            VStack {
-                Text("Tribe Ranking")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                Text("Tribe ranking content goes here")
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { onDismiss?() }
+            TribeView()
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
-            }
         }
     }
 }
@@ -475,14 +548,14 @@ struct ErrorBanner: View {
     var body: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.yellow)
+                .foregroundStyle(.yellow)
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
             Spacer()
             Button(action: { onDismiss?() }) {
                 Image(systemName: "xmark")
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
         }
         .padding()

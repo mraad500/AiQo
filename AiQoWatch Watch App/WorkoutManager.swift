@@ -100,11 +100,17 @@ final class WorkoutManager: NSObject, ObservableObject {
         }
 
         let typesToShare: Set<HKSampleType> = [HKQuantityType.workoutType()]
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+              let calorieType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+              let walkingDistanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
+              let cyclingDistanceType = HKQuantityType.quantityType(forIdentifier: .distanceCycling)
+        else { return }
+
         let typesToRead: Set<HKObjectType> = [
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceCycling)!
+            heartRateType,
+            calorieType,
+            walkingDistanceType,
+            cyclingDistanceType
         ]
 
         isAuthorizationRequestInFlight = true

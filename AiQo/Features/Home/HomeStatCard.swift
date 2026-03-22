@@ -125,7 +125,7 @@ struct HomeStatCard: View {
                 HStack(alignment: .top) {
                     Text(kind.title)
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black.opacity(0.55))
+                        .foregroundStyle(.black.opacity(0.55))
                         .lineLimit(1)
                     
                     Spacer(minLength: 8)
@@ -133,7 +133,7 @@ struct HomeStatCard: View {
                     // Icon badge
                     Image(systemName: kind.icon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.black.opacity(0.4))
+                        .foregroundStyle(.black.opacity(0.4))
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
@@ -149,7 +149,7 @@ struct HomeStatCard: View {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(displayValue)
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundColor(.black.opacity(0.85))
+                        .foregroundStyle(.black.opacity(0.85))
                         .contentTransition(.numericText())
                         .id(valueChangeID)
                         .minimumScaleFactor(0.6)
@@ -159,7 +159,7 @@ struct HomeStatCard: View {
                     if shouldShowUnit {
                         Text(kind.unit)
                             .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.black.opacity(0.5))
+                            .foregroundStyle(.black.opacity(0.5))
                             .padding(.leading, 2) // Additional padding for better spacing
                             .padding(.bottom, 2)
                     }
@@ -266,7 +266,7 @@ struct ExpandedStatCard: View {
             HStack(alignment: .center) {
                 Text(kind.title)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.8))
+                    .foregroundStyle(.primary.opacity(0.8))
                 
                 Spacer()
                 
@@ -282,7 +282,7 @@ struct ExpandedStatCard: View {
             // Value
             Text(headerValue)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             
             // Scope picker
             Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {

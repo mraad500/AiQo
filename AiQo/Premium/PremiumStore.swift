@@ -1,5 +1,5 @@
 import Foundation
-internal import Combine
+import Combine
 import StoreKit
 
 enum PremiumPlan: String, CaseIterable, Identifiable {

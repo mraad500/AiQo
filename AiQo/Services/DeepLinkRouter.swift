@@ -1,10 +1,10 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// يدير الروابط العميقة والتنقل — يدعم Universal Links و URL Schemes
 /// Scheme: aiqo://
 /// Universal Link: https://aiqo.app/
-@MainActor
 final class DeepLinkRouter: ObservableObject {
     static let shared = DeepLinkRouter()
 
@@ -24,6 +24,7 @@ final class DeepLinkRouter: ObservableObject {
     private init() {}
 
     /// يحلل الـ URL ويوجّه للشاشة المطلوبة
+    @MainActor
     func handle(url: URL) -> Bool {
         guard let deepLink = parse(url: url) else { return false }
 
@@ -37,6 +38,7 @@ final class DeepLinkRouter: ObservableObject {
     }
 
     /// يوجّه لشاشة معينة
+    @MainActor
     func route(to deepLink: DeepLink) {
         switch deepLink {
         case .home:
@@ -54,7 +56,6 @@ final class DeepLinkRouter: ObservableObject {
             MainTabRouter.shared.navigate(to: .kitchen)
         case .settings:
             MainTabRouter.shared.navigate(to: .home)
-            // Settings is within home nav stack
         case .referral(let code):
             ReferralManager.shared.applyReferralCode(code)
         case .premium:

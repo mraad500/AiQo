@@ -18,12 +18,12 @@ struct RecipeCardView: View {
             VStack(alignment: .trailing, spacing: 8) {
                 Text(meal.localizedName)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundStyle(.black)
                     .multilineTextAlignment(.trailing)
 
                 Text("\(meal.calories_kcal) " + "screen.kitchen.caloriesUnit".localized)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundStyle(.black.opacity(0.7))
                     .multilineTextAlignment(.trailing)
             }
 
@@ -35,6 +35,7 @@ struct RecipeCardView: View {
                 .fill(Color.kitchenMint)
         )
         .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 4)
+        .aiQoPressEffect()
     }
 }
 

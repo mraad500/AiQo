@@ -51,6 +51,15 @@ struct MemoryExtractor: Sendable {
             }
         }
 
+        // Weight (English)
+        if let match = text.range(of: #"(?:weigh|weight)\s*(?:is\s*)?(\d{2,3})\s*(?:kg|kilos?|lbs?|pounds?)?"#, options: [.regularExpression, .caseInsensitive]) {
+            let numberRange = text[match].range(of: #"\d{2,3}"#, options: .regularExpression)
+            if let numberRange {
+                let weight = String(text[numberRange])
+                store.set("weight", value: weight, category: "body", source: "extracted")
+            }
+        }
+
         // الطول
         if let match = text.range(of: #"(\d{2,3})\s*(سم|cm)"#, options: .regularExpression) {
             let numberRange = text[match].range(of: #"\d{2,3}"#, options: .regularExpression)
@@ -60,8 +69,26 @@ struct MemoryExtractor: Sendable {
             }
         }
 
+        // Height (English)
+        if let match = text.range(of: #"(\d{2,3})\s*(?:cm|centimeters?)\s*(?:tall)?"#, options: [.regularExpression, .caseInsensitive]) {
+            let numberRange = text[match].range(of: #"\d{2,3}"#, options: .regularExpression)
+            if let numberRange {
+                let height = String(text[numberRange])
+                store.set("height", value: height, category: "body", source: "extracted")
+            }
+        }
+
         // العمر
         if let match = text.range(of: #"(عمري|عندي)\s*(\d{1,2})\s*(سنة|سنه)"#, options: .regularExpression) {
+            let numberRange = text[match].range(of: #"\d{1,2}"#, options: .regularExpression)
+            if let numberRange {
+                let age = String(text[numberRange])
+                store.set("age", value: age, category: "identity", source: "extracted")
+            }
+        }
+
+        // Age (English)
+        if let match = text.range(of: #"(?:i'?m|i am|age)\s*(\d{1,2})\s*(?:years?\s*old)?"#, options: [.regularExpression, .caseInsensitive]) {
             let numberRange = text[match].range(of: #"\d{1,2}"#, options: .regularExpression)
             if let numberRange {
                 let age = String(text[numberRange])
@@ -79,12 +106,32 @@ struct MemoryExtractor: Sendable {
             }
         }
 
+        // Injury (English)
+        let englishInjuryKeywords = ["knee", "back", "shoulder", "neck", "injury", "pain", "surgery", "joint"]
+        for keyword in englishInjuryKeywords {
+            if text.localizedCaseInsensitiveContains(keyword) {
+                let sentence = extractSentenceContaining(keyword: keyword, in: text)
+                store.set("injury_\(keyword)", value: sentence, category: "injury", source: "extracted")
+                break
+            }
+        }
+
         // هدف
         let goalPatterns = [
             (#"(أبي|أريد|أبغى|هدفي|ودّي|ودي)\s*.{0,30}(تنشيف|تضخيم|نزول وزن|زيادة وزن|عضل|كارديو|مرونة)"#, "goal"),
         ]
         for (pattern, key) in goalPatterns {
             if let match = text.range(of: pattern, options: .regularExpression) {
+                store.set(key, value: String(text[match]), category: "goal", source: "extracted")
+            }
+        }
+
+        // Goal (English)
+        let englishGoalPatterns = [
+            (#"(?:i want to|my goal is|trying to|i need to)\s*.{0,30}(?:lose weight|build muscle|gain weight|get lean|bulk|cut|cardio|flexibility|endurance)"#, "goal"),
+        ]
+        for (pattern, key) in englishGoalPatterns {
+            if let match = text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
                 store.set(key, value: String(text[match]), category: "goal", source: "extracted")
             }
         }
@@ -114,6 +161,22 @@ struct MemoryExtractor: Sendable {
                 }
             }
         }
+
+        // Name (English)
+        let englishNamePatterns = [#"(?:my name is|i'?m|call me)\s+(\w+)"#]
+        for pattern in englishNamePatterns {
+            if let match = text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
+                let fullMatch = String(text[match])
+                let parts = fullMatch.split(separator: " ")
+                if let lastName = parts.last {
+                    let name = String(lastName)
+                    let existing = store.get("user_name")
+                    if existing == nil {
+                        store.set("user_name", value: name, category: "identity", source: "extracted")
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - LLM Extraction
@@ -123,6 +186,11 @@ struct MemoryExtractor: Sendable {
         assistantReply: String,
         store: MemoryStore
     ) async {
+        // Privacy-first: sanitize all outgoing text before it leaves the device
+        let sanitizer = PrivacySanitizer()
+        let sanitizedUserMessage = sanitizer.sanitizeText(userMessage, knownUserName: nil)
+        let sanitizedAssistantReply = sanitizer.sanitizeText(assistantReply, knownUserName: nil)
+
         let systemPrompt = """
         أنت محلل بيانات. من المحادثة التالية، استخرج أي معلومات جديدة عن المستخدم. أرجع JSON فقط بدون أي نص إضافي أو markdown.
         المفاتيح المسموحة فقط:
@@ -136,8 +204,8 @@ struct MemoryExtractor: Sendable {
         """
 
         let userContent = """
-        المستخدم: \(userMessage)
-        الكابتن: \(assistantReply)
+        المستخدم: \(sanitizedUserMessage)
+        الكابتن: \(sanitizedAssistantReply)
         """
 
         do {

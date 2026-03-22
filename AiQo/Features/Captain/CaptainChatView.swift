@@ -42,6 +42,36 @@ struct CaptainChatView: View {
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
 
+                        // Quick Reply Chips
+                        if !globalBrain.quickReplies.isEmpty && !globalBrain.isTyping {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(globalBrain.quickReplies, id: \.self) { reply in
+                                        Button {
+                                            HapticEngine.light()
+                                            globalBrain.sendMessage(reply)
+                                        } label: {
+                                            Text(reply)
+                                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                .foregroundStyle(Color(hex: "EBCF97"))
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(Color(hex: "EBCF97").opacity(0.15))
+                                                        .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .aiQoPressEffect()
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: globalBrain.quickReplies)
+                        }
+
                         Color.clear
                             .frame(height: 1)
                             .id(bottomAnchorID)
@@ -274,7 +304,7 @@ private struct ChatMessageRow: View {
             if message.isUser {
                 Spacer(minLength: 26)
 
-                MessageBubble(isUser: true) {
+                MessageBubble(isUser: true, timestamp: message.timestamp) {
                     Text(message.text)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.trailing)
@@ -282,7 +312,7 @@ private struct ChatMessageRow: View {
             } else {
                 CaptainChatAvatarView(size: 28)
 
-                MessageBubble(isUser: false) {
+                MessageBubble(isUser: false, timestamp: message.timestamp) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(message.text)
                             .font(.system(size: 16, weight: .medium, design: .rounded))

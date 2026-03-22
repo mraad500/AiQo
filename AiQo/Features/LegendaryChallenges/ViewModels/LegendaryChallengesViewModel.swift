@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 // MARK: - Legendary Challenges ViewModel
 
@@ -11,6 +11,10 @@ final class LegendaryChallengesViewModel: ObservableObject {
     @Published var activeProject: LegendaryProject?
 
     // MARK: - Persistence Key
+    // NOTE: This ViewModel uses UserDefaults for simple seed-record projects.
+    // RecordProjectManager uses SwiftData for AI-generated weekly plan projects.
+    // These are separate systems — RecordProjectManager is the long-term target.
+    // Migration: When RecordProjectManager is fully adopted, deprecate this class.
 
     private static let projectKey = "aiqo.legendary.activeProject"
 

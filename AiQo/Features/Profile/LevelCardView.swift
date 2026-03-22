@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 struct LevelCardView: View {
     @State private var snapshot = LevelCardSnapshot.load()

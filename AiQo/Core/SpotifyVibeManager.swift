@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-internal import Combine
+import Combine
 
 #if !targetEnvironment(simulator)
 import SpotifyiOS
@@ -29,8 +29,14 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     let sessionManager: SPTSessionManager
     let appRemote: SPTAppRemote
 
-    private let clientID = "b55c2098adc8411e83eee55a905e42f3"
-    private let redirectURI = URL(string: "aiqo://spotify-login-callback")!
+    private let clientID: String
+    private static let redirectURI: URL = {
+        guard let url = URL(string: "aiqo://spotify-login-callback") else {
+            assertionFailure("Invalid Spotify redirect URI")
+            return URL(fileURLWithPath: "/")
+        }
+        return url
+    }()
     private let scopes: SPTScope = .appRemoteControl
 
     private var pendingVibeURI: String?
@@ -40,7 +46,20 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     private var wasStoppedManually = false
 
     private override init() {
-        let configuration = SPTConfiguration(clientID: clientID, redirectURL: redirectURI)
+        guard let resolvedClientID = Bundle.main.infoDictionary?["SPOTIFY_CLIENT_ID"] as? String,
+              !resolvedClientID.isEmpty,
+              !resolvedClientID.hasPrefix("$(") else {
+            print("SpotifyVibeManager: SPOTIFY_CLIENT_ID missing from Info.plist — Spotify features disabled.")
+            self.clientID = ""
+            let dummyConfig = SPTConfiguration(clientID: "", redirectURL: Self.redirectURI)
+            self.configuration = dummyConfig
+            self.sessionManager = SPTSessionManager(configuration: dummyConfig, delegate: nil)
+            self.appRemote = SPTAppRemote(configuration: dummyConfig, logLevel: .debug)
+            super.init()
+            return
+        }
+        self.clientID = resolvedClientID
+        let configuration = SPTConfiguration(clientID: resolvedClientID, redirectURL: Self.redirectURI)
         configuration.companyName = "AiQo"
 
         self.configuration = configuration

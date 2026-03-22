@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 // MARK: - Emara Tab Enum
 
@@ -39,26 +39,51 @@ private struct EmaraTribeMember: Identifiable {
         Color(hex: "A8D8EA")  // Sky
     ]
 
-    static let mockMembers: [EmaraTribeMember] = [
-        EmaraTribeMember(name: "حمودي", username: "@mohammed", points: 38620, level: 18, colorIndex: 0, initials: "حم"),
-        EmaraTribeMember(name: "شُرى خالد", username: "@sora.world", points: 9420, level: 28, colorIndex: 1, initials: "شُخ"),
-        EmaraTribeMember(name: "سمر نادر", username: "@samar.n", points: 8980, level: 26, colorIndex: 2, initials: "سن"),
-        EmaraTribeMember(name: "Noah Reed", username: "@noah.reed", points: 8760, level: 25, colorIndex: 3, initials: "NR"),
-        EmaraTribeMember(name: "جود منصور", username: "@joud.rank", points: 8340, level: 24, colorIndex: 4, initials: "جم"),
-    ]
 }
 
 // MARK: - TribeView
 
 struct TribeView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = TribeViewModel()
-    @State private var selectedTab: EmaraTab = .global
+    @State private var arenaVM = EmaraArenaViewModel()
+    @State private var selectedTab: EmaraTab = .tribe
     @State private var selectedUserID: String?
+    @State private var sharedUserTribe: ArenaTribe?
+
+    /// Global leaderboard from live Supabase data.
+    /// For the current user, we always overlay local profile data so the level/XP
+    /// stays consistent with الملف الشخصي even when Supabase is stale.
+    private var globalLeaderboard: [TribeLeaderboardUser] {
+        let myID = SupabaseService.shared.currentUserID
+        let localUser = viewModel.currentUser
+
+        var rows = arenaVM.globalUsers.map { row in
+            let isCurrent = row.id == myID
+            return TribeLeaderboardUser(
+                id: row.id,
+                displayName: isCurrent ? localUser.displayName : row.displayName,
+                username: isCurrent ? localUser.username : row.username,
+                level: isCurrent ? localUser.level : row.level,
+                points: isCurrent ? localUser.points : row.points,
+                isProfilePublic: isCurrent ? localUser.isProfilePublic : row.isProfilePublic,
+                profileImage: isCurrent ? localUser.profileImage : nil,
+                isCurrentUser: isCurrent
+            )
+        }
+
+        // If current user wasn't in the Supabase results, inject them
+        if myID != nil && !rows.contains(where: { $0.isCurrentUser }) {
+            rows.append(localUser)
+        }
+
+        return rows.sorted { $0.points > $1.points }
+    }
 
     private var selectedUser: TribeLeaderboardUser? {
         guard let selectedUserID else { return nil }
-        return viewModel.user(withID: selectedUserID)
+        return globalLeaderboard.first(where: { $0.id == selectedUserID })
     }
 
     var body: some View {
@@ -82,6 +107,13 @@ struct TribeView: View {
         .navigationBarBackButtonHidden(true)
         .task {
             viewModel.refreshCurrentUser()
+            await arenaVM.loadAll(context: modelContext)
+            if let tribe = arenaVM.myTribe {
+                sharedUserTribe = tribe
+            }
+        }
+        .onChange(of: arenaVM.myTribe) { _, newTribe in
+            sharedUserTribe = newTribe
         }
         .onReceive(NotificationCenter.default.publisher(for: .userProfileDidChange)) { _ in
             viewModel.refreshCurrentUser()
@@ -145,21 +177,32 @@ struct TribeView: View {
 
             // Native segmented picker
             Picker("", selection: $selectedTab) {
-                Text("العالمية").tag(EmaraTab.global)
-                Text("الارينا").tag(EmaraTab.arena)
                 Text("القبيلة").tag(EmaraTab.tribe)
+                Text("الارينا").tag(EmaraTab.arena)
+                Text("العالمية").tag(EmaraTab.global)
             }
             .pickerStyle(.segmented)
-            .scaleEffect(y: 1.35)
-            .frame(height: 44)
+            .frame(height: 36)
             .onAppear {
-                UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color(hex: "EBCF97"))
-                UISegmentedControl.appearance().setTitleTextAttributes([
-                    .font: UIFont.systemFont(ofSize: 14, weight: .bold)
-                ], for: .selected)
-                UISegmentedControl.appearance().setTitleTextAttributes([
-                    .font: UIFont.systemFont(ofSize: 14, weight: .medium)
-                ], for: .normal)
+                UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color(hex: "F9E697"))
+                let selectedDesc = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline)
+                    .withDesign(.rounded)?.addingAttributes([
+                        .traits: [UIFontDescriptor.TraitKey.weight: UIFont.Weight.bold]
+                    ])
+                let normalDesc = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline)
+                    .withDesign(.rounded)?.addingAttributes([
+                        .traits: [UIFontDescriptor.TraitKey.weight: UIFont.Weight.medium]
+                    ])
+                if let selectedDesc {
+                    UISegmentedControl.appearance().setTitleTextAttributes([
+                        .font: UIFont(descriptor: selectedDesc, size: 14)
+                    ], for: .selected)
+                }
+                if let normalDesc {
+                    UISegmentedControl.appearance().setTitleTextAttributes([
+                        .font: UIFont(descriptor: normalDesc, size: 14)
+                    ], for: .normal)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -174,7 +217,7 @@ struct TribeView: View {
         case .global:
             globalLeaderboardContent
         case .arena:
-            arenaPlaceholderContent
+            arenaContent
         case .tribe:
             tribeRingContent
         }
@@ -185,64 +228,168 @@ struct TribeView: View {
     private var globalLeaderboardContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 22) {
-                leaderboardSection
+                podiumSection
+
+                // Show rank 4+ in the list (skip top 3 since they're in podium)
+                LazyVStack(spacing: 12) {
+                    ForEach(Array(globalLeaderboard.dropFirst(3).enumerated()), id: \.element.id) { index, user in
+                        Button {
+                            selectedUserID = user.id
+                        } label: {
+                            TribeUserRowCard(
+                                rank: index + 4,
+                                user: user
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 132)
         }
+        .refreshable {
+            await refreshGlobalLeaderboard()
+        }
+        .safeAreaInset(edge: .bottom) {
+            pinnedRankBar
+        }
     }
 
-    private var leaderboardSection: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(Array(viewModel.leaderboard.enumerated()), id: \.element.id) { index, user in
-                Button {
-                    selectedUserID = user.id
-                } label: {
-                    TribeUserRowCard(
-                        rank: index + 1,
-                        user: user
-                    )
+    // MARK: - Podium Section
+
+    private var podiumSection: some View {
+        let top3 = Array(globalLeaderboard.prefix(3))
+        return Group {
+            if top3.count >= 3 {
+                HStack(alignment: .bottom, spacing: 12) {
+                    // Rank 2 (left, shorter)
+                    podiumCard(user: top3[1], rank: 2, height: 100, medal: "\u{1F948}")
+                    // Rank 1 (center, tallest, gold crown)
+                    podiumCard(user: top3[0], rank: 1, height: 130, medal: "\u{1F451}")
+                    // Rank 3 (right, shortest)
+                    podiumCard(user: top3[2], rank: 3, height: 80, medal: "\u{1F949}")
                 }
-                .buttonStyle(.plain)
+                .padding(.bottom, 8)
             }
         }
     }
 
-    // MARK: - Arena Placeholder
+    private func podiumCard(user: TribeLeaderboardUser, rank: Int, height: CGFloat, medal: String) -> some View {
+        VStack(spacing: 6) {
+            Text(medal)
+                .font(.system(size: rank == 1 ? 28 : 22))
 
-    private var arenaPlaceholderContent: some View {
-        VStack {
-            Spacer()
-            Text("قريباً")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(rank == 1 ? TribeLeaderboardPalette.sand.opacity(0.4) : TribeLeaderboardPalette.mint.opacity(0.3))
+                Text(user.initials)
+                    .font(.system(size: rank == 1 ? 18 : 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+            }
+            .frame(width: rank == 1 ? 62 : 48, height: rank == 1 ? 62 : 48)
+            .clipShape(Circle())
+            .overlay {
+                Circle()
+                    .stroke(rank == 1 ? TribeLeaderboardPalette.sand : TribeLeaderboardPalette.mint, lineWidth: 2.5)
+            }
+
+            Text(String(user.displayName.prefix(12)))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+                .lineLimit(1)
+
+            Text("\(user.points.arabicFormatted)")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(TribeLeaderboardPalette.textSecondary)
-            Spacer()
+
+            // Level badge
+            Text("المستوى \(user.level.arabicFormatted)")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(TribeLeaderboardPalette.sand.opacity(0.3)))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .frame(height: height, alignment: .bottom)
     }
 
-    // MARK: - Tribe Ring Content
+    // MARK: - Pinned Rank Bar
+
+    private var pinnedRankBar: some View {
+        let currentRank = (globalLeaderboard.firstIndex(where: { $0.isCurrentUser }) ?? globalLeaderboard.count - 1) + 1
+        let user = viewModel.currentUser
+
+        return VStack(spacing: 6) {
+            if user.points <= 100 {
+                Text(NSLocalizedString("leaderboard.startWalking", value: "ابدأ تمشي واكسب نقاطك الأولى 🚀", comment: ""))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(TribeLeaderboardPalette.textSecondary)
+            }
+
+            TribeCardSurface(
+                tint: TribeLeaderboardPalette.mint,
+                padding: 14,
+                cornerRadius: 24
+            ) {
+                HStack(spacing: 12) {
+                    AvatarView(user: user, size: 42)
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(user.displayName)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+                            .lineLimit(1)
+
+                        Text(String(format: NSLocalizedString("leaderboard.yourRank", value: "ترتيبك: #%@ عالمياً", comment: "User's global rank"), currentRank.arabicFormatted))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(TribeLeaderboardPalette.textSecondary)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("\(user.points.arabicFormatted)")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(TribeLeaderboardPalette.textPrimary)
+
+                        Text("المستوى \(user.level.arabicFormatted)")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(TribeLeaderboardPalette.textTertiary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Refresh
+
+    private func refreshGlobalLeaderboard() async {
+        await arenaVM.loadGlobalUsers()
+        viewModel.refreshCurrentUser()
+    }
+
+    // MARK: - Arena Content
+
+    private var arenaContent: some View {
+        ArenaTabView(userTribe: $sharedUserTribe)
+            .environment(arenaVM)
+    }
+
+    // MARK: - Tribe Tab Content
 
     private var tribeRingContent: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
-                EmaraTribeRingView(members: EmaraTribeMember.mockMembers)
-                    .padding(.top, 20)
-
-                tribeRingMemberCards
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 132)
-        }
-    }
-
-    private var tribeRingMemberCards: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(EmaraTribeMember.mockMembers) { member in
-                TribeRingMemberCard(member: member)
-            }
-        }
+        TribeTabView(userTribe: $sharedUserTribe)
+            .environment(arenaVM)
     }
 
     // MARK: - Background
@@ -415,12 +562,12 @@ private struct TribeRingMemberCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 10, weight: .semibold))
-                        Text("\(member.points.formatted(.number.locale(.autoupdatingCurrent)))")
+                        Text("\(member.points.arabicFormatted)")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                     }
                     .foregroundStyle(TribeLeaderboardPalette.textPrimary)
 
-                    Text("المستوى \(member.level.formatted(.number.locale(.autoupdatingCurrent)))")
+                    Text("المستوى \(member.level.arabicFormatted)")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(TribeLeaderboardPalette.textTertiary)
                 }
@@ -448,12 +595,12 @@ private struct TribeUserRowCard: View {
                     HStack(spacing: 8) {
                         labelChip(
                             icon: "sparkles",
-                            text: "المستوى \(user.level.formatted(.number.locale(.autoupdatingCurrent)))",
+                            text: "المستوى \(user.level.arabicFormatted)",
                             tint: TribeLeaderboardPalette.sand
                         )
                         labelChip(
                             icon: "bolt.fill",
-                            text: "\(user.points.formatted(.number.locale(.autoupdatingCurrent))) نقطة",
+                            text: "\(user.points.arabicFormatted) نقطة",
                             tint: TribeLeaderboardPalette.mint
                         )
                     }
@@ -488,7 +635,7 @@ private struct TribeUserRowCard: View {
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 6) {
-                    Text("#\(rank.formatted(.number.locale(.autoupdatingCurrent)))")
+                    Text("#\(rank.arabicFormatted)")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeLeaderboardPalette.textPrimary)
                         .monospacedDigit()
@@ -565,8 +712,8 @@ private struct TribeUserDetailSheet: View {
                         }
 
                         HStack(spacing: 10) {
-                            detailMetric(title: "المستوى", value: user.level.formatted(.number.locale(.autoupdatingCurrent)), tint: TribeLeaderboardPalette.sand)
-                            detailMetric(title: "النقاط", value: user.points.formatted(.number.locale(.autoupdatingCurrent)), tint: TribeLeaderboardPalette.mint)
+                            detailMetric(title: "المستوى", value: user.level.arabicFormatted, tint: TribeLeaderboardPalette.sand)
+                            detailMetric(title: "النقاط", value: user.points.arabicFormatted, tint: TribeLeaderboardPalette.mint)
                         }
 
                         if user.isCurrentUser || !user.isProfilePublic {
@@ -784,25 +931,8 @@ private struct TribeCardSurface<Content: View>: View {
 private final class TribeViewModel: ObservableObject {
     @Published private(set) var currentUser: TribeLeaderboardUser
 
-    private let leaderboardSeed: [TribeLeaderboardUser]
-
     init() {
         self.currentUser = TribeViewModel.makeCurrentUser()
-        self.leaderboardSeed = TribeViewModel.makeGlobalSeed()
-    }
-
-    var leaderboard: [TribeLeaderboardUser] {
-        (leaderboardSeed + [currentUser])
-            .sorted { lhs, rhs in
-                if lhs.points == rhs.points {
-                    return lhs.displayName < rhs.displayName
-                }
-                return lhs.points > rhs.points
-            }
-    }
-
-    func user(withID id: String) -> TribeLeaderboardUser? {
-        (leaderboardSeed + [currentUser]).first(where: { $0.id == id })
     }
 
     func refreshCurrentUser() {
@@ -815,13 +945,20 @@ private final class TribeViewModel: ObservableObject {
         ? "أنت"
         : profile.name
         let rawUsername = profile.username?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let currentLevel = max(LevelStore.shared.level, 1)
-        let currentPoints = max(LevelStore.shared.totalXP, 6_120 + (currentLevel * 38))
+
+        // Read from the SAME UserDefaults keys the profile screen uses
+        let profileLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
+        let profilePoints = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
+        let currentLevel = max(profileLevel, 1)
+        let currentPoints = max(profilePoints, 0)
+
+        // Use the real Supabase user ID so deduplication filter works correctly
+        let userID = SupabaseService.shared.currentUserID ?? "tribe-current-user"
 
         return TribeLeaderboardUser(
-            id: "tribe-current-user",
+            id: userID,
             displayName: displayName,
-            username: rawUsername?.isEmpty == false ? rawUsername! : "aiqo.me",
+            username: (rawUsername?.isEmpty == false ? rawUsername : nil) ?? "aiqo.me",
             level: currentLevel,
             points: currentPoints,
             isProfilePublic: UserProfileStore.shared.tribePrivacyMode == .public,
@@ -830,70 +967,6 @@ private final class TribeViewModel: ObservableObject {
         )
     }
 
-    private static func makeGlobalSeed() -> [TribeLeaderboardUser] {
-        [
-            TribeLeaderboardUser(
-                id: "global-sora",
-                displayName: "سُرى خالد",
-                username: "sora.world",
-                level: 28,
-                points: 9_420,
-                isProfilePublic: true,
-                profileImage: nil,
-                isCurrentUser: false
-            ),
-            TribeLeaderboardUser(
-                id: "global-omar",
-                displayName: "Omar Bell",
-                username: "omar.bell",
-                level: 27,
-                points: 9_180,
-                isProfilePublic: false,
-                profileImage: nil,
-                isCurrentUser: false
-            ),
-            TribeLeaderboardUser(
-                id: "global-samar",
-                displayName: "سمر نادر",
-                username: "samar.n",
-                level: 26,
-                points: 8_980,
-                isProfilePublic: true,
-                profileImage: nil,
-                isCurrentUser: false
-            ),
-            TribeLeaderboardUser(
-                id: "global-noah",
-                displayName: "Noah Reed",
-                username: "noah.reed",
-                level: 25,
-                points: 8_760,
-                isProfilePublic: true,
-                profileImage: nil,
-                isCurrentUser: false
-            ),
-            TribeLeaderboardUser(
-                id: "global-joud",
-                displayName: "جود منصور",
-                username: "joud.rank",
-                level: 24,
-                points: 8_340,
-                isProfilePublic: false,
-                profileImage: nil,
-                isCurrentUser: false
-            ),
-            TribeLeaderboardUser(
-                id: "global-ella",
-                displayName: "Ella Moss",
-                username: "ella.moss",
-                level: 23,
-                points: 8_120,
-                isProfilePublic: true,
-                profileImage: nil,
-                isCurrentUser: false
-            )
-        ]
-    }
 }
 
 private struct TribeLeaderboardUser: Identifiable {

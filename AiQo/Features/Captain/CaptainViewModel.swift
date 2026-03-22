@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 struct CaptainProcessingTimeoutError: LocalizedError {
     var errorDescription: String? {
@@ -100,6 +100,7 @@ final class CaptainViewModel: ObservableObject {
     @Published var customization: CaptainCustomization = .default
     @Published var feedbackTrigger: Int = 0
     @Published var activeModule: ScreenContext = .mainChat
+    @Published var quickReplies: [String] = []
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -212,11 +213,18 @@ final class CaptainViewModel: ObservableObject {
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
 
+        HapticEngine.light()
         AnalyticsService.shared.track(.captainMessageSent(length: trimmedText.count))
 
         responseTask?.cancel()
         feedbackTrigger += 1
         inputText = ""
+
+        // Persist the welcome message on first user interaction so the session is complete in SwiftData
+        if messageCount == 0, let welcomeMessage = messages.first, !welcomeMessage.isUser {
+            MemoryStore.shared.persistMessage(welcomeMessage, sessionID: currentSessionID)
+        }
+
         let userMessage = ChatMessage(text: trimmedText, isUser: true)
         messages.append(userMessage)
         MemoryStore.shared.persistMessage(userMessage, sessionID: currentSessionID)
@@ -330,13 +338,15 @@ final class CaptainViewModel: ObservableObject {
         messageCount = 0
         currentWorkoutPlan = nil
         currentMealPlan = nil
+        quickReplies = []
 
         let welcome = ChatMessage(
-            text: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
+            text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", comment: "Captain first message"),
             isUser: false
         )
         messages.append(welcome)
-        MemoryStore.shared.persistMessage(welcome, sessionID: currentSessionID)
+        // Don't persist the welcome message — the session is only persisted once the user sends their first message.
+        // This prevents stale single-message sessions accumulating in SwiftData on every cold launch.
     }
 
     /// يحمّل جلسة قديمة — يستبدل الرسائل الحالية برسائل الجلسة المختارة
@@ -403,6 +413,7 @@ final class CaptainViewModel: ObservableObject {
 
             currentWorkoutPlan = reply.workoutPlan
             currentMealPlan = reply.mealPlan
+            quickReplies = reply.quickReplies ?? []
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
             let assistantReply = reply.message
@@ -439,7 +450,9 @@ final class CaptainViewModel: ObservableObject {
         } catch {
             guard activeRequestID == requestID else { return }
             AnalyticsService.shared.track(.captainResponseFailed(error: String(describing: error)))
+            #if DEBUG
             print("CaptainViewModel hybrid brain error:", error)
+            #endif
             let errorMessage = ChatMessage(
                 text: fallbackMessage(for: error, screenContext: screenContext),
                 isUser: false,
@@ -618,6 +631,24 @@ final class CaptainViewModel: ObservableObject {
         for error: Error,
         screenContext: ScreenContext
     ) -> String {
+        // Handle AiQoError rate-limit and server errors
+        if let aiqoError = error as? AiQoError {
+            switch aiqoError {
+            case .captainRateLimited, .serverError(statusCode: 429):
+                return localizedFallbackMessage(
+                    arabic: NSLocalizedString("captain.error.rateLimited", value: "الكابتن مشغول شوي، جرّب بعد ثواني", comment: "Rate limit 429 error"),
+                    english: "Captain is a bit busy, try again in a few seconds."
+                )
+            case .serverError(statusCode: 503):
+                return localizedFallbackMessage(
+                    arabic: NSLocalizedString("captain.error.serviceUnavailable", value: "السيرفر يحتاج استراحة، جرّب بعد شوي", comment: "Service unavailable 503 error"),
+                    english: "The server needs a break, try again shortly."
+                )
+            default:
+                break
+            }
+        }
+
         if error is CaptainProcessingTimeoutError {
             if screenContext == .myVibe {
                 return localizedFallbackMessage(
@@ -680,6 +711,16 @@ final class CaptainViewModel: ObservableObject {
                 return localizedFallbackMessage(
                     arabic: "الاتصال بالسحابة مو ثابت هسه. جرّب مرة ثانية.",
                     english: "The cloud connection is unstable right now. Try again."
+                )
+            case .badStatusCode(429):
+                return localizedFallbackMessage(
+                    arabic: NSLocalizedString("captain.error.rateLimited", value: "الكابتن مشغول شوي، جرّب بعد ثواني", comment: "Rate limit 429 error"),
+                    english: "Captain is a bit busy, try again in a few seconds."
+                )
+            case .badStatusCode(503):
+                return localizedFallbackMessage(
+                    arabic: NSLocalizedString("captain.error.serviceUnavailable", value: "السيرفر يحتاج استراحة، جرّب بعد شوي", comment: "Service unavailable 503 error"),
+                    english: "The server needs a break, try again shortly."
                 )
             case .badStatusCode, .invalidResponse, .emptyResponse, .emptyConversation, .missingUserMessage:
                 break

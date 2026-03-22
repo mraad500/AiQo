@@ -1,9 +1,10 @@
 import Foundation
+import Security
+import Combine
 
 /// يدير فترة التجربة المجانية (7 أيام) — بدون اشتراك StoreKit
 /// الفكرة: أول ما المستخدم يفتح التطبيق، يبدأ العد التنازلي 7 أيام
 /// خلال هالفترة يقدر يستخدم كل الميزات المدفوعة
-@MainActor
 final class FreeTrialManager: ObservableObject {
     static let shared = FreeTrialManager()
 
@@ -32,14 +33,18 @@ final class FreeTrialManager: ObservableObject {
 
     /// يبدأ التجربة المجانية — ينحفظ التاريخ ومايتغير
     func startTrialIfNeeded() {
-        guard defaults.object(forKey: Keys.trialStartDate) == nil else {
+        // Check both Keychain and UserDefaults — trial may already exist from a previous install
+        guard trialStartDate == nil else {
             refreshState()
             return
         }
 
         let now = nowProvider()
         defaults.set(now, forKey: Keys.trialStartDate)
-        AnalyticsService.shared.track(.freeTrialStarted)
+        KeychainTrialHelper.writeTrialStartDate(now)
+        Task { @MainActor in
+            AnalyticsService.shared.track(.freeTrialStarted)
+        }
         refreshState()
     }
 
@@ -51,7 +56,7 @@ final class FreeTrialManager: ObservableObject {
 
     /// هل المستخدم جرب التطبيق قبل (بدأ trial سابقاً)؟
     var hasUsedTrial: Bool {
-        defaults.object(forKey: Keys.trialStartDate) != nil
+        trialStartDate != nil
     }
 
     /// كم يوم باقي بالتجربة
@@ -62,15 +67,35 @@ final class FreeTrialManager: ObservableObject {
 
     /// تاريخ انتهاء التجربة
     var trialEndDate: Date? {
-        guard let startDate = defaults.object(forKey: Keys.trialStartDate) as? Date else {
+        guard let startDate = trialStartDate else {
             return nil
         }
         return Calendar.current.date(byAdding: .day, value: Self.trialDurationDays, to: startDate)
     }
 
+    /// Reads the trial start date from Keychain first (persists across reinstalls),
+    /// falling back to UserDefaults. Syncs between the two stores if one is missing.
+    private var trialStartDate: Date? {
+        // Keychain is the source of truth (survives reinstall)
+        if let keychainDate = KeychainTrialHelper.readTrialStartDate() {
+            // Sync back to UserDefaults if it was lost (e.g. after reinstall)
+            if defaults.object(forKey: Keys.trialStartDate) == nil {
+                defaults.set(keychainDate, forKey: Keys.trialStartDate)
+            }
+            return keychainDate
+        }
+        // Fall back to UserDefaults
+        if let defaultsDate = defaults.object(forKey: Keys.trialStartDate) as? Date {
+            // Sync to Keychain so future reinstalls are protected
+            KeychainTrialHelper.writeTrialStartDate(defaultsDate)
+            return defaultsDate
+        }
+        return nil
+    }
+
     /// يحدّث الحالة — ينادى عند فتح التطبيق
     func refreshState() {
-        guard let startDate = defaults.object(forKey: Keys.trialStartDate) as? Date else {
+        guard let startDate = trialStartDate else {
             trialState = .notStarted
             return
         }
@@ -96,5 +121,39 @@ final class FreeTrialManager: ObservableObject {
 
     private enum Keys {
         static let trialStartDate = "aiqo.freeTrial.startDate"
+    }
+
+    // MARK: - Keychain Helper (persists across app reinstalls)
+
+    private enum KeychainTrialHelper {
+        private static let service = "com.aiqo.trial"
+        private static let account = "trialStartDate"
+
+        static func readTrialStartDate() -> Date? {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            guard status == errSecSuccess, let data = result as? Data else { return nil }
+            return try? JSONDecoder().decode(Date.self, from: data)
+        }
+
+        static func writeTrialStartDate(_ date: Date) {
+            guard let data = try? JSONEncoder().encode(date) else { return }
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account
+            ]
+            SecItemDelete(query as CFDictionary)
+            var newItem = query
+            newItem[kSecValueData as String] = data
+            SecItemAdd(newItem as CFDictionary, nil)
+        }
     }
 }

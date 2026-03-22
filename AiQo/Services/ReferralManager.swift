@@ -1,7 +1,7 @@
 import Foundation
+import Combine
 
 /// يدير نظام الإحالة — دعوة أصدقاء مقابل أيام مجانية
-@MainActor
 final class ReferralManager: ObservableObject {
     static let shared = ReferralManager()
 
@@ -34,13 +34,13 @@ final class ReferralManager: ObservableObject {
     // MARK: - Public
 
     /// لينك المشاركة
-    var shareURL: URL {
-        URL(string: "https://aiqo.app/refer/\(referralCode)")!
+    var shareURL: URL? {
+        URL(string: "https://aiqo.app/refer/\(referralCode)")
     }
 
     /// نص المشاركة
     var shareText: String {
-        String(format: "referral.shareText".localized, shareURL.absoluteString)
+        String(format: "referral.shareText".localized, shareURL?.absoluteString ?? "https://aiqo.app")
     }
 
     /// يطبّق كود إحالة (المستخدم الجديد اللي استلم الدعوة)
@@ -54,9 +54,11 @@ final class ReferralManager: ObservableObject {
         // يعطي المستخدم الجديد 3 أيام إضافية
         addBonusDays(Self.bonusDaysPerReferral)
 
-        AnalyticsService.shared.track(AnalyticsEvent("referral_code_applied", properties: [
-            "code": code
-        ]))
+        Task { @MainActor in
+            AnalyticsService.shared.track(AnalyticsEvent("referral_code_applied", properties: [
+                "code": code
+            ]))
+        }
     }
 
     /// يسجّل إحالة ناجحة (المستخدم اللي دعا شخص)
@@ -67,10 +69,12 @@ final class ReferralManager: ObservableObject {
         defaults.set(referralCount, forKey: Keys.referralCount)
         addBonusDays(Self.bonusDaysPerReferral)
 
-        AnalyticsService.shared.track(AnalyticsEvent("referral_successful", properties: [
-            "total_referrals": referralCount,
-            "bonus_days": bonusDaysEarned
-        ]))
+        Task { @MainActor in
+            AnalyticsService.shared.track(AnalyticsEvent("referral_successful", properties: [
+                "total_referrals": self.referralCount,
+                "bonus_days": self.bonusDaysEarned
+            ]))
+        }
     }
 
     /// هل المستخدم استخدم كود إحالة قبل؟
@@ -96,12 +100,14 @@ final class ReferralManager: ObservableObject {
         // نرجّع تاريخ البداية لورا بعدد الأيام — هالشي يطوّل التجربة
         let extendedStart = Calendar.current.date(byAdding: .day, value: -days, to: startDate) ?? startDate
         defaults.set(extendedStart, forKey: trialKey)
-        FreeTrialManager.shared.refreshState()
+        Task { @MainActor in
+            FreeTrialManager.shared.refreshState()
+        }
     }
 
     private static func generateCode() -> String {
         let chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        return String((0..<6).map { _ in chars.randomElement()! })
+        return String((0..<6).map { _ in chars.randomElement() ?? Character("A") })
     }
 
     private enum Keys {

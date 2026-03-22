@@ -164,6 +164,40 @@ final class MemoryStore {
         }
     }
 
+    /// Builds a privacy-safe memory context suitable for cloud (no PII, no exact measurements)
+    func buildCloudSafeContext(maxTokens: Int = 400) -> String {
+        guard isEnabled, let context else { return "" }
+
+        let cloudSafeCategories: Set<String> = ["goal", "preference", "mood", "injury", "nutrition", "insight"]
+
+        do {
+            var descriptor = FetchDescriptor<CaptainMemory>(
+                sortBy: [SortDescriptor(\.confidence, order: .reverse), SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+            descriptor.fetchLimit = 40
+
+            let allResults = try context.fetch(descriptor)
+            let filtered = allResults.filter { cloudSafeCategories.contains($0.category) }
+            let limited = Array(filtered.prefix(15))
+
+            var lines: [String] = []
+            var budget = maxTokens
+
+            for memory in limited {
+                let line = "- \(memory.key): \(memory.value)"
+                let cost = line.count / 4
+                guard budget - cost > 0 else { break }
+                budget -= cost
+                lines.append(line)
+            }
+
+            return lines.joined(separator: "\n")
+        } catch {
+            logger.error("memory_store_cloud_safe_error error=\(error.localizedDescription)")
+            return ""
+        }
+    }
+
     /// تنظيف الذكريات القديمة واللي confidence قليل
     func removeStale(olderThan days: Int = 90, belowConfidence: Double = 0.3) {
         guard let context else { return }

@@ -17,7 +17,7 @@ struct GalaxySelectionCard: View {
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
 
-                        Text("\(node.title) • المستوى \(node.member.level)")
+                        Text("\(node.title) • المستوى \(node.member.level.arabicFormatted)")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.66))
                     }

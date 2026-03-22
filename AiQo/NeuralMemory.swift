@@ -4,6 +4,8 @@ import SwiftData
 // 1. الكيان الأول: السجل اليومي للمستخدم (The Daily Aura)
 @Model
 final class AiQoDailyRecord {
+    #Index<AiQoDailyRecord>([\.date])
+
     @Attribute(.unique) var id: String // نخليه بصيغة (yyyy-MM-dd) حتى ما يتكرر اليوم
     var date: Date
     

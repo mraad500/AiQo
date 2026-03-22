@@ -2,7 +2,7 @@ import AVFoundation
 import Speech
 import SwiftUI
 import os.log
-internal import Combine
+import Combine
 
 @MainActor
 struct HandsFreeZone2Manager: View {

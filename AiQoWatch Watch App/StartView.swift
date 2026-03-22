@@ -214,7 +214,7 @@ struct GlassCard: View {
                 // Title - never truncated, dark text for contrast
                 Text(exercise.title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color(red: 0.15, green: 0.15, blue: 0.18))
+                    .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.18))
                     .lineLimit(2)
                     .minimumScaleFactor(0.5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -224,7 +224,7 @@ struct GlassCard: View {
                 // Chevron indicator - dark for visibility
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(red: 0.15, green: 0.15, blue: 0.18).opacity(0.5))
+                    .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.18).opacity(0.5))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
@@ -375,7 +375,7 @@ struct GlassIcon: View {
             // Icon - dark color for contrast
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(red: 0.15, green: 0.15, blue: 0.18))
+                .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.18))
         }
         .shadow(color: primaryColor.opacity(0.5), radius: 4, x: 0, y: 2)
     }

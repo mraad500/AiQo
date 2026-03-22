@@ -148,6 +148,9 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
     var title: String
     var calories: Int?
     var protein: Double?
+    var carbs: Double?
+    var fat: Double?
+    var fiber: Double?
     var ingredients: [KitchenIngredient]
 
     init(
@@ -157,6 +160,9 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
         title: String,
         calories: Int? = nil,
         protein: Double? = nil,
+        carbs: Double? = nil,
+        fat: Double? = nil,
+        fiber: Double? = nil,
         ingredients: [KitchenIngredient]
     ) {
         self.id = id
@@ -165,6 +171,9 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
         self.title = title
         self.calories = calories
         self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.fiber = fiber
         self.ingredients = ingredients
     }
 

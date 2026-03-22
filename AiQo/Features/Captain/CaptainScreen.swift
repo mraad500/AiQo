@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-internal import Combine
+import Combine
 
 // MARK: - User Customization Model
 
@@ -265,6 +265,9 @@ struct CaptainScreen: View {
         }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
+            Task {
+                await CaptainVoiceService.shared.preCacheVoices()
+            }
         }
         .onReceive(CaptainNotificationHandler.shared.$pendingNotificationMessage) { _ in
             viewModel.consumePendingCaptainNotificationIfAny()
@@ -280,7 +283,7 @@ struct CaptainScreen: View {
             HStack {
                 Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
                     .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
                     .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
 
                 Spacer(minLength: 0)
@@ -290,7 +293,7 @@ struct CaptainScreen: View {
                 } label: {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(theme.subtext)
+                        .foregroundStyle(theme.subtext)
                         .frame(width: 34, height: 34)
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
@@ -472,7 +475,7 @@ struct ChatBubbleView: View {
             VStack(alignment: isUser ? .trailing : .leading, spacing: 10) {
                 Text(text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundColor(theme.chatBubbleText)
+                    .foregroundStyle(theme.chatBubbleText)
                     .lineSpacing(3)
                     .multilineTextAlignment(isUser ? .trailing : .leading)
 
@@ -545,7 +548,7 @@ struct TypingIndicatorView: View {
 
             Text(thinkingLabel)
                 .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundColor(theme.subtext.opacity(0.80))
+                .foregroundStyle(theme.subtext.opacity(0.80))
                 .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 4)
         }
         .padding(.leading, 4)
@@ -867,15 +870,15 @@ struct BreathingRingIndicatorView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Captain Consciousness")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.subtext.opacity(0.8))
+                    .foregroundStyle(theme.subtext.opacity(0.8))
 
                 Text(state.statusText ?? "الكابتن حاضر")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Text(state.detailText)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(theme.subtext)
+                    .foregroundStyle(theme.subtext)
                     .lineLimit(2)
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -961,11 +964,11 @@ struct CaptainInputView: View {
                 "",
                 text: $text,
                 prompt: Text(NSLocalizedString("captain.input.prompt", value: "شنو هدفك اليوم؟", comment: ""))
-                    .foregroundColor(theme.subtext.opacity(0.75)),
+                    .foregroundStyle(theme.subtext.opacity(0.75)),
                 axis: .vertical
             )
             .font(.system(size: 18, weight: .medium, design: .rounded))
-            .foregroundColor(theme.text)
+            .foregroundStyle(theme.text)
             .lineLimit(1...4)
             .submitLabel(.send)
             .onSubmit(onSend)
@@ -980,7 +983,7 @@ struct CaptainInputView: View {
 
                     Image(systemName: "arrow.up")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(canSend ? theme.spatialMint : theme.subtext.opacity(0.50))
+                        .foregroundStyle(canSend ? theme.spatialMint : theme.subtext.opacity(0.50))
                 }
                 .frame(width: 42, height: 42)
                 .shadow(
@@ -1028,11 +1031,11 @@ struct CustomizationSheetView: View {
                         VStack(spacing: 6) {
                             Text(NSLocalizedString("captain.customize.title", value: "Customize Captain", comment: ""))
                                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundColor(theme.text)
+                                .foregroundStyle(theme.text)
 
                             Text(NSLocalizedString("captain.customize.subtitle", value: "Add your info to personalize the captain.", comment: ""))
                                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundColor(theme.subtext)
+                                .foregroundStyle(theme.subtext)
                                 .multilineTextAlignment(.center)
                         }
                         .padding(.top, 8)
@@ -1048,7 +1051,7 @@ struct CustomizationSheetView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(NSLocalizedString("captain.customize.tone", value: "Captain tone", comment: ""))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundColor(theme.subtext)
+                                .foregroundStyle(theme.subtext)
 
                             Picker("", selection: $viewModel.customization.tone) {
                                 ForEach(CaptainTone.allCases, id: \.self) { tone in
@@ -1061,7 +1064,7 @@ struct CustomizationSheetView: View {
                         Button(action: { viewModel.saveCustomization() }) {
                             Text(NSLocalizedString("action.save", value: "Save", comment: ""))
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(.black)
+                                .foregroundStyle(.black)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
                                 .background(
@@ -1089,7 +1092,7 @@ struct CustomizationSheetView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundColor(theme.subtext)
+                            .foregroundStyle(theme.subtext)
                             .frame(width: 34, height: 34)
                             .background(Circle().fill(theme.fieldBackground))
                             .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
@@ -1114,10 +1117,10 @@ struct CustomInputField: View {
         TextField(
             "",
             text: $text,
-            prompt: Text(placeholder).foregroundColor(theme.subtext.opacity(0.7))
+            prompt: Text(placeholder).foregroundStyle(theme.subtext.opacity(0.7))
         )
         .font(.system(size: 16, weight: .medium, design: .rounded))
-        .foregroundColor(theme.text)
+        .foregroundStyle(theme.text)
         .keyboardType(keyboard)
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)

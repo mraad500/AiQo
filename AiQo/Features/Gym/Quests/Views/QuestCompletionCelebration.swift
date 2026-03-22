@@ -32,16 +32,16 @@ struct QuestCompletionCelebration: View {
                 VStack(spacing: 8) {
                     Text("مبروك!")
                         .font(.system(size: 28, weight: .heavy))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
 
                     Text("أكملت تحدي \(quest.title)")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
 
                     Text("الجائزة محفوظة في الإنجازات")
                         .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.6))
                         .padding(.top, 4)
                 }
                 .opacity(textOpacity)
@@ -52,7 +52,7 @@ struct QuestCompletionCelebration: View {
                 Button(action: { onDismiss() }) {
                     Text("تمام")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(

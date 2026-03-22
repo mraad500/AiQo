@@ -1,11 +1,14 @@
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
     private let appTint = Color.aiqoAccent
+
+    @State private var showLevelUp = false
+    @State private var levelUpLevel = 0
 
     var body: some View {
         Group {
@@ -61,6 +64,25 @@ struct MainTabScreen: View {
             .accessibilityHint(NSLocalizedString("tab.captain.hint", value: "Chat with your AI health coach", comment: ""))
         }
         .tint(appTint)
+        .onChange(of: tabRouter.selectedTab) {
+            HapticEngine.selection()
+        }
+        .overlay {
+            if showLevelUp {
+                LevelUpCelebrationView(level: levelUpLevel) {
+                    showLevelUp = false
+                }
+                .transition(.opacity)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .levelDidLevelUp)) { notification in
+            guard let newLevel = notification.userInfo?["newLevel"] as? Int else { return }
+            let lastCelebrated = UserDefaults.standard.integer(forKey: "lastCelebratedLevel")
+            guard newLevel > lastCelebrated else { return }
+            UserDefaults.standard.set(newLevel, forKey: "lastCelebratedLevel")
+            levelUpLevel = newLevel
+            withAnimation { showLevelUp = true }
+        }
     }
 
     private func configureTabBarAppearance() {

@@ -471,13 +471,17 @@ private enum SmartWakeFormatters {
         date.formatted(date: .omitted, time: .shortened)
     }
 
-    static func duration(_ duration: TimeInterval) -> String {
+    private static let durationFormatter: DateComponentsFormatter = {
         let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute]
         formatter.unitsStyle = .abbreviated
         formatter.maximumUnitCount = 2
         formatter.zeroFormattingBehavior = .dropLeading
-        return formatter.string(from: duration) ?? "0m"
+        return formatter
+    }()
+
+    static func duration(_ duration: TimeInterval) -> String {
+        durationFormatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute]
+        return durationFormatter.string(from: duration) ?? "0m"
     }
 }
 

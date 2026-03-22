@@ -12,7 +12,16 @@ final class CrashReporter {
     private let maxCrashLogs = 50
 
     private init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            // Fallback to tmp if Application Support is unavailable
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent("CrashReports", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            logFileURL = dir.appendingPathComponent("crash_log.jsonl")
+            setupExceptionHandling()
+            setupSignalHandling()
+            checkPreviousCrash()
+            return
+        }
         let dir = appSupport.appendingPathComponent("CrashReports", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         logFileURL = dir.appendingPathComponent("crash_log.jsonl")
@@ -160,21 +169,25 @@ final class CrashReporter {
     // MARK: - Persistence
 
     private func persistEntry(_ entry: CrashEntry) {
-        queue.async { [logFileURL, maxCrashLogs] in
-            CrashReporter.writeEntry(entry, to: logFileURL, maxEntries: maxCrashLogs)
+        let url = logFileURL
+        let max = maxCrashLogs
+        queue.async {
+            CrashReporter.writeEntry(entry, to: url, maxEntries: max)
         }
     }
 
     /// Synchronous write for crash handlers (can't use async in signal handler)
-    private static func persistEntrySynchronously(_ entry: CrashEntry) {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    nonisolated private static func persistEntrySynchronously(_ entry: CrashEntry) {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return
+        }
         let dir = appSupport.appendingPathComponent("CrashReports", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileURL = dir.appendingPathComponent("crash_log.jsonl")
         writeEntry(entry, to: fileURL, maxEntries: 50)
     }
 
-    private static func writeEntry(_ entry: CrashEntry, to fileURL: URL, maxEntries: Int) {
+    nonisolated private static func writeEntry(_ entry: CrashEntry, to fileURL: URL, maxEntries: Int) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(entry),
@@ -216,7 +229,7 @@ final class CrashReporter {
 
 // MARK: - Crash Entry Model
 
-struct CrashEntry: Codable {
+nonisolated struct CrashEntry: Codable, Sendable {
     let type: String          // "crash_exception", "crash_signal", "non_fatal"
     let message: String
     let context: String

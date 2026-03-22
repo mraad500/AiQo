@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-internal import Combine
+import Combine
 
 @MainActor
 final class DailyAuraViewModel: ObservableObject {
@@ -100,22 +100,22 @@ final class DailyAuraViewModel: ObservableObject {
         Self.saveHistory(historyByDay, defaults: defaults, key: historyKey)
     }
 
-    private static var storageFormatter: DateFormatter {
+    private static let storageFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
-    }
+    }()
 
-    private static var uiFormatter: DateFormatter {
+    private static let uiFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = .current
         formatter.timeZone = .current
         formatter.setLocalizedDateFormatFromTemplate("EEE, MMM d")
         return formatter
-    }
+    }()
 
     private static func loadHistory(defaults: UserDefaults, key: String) -> [String: DailyRecord] {
         guard let data = defaults.data(forKey: key),

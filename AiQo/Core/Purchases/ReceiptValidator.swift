@@ -9,24 +9,29 @@ actor ReceiptValidator {
     /// عنوان الـ API — يحتاج يتغير حسب السيرفر الحقيقي
     private let validationEndpoint = "https://zidbsrepqpbucqzxnwgk.supabase.co/functions/v1/validate-receipt"
 
-    enum ValidationResult {
+    enum ValidationResult: Sendable {
         case valid(expiresAt: Date)
         case invalid(reason: String)
-        case networkError(Error)
+        case networkError(String)
     }
 
     /// يتحقق من الشراء مع السيرفر
     func validate(transaction: Transaction) async -> ValidationResult {
-        let payload = ReceiptPayload(
-            transactionId: String(transaction.id),
-            productId: transaction.productID,
-            originalPurchaseDate: transaction.originalPurchaseDate.iso8601String,
-            purchaseDate: transaction.purchaseDate.iso8601String,
-            environment: transaction.environment.rawValue,
-            appAccountToken: transaction.appAccountToken?.uuidString
-        )
+        let transactionId = String(transaction.id)
+        let productId = transaction.productID
+        let originalPurchaseDate = ISO8601DateFormatter().string(from: transaction.originalPurchaseDate)
+        let purchaseDate = ISO8601DateFormatter().string(from: transaction.purchaseDate)
+        let appAccountToken = transaction.appAccountToken?.uuidString
 
-        guard let bodyData = try? JSONEncoder().encode(payload) else {
+        let payload: [String: String?] = [
+            "transactionId": transactionId,
+            "productId": productId,
+            "originalPurchaseDate": originalPurchaseDate,
+            "purchaseDate": purchaseDate,
+            "appAccountToken": appAccountToken
+        ]
+
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: payload.compactMapValues({ $0 })) else {
             return .invalid(reason: "Failed to encode receipt payload")
         }
 
@@ -53,18 +58,22 @@ actor ReceiptValidator {
                 return .invalid(reason: "Server returned \(httpResponse.statusCode)")
             }
 
-            let result = try JSONDecoder().decode(ValidationResponse.self, from: data)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return .invalid(reason: "Invalid JSON response")
+            }
 
-            if result.valid {
-                let expiresAt = ISO8601DateFormatter().date(from: result.expiresAt ?? "") ?? Date()
+            let valid = json["valid"] as? Bool ?? false
+            if valid {
+                let expiresAtString = json["expiresAt"] as? String ?? ""
+                let expiresAt = ISO8601DateFormatter().date(from: expiresAtString) ?? Date()
                 return .valid(expiresAt: expiresAt)
             } else {
-                return .invalid(reason: result.reason ?? "Unknown")
+                let reason = json["reason"] as? String ?? "Unknown"
+                return .invalid(reason: reason)
             }
         } catch {
             print("🧾 Receipt validation network error: \(error.localizedDescription)")
-            // عند فشل الشبكة، نثق بالـ StoreKit محلياً (graceful degradation)
-            return .networkError(error)
+            return .networkError(error.localizedDescription)
         }
     }
 
@@ -86,40 +95,8 @@ actor ReceiptValidator {
                     ]))
                 }
             case .networkError:
-                // لا نعاقب المستخدم على مشاكل الشبكة
                 print("🧾 Could not validate \(transaction.productID) — network issue, falling back to local")
             }
         }
-    }
-}
-
-// MARK: - Models
-
-private struct ReceiptPayload: Codable {
-    let transactionId: String
-    let productId: String
-    let originalPurchaseDate: String
-    let purchaseDate: String
-    let environment: String
-    let appAccountToken: String?
-}
-
-private struct ValidationResponse: Codable {
-    let valid: Bool
-    let expiresAt: String?
-    let reason: String?
-}
-
-private extension Date {
-    var iso8601String: String {
-        ISO8601DateFormatter().string(from: self)
-    }
-}
-
-private extension Transaction.EnvironmentValues {
-    var rawValue: String {
-        if self == .production { return "production" }
-        if self == .sandbox { return "sandbox" }
-        return "xcode"
     }
 }

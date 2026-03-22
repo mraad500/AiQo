@@ -40,26 +40,43 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>
+		<string>instagram-stories</string>
+		<string>instagram</string>
 	</array>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>يستخدم AiQo صلاحية المنبه لحفظ وقت الاستيقاظ الذكي كمنبه على جهازك.</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>AiQo يقرأ بياناتك الصحية لتحديد مستواك وتتبع تقدمك اليومي</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>AiQo يسجّل بيانات التمارين والنبض لتحليل أدائك</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.aiqo.startWalk</string>
+		<string>com.aiqo.startRun</string>
+		<string>com.aiqo.startHIIT</string>
+		<string>com.aiqo.openCaptain</string>
+		<string>com.aiqo.todaySummary</string>
+		<string>com.aiqo.logWater</string>
+		<string>com.aiqo.openKitchen</string>
+		<string>com.aiqo.weeklyReport</string>
+	</array>
 	<key>SPIRITUAL_WHISPERS_LLM_API_KEY</key>
 	<string></string>
 	<key>SPIRITUAL_WHISPERS_LLM_API_URL</key>
 	<string>https://api.openai.com/v1/chat/completions</string>
+	<key>SPOTIFY_CLIENT_ID</key>
+	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M</string>
 	<key>SUPABASE_URL</key>
 	<string>https://zidbsrepqpbucqzxnwgk.supabase.co</string>
+	<key>TRIBE_BACKEND_ENABLED</key>
+	<string>true</string>
+	<key>TRIBE_FEATURE_VISIBLE</key>
+	<string>true</string>
+	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
+	<string>true</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

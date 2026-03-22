@@ -15,44 +15,44 @@ func questLocalizedText(_ key: String) -> String {
 func questFormatValue(_ value: Double, unit: QuestMetricUnit) -> String {
     switch unit {
     case .liters:
-        return String(format: "%.2fL", value)
+        return value.arabicFormatted + "L"
     case .hours:
-        return String(format: "%.1fh", value)
+        return value.arabicFormatted + "h"
     case .minutes:
-        return "\(Int(value.rounded()))m"
+        return Int(value.rounded()).arabicFormatted + "m"
     case .seconds:
-        return "\(Int(value.rounded()))s"
+        return Int(value.rounded()).arabicFormatted + "s"
     case .kilometers:
-        return String(format: "%.1fkm", value)
+        return value.arabicFormatted + "km"
     case .percent:
-        return "\(Int(value.rounded()))%"
+        return Int(value.rounded()).arabicFormatted + "%"
     case .days:
-        return "\(Int(value.rounded()))d"
+        return Int(value.rounded()).arabicFormatted + "d"
     case .count:
-        return "\(Int(value.rounded()))"
+        return Int(value.rounded()).arabicFormatted
     case .none:
-        return "\(Int(value.rounded()))"
+        return Int(value.rounded()).arabicFormatted
     }
 }
 
 func questFormatValueArabic(_ value: Double, unit: QuestMetricUnit) -> String {
     switch unit {
     case .liters:
-        return String(format: "%.2fل", value)
+        return value.arabicFormatted + "ل"
     case .hours:
-        return String(format: "%.1fس", value)
+        return value.arabicFormatted + "س"
     case .minutes:
-        return "\(Int(value.rounded()))د"
+        return Int(value.rounded()).arabicFormatted + "د"
     case .seconds:
-        return "\(Int(value.rounded()))ث"
+        return Int(value.rounded()).arabicFormatted + "ث"
     case .kilometers:
-        return String(format: "%.1fكم", value)
+        return value.arabicFormatted + "كم"
     case .percent:
-        return "\(Int(value.rounded()))٪"
+        return Int(value.rounded()).arabicFormatted + "٪"
     case .days:
-        return "\(Int(value.rounded()))ي"
+        return Int(value.rounded()).arabicFormatted + "ي"
     case .count, .none:
-        return "\(Int(value.rounded()))"
+        return Int(value.rounded()).arabicFormatted
     }
 }
 
@@ -108,7 +108,7 @@ struct Stage1QuestFormatter {
         if currentCenter == 0 {
             return "غير مكتمل"
         }
-        return "مركز \(currentCenter)"
+        return "مركز \(currentCenter.arabicFormatted)"
     }
 
     func progressLine(for quest: QuestDefinition, progress: QuestCardProgressModel) -> String {
@@ -121,9 +121,9 @@ struct Stage1QuestFormatter {
         case "s1q3":
             return "\(isolated(formatted(current, digits: 2) + "س")) / \(isolated(formatted(target, digits: 2) + "س"))"
         case "s1q4":
-            return "\(isolated("\(Int(current.rounded()))د")) / \(isolated("\(Int(target.rounded()))د"))"
+            return "\(isolated(Int(current.rounded()).arabicFormatted + "د")) / \(isolated(Int(target.rounded()).arabicFormatted + "د"))"
         default:
-            return "\(isolated("\(Int(current.rounded()))")) / \(isolated("\(Int(target.rounded()))"))"
+            return "\(isolated(Int(current.rounded()).arabicFormatted)) / \(isolated(Int(target.rounded()).arabicFormatted))"
         }
     }
 
@@ -205,7 +205,7 @@ struct Stage1QuestFormatter {
         let components = calendar.dateComponents([.hour, .minute], from: now, to: nextMidnight)
         let hours = max(components.hour ?? 0, 0)
         let minutes = max(components.minute ?? 0, 0)
-        return "\(isolated("\(hours)س")) \(isolated("\(minutes)د"))"
+        return "\(isolated(hours.arabicFormatted + "س")) \(isolated(minutes.arabicFormatted + "د"))"
     }
 
     private func formatted(_ value: Double, digits: Int) -> String {
@@ -326,23 +326,23 @@ private func questDisplayValue(_ value: Double, unit: QuestMetricUnit, quest: Qu
     if (2...6).contains(quest.stageIndex) {
         switch unit {
         case .count:
-            return "\(Int(value.rounded()))"
+            return Int(value.rounded()).arabicFormatted
         case .liters:
-            return String(format: "%.1fL", value)
+            return value.arabicFormatted + "L"
         case .hours:
-            return String(format: "%.1fh", value)
+            return value.arabicFormatted + "h"
         case .minutes:
-            return "\(Int(value.rounded()))m"
+            return Int(value.rounded()).arabicFormatted + "m"
         case .seconds:
-            return "\(Int(value.rounded()))s"
+            return Int(value.rounded()).arabicFormatted + "s"
         case .kilometers:
-            return String(format: "%.1fkm", value)
+            return value.arabicFormatted + "km"
         case .percent:
-            return "\(Int(value.rounded()))%"
+            return Int(value.rounded()).arabicFormatted + "%"
         case .days:
-            return "\(Int(value.rounded()))d"
+            return Int(value.rounded()).arabicFormatted + "d"
         case .none:
-            return "\(Int(value.rounded()))"
+            return Int(value.rounded()).arabicFormatted
         }
     }
 

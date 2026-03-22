@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 // MARK: - Data Models
 // عرفنا الموديل هنا حتى يختفي خطأ "Cannot find type WorkoutVideo"

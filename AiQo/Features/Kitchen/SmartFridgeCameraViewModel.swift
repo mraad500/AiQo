@@ -1,7 +1,8 @@
 @preconcurrency import AVFoundation
-internal import Combine
+import Combine
 import CoreMedia
 import Foundation
+import os.log
 import UIKit
 
 final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
@@ -45,6 +46,12 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     private var isSessionConfigured = false
     private var processingTickerTask: Task<Void, Never>?
     private var configuredMaxPhotoDimensions: CMVideoDimensions?
+
+    private let sanitizer = PrivacySanitizer()
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "SmartFridgeCamera"
+    )
 
     func startSession() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -108,9 +115,154 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     func analyzeFridgeImage(image: UIImage) async throws -> [FridgeItem] {
-        try await Task.sleep(nanoseconds: 1_700_000_000)
+        do {
+            let items = try await callVisionAPI(image: image)
+            guard !items.isEmpty else {
+                logger.warning("Vision API returned empty items, using fallback")
+                return fallbackItems()
+            }
+            return items
+        } catch {
+            logger.error("Fridge image analysis failed: \(error.localizedDescription, privacy: .public)")
+            return fallbackItems()
+        }
+    }
 
-        return [
+    private func callVisionAPI(image: UIImage) async throws -> [FridgeItem] {
+        // Resolve API key using the same logic as HybridBrainService
+        let apiKey = try resolveAPIKey()
+
+        // Sanitize image: resize to max 1280px, strip EXIF/GPS, compress to JPEG 0.78
+        guard let imageData = sanitizer.sanitizeKitchenImageData(image.jpegData(compressionQuality: 1.0)) else {
+            throw FridgeAnalysisError.imageProcessingFailed
+        }
+
+        let base64Image = imageData.base64EncodedString()
+        let dataURL = "data:image/jpeg;base64,\(base64Image)"
+
+        // Build the request body
+        let requestBody: [String: Any] = [
+            "model": "gpt-4o-mini",
+            "messages": [
+                [
+                    "role": "user",
+                    "content": [
+                        [
+                            "type": "text",
+                            "text": """
+                            Analyze this fridge photo. Identify all visible food items. \
+                            Return ONLY a JSON array of objects, each with: \
+                            "name" (string, the food item name), \
+                            "quantity" (number, estimated count or weight), \
+                            "unit" (string, e.g. "pieces", "cups", "lbs", "bags", or null). \
+                            Example: [{"name":"Eggs","quantity":6,"unit":"pieces"}] \
+                            Return ONLY the JSON array, no other text.
+                            """
+                        ],
+                        [
+                            "type": "image_url",
+                            "image_url": [
+                                "url": dataURL,
+                                "detail": "low"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "max_tokens": 500,
+            "temperature": 0.2,
+            "store": false
+        ]
+
+        let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
+        var urlRequest = URLRequest(url: endpoint)
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 15
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            logger.error("Vision API returned status \(statusCode)")
+            throw FridgeAnalysisError.badStatusCode(statusCode)
+        }
+
+        // Parse the OpenAI chat completion response
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            throw FridgeAnalysisError.invalidResponse
+        }
+
+        return parseFridgeItems(from: content)
+    }
+
+    private func resolveAPIKey() throws -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let env = ProcessInfo.processInfo.environment
+
+        let keyNames = ["CAPTAIN_API_KEY", "COACH_BRAIN_LLM_API_KEY"]
+        for keyName in keyNames {
+            if let key = normalizedKey(env[keyName]) ?? normalizedKey(info[keyName] as? String) {
+                return key
+            }
+        }
+
+        throw FridgeAnalysisError.missingAPIKey
+    }
+
+    private func normalizedKey(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
+        return trimmed
+    }
+
+    private func parseFridgeItems(from content: String) -> [FridgeItem] {
+        // Try to extract a JSON array from the response content
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Strip markdown fences if present
+        let jsonString: String
+        if let fenceRange = trimmed.range(of: #"```(?:json)?\s*"#, options: .regularExpression),
+           let endFence = trimmed.range(of: "```", options: [], range: fenceRange.upperBound..<trimmed.endIndex) {
+            jsonString = String(trimmed[fenceRange.upperBound..<endFence.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            jsonString = trimmed
+        }
+
+        guard let jsonData = jsonString.data(using: .utf8),
+              let rawArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] else {
+            logger.warning("Failed to parse fridge items JSON from LLM response")
+            return []
+        }
+
+        return rawArray.compactMap { dict -> FridgeItem? in
+            guard let name = dict["name"] as? String, !name.isEmpty else { return nil }
+            let quantity: Double
+            if let q = dict["quantity"] as? Double {
+                quantity = q
+            } else if let q = dict["quantity"] as? Int {
+                quantity = Double(q)
+            } else {
+                quantity = 1
+            }
+            let unit = dict["unit"] as? String
+            return FridgeItem(name: name, quantity: quantity, unit: unit)
+        }
+    }
+
+    private func fallbackItems() -> [FridgeItem] {
+        [
             FridgeItem(
                 name: "kitchen.scanner.item.chicken".localized,
                 quantity: 2,
@@ -282,6 +434,26 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         }
 
         handleCapturedPhoto(image)
+    }
+}
+
+private enum FridgeAnalysisError: LocalizedError {
+    case missingAPIKey
+    case imageProcessingFailed
+    case badStatusCode(Int)
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .missingAPIKey:
+            return "API key is missing from configuration."
+        case .imageProcessingFailed:
+            return "Failed to process fridge image for analysis."
+        case .badStatusCode(let code):
+            return "Vision API returned status code \(code)."
+        case .invalidResponse:
+            return "Vision API returned an invalid response."
+        }
     }
 }
 

@@ -89,7 +89,7 @@ struct MyPlanView: View {
                 // Title
                 Text(L10n.t("plan.title"))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .padding(.top, 18)
 
                 workoutPlanEntryCard
@@ -101,7 +101,7 @@ struct MyPlanView: View {
                 // Today's Workouts Section
                 Text(L10n.t("plan.today_workouts"))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .padding(.top, 4)
 
                 todayWorkoutsCard
@@ -109,7 +109,7 @@ struct MyPlanView: View {
                 // Templates Section
                 Text(L10n.t("plan.templates"))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .padding(.top, 4)
 
                 templatesCard
@@ -125,7 +125,7 @@ struct MyPlanView: View {
     private func sectionHeader(_ title: String) -> some View {
         Text(title.uppercased())
             .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
             .tracking(0.5)
     }
 
@@ -196,7 +196,7 @@ struct MyPlanView: View {
                 if todayWorkouts.isEmpty {
                     Text(L10n.t("plan.no_workouts"))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.vertical, 20)
                 }
             }
@@ -231,7 +231,7 @@ struct MyPlanView: View {
                     Button(action: addNewExercise) {
                         Image(systemName: "plus")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
                             .background(
                                 Circle()
@@ -254,7 +254,7 @@ struct MyPlanView: View {
                 if templates.isEmpty {
                     Text(L10n.t("plan.add_routine"))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.vertical, 12)
                 }
             }
@@ -330,18 +330,18 @@ struct StatRowView: View {
             // Icon
             Image(systemName: stat.icon)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(width: 22, height: 22)
             
             // Title & Value
             VStack(alignment: .leading, spacing: 2) {
                 Text(stat.title)
                     .font(.system(size: 15, weight: .regular, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text(stat.value)
                     .font(.system(size: stat.isSuggestion ? 15 : 17, weight: stat.isSuggestion ? .regular : .bold, design: .rounded))
-                    .foregroundColor(stat.isSuggestion ? .secondary : .primary)
+                    .foregroundStyle(stat.isSuggestion ? .secondary : .primary)
             }
             
             Spacer()
@@ -368,7 +368,7 @@ struct TodayWorkoutRowView: View {
         HStack(spacing: 12) {
             Text(workout.name)
                 .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundColor(workout.isCompleted ? .secondary : .primary)
+                .foregroundStyle(workout.isCompleted ? .secondary : .primary)
                 .strikethrough(workout.isCompleted, color: .secondary)
             
             Spacer()
@@ -382,7 +382,7 @@ struct TodayWorkoutRowView: View {
             }) {
                 Image(systemName: workout.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(workout.isCompleted ? GymTheme.beige : .secondary)
+                    .foregroundStyle(workout.isCompleted ? GymTheme.beige : .secondary)
             }
             .sensoryFeedback(.selection, trigger: feedbackTrigger)
         }
@@ -399,14 +399,14 @@ struct TemplateRowView: View {
         HStack(spacing: 8) {
             Text(template.name)
                 .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             
             Spacer()
             
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
             }
         }
         .padding(.vertical, 6)

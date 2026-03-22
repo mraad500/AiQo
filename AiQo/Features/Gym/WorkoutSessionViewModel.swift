@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Combine
+import Combine
 
 @MainActor
 final class WorkoutSessionViewModel: ObservableObject {

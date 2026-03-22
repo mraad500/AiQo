@@ -112,7 +112,7 @@ struct PlanView: View {
                 } label: {
                     Text(period)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundColor(isSelected ? Color(hex: "1A1A1A") : Color(hex: "AAAAAA"))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(hex: "AAAAAA"))
                         .frame(width: 44, height: 62)
                         .background {
                             if isSelected {

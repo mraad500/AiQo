@@ -21,17 +21,14 @@ final class SmartFridgeCameraPreviewView: UIView {
         AVCaptureVideoPreviewLayer.self
     }
 
-    private var previewLayer: AVCaptureVideoPreviewLayer {
-        guard let layer = layer as? AVCaptureVideoPreviewLayer else {
-            fatalError("SmartFridgeCameraPreviewView requires AVCaptureVideoPreviewLayer.")
-        }
-        return layer
+    private var previewLayer: AVCaptureVideoPreviewLayer? {
+        layer as? AVCaptureVideoPreviewLayer
     }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
-        previewLayer.videoGravity = .resizeAspectFill
+        previewLayer?.videoGravity = .resizeAspectFill
     }
 
     required init?(coder: NSCoder) {
@@ -40,14 +37,14 @@ final class SmartFridgeCameraPreviewView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        if let connection = previewLayer.connection, connection.isVideoRotationAngleSupported(90) {
+        if let connection = previewLayer?.connection, connection.isVideoRotationAngleSupported(90) {
             connection.videoRotationAngle = 90
         }
     }
 
     func update(session: AVCaptureSession) {
-        if previewLayer.session !== session {
-            previewLayer.session = session
+        if previewLayer?.session !== session {
+            previewLayer?.session = session
         }
     }
 }

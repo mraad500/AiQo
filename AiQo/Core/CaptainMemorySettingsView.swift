@@ -62,6 +62,15 @@ struct CaptainMemorySettingsView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.5))
                     .multilineTextAlignment(.center)
+
+                if !memories.isEmpty {
+                    Text("\(memories.count) / 200")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(GymTheme.mint)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(GymTheme.mint.opacity(0.12)))
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)

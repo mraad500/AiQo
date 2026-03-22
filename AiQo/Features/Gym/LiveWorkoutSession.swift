@@ -8,7 +8,7 @@ import Foundation
 import HealthKit
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 @MainActor
 final class LiveWorkoutSession: ObservableObject {
@@ -327,7 +327,7 @@ final class LiveWorkoutSession: ObservableObject {
     private func startElapsedSmoothingTimer() {
         smoothingTimer?.invalidate()
 
-        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.tickElapsedDisplay()
             }
@@ -820,7 +820,7 @@ struct WorkoutView: View {
                 .font(.title)
             
             Text(session.statusText)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             // Live stats
             if session.phase == .running {
@@ -852,7 +852,7 @@ struct WorkoutView: View {
             // Error display
             if let error = session.lastError {
                 Text(error)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.caption)
             }
         }

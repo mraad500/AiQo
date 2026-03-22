@@ -141,7 +141,7 @@ struct SpinWheelView: View {
                 .overlay(
                     Text("SPIN")
                         .font(.system(size: 14, weight: .black, design: .rounded))
-                        .foregroundColor(.black)
+                        .foregroundStyle(.black)
                 )
                 .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 3)
                 .transition(.scale)
@@ -172,7 +172,7 @@ struct SpinWheelView: View {
                 .overlay(
                     Image(systemName: "hand.tap.fill")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 )
                 .shadow(color: Color(red: 0.72, green: 0.91, blue: 0.83).opacity(0.5), radius: 8, x: 0, y: 4)
         }
@@ -279,7 +279,7 @@ struct WheelSegment: View {
             
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .position(x: iconX, y: iconY)
                 .rotationEffect(.degrees(midAngle + 90))
         }

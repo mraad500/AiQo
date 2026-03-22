@@ -23,7 +23,7 @@ struct PaywallView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("المدة 30 يوم وتنتهي تلقائياً، والتجديد بقرارك.")
+                    Text("paywall.duration".localized)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -44,7 +44,7 @@ struct PaywallView: View {
                     .buttonStyle(.plain)
                 }
 
-                Section("الباقات") {
+                Section("paywall.plans".localized) {
                     if purchaseManager.isLoadingProducts {
                         HStack {
                             Spacer()
@@ -57,13 +57,13 @@ struct PaywallView: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
 
-                            Button("إعادة المحاولة") {
+                            Button("paywall.retry".localized) {
                                 retryLoadingProducts()
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(processingProductID != nil || purchaseManager.isLoadingProducts)
 
-                            Button("استرجاع") {
+                            Button("paywall.restore".localized) {
                                 restorePurchases()
                             }
                             .buttonStyle(.bordered)
@@ -78,7 +78,7 @@ struct PaywallView: View {
                 }
 
                 Section {
-                    Button("استرجاع") {
+                    Button("paywall.restore".localized) {
                         restorePurchases()
                     }
                     .disabled(processingProductID != nil || purchaseManager.productLoadErrorMessage != nil)
@@ -100,10 +100,10 @@ struct PaywallView: View {
                     }
                 }
 
-                Section("اختبار") {
-                    Button("حذف بيانات بريميوم") {
+                Section("paywall.debug.testing".localized) {
+                    Button("paywall.debug.resetPremium".localized) {
                         purchaseManager.debugResetPremiumData()
-                        statusMessage = "تم حذف بيانات البريميوم محلياً لاختبار انتهاء الاشتراك."
+                        statusMessage = "paywall.debug.resetDone".localized
                     }
                     .foregroundStyle(.red)
                     .disabled(processingProductID != nil)
@@ -111,13 +111,13 @@ struct PaywallView: View {
                 #endif
 
                 if let statusMessage {
-                    Section("الحالة") {
+                    Section("paywall.status".localized) {
                         Text(statusMessage)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 } else if let expiresAt = entitlementStore.expiresAt {
-                    Section("الحالة") {
+                    Section("paywall.status".localized) {
                         Text(statusText(expiresAt: expiresAt))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -132,10 +132,10 @@ struct PaywallView: View {
                 TribeExperienceFlowView(source: .premium)
             }
             #if DEBUG
-            .alert("إعدادات الاختبار", isPresented: $isDebugTestSetupPresented) {
-                Button("حسناً", role: .cancel) { }
+            .alert("paywall.debug.setupTitle".localized, isPresented: $isDebugTestSetupPresented) {
+                Button("paywall.debug.ok".localized, role: .cancel) { }
             } message: {
-                Text("افتح Scheme > Run > Options > StoreKit Configuration ثم اختر AiQo_Test.storekit وبعدها أعد تشغيل التطبيق.")
+                Text("paywall.debug.setupMessage".localized)
             }
             #endif
         }
@@ -151,7 +151,7 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(SubscriptionProductIDs.displayName(for: productID)) - 30 يوم")
+                    Text("\(SubscriptionProductIDs.displayName(for: productID)) - " + "paywall.thirtyDays".localized)
                         .font(.headline)
                     Text(product?.displayPrice ?? SubscriptionProductIDs.fallbackDisplayPrice(for: productID))
                         .font(.subheadline)
@@ -181,7 +181,7 @@ struct PaywallView: View {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                 } else {
-                    Text("شراء")
+                    Text("paywall.buy".localized)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -240,13 +240,13 @@ struct PaywallView: View {
             if let expiresAt = entitlementStore.expiresAt {
                 return statusText(expiresAt: expiresAt)
             }
-            return "تمت مزامنة الاشتراك بنجاح."
+            return "paywall.status.synced".localized
         case .pending:
-            return "الشراء قيد الانتظار من آبل."
+            return "paywall.status.pending".localized
         case .cancelled:
-            return "تم إلغاء عملية الشراء."
+            return "paywall.status.cancelled".localized
         case .failed(let message):
-            return "تعذر إكمال العملية: \(message)"
+            return String(format: "paywall.status.failed".localized, message)
         }
     }
 
@@ -256,16 +256,16 @@ struct PaywallView: View {
         formatter.timeStyle = .short
 
         let plan = SubscriptionProductIDs.displayName(for: entitlementStore.activeProductId ?? SubscriptionProductIDs.aiqo_nr_30d_individual_5_99)
-        let tribeNote = entitlementStore.canCreateTribe ? " يمكنك إنشاء القبيلة الآن." : ""
-        return "الباقة الحالية: \(plan). تنتهي في \(formatter.string(from: expiresAt)).\(tribeNote)"
+        let tribeNote = entitlementStore.canCreateTribe ? " " + "paywall.status.canCreateTribe".localized : ""
+        return String(format: "paywall.status.currentPlan".localized, plan, formatter.string(from: expiresAt)) + tribeNote
     }
 
     private func planDescription(for productID: String) -> String {
         if SubscriptionProductIDs.isFamily(productID: productID) {
-            return "هذه الباقة مناسبة للعائلة وتفعّل إنشاء القبيلة طوال مدة الـ 30 يوم."
+            return "paywall.plan.familyDescription".localized
         }
 
-        return "وصول فردي لمدة 30 يوم. تنتهي تلقائياً بدون تجديد تلقائي."
+        return "paywall.plan.individualDescription".localized
     }
 }
 

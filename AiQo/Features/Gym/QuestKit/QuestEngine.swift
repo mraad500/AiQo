@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
-internal import Combine
+import Combine
 
 extension Notification.Name {
     static let questKitchenPlanSaved = Notification.Name("aiqo.quest.kitchen.plan.saved")

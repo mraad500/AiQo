@@ -72,6 +72,8 @@ final class QuestStage {
 
 @Model
 final class QuestRecord {
+    #Index<QuestRecord>([\.questID])
+
     @Attribute(.unique) var questID: String
     var stageIndex: Int
     var questIndex: Int

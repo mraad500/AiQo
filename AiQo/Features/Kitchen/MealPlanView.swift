@@ -35,7 +35,7 @@ private extension MealPlanView {
         VStack(alignment: .leading, spacing: 8) {
             Text("kitchen.mealplan.duration".localized)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Picker("kitchen.mealplan.duration".localized, selection: $selectedDays) {
                 Text("3 " + "kitchen.mealplan.days".localized).tag(3)
@@ -57,7 +57,7 @@ private extension MealPlanView {
                 Text("kitchen.mealplan.generateButton".localized)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
-            .foregroundColor(.black)
+            .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
             .background(
@@ -103,7 +103,7 @@ private extension MealPlanView {
 
             if kitchenStore.shoppingList.isEmpty {
                 Text("kitchen.shopping.empty".localized)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .font(.system(size: 14, weight: .regular, design: .rounded))
             } else {
                 VStack(spacing: 8) {
@@ -113,7 +113,7 @@ private extension MealPlanView {
                                 kitchenStore.toggleShoppingItem(item.id)
                             } label: {
                                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(item.isChecked ? .green : .secondary)
+                                    .foregroundStyle(item.isChecked ? .green : .secondary)
                                     .frame(width: 44, height: 44)
                             }
                             .buttonStyle(.plain)
@@ -125,7 +125,7 @@ private extension MealPlanView {
                                 if let amount = item.amount {
                                     Text(amountText(amount: amount, unit: item.unit))
                                         .font(.system(size: 13, weight: .regular, design: .rounded))
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
 
@@ -156,7 +156,7 @@ private extension MealPlanView {
     var emptyStateCard: some View {
         Text("kitchen.mealplan.empty".localized)
             .font(.system(size: 14, weight: .medium, design: .rounded))
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(
@@ -174,7 +174,7 @@ private extension MealPlanView {
 
             if meals.isEmpty {
                 Text("kitchen.mealplan.noMealsDay".localized)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .font(.system(size: 14, weight: .regular, design: .rounded))
             } else {
                 ForEach(meals) { meal in
@@ -208,7 +208,7 @@ private extension MealPlanView {
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                     Text(meal.type.localizedTitle)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -221,7 +221,7 @@ private extension MealPlanView {
                     if let protein = meal.protein {
                         Text("\("kitchen.mealplan.protein".localized): \(String(format: "%.0f", protein))g")
                             .font(.system(size: 12, weight: .regular, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -279,14 +279,14 @@ private extension MealPlanView {
                     if let amount = ingredient.amount {
                         Text(amountText(amount: amount, unit: ingredient.unit))
                             .font(.system(size: 12, weight: .regular, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
                 HStack(spacing: 8) {
                     Text(statusText)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(markedNeedsPurchase ? .orange : .secondary)
+                        .foregroundStyle(markedNeedsPurchase ? .orange : .secondary)
 
                     if needsShoppingShortcut {
                         quickShoppingButton(
@@ -306,7 +306,7 @@ private extension MealPlanView {
                 .font(.system(size: 14, weight: .bold, design: .rounded))
             Text("\("kitchen.impact.missingItem".localized): \(missingIngredient.name)")
                 .font(.system(size: 13, weight: .regular, design: .rounded))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             VStack(spacing: 12) {
                 Button {
@@ -362,7 +362,7 @@ private extension MealPlanView {
                 )
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundColor(isAlreadyAdded ? .green : .accentColor)
+            .foregroundStyle(isAlreadyAdded ? .green : .accentColor)
             .padding(.horizontal, 10)
             .frame(minWidth: 44, minHeight: 44)
             .background(

@@ -63,6 +63,7 @@ struct WorkoutCategoriesView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCardPressStyle())
+                        .aiQoPressEffect()
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
@@ -97,7 +98,7 @@ struct WorkoutCategoriesView: View {
                 } label: {
                     Text(category.title)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundColor(isSelected ? Color(.label) : Color(.secondaryLabel))
+                        .foregroundStyle(isSelected ? Color(.label) : Color(.secondaryLabel))
                         .frame(width: 44, height: 62)
                         .background(
                             Capsule()
@@ -149,13 +150,13 @@ private struct ClubWorkoutCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.system(size: 20, weight: .heavy))
-                    .foregroundColor(Color(.label))
+                    .foregroundStyle(Color(.label))
                     .lineLimit(2)
 
                 if isFeatured, let subtitle = item.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(Color(.secondaryLabel))
+                        .foregroundStyle(Color(.secondaryLabel))
                 }
             }
 
@@ -167,7 +168,7 @@ private struct ClubWorkoutCard: View {
                 .overlay(
                     Image(systemName: item.iconName)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(Color(.label))
+                        .foregroundStyle(Color(.label))
                         .flipsForRightToLeftLayoutDirection(false)
                 )
                 .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
@@ -225,7 +226,7 @@ struct GlassWorkoutCard: View {
                 .overlay(
                     Image(systemName: item.iconName)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(Color(.label))
+                        .foregroundStyle(Color(.label))
                         .flipsForRightToLeftLayoutDirection(false)
                 )
                 .shadow(color: .black.opacity(0.06), radius: 2, y: 1)

@@ -18,7 +18,8 @@ struct PrivacySanitizer: Sendable {
 
     func sanitizeForCloud(
         _ request: HybridBrainRequest,
-        knownUserName: String?
+        knownUserName: String?,
+        cloudSafeMemories: String = ""
     ) -> HybridBrainRequest {
         let sanitizedConversation = sanitizeConversation(
             request.conversation,
@@ -29,12 +30,16 @@ struct PrivacySanitizer: Sendable {
             ? sanitizeKitchenImageData(request.attachedImageData)
             : nil
 
+        // Instead of blanking userProfileSummary entirely, inject cloud-safe memories
+        // (no PII — only goals, preferences, mood, injury, nutrition, insights)
+        let safeProfile = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
+
         return HybridBrainRequest(
             conversation: sanitizedConversation,
             screenContext: request.screenContext,
             language: request.language,
             contextData: sanitizedContext,
-            userProfileSummary: "",
+            userProfileSummary: safeProfile,
             attachedImageData: sanitizedImageData
         )
     }

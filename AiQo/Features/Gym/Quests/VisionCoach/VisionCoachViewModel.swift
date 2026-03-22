@@ -1,5 +1,5 @@
 import AVFoundation
-internal import Combine
+import Combine
 import CoreGraphics
 import Foundation
 import ImageIO

@@ -1,6 +1,6 @@
 // Supabase hook: replace `seedPreviewData()` with member/challenge fetches and map the
 // API payload into `TribeMember`, `TribeChallenge`, and `ChallengeContribution`.
-internal import Combine
+import Combine
 import SwiftUI
 import UIKit
 

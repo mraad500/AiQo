@@ -7,9 +7,33 @@ public final class SupabaseService {
     public let client: SupabaseClient
 
     private init() {
+        let urlString = K.Supabase.url
+        let anonKey = K.Supabase.anonKey
+
+        guard !urlString.isEmpty,
+              let url = URL(string: urlString),
+              url.host != nil else {
+            assertionFailure("SUPABASE_URL is missing or invalid — check Secrets.xcconfig")
+            // Release: create a non-functional client so the app doesn't crash.
+            client = SupabaseClient(
+                supabaseURL: URL(string: "https://placeholder.invalid")!,
+                supabaseKey: "missing"
+            )
+            return
+        }
+
+        guard !anonKey.isEmpty else {
+            assertionFailure("SUPABASE_ANON_KEY is missing — check Secrets.xcconfig")
+            client = SupabaseClient(
+                supabaseURL: url,
+                supabaseKey: "missing"
+            )
+            return
+        }
+
         client = SupabaseClient(
-            supabaseURL: URL(string: K.Supabase.url) ?? URL(string: "https://zidbsrepqpbucqzxnwgk.supabase.co")!,
-            supabaseKey: K.Supabase.anonKey
+            supabaseURL: url,
+            supabaseKey: anonKey
         )
     }
 
@@ -80,6 +104,11 @@ public final class SupabaseService {
     }
 
     // MARK: - Notification Logic
+
+    /// The current authenticated user's UUID string, or `nil` if not logged in.
+    public var currentUserID: String? {
+        client.auth.currentUser?.id.uuidString
+    }
 
     public func updateDeviceToken(_ token: String) {
         UserDefaults.standard.set(token, forKey: "push_device_token")

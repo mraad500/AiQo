@@ -32,6 +32,7 @@ struct HybridBrainRequest: Sendable {
 
 struct HybridBrainServiceReply: Sendable {
     let message: String
+    let quickReplies: [String]?
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
@@ -99,6 +100,9 @@ private struct HybridBrainServiceConfiguration: Sendable {
 private enum HybridBrainServiceConfig {
     static let apiKeyName = "CAPTAIN_API_KEY"
     static let fallbackAPIKeyName = "COACH_BRAIN_LLM_API_KEY"
+    // SECURITY TODO: Route through a backend proxy before v2.0
+    // Direct client→OpenAI exposes the API key in the binary and sends user data
+    // without an intermediary. For v1.0 this is an accepted risk documented in the audit.
     static let endpoint = "https://api.openai.com/v1/responses"
     static let promptID = "pmpt_6989314757d48190b10842e9b852048d0f4dbc957002f486"
     static let promptVersion = "9"
@@ -212,7 +216,8 @@ struct HybridBrainService: Sendable {
         let rawText = try encodeStructuredResponse(structuredResponse)
 
         return HybridBrainServiceReply(
-            message: structuredResponse.message,
+            message: CaptainPersonaBuilder.sanitizeResponse(structuredResponse.message),
+            quickReplies: structuredResponse.quickReplies,
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
@@ -224,6 +229,7 @@ struct HybridBrainService: Sendable {
         let reply = try await generateReply(request: request)
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
+            quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation
@@ -493,15 +499,23 @@ private extension HybridBrainService {
             ]
         ]
 
+        let quickRepliesSchema: [String: Any] = [
+            "type": ["array", "null"],
+            "items": [
+                "type": "string"
+            ]
+        ]
+
         return [
             "type": "object",
             "additionalProperties": false,
-            "required": ["message", "workoutPlan", "mealPlan", "spotifyRecommendation"],
+            "required": ["message", "quickReplies", "workoutPlan", "mealPlan", "spotifyRecommendation"],
             "properties": [
                 "message": [
                     "type": "string",
                     "minLength": 1
                 ],
+                "quickReplies": quickRepliesSchema,
                 "workoutPlan": workoutPlanSchema,
                 "mealPlan": mealPlanSchema,
                 "spotifyRecommendation": spotifyRecommendationSchema

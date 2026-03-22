@@ -1,8 +1,18 @@
 import Foundation
 
 struct TribeFeatureFlags {
-    static let backendEnabled = false
-    static let subscriptionGateEnabled = false
+    /// Read from Info.plist so backend can be enabled via a new build without code changes
+    static var backendEnabled: Bool {
+        (Bundle.main.infoDictionary?["TRIBE_BACKEND_ENABLED"] as? String)?.lowercased() == "true"
+    }
+    /// Read from Info.plist — when true, Tribe requires active subscription
+    static var subscriptionGateEnabled: Bool {
+        (Bundle.main.infoDictionary?["TRIBE_SUBSCRIPTION_GATE_ENABLED"] as? String)?.lowercased() == "true"
+    }
+    /// Whether the Tribe tab is visible at all — hide if not ready for launch
+    static var featureVisible: Bool {
+        (Bundle.main.infoDictionary?["TRIBE_FEATURE_VISIBLE"] as? String)?.lowercased() != "false"
+    }
 }
 
 enum TribeScreenTab: String, CaseIterable, Identifiable, Hashable, Codable {

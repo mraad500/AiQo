@@ -1,6 +1,6 @@
 import SwiftUI
 import HealthKit
-internal import Combine
+import Combine
 
 // =========================
 // File: Features/Gym/RecapView.swift
@@ -83,7 +83,7 @@ struct RecapView: View {
                 } else if !viewModel.isLoading {
                     Text(L10n.t("gym.recap.empty"))
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.top, 16)
                 }
             }
@@ -113,11 +113,11 @@ struct RecapView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(NSLocalizedString("recap.history.title", value: "History", comment: ""))
                 .font(.system(size: 34, weight: .heavy))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text(NSLocalizedString("recap.history.subtitle", value: "Your journey tracked via Apple Health.", comment: ""))
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.top, 18)
         .padding(.horizontal, 4)
@@ -132,7 +132,7 @@ struct DatePillView: View {
         HStack {
             Text(text)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundStyle(Color(hex: "1A1A1A"))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
                 .background(
@@ -171,17 +171,17 @@ struct HistoryCardView: View {
 
                     Image(systemName: item.icon)
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(item.tint)
+                        .foregroundStyle(item.tint)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(item.source)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -189,11 +189,11 @@ struct HistoryCardView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(item.duration)
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(item.calories)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 16)
@@ -346,7 +346,7 @@ struct WorkoutDetailSheetView: View {
                         SectionCard(title: L10n.t("recap.section.notes")) {
                             Text(notes)
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -489,7 +489,7 @@ struct SectionCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.secondary.opacity(0.85))
+                .foregroundStyle(.secondary.opacity(0.85))
                 .padding(.horizontal, 2)
 
             VStack(spacing: 8) {
@@ -517,13 +517,13 @@ struct KeyValueRow: View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Spacer(minLength: 12)
 
             Text(value)
                 .font(.system(size: 14, weight: .heavy))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, 10)
@@ -552,18 +552,18 @@ struct WorkoutMetricCard: View {
 
                 Image(systemName: metric.icon)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(metric.tint)
+                    .foregroundStyle(metric.tint)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(metric.title)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
 
                 Text(metric.value)
                     .font(.system(size: 18, weight: .heavy))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
             }
 
@@ -589,10 +589,10 @@ struct WorkoutSourceBadge: View {
         HStack(spacing: 6) {
             Image(systemName: "wave.3.right")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(tint)
+                .foregroundStyle(tint)
             Text(text)
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.primary.opacity(0.92))
+                .foregroundStyle(.primary.opacity(0.92))
                 .lineLimit(1)
         }
         .padding(.horizontal, 12)

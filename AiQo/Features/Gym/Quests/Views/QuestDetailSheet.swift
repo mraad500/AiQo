@@ -1,6 +1,6 @@
 import SwiftUI
 import AVFoundation
-internal import Combine
+import Combine
 
 struct QuestDetailSheet: View {
     let quest: QuestDefinition
@@ -41,12 +41,12 @@ struct QuestDetailSheet: View {
                 // Quest name
                 Text(quest.title)
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
 
                 // Source badge
                 Text(sourceText)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "666666"))
+                    .foregroundStyle(Color(hex: "666666"))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(
@@ -57,11 +57,11 @@ struct QuestDetailSheet: View {
                 VStack(alignment: .trailing, spacing: 8) {
                     Text("التحدي")
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
 
                     Text(content.explanation)
                         .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(Color(hex: "444444"))
+                        .foregroundStyle(Color(hex: "444444"))
                         .multilineTextAlignment(.trailing)
                         .lineSpacing(6)
                 }
@@ -70,13 +70,13 @@ struct QuestDetailSheet: View {
                 VStack(alignment: .trailing, spacing: 8) {
                     Text("الفائدة")
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
 
                     ForEach(content.benefits, id: \.self) { benefit in
                         HStack(spacing: 8) {
                             Text(benefit)
                                 .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(Color(hex: "444444"))
+                                .foregroundStyle(Color(hex: "444444"))
                                 .multilineTextAlignment(.trailing)
 
                             Circle()
@@ -90,18 +90,18 @@ struct QuestDetailSheet: View {
                 VStack(alignment: .trailing, spacing: 8) {
                     Text("شلون تنجزه؟")
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
 
                     ForEach(Array(content.howTo.enumerated()), id: \.offset) { index, step in
                         HStack(spacing: 8) {
                             Text(step)
                                 .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(Color(hex: "444444"))
+                                .foregroundStyle(Color(hex: "444444"))
                                 .multilineTextAlignment(.trailing)
 
                             Text("\(index + 1)")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .frame(width: 22, height: 22)
                                 .background(Circle().fill(Color(hex: "EBCF97")))
                         }
@@ -127,12 +127,12 @@ struct QuestDetailSheet: View {
 
                         Text("مركزك الحالي")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color(hex: "1A1A1A"))
+                            .foregroundStyle(Color(hex: "1A1A1A"))
                     }
 
                     Text(questProgressText(for: quest, progress: cardProgress))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .monospacedDigit()
                 }
 
@@ -250,9 +250,9 @@ struct QuestDetailSheet: View {
             HStack(spacing: 8) {
                 Text("تم الإنجاز")
                     .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(Color(hex: "B7E5D2"))
+                    .foregroundStyle(Color(hex: "B7E5D2"))
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
@@ -267,10 +267,10 @@ struct QuestDetailSheet: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "heart.fill")
-                            .foregroundColor(Color(hex: "B7E5D2"))
+                            .foregroundStyle(Color(hex: "B7E5D2"))
                         Text("يتتبع تلقائياً من Apple Health")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(Color(hex: "666666"))
+                            .foregroundStyle(Color(hex: "666666"))
                     }
 
                     // Progress bar
@@ -288,14 +288,14 @@ struct QuestDetailSheet: View {
 
                     Text(questProgressText(for: quest, progress: cardProgress))
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .monospacedDigit()
 
                     if !engine.isHealthAuthorized {
                         Button(action: { handleHealthKitCTA(progress: progress) }) {
                             Text("اربط هيلث كِت")
                                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(hex: "1A1A1A"))
+                                .foregroundStyle(Color(hex: "1A1A1A"))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 44)
                                 .background(
@@ -314,7 +314,7 @@ struct QuestDetailSheet: View {
                                 Text("تحديث")
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
                             }
-                            .foregroundColor(Color(hex: "1A1A1A"))
+                            .foregroundStyle(Color(hex: "1A1A1A"))
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                             .background(
@@ -339,7 +339,7 @@ struct QuestDetailSheet: View {
                         Text(progress.isStarted ? "انهاء" : "افتح الكاميرا")
                     }
                     .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                     .background(
@@ -352,7 +352,7 @@ struct QuestDetailSheet: View {
                 Button(action: { showWaterEntry = true }) {
                     Text("فتح إدخال الماء")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -365,7 +365,7 @@ struct QuestDetailSheet: View {
                 Button(action: { handleTimerCTA(progress: progress) }) {
                     Text(progress.isStarted ? "انهاء الجلسة" : "ابدأ الجلسة")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -378,7 +378,7 @@ struct QuestDetailSheet: View {
                 Button(action: { showWorkoutEntry = true }) {
                     Text("سجل جلسة كارديو")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -391,7 +391,7 @@ struct QuestDetailSheet: View {
                 Button(action: { handleSocialCTA() }) {
                     Text("سجّل تفاعل")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -404,7 +404,7 @@ struct QuestDetailSheet: View {
                 Button(action: { handleKitchenCTA(progress: progress) }) {
                     Text(quest.isStageOneBooleanQuest && progress.isCompleted ? "تم" : "فتح المطبخ")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -418,7 +418,7 @@ struct QuestDetailSheet: View {
                 Button(action: { showShareSheet = true }) {
                     Text("مشاركة الإنجاز")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
@@ -431,7 +431,7 @@ struct QuestDetailSheet: View {
                 Button(action: { handleManualCTA(progress: progress) }) {
                     Text("أكد الإنجاز")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(

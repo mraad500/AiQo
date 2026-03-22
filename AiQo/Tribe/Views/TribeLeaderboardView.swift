@@ -185,7 +185,7 @@ struct TribeLeaderboardView: View {
         HStack {
             Text("إمارة")
                 .font(.system(size: 34, weight: .heavy))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundStyle(Color(hex: "1A1A1A"))
 
             Spacer()
 
@@ -198,7 +198,7 @@ struct TribeLeaderboardView: View {
                 .overlay(
                     Image(systemName: "person.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(Color(hex: "999999"))
+                        .foregroundStyle(Color(hex: "999999"))
                 )
                 .frame(width: 46, height: 46)
                 .overlay(
@@ -217,7 +217,7 @@ struct TribeLeaderboardView: View {
             ForEach(TimeFilter.allCases, id: \.self) { filter in
                 Text(filter.rawValue)
                     .font(.system(size: 13, weight: filter == selectedFilter ? .bold : .medium))
-                    .foregroundColor(filter == selectedFilter ? Color(hex: "1A1A1A") : Color(hex: "999999"))
+                    .foregroundStyle(filter == selectedFilter ? Color(hex: "1A1A1A") : Color(hex: "999999"))
                     .padding(.vertical, 8)
                     .padding(.horizontal, 20)
                     .background {
@@ -334,7 +334,7 @@ struct TribeLeaderboardView: View {
                     if isFirst {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(sandDark)
+                            .foregroundStyle(sandDark)
                             .offset(y: crownFloat ? -4 : 0)
                             .animation(
                                 .easeInOut(duration: 2.5).repeatForever(autoreverses: true),
@@ -370,7 +370,7 @@ struct TribeLeaderboardView: View {
                     .overlay(
                         Text("\(entry.rank)")
                             .font(.system(size: 11, weight: .heavy))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     )
                     .shadow(color: Color.black.opacity(0.1), radius: 2, y: 1)
                     .offset(y: badgeSize / 2)
@@ -380,7 +380,7 @@ struct TribeLeaderboardView: View {
             // Name
             Text(entry.name)
                 .font(.system(size: 15, weight: .bold))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundStyle(Color(hex: "1A1A1A"))
                 .lineLimit(1)
                 .frame(maxWidth: 105)
 
@@ -388,10 +388,10 @@ struct TribeLeaderboardView: View {
             HStack(spacing: 3) {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 10))
-                Text("\(entry.points)")
+                Text(entry.points.arabicFormatted)
                     .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundColor(Color(hex: "777777"))
+            .foregroundStyle(Color(hex: "777777"))
 
             // Pillar
             UnevenRoundedRectangle(
@@ -432,10 +432,10 @@ struct TribeLeaderboardView: View {
                 VStack(spacing: 4) {
                     Text("المستوى")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(hex: "999999"))
-                    Text("\(entry.level)")
+                        .foregroundStyle(Color(hex: "999999"))
+                    Text(entry.level.arabicFormatted)
                         .font(.system(size: 22, weight: .heavy))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                 }
             }
         }
@@ -456,7 +456,7 @@ struct TribeLeaderboardView: View {
             // Rank number
             Text("#\(entry.rank)")
                 .font(.system(size: 18, weight: .heavy))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundStyle(Color(hex: "1A1A1A"))
                 .frame(minWidth: 36, alignment: .center)
                 .padding(.trailing, 10)
 
@@ -480,18 +480,18 @@ struct TribeLeaderboardView: View {
                 HStack(spacing: 4) {
                     Text(entry.name)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .lineLimit(1)
 
                     if entry.isPrivate {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "AAAAAA"))
+                            .foregroundStyle(Color(hex: "AAAAAA"))
                     }
                 }
                 Text(entry.username)
                     .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .foregroundStyle(Color(hex: "AAAAAA"))
             }
 
             Spacer()
@@ -500,10 +500,10 @@ struct TribeLeaderboardView: View {
             HStack(spacing: 3) {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 10))
-                Text("\(entry.points)")
+                Text(entry.points.arabicFormatted)
                     .font(.system(size: 12, weight: .bold))
             }
-            .foregroundColor(Color(hex: "1A1A1A"))
+            .foregroundStyle(Color(hex: "1A1A1A"))
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .background(theme.accent.opacity(0.33))
@@ -513,10 +513,10 @@ struct TribeLeaderboardView: View {
             HStack(spacing: 3) {
                 Image(systemName: "star.fill")
                     .font(.system(size: 9))
-                Text("\(entry.level)")
+                Text(entry.level.arabicFormatted)
                     .font(.system(size: 11, weight: .semibold))
             }
-            .foregroundColor(Color(hex: "777777"))
+            .foregroundStyle(Color(hex: "777777"))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Color.white.opacity(0.55))
@@ -549,7 +549,7 @@ struct TribeLeaderboardView: View {
             // Rank
             Text("#\(entry.rank)")
                 .font(.system(size: 18, weight: .heavy))
-                .foregroundColor(sandDark)
+                .foregroundStyle(sandDark)
                 .frame(minWidth: 36, alignment: .center)
                 .padding(.trailing, 10)
 
@@ -573,7 +573,7 @@ struct TribeLeaderboardView: View {
                 HStack(spacing: 6) {
                     Text("أنت")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
+                        .foregroundStyle(Color(hex: "1A1A1A"))
 
                     // +3 badge
                     HStack(spacing: 2) {
@@ -582,7 +582,7 @@ struct TribeLeaderboardView: View {
                         Text("+3")
                             .font(.system(size: 10, weight: .bold))
                     }
-                    .foregroundColor(Color(hex: "4CAF50"))
+                    .foregroundStyle(Color(hex: "4CAF50"))
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
                     .background(Color(hex: "E8F5E9"))
@@ -591,7 +591,7 @@ struct TribeLeaderboardView: View {
 
                 Text(entry.username)
                     .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .foregroundStyle(Color(hex: "AAAAAA"))
             }
 
             Spacer()
@@ -600,10 +600,10 @@ struct TribeLeaderboardView: View {
             HStack(spacing: 3) {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 11))
-                Text("\(entry.points)")
+                Text(entry.points.arabicFormatted)
                     .font(.system(size: 13, weight: .bold))
             }
-            .foregroundColor(Color(hex: "1A1A1A"))
+            .foregroundStyle(Color(hex: "1A1A1A"))
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
             .background(sand.opacity(0.27))
@@ -661,7 +661,7 @@ struct TribeLeaderboardView: View {
             .overlay(
                 Text(initials)
                     .font(.system(size: fontSize, weight: .bold))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
             )
             .overlay(
                 Circle().stroke(borderColor, lineWidth: borderWidth)
@@ -700,7 +700,7 @@ private struct UserDetailSheet: View {
                 .overlay(
                     Text(entry.initials)
                         .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 )
                 .overlay(
                     Circle().stroke(accentColor, lineWidth: 3)
@@ -712,11 +712,11 @@ private struct UserDetailSheet: View {
             VStack(spacing: 4) {
                 Text(entry.name)
                     .font(.system(size: 24, weight: .heavy))
-                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
 
                 Text(entry.username)
                     .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .foregroundStyle(Color(hex: "AAAAAA"))
             }
 
             // Stats grid
@@ -731,7 +731,7 @@ private struct UserDetailSheet: View {
             HStack(spacing: 6) {
                 Text("عالمي")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(hex: "888888"))
+                    .foregroundStyle(Color(hex: "888888"))
 
                 Circle()
                     .fill(Color(hex: "CCCCCC"))
@@ -739,7 +739,7 @@ private struct UserDetailSheet: View {
 
                 Text(entry.isPrivate ? "حساب خاص 🔒" : "حساب عام")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(hex: "888888"))
+                    .foregroundStyle(Color(hex: "888888"))
             }
             .frame(maxWidth: .infinity)
             .padding(12)
@@ -762,19 +762,19 @@ private struct UserDetailSheet: View {
 
     private var formattedPoints: String {
         if entry.points >= 1000 {
-            return String(format: "%.1fK", Double(entry.points) / 1000.0)
+            return (Double(entry.points) / 1000.0).arabicFormatted + "K"
         }
-        return "\(entry.points)"
+        return entry.points.arabicFormatted
     }
 
     private func statCard(label: String, value: String, bg: Color) -> some View {
         VStack(spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color(hex: "999999"))
+                .foregroundStyle(Color(hex: "999999"))
             Text(value)
                 .font(.system(size: 24, weight: .heavy))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundStyle(Color(hex: "1A1A1A"))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)

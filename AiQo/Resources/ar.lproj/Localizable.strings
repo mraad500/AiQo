@@ -10,8 +10,8 @@
 "onboarding.page1.subtitle" = "خطوات، سعرات، نوم، نبض القلب — كلشي بمكان واحد مع تحليل ذكي يومي.";
 "onboarding.page2.title" = "كابتن حمّودي";
 "onboarding.page2.subtitle" = "مدربك الشخصي بالذكاء الاصطناعي. يعطيك نصائح، خطط تمارين، وخطط أكل مخصصة إلك.";
-"onboarding.page3.title" = "القبيلة";
-"onboarding.page3.subtitle" = "تحدّى أصدقائك وعائلتك. لوحة متصدرين، تحديات جماعية، وطاقة مشتركة.";
+"onboarding.page3.title" = "إمارة";
+"onboarding.page3.subtitle" = "يمكنك إنشاء قبيلة مع الأصدقاء والتنافس.";
 "onboarding.page4.title" = "مستعد تبدأ رحلتك؟";
 "onboarding.page4.subtitle" = "7 أيام مجانية. بدون بطاقة. ابدأ الحين وشوف الفرق.";
 "onboarding.next" = "التالي";
@@ -38,6 +38,8 @@
 "error.trialExpired.recovery" = "اشترك بالباقة المدفوعة لمتابعة الاستخدام.";
 "error.tribeNotFound" = "القبيلة غير موجودة";
 "error.tribeAccessDenied" = "ما عندك صلاحية لهذي القبيلة";
+"error.tribeFull" = "القبيلة ممتلئة (الحد الأقصى 5 أعضاء)";
+"error.tribeAlreadyJoined" = "أنت عضو بهذي القبيلة بالفعل";
 
 /* Legal */
 "legal.section" = "القانونية";
@@ -1308,6 +1310,9 @@
 "premium.trial.start" = "ابدأ";
 "premium.trial.active.title" = "التجربة المجانية نشطة";
 "premium.trial.active.days" = "باقي %d يوم";
+"premium.active" = "الاشتراك فعّال";
+"premium.expired" = "انتهى الاشتراك";
+"premium.expires.date" = "ينتهي: %@";
 
 /* Club */
 "club.tab.impact" = "الأثر";
@@ -1343,3 +1348,178 @@
 "impact_summary" = "الملخص";
 "impact_achievements" = "الإنجازات";
 "club_top_tabs_accessibility" = "تبويبات النادي العلوية";
+
+/* Weekly Report */
+"screen.profile.weeklyReport.title" = "تقرير الأسبوع";
+"screen.profile.weeklyReport.subtitle" = "ملخص نشاطك الأسبوعي";
+
+/* Progress Photos */
+"screen.profile.progressPhotos.title" = "صور التقدم";
+"screen.profile.progressPhotos.subtitle" = "تابع تحولك الجسدي";
+
+/* Accessibility */
+"tab.home.hint" = "عرض ملخص الصحة اليومي";
+"tab.gym.hint" = "التمارين والتحديات الرياضية";
+"tab.captain.hint" = "تكلم مع كابتن حمّودي";
+"accessibility.steps" = "الخطوات";
+"accessibility.calories" = "السعرات الحرارية";
+"accessibility.sleep" = "ساعات النوم";
+"accessibility.water" = "شرب الماء";
+"accessibility.distance" = "المسافة";
+"accessibility.stand" = "ساعات الوقوف";
+"accessibility.workout.start" = "ابدأ التمرين";
+"accessibility.workout.pause" = "أوقف التمرين مؤقتاً";
+"accessibility.workout.stop" = "أنهي التمرين";
+
+/* Vibe */
+"vibe.title" = "ذوقي";
+"vibe.audioSource" = "مصدر الصوت";
+"vibe.aiqoSounds" = "أصوات AiQo";
+"vibe.spotify" = "Spotify";
+"vibe.soundControls" = "التحكم بالصوت";
+"vibe.mixAudio" = "مزج مع صوت آخر";
+"vibe.intensity" = "الشدة";
+"vibe.djPick" = "اختيار دي جي حمّودي";
+"vibe.openSpotify" = "افتح في Spotify";
+
+/* Fridge */
+"fridge.addOne" = "أضف واحد";
+"fridge.useOne" = "استخدم واحد";
+"fridge.remove" = "إزالة";
+"fridge.addToFridge" = "إضافة إلى الثلاجة";
+"fridge.tapAnyItem" = "اضغط على أي عنصر";
+"fridge.add" = "أضف";
+
+/* Paywall */
+"paywall.duration" = "المدة 30 يوم وتنتهي تلقائياً، والتجديد بقرارك.";
+"paywall.plans" = "الباقات";
+"paywall.retry" = "إعادة المحاولة";
+"paywall.restore" = "استرجاع";
+"paywall.buy" = "شراء";
+"paywall.status" = "الحالة";
+"paywall.thirtyDays" = "30 يوم";
+"paywall.status.synced" = "تمت مزامنة الاشتراك بنجاح.";
+"paywall.status.pending" = "الشراء قيد الانتظار من آبل.";
+"paywall.status.cancelled" = "تم إلغاء عملية الشراء.";
+"paywall.status.failed" = "تعذر إكمال العملية: %@";
+"paywall.status.currentPlan" = "الباقة الحالية: %@. تنتهي في %@.";
+"paywall.status.canCreateTribe" = "يمكنك إنشاء القبيلة الآن.";
+"paywall.plan.familyDescription" = "هذه الباقة مناسبة للعائلة وتفعّل إنشاء القبيلة طوال مدة الـ 30 يوم.";
+"paywall.plan.individualDescription" = "وصول فردي لمدة 30 يوم. تنتهي تلقائياً بدون تجديد تلقائي.";
+"paywall.debug.testing" = "اختبار";
+"paywall.debug.resetPremium" = "حذف بيانات بريميوم";
+"paywall.debug.resetDone" = "تم حذف بيانات البريميوم محلياً لاختبار انتهاء الاشتراك.";
+"paywall.debug.setupTitle" = "إعدادات الاختبار";
+"paywall.debug.ok" = "حسناً";
+"paywall.debug.setupMessage" = "افتح Scheme > Run > Options > StoreKit Configuration ثم اختر AiQo_Test.storekit وبعدها أعد تشغيل التطبيق.";
+
+/* Captain Welcome */
+"captain.welcome" = "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟";
+
+/* Profile Setup - Privacy */
+"profile.privacy.public" = "عام";
+"profile.privacy.private" = "خاص";
+"profile.privacy.publicAccount" = "حساب عام";
+"profile.privacy.arenaHint" = "للمنافسة في الارينا";
+"profile.privacy.changeHint" = "يمكنك إخفاء اسمك لاحقاً وجعله خاصاً متى ما شئت.";
+
+/* Units */
+"unit.kg" = "كغم";
+"unit.cm" = "سم";
+"unit.km" = "كم";
+"unit.hours.short" = "س";
+
+/* Legacy Calculation - Intro */
+"legacy.intro.body" = "%@، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.";
+"legacy.intro.tagline" = "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.";
+"legacy.continue" = "متابعة";
+"legacy.skip" = "ليس الآن";
+"legacy.goHome" = "الذهاب إلى الرئيسية";
+"legacy.fallbackName" = "أنت";
+
+/* Legacy Calculation - Result */
+"legacy.result.level" = "المستوى";
+"legacy.result.total" = "المجموع: %@ نقطة";
+"legacy.metric.steps" = "الخطوات";
+"legacy.metric.calories" = "السعرات";
+"legacy.metric.distance" = "المسافة";
+"legacy.metric.sleep" = "النوم";
+"legacy.metric.total" = "المجموع";
+
+/* Legacy Calculation - Loading Phases */
+"legacy.loading.permissions.title" = "نطلب Apple Health";
+"legacy.loading.permissions.subtitle" = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل";
+"legacy.loading.locating.title" = "نحدد أول سجل";
+"legacy.loading.locating.subtitle" = "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك";
+"legacy.loading.aggregating.title" = "نجمع تاريخك الكامل";
+"legacy.loading.aggregating.subtitle" = "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح";
+"legacy.loading.finalizing.title" = "نشكّل مستواك";
+"legacy.loading.finalizing.subtitle" = "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي";
+"legacy.loading.timeout.title" = "أخذت البيانات وقتاً أطول";
+"legacy.loading.timeout.subtitle" = "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة";
+"legacy.loading.unauthorized.title" = "لم تُمنح الصلاحية";
+"legacy.loading.unauthorized.subtitle" = "يمكنك تفعيل Apple Health لاحقاً من الإعدادات";
+
+/* Legacy Calculation - Rank Titles */
+"legacy.rank.0.title" = "المبتدئ";
+"legacy.rank.0.desc" = "يلا نبدأ!";
+"legacy.rank.1.title" = "البداية";
+"legacy.rank.1.desc" = "كل رحلة تبدأ بخطوة. AiQo معك من هنا.";
+"legacy.rank.2.title" = "المتحرّك";
+"legacy.rank.2.desc" = "بدأت تتحرك وتبني عادات. استمر!";
+"legacy.rank.3.title" = "النشيط";
+"legacy.rank.3.desc" = "جسمك يشكرك. مستواك يرتفع بثبات.";
+"legacy.rank.4.title" = "المنضبط";
+"legacy.rank.4.desc" = "التزامك واضح. أنت فوق المعدّل.";
+"legacy.rank.5.title" = "القوي";
+"legacy.rank.5.desc" = "بيانات قوية. جسمك يتكلم وأنت تسمع.";
+"legacy.rank.6.title" = "المحارب";
+"legacy.rank.6.desc" = "قليلين يوصلون هنا. أنت محارب حقيقي.";
+"legacy.rank.7.title" = "البطل";
+"legacy.rank.7.desc" = "أرقامك تتكلم عنك. بطل بكل المقاييس.";
+"legacy.rank.8.title" = "الأسطورة الرياضية";
+"legacy.rank.8.desc" = "أرقامك تبيّن إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي.";
+"legacy.rank.9.title" = "الخارق";
+"legacy.rank.9.desc" = "مستوى لا يُصدَّق. أنت تتحدى الحدود.";
+"legacy.rank.10.title" = "الأسطورة الحيّة";
+"legacy.rank.10.desc" = "أنت في القمة المطلقة. تاريخك الصحي استثنائي.";
+
+/* Profile Setup - Dating fields */
+"dating.title" = "أكمل ملفك";
+"dating.subtitle" = "خلينا نجهّز حسابك";
+"dating.name" = "الاسم";
+"dating.username" = "اسم المستخدم";
+"dating.birthDate" = "تاريخ الميلاد";
+"dating.gender" = "الجنس";
+"dating.weight" = "الوزن";
+"dating.height" = "الطول";
+"dating.continue" = "متابعة";
+
+/* Captain Chat Timestamps */
+"time.now" = "الحين";
+"time.minutesAgo" = "قبل %d دقايق";
+"time.yesterday" = "البارحة";
+
+/* Home — Emirate Card */
+"home.emirate.title" = "إمارة 🏆";
+"home.emirate.subtitle" = "المستوى %d · %@ نقطة";
+
+/* Tribe — Join */
+"tribe.join.tooShort" = "الرمز لازم يكون بصيغة AQ-XXXX";
+"tribe.join.invalidCode" = "الكود غلط، تأكد منه وحاول مرة ثانية";
+"tribe.join.error" = "ما قدرنا نوصلك بالقبيلة هسه. جرّب مرة ثانية.";
+
+/* Tribe — Create */
+"tribe.create.error" = "ما قدرنا ننشئ القبيلة هسه. جرّب مرة ثانية.";
+
+/* Tribe — Invite / Share */
+"tribe.invite.shareText" = "انضم لقبيلتي في AiQo! 💪\nالكود: %@\nhttps://aiqo.app/tribe/%@";
+"tribe.invite.subject" = "دعوة قبيلة AiQo";
+"tribe.invite.message" = "انضم لقبيلتي في AiQo! 💪";
+
+/* Leaderboard */
+"leaderboard.yourRank" = "ترتيبك: #%d عالمياً";
+"leaderboard.startWalking" = "ابدأ تمشي واكسب نقاطك الأولى 🚀";
+
+/* Level Up */
+"levelUp.celebration" = "وصلت للمستوى %d 🎉";

@@ -148,11 +148,11 @@ struct WinsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(L10n.t("wins.title"))
                 .font(.system(size: 34, weight: .heavy))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text(L10n.t("wins.subtitle"))
                 .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.top, 10)
     }
@@ -204,7 +204,7 @@ struct WinCardView: View {
 
                     Image(systemName: item.icon)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(item.themeColor)
+                        .foregroundStyle(item.themeColor)
                 }
                 .padding(.top, 16)
                 .padding(.leading, 16)
@@ -214,12 +214,12 @@ struct WinCardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
 
                     Text(item.subtitle)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 .padding(.horizontal, 16)
@@ -236,7 +236,7 @@ struct WinCardView: View {
 
             Image(systemName: item.isLocked ? "lock.fill" : "checkmark.seal.fill")
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(item.isLocked ? item.themeColor.opacity(0.5) : item.themeColor)
+                .foregroundStyle(item.isLocked ? item.themeColor.opacity(0.5) : item.themeColor)
                 .padding(16)
         }
     }
@@ -270,7 +270,7 @@ struct BottomGlassSheet: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .padding(10)
                             .background(Circle().fill(Color.white.opacity(0.35)))
                     }
@@ -363,17 +363,17 @@ struct SheetContent: View {
 
                     Image(systemName: item.icon)
                         .font(.system(size: 19, weight: .semibold))
-                        .foregroundColor(item.themeColor)
+                        .foregroundStyle(item.themeColor)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.system(size: 18, weight: .heavy))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(item.detailHint)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -384,18 +384,18 @@ struct SheetContent: View {
             HStack(alignment: .lastTextBaseline) {
                 Text(item.detailValue)
                     .font(.system(size: 38, weight: .heavy))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
                 HStack(spacing: 8) {
                     Image(systemName: item.isLocked ? "lock.fill" : "checkmark.seal.fill")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(item.isLocked ? item.themeColor.opacity(0.55) : item.themeColor)
+                        .foregroundStyle(item.isLocked ? item.themeColor.opacity(0.55) : item.themeColor)
 
-                    Text("\(Int(item.progress * 100))%")
+                    Text("\(Int(item.progress * 100).arabicFormatted)%")
                         .font(.system(size: 14, weight: .heavy))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -408,7 +408,7 @@ struct SheetContent: View {
                 ForEach(SheetTab.allCases) { tab in
                     Text(tab.title)
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(selectedTab == tab ? .primary : .secondary)
+                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(
@@ -448,13 +448,13 @@ struct SheetContent: View {
             HStack {
                 Text(item.isLocked ? L10n.t("wins.sheet.keep_going") : L10n.t("wins.sheet.unlocked"))
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
                 Text(L10n.t("wins.sheet.swipe_close"))
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.75))
+                    .foregroundStyle(.secondary.opacity(0.75))
             }
             .padding(.top, 4)
         }
@@ -485,7 +485,7 @@ struct RewardShieldView: View {
 
                 Image(systemName: "shield.fill")
                     .font(.system(size: 34, weight: .heavy))
-                    .foregroundColor(tint)
+                    .foregroundStyle(tint)
 
                 if isLocked {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -501,7 +501,7 @@ struct RewardShieldView: View {
                     .font(.system(size: 15, weight: .bold))
                 Text(L10n.t("wins.sheet.reward_desc"))
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -537,7 +537,7 @@ struct FeaturedWinCard: View {
 
                 Image(systemName: icon)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(themeColor)
+                    .foregroundStyle(themeColor)
             }
             .padding(.top, 16)
             .padding(.leading, 16)
@@ -546,11 +546,11 @@ struct FeaturedWinCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: 18, weight: .heavy))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(subtitle)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 .padding(.top, 16)

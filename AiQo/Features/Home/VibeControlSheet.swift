@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 import AVKit
-internal import Combine
+import Combine
 
 struct RoutePickerView: UIViewRepresentable {
     func makeUIView(context: Context) -> AVRoutePickerView {
@@ -119,6 +119,13 @@ enum VibePlaybackSource: String, CaseIterable, Identifiable {
     case spotify = "Spotify"
 
     var id: String { rawValue }
+
+    var localizedName: String {
+        switch self {
+        case .aiqoSounds: return "vibe.aiqoSounds".localized
+        case .spotify: return "vibe.spotify".localized
+        }
+    }
 }
 
 @MainActor
@@ -150,7 +157,7 @@ final class VibeControlViewModel: ObservableObject {
         self.nativeIntensity = UserDefaults.standard.object(forKey: Self.intensityDefaultsKey) as? Double ?? 0.55
     }
 
-    var title: String { "My Vibe" }
+    var title: String { "vibe.title".localized }
     var subtitle: String {
         switch selectedSource {
         case .aiqoSounds:
@@ -226,7 +233,7 @@ struct VibeControlSheet: View {
         .onChange(of: viewModel.selectedMode) { _, _ in
             syncAiQoTrackToSelectedModeIfNeeded()
         }
-        .alert("My Vibe", isPresented: errorAlertIsPresented) {
+        .alert("vibe.title".localized, isPresented: errorAlertIsPresented) {
             Button("OK", role: .cancel) {
                 scheduleActiveAlertClear()
             }
@@ -386,13 +393,13 @@ struct VibeControlSheet: View {
 
     private var sourceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Audio Source")
+            Text("vibe.audioSource".localized)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.82))
 
-            Picker("Audio Source", selection: $viewModel.selectedSource) {
+            Picker("vibe.audioSource".localized, selection: $viewModel.selectedSource) {
                 ForEach(VibePlaybackSource.allCases) { source in
-                    Text(source.rawValue).tag(source)
+                    Text(source.localizedName).tag(source)
                 }
             }
             .pickerStyle(.segmented)
@@ -506,7 +513,7 @@ struct VibeControlSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Sound Controls")
+                        Text("vibe.soundControls".localized)
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                         Text(displayedVibeTitle)
                             .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -567,7 +574,7 @@ struct VibeControlSheet: View {
     private var mixSection: some View {
         Toggle(isOn: $viewModel.mixWithOthers) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Mix with other audio")
+                Text("vibe.mixAudio".localized)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
 
                 Text("Keep AiQo Sounds active while music or podcasts play.")
@@ -590,7 +597,7 @@ struct VibeControlSheet: View {
     private var intensitySection: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Intensity")
+                Text("vibe.intensity".localized)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.82))
 

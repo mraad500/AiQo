@@ -278,15 +278,15 @@ private struct FridgeShelvesOverlay: View {
                     )
                     .position(layout.position(for: index, total: section.items.count, in: size))
                     .contextMenu {
-                        Button("Add one") {
+                        Button("fridge.addOne".localized) {
                             onIncrement(item.id)
                         }
 
-                        Button("Use one") {
+                        Button("fridge.useOne".localized) {
                             onDecrement(item.id)
                         }
 
-                        Button("Remove", role: .destructive) {
+                        Button("fridge.remove".localized, role: .destructive) {
                             onRemove(item.id)
                         }
                     }
@@ -414,13 +414,13 @@ private struct IngredientPickerRailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("إضافة إلى الثلاجة")
+                Text("fridge.addToFridge".localized)
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .foregroundStyle(.primary)
 
                 Spacer()
 
-                Text("اضغط على أي عنصر")
+                Text("fridge.tapAnyItem".localized)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -501,7 +501,7 @@ private struct IngredientPickerBadge: View {
     let isStored: Bool
 
     var body: some View {
-        Text(isStored ? "+1" : "أضف")
+        Text(isStored ? "+1" : "fridge.add".localized)
             .font(.system(size: 10, weight: .heavy, design: .rounded))
             .foregroundStyle(isStored ? Color.green : Color.blue)
             .padding(.horizontal, 9)

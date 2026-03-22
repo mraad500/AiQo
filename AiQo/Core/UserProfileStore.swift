@@ -89,16 +89,34 @@ public final class UserProfileStore: ObservableObject {
     }
     
     // MARK: - Avatar Methods
-    public func saveAvatar(_ image: UIImage?) {
-        guard let image else { UserDefaults.standard.removeObject(forKey: avatarKey); return }
-        if let data = image.jpegData(compressionQuality: 0.85) {
-            UserDefaults.standard.set(data, forKey: avatarKey)
-        }
+
+    private static var avatarFileURL: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return docs.appendingPathComponent("avatar.jpg")
     }
-    
+
+    public func saveAvatar(_ image: UIImage?) {
+        if let image, let data = image.jpegData(compressionQuality: 0.85) {
+            try? data.write(to: Self.avatarFileURL)
+        } else {
+            try? FileManager.default.removeItem(at: Self.avatarFileURL)
+        }
+        // Remove legacy UserDefaults data if present
+        UserDefaults.standard.removeObject(forKey: avatarKey)
+    }
+
     public func loadAvatar() -> UIImage? {
-        guard let data = UserDefaults.standard.data(forKey: avatarKey) else { return nil }
-        return UIImage(data: data)
+        // Try file first
+        if let data = try? Data(contentsOf: Self.avatarFileURL) {
+            return UIImage(data: data)
+        }
+        // Migrate from UserDefaults if present
+        if let legacyData = UserDefaults.standard.data(forKey: avatarKey) {
+            try? legacyData.write(to: Self.avatarFileURL)
+            UserDefaults.standard.removeObject(forKey: avatarKey)
+            return UIImage(data: legacyData)
+        }
+        return nil
     }
 
     func setTribePrivacyMode(_ mode: PrivacyMode) {

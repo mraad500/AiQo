@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import os.log
 
 /// Common Iraqi Arabic phrases Captain Hamoudi uses frequently.
@@ -28,8 +29,8 @@ enum CachedPhrase: String, CaseIterable, Sendable {
     case streakCongrats = "سلسلة قوية، لا تكطعها"
 
     nonisolated var cacheFileName: String {
-        let hash = abs(rawValue.hashValue)
-        return "hamoudi_\(hash).mp3"
+        let key = CaptainVoiceCache.cacheKey(for: rawValue)
+        return "hamoudi_\(key).mp3"
     }
 }
 
@@ -48,6 +49,43 @@ actor CaptainVoiceCache {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         cacheDirectory = docs.appendingPathComponent("HamoudiVoiceCache", isDirectory: true)
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        Task { await clearStaleCache() }
+    }
+
+    // MARK: - Deterministic Cache Key
+
+    /// Generates a deterministic SHA256-based cache key for the given text.
+    /// This is `static` and `nonisolated` so `CachedPhrase.cacheFileName` can use it without `await`.
+    nonisolated static func cacheKey(for text: String) -> String {
+        let normalized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard let data = normalized.data(using: .utf8) else {
+            return UUID().uuidString
+        }
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Removes cache files that don't match the new SHA256 naming convention.
+    /// SHA256 hex strings are 64 characters, so valid filenames are `hamoudi_<64 hex chars>.mp3`.
+    private func clearStaleCache() {
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: nil
+        ) else { return }
+
+        let hexPattern = try? NSRegularExpression(pattern: "^hamoudi_[0-9a-f]{64}\\.mp3$")
+
+        for fileURL in files {
+            let fileName = fileURL.lastPathComponent
+            let range = NSRange(fileName.startIndex..., in: fileName)
+            let isValid = hexPattern?.firstMatch(in: fileName, range: range) != nil
+            if !isValid {
+                try? FileManager.default.removeItem(at: fileURL)
+                logger.notice("stale_cache_removed file=\(fileName, privacy: .public)")
+            }
+        }
     }
 
     // MARK: - Query

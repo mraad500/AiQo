@@ -36,7 +36,8 @@ struct LocalIntelligenceService: Sendable {
         let rawText = try encode(response)
 
         return HybridBrainServiceReply(
-            message: response.message,
+            message: CaptainPersonaBuilder.sanitizeResponse(response.message),
+            quickReplies: response.quickReplies,
             workoutPlan: response.workoutPlan,
             mealPlan: response.mealPlan,
             spotifyRecommendation: response.spotifyRecommendation,

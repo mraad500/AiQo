@@ -1,6 +1,6 @@
 // Supabase hook: keep this legacy preview view model in sync with the shared
 // `TribeChallenge` model until the older Galaxy preview screens are removed.
-internal import Combine
+import Combine
 import SwiftUI
 import UIKit
 
@@ -76,63 +76,157 @@ final class ArenaViewModel: ObservableObject {
 
     private func seedPreviewData() {
         let now = Date()
+        let endOfDay = Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now.addingTimeInterval(60 * 60 * 10)
+        let endOfMonth = Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now.addingTimeInterval(60 * 60 * 24 * 30)
 
         challenges = [
+            // ✅ تحديات شخصية يومية
             TribeChallenge(
-                id: "legacy-personal-calm",
+                id: "personal-steps-daily",
                 scope: .personal,
                 cadence: .daily,
-                title: "هدوء 20 دقيقة",
-                subtitle: "معاينة سريعة.",
-                metricType: .calmMinutes,
-                targetValue: 20,
-                progressValue: 8,
-                startAt: now,
-                endAt: now.addingTimeInterval(60 * 60 * 10),
-                createdByUserId: "legacy-self",
+                title: "10,000 خطوة",
+                subtitle: "حقق هدفك اليومي من الخطوات",
+                metricType: .steps,
+                targetValue: 10_000,
+                progressValue: Int.random(in: 2000...7000),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                createdByUserId: "self",
                 participantsCount: 1
             ),
             TribeChallenge(
-                id: "legacy-tribe-steps",
+                id: "personal-calm-daily",
+                scope: .personal,
+                cadence: .daily,
+                title: "هدوء 15 دقيقة",
+                subtitle: "خذ وقتك للتأمل والراحة النفسية",
+                metricType: .calmMinutes,
+                targetValue: 15,
+                progressValue: Int.random(in: 0...8),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                createdByUserId: "self",
+                participantsCount: 1
+            ),
+            TribeChallenge(
+                id: "personal-water-daily",
+                scope: .personal,
+                cadence: .daily,
+                title: "8 أكواب ماء",
+                subtitle: "حافظ على ترطيب جسمك",
+                metricType: .water,
+                targetValue: 8,
+                progressValue: Int.random(in: 1...4),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                createdByUserId: "self",
+                participantsCount: 1
+            ),
+
+            // 🏋️ تحديات القبيلة اليومية
+            TribeChallenge(
+                id: "tribe-steps-daily",
                 scope: .tribe,
                 cadence: .daily,
-                title: "50,000 خطوة اليوم",
-                subtitle: "زخم قبلي سريع.",
+                title: "ماراثون القبيلة",
+                subtitle: "50,000 خطوة جماعية اليوم!",
                 metricType: .steps,
                 targetValue: 50_000,
-                progressValue: 37_600,
-                startAt: now,
-                endAt: now.addingTimeInterval(60 * 60 * 9),
-                createdByUserId: "legacy-tribe",
-                participantsCount: 8
+                progressValue: Int.random(in: 15000...38000),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                createdByUserId: "tribe-leader",
+                participantsCount: Int.random(in: 5...12)
             ),
             TribeChallenge(
-                id: "legacy-galaxy-water",
+                id: "tribe-sugarfree-daily",
+                scope: .tribe,
+                cadence: .daily,
+                title: "يوم بدون سكر 🍬",
+                subtitle: "تحدّوا أنفسكم كقبيلة!",
+                metricType: .sugarFree,
+                targetValue: 1,
+                progressValue: 0,
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                createdByUserId: "tribe-leader",
+                participantsCount: Int.random(in: 4...8)
+            ),
+
+            // 🌍 تحديات المجرة (عالمية)
+            TribeChallenge(
+                id: "galaxy-water-daily",
                 scope: .galaxy,
                 cadence: .daily,
-                title: "ماء 40 كوب",
-                subtitle: "تحدٍ مختار من AiQo.",
+                title: "موجة الترطيب 💧",
+                subtitle: "تحدي AiQo العالمي — 500 كوب ماء!",
                 metricType: .water,
-                targetValue: 40,
-                progressValue: 24,
-                startAt: now,
-                endAt: now.addingTimeInterval(60 * 60 * 8),
-                participantsCount: 98
+                targetValue: 500,
+                progressValue: Int.random(in: 180...380),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                isCuratedGlobal: true,
+                participantsCount: Int.random(in: 120...450)
             ),
             TribeChallenge(
-                id: "legacy-monthly-sleep",
+                id: "galaxy-steps-daily",
+                scope: .galaxy,
+                cadence: .daily,
+                title: "مليون خطوة 🏃",
+                subtitle: "المجرة كلها تمشي! تحدي AiQo اليومي",
+                metricType: .steps,
+                targetValue: 1_000_000,
+                progressValue: Int.random(in: 350000...720000),
+                startAt: Calendar.current.startOfDay(for: now),
+                endAt: endOfDay,
+                isCuratedGlobal: true,
+                participantsCount: Int.random(in: 200...800)
+            ),
+
+            // 📅 تحديات شهرية
+            TribeChallenge(
+                id: "personal-sleep-monthly",
+                scope: .personal,
+                cadence: .monthly,
+                title: "نوم 200 ساعة",
+                subtitle: "حافظ على نوم صحي هالشهر",
+                metricType: .sleep,
+                targetValue: 200,
+                progressValue: Int.random(in: 40...120),
+                startAt: Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: now)) ?? now,
+                endAt: endOfMonth,
+                createdByUserId: "self",
+                participantsCount: 1
+            ),
+            TribeChallenge(
+                id: "tribe-steps-monthly",
                 scope: .tribe,
                 cadence: .monthly,
-                title: "نوم 40 ساعة",
-                subtitle: "تعافٍ جماعي.",
-                metricType: .sleep,
-                targetValue: 40,
-                progressValue: 21,
-                startAt: now,
-                endAt: now.addingTimeInterval(60 * 60 * 24 * 20),
-                createdByUserId: "legacy-tribe",
-                participantsCount: 6
-            )
+                title: "500,000 خطوة شهرية",
+                subtitle: "القبيلة تتحدى بعض!",
+                metricType: .steps,
+                targetValue: 500_000,
+                progressValue: Int.random(in: 100000...320000),
+                startAt: Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: now)) ?? now,
+                endAt: endOfMonth,
+                createdByUserId: "tribe-leader",
+                participantsCount: Int.random(in: 6...15)
+            ),
+            TribeChallenge(
+                id: "galaxy-calm-monthly",
+                scope: .galaxy,
+                cadence: .monthly,
+                title: "10,000 دقيقة هدوء 🧘",
+                subtitle: "المجرة تتأمل — تحدي AiQo الشهري",
+                metricType: .calmMinutes,
+                targetValue: 10_000,
+                progressValue: Int.random(in: 2500...6800),
+                startAt: Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: now)) ?? now,
+                endAt: endOfMonth,
+                isCuratedGlobal: true,
+                participantsCount: Int.random(in: 150...600)
+            ),
         ]
 
         activeChallengeId = challenges.first?.id

@@ -6,6 +6,8 @@ import SwiftData
 /// نموذج SwiftData لحفظ رسائل المحادثة على القرص — يتحوّل من وإلى ChatMessage بدون ما يأثر على الـ UI
 @Model
 final class PersistentChatMessage {
+    #Index<PersistentChatMessage>([\.sessionID], [\.timestamp])
+
     var messageID: UUID
     var text: String
     var isUser: Bool
@@ -81,12 +83,14 @@ struct ChatSession: Identifiable, Sendable {
 
 struct CaptainStructuredResponse: Codable, Sendable {
     let message: String
+    let quickReplies: [String]?
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
 
     private enum CodingKeys: String, CodingKey {
         case message
+        case quickReplies
         case workoutPlan
         case mealPlan
         case spotifyRecommendation
@@ -94,11 +98,13 @@ struct CaptainStructuredResponse: Codable, Sendable {
 
     init(
         message: String,
+        quickReplies: [String]? = nil,
         workoutPlan: WorkoutPlan? = nil,
         mealPlan: MealPlan? = nil,
         spotifyRecommendation: SpotifyRecommendation? = nil
     ) {
         self.message = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.quickReplies = quickReplies?.prefix(3).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         self.workoutPlan = workoutPlan?.isMeaningful == true ? workoutPlan : nil
         self.mealPlan = mealPlan?.isMeaningful == true ? mealPlan : nil
         self.spotifyRecommendation = spotifyRecommendation?.isMeaningful == true ? spotifyRecommendation : nil
@@ -118,6 +124,8 @@ struct CaptainStructuredResponse: Codable, Sendable {
         }
 
         message = normalizedMessage
+        let rawReplies = try container.decodeIfPresent([String].self, forKey: .quickReplies)
+        quickReplies = rawReplies?.prefix(3).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         workoutPlan = try container.decodeIfPresent(WorkoutPlan.self, forKey: .workoutPlan)
         let decodedMealPlan = try container.decodeIfPresent(MealPlan.self, forKey: .mealPlan)
         mealPlan = decodedMealPlan?.isMeaningful == true ? decodedMealPlan : nil
