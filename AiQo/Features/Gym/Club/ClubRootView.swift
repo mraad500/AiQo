@@ -55,7 +55,7 @@ struct ClubRootView: View {
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
     @State private var isGratitudeSessionPresented = false
-    @State private var isTribePresented = false
+    @State private var isProfileSheetPresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
@@ -91,9 +91,7 @@ struct ClubRootView: View {
             .animation(.easeInOut(duration: 0.3), value: selectedTab)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .navigationDestination(isPresented: $isTribePresented) {
-            TribeScreen()
-        }
+        .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionSheetView(session: presented.session)
@@ -140,27 +138,21 @@ struct ClubRootView: View {
 
     private var topHeaderBar: some View {
         HStack(spacing: 10) {
-            // Tabs — appear on RIGHT in RTL (first in code)
+            // Tabs on the left
             PrimarySegmentedTabs(
                 tabs: displayedTabs,
                 selection: $selectedTab
             )
 
-            // Tribe icon — appears on LEFT in RTL (second in code)
-            Button {
-                isTribePresented = true
-            } label: {
-                Image("Tribe_icon")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 42, height: 42)
-                    .clipShape(Circle())
-                    .shadow(color: Color(hex: "D4B87A").opacity(0.3), radius: 4, y: 2)
+            // Profile icon on the right (same as Home screen)
+            AiQoProfileButton {
+                isProfileSheetPresented = true
             }
         }
         .padding(.leading, 16)
         .padding(.trailing, 10)
         .padding(.vertical, 6)
+        .environment(\.layoutDirection, .leftToRight)
     }
 
     @ViewBuilder

@@ -7,10 +7,10 @@ import Combine
 
 private enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
+    static let didCompleteFeatureIntro = "didCompleteFeatureIntro"
     static let didShowFirstAuthScreen = "didShowFirstAuthScreen"
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
-    static let didCompleteWalkthrough = "didCompleteWalkthrough"
-    static let didSelectLanguage = "didSelectLanguage"
+static let didSelectLanguage = "didSelectLanguage"
 }
 
 @MainActor
@@ -19,10 +19,10 @@ final class AppFlowController: ObservableObject {
 
     enum RootScreen {
         case languageSelection
-        case welcome
         case login
         case profileSetup
         case legacy
+        case featureIntro
         case main
     }
 
@@ -38,11 +38,6 @@ final class AppFlowController: ObservableObject {
 
     func didSelectLanguage() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didSelectLanguage)
-        transition(to: .welcome)
-    }
-
-    func didCompleteWalkthrough() {
-        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteWalkthrough)
         transition(to: .login)
     }
 
@@ -83,8 +78,13 @@ final class AppFlowController: ObservableObject {
     private func finalizeOnboarding() {
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
             FreeTrialManager.shared.startTrialIfNeeded()
-            MainTabRouter.shared.navigate(to: .home)
-            transition(to: .main)
+            transition(to: .featureIntro)
+    }
+
+    func didCompleteFeatureIntro() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteFeatureIntro)
+        MainTabRouter.shared.navigate(to: .home)
+        transition(to: .main)
     }
 
     private func requestFullHealthKitPermissions() async {
@@ -134,6 +134,7 @@ final class AppFlowController: ObservableObject {
             try? await SupabaseService.shared.client.auth.signOut()
 
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteLegacyCalculation)
+            UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteFeatureIntro)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteDatingProfile)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didShowFirstAuthScreen)
 
@@ -156,7 +157,6 @@ final class AppFlowController: ObservableObject {
 
     private static func resolveCurrentScreen() -> RootScreen {
         let didSelectLanguage = UserDefaults.standard.bool(forKey: OnboardingKeys.didSelectLanguage)
-        let didCompleteWalkthrough = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteWalkthrough)
         let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
@@ -173,7 +173,6 @@ final class AppFlowController: ObservableObject {
         }()
 
         guard didSelectLanguage else { return .languageSelection }
-        guard didCompleteWalkthrough else { return .welcome }
         guard didShowFirstAuthScreen else { return .login }
         guard isLoggedIn else { return .login }
 
@@ -185,12 +184,18 @@ final class AppFlowController: ObservableObject {
             return .legacy
         }
 
+        let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
+        if !didCompleteFeatureIntro {
+            return .featureIntro
+        }
+
         return .main
     }
 
     private static func nextScreenAfterLogin() -> RootScreen {
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
+        let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -198,6 +203,10 @@ final class AppFlowController: ObservableObject {
 
         if !didCompleteLegacyCalculation {
             return .legacy
+        }
+
+        if !didCompleteFeatureIntro {
+            return .featureIntro
         }
 
         return .main
@@ -243,11 +252,6 @@ struct AppRootView: View {
                 flow.didSelectLanguage()
             }
             .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading)))
-        case .welcome:
-            OnboardingWalkthroughView {
-                flow.didCompleteWalkthrough()
-            }
-            .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading)))
         case .login:
             LoginScreenView()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
@@ -257,6 +261,11 @@ struct AppRootView: View {
         case .legacy:
             LegacyCalculationScreenView()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .featureIntro:
+            FeatureIntroView {
+                flow.didCompleteFeatureIntro()
+            }
+            .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading)))
         case .main:
             MainTabScreen()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))

@@ -118,17 +118,17 @@ struct HomeView: View {
     
     private var topChrome: some View {
         AiQoScreenTopChrome(
-            horizontalInset: 24,
+            horizontalInset: 10,
+            profileVerticalOffset: -16,
             onProfileTap: { isProfileSheetPresented = true }
         ) {
             HStack {
                 VibeDashboardTriggerButton {
                     showVibeSheet = true
                 }
+                .offset(y: -16)
 
                 Spacer(minLength: 0)
-
-                StreakBadgeView()
             }
         }
     }
@@ -139,13 +139,13 @@ struct HomeView: View {
         DailyAuraView(viewModel: dailyAuraViewModel)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
-            .padding(.top, -4)
+            .padding(.top, -19)
             .padding(.bottom, 16)
     }
     
     private var metricsGrid: some View {
         let allRows = Array(viewModel.gridRows.enumerated())
-        return VStack(spacing: 8) {
+        return VStack(spacing: 28) {
             ForEach(allRows, id: \.offset) { rowIndex, row in
                 HStack(spacing: 14) {
                     ForEach(Array(row.enumerated()), id: \.element.id) { colIndex, cardData in
@@ -171,7 +171,6 @@ struct HomeView: View {
                                 HapticEngine.light()
                                 viewModel.handleMetricTap(cardData.kind)
                             }
-                            .aiQoPressEffect()
                             .opacity(appeared ? 1 : 0)
                             .offset(y: appeared ? 0 : 12)
                             .animation(
@@ -256,8 +255,7 @@ struct HomeView: View {
                     .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
             }
         }
-        .buttonStyle(.plain)
-        .aiQoPressEffect()
+        .buttonStyle(AiQoPressButtonStyle())
     }
 
     // MARK: - Destination Views

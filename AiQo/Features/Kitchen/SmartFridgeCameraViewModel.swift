@@ -138,17 +138,14 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         }
 
         let base64Image = imageData.base64EncodedString()
-        let dataURL = "data:image/jpeg;base64,\(base64Image)"
 
-        // Build the request body
+        // Build the Gemini request body
         let requestBody: [String: Any] = [
-            "model": "gpt-4o-mini",
-            "messages": [
+            "contents": [
                 [
                     "role": "user",
-                    "content": [
+                    "parts": [
                         [
-                            "type": "text",
                             "text": """
                             Analyze this fridge photo. Identify all visible food items. \
                             Return ONLY a JSON array of objects, each with: \
@@ -160,27 +157,26 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
                             """
                         ],
                         [
-                            "type": "image_url",
-                            "image_url": [
-                                "url": dataURL,
-                                "detail": "low"
+                            "inlineData": [
+                                "mimeType": "image/jpeg",
+                                "data": base64Image
                             ]
                         ]
                     ]
                 ]
             ],
-            "max_tokens": 500,
-            "temperature": 0.2,
-            "store": false
+            "generationConfig": [
+                "maxOutputTokens": 500,
+                "temperature": 0.2
+            ]
         ]
 
-        let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
+        let endpoint = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)")!
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = 15
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
@@ -192,12 +188,13 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
             throw FridgeAnalysisError.badStatusCode(statusCode)
         }
 
-        // Parse the OpenAI chat completion response
+        // Parse the Gemini response
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let firstChoice = choices.first,
-              let message = firstChoice["message"] as? [String: Any],
-              let content = message["content"] as? String else {
+              let candidates = json["candidates"] as? [[String: Any]],
+              let firstCandidate = candidates.first,
+              let candidateContent = firstCandidate["content"] as? [String: Any],
+              let parts = candidateContent["parts"] as? [[String: Any]],
+              let content = parts.first?["text"] as? String else {
             throw FridgeAnalysisError.invalidResponse
         }
 

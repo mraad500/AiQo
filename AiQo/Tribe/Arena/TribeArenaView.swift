@@ -210,9 +210,6 @@ struct TribeArenaView: View {
                 }
             }
         }
-        .onTapGesture {
-            store.setActiveChallenge(challenge)
-        }
     }
 
     private func leaderboardCard(for challenge: TribeChallenge) -> some View {

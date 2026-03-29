@@ -103,10 +103,10 @@ private struct ProfileLevelSummary {
 }
 
 private enum ProfilePalette {
-    static let backgroundTop = Color(hex: "FEFCF8")
-    static let backgroundBottom = Color(hex: "F3ECE1")
-    static let mint = Color(hex: "B7E3CA")
-    static let sand = Color(hex: "EBC793")
+    static let backgroundTop = Color.white
+    static let backgroundBottom = Color.white
+    static let mint = Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB — same as Home
+    static let sand = Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3 — same as Home
     static let pearl = Color(hex: "FFF8EF")
     static let textPrimary = Color.black.opacity(0.84)
     static let textSecondary = Color.black.opacity(0.58)
@@ -128,21 +128,21 @@ private enum ProfileSurfaceTone {
         switch self {
         case .sand:
             return [
-                ProfilePalette.sand.opacity(0.99),
-                Color(hex: "F3D7AF"),
-                Color(hex: "FAEEDB")
+                ProfilePalette.sand,
+                Color(hex: "EDCB8E"),
+                Color(hex: "F5DEBB")
             ]
         case .mint:
             return [
-                ProfilePalette.mint.opacity(0.99),
-                Color(hex: "D2EEDD"),
-                Color(hex: "EDF8F1")
+                ProfilePalette.mint,
+                ProfilePalette.mint.opacity(0.85),
+                ProfilePalette.mint.opacity(0.65)
             ]
         case .pearl:
             return [
-                Color(hex: "FFFBF6"),
-                Color(hex: "FCF6EE"),
-                Color(hex: "F7EFE5")
+                Color(hex: "FFF8EF"),
+                Color(hex: "F8EFE2"),
+                Color(hex: "F0E5D5")
             ]
         }
     }
@@ -150,11 +150,11 @@ private enum ProfileSurfaceTone {
     var shadowTint: Color {
         switch self {
         case .sand:
-            return ProfilePalette.sand.opacity(0.17)
+            return ProfilePalette.sand.opacity(0.32)
         case .mint:
-            return ProfilePalette.mint.opacity(0.15)
+            return ProfilePalette.mint.opacity(0.28)
         case .pearl:
-            return Color(hex: "E2D7C6").opacity(0.28)
+            return Color(hex: "E2D7C6").opacity(0.38)
         }
     }
 
@@ -201,7 +201,7 @@ private enum ProfileSurfaceTone {
     var materialOpacity: Double {
         switch self {
         case .sand, .mint:
-            return 0.04
+            return 0.0
         case .pearl:
             return 0.10
         }
@@ -258,32 +258,6 @@ struct ProfileScreen: View {
                         }
                     )
 
-                    // بطاقة الـ Streak
-                    StreakDetailCard()
-                        .padding(.bottom, 4)
-
-                    profileSection(
-                        title: NSLocalizedString(
-                            "screen.profile.section.health",
-                            value: "Bio-Scan",
-                            comment: ""
-                        )
-                    ) {
-                        BioScanSummaryCard(
-                            weightValue: weightNumberText,
-                            weightUnit: weightUnitText,
-                            subtitle: NSLocalizedString(
-                                "screen.profile.bio.subtitle",
-                                value: "Latest body composition synced from HealthKit",
-                                comment: ""
-                            ),
-                            highlight: bioScanHighlight
-                        ) {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showBioMetricsSheet = true
-                        }
-                    }
-
                     profileSection(
                         title: NSLocalizedString(
                             "screen.profile.section.body",
@@ -291,44 +265,47 @@ struct ProfileScreen: View {
                             comment: ""
                         )
                     ) {
-                        HStack(spacing: 12) {
-                            MetricCard(
-                                title: NSLocalizedString("screen.profile.metric.age", value: "Age", comment: ""),
-                                value: ageText,
-                                symbol: "calendar",
-                                tone: .mint
-                            ) {
-                                beginEdit(.age)
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
+                                MetricCard(
+                                    title: NSLocalizedString("screen.profile.metric.age", value: "Age", comment: ""),
+                                    value: ageText,
+                                    symbol: "calendar",
+                                    tone: .mint
+                                ) {
+                                    beginEdit(.age)
+                                }
+
+                                MetricCard(
+                                    title: NSLocalizedString("screen.profile.metric.height", value: "Height", comment: ""),
+                                    value: heightText,
+                                    symbol: "ruler",
+                                    tone: .mint
+                                ) {
+                                    beginEdit(.height)
+                                }
                             }
 
-                            MetricCard(
-                                title: NSLocalizedString("screen.profile.metric.height", value: "Height", comment: ""),
-                                value: heightText,
-                                symbol: "ruler",
-                                tone: .sand
-                            ) {
-                                beginEdit(.height)
+                            HStack(spacing: 12) {
+                                MetricCard(
+                                    title: NSLocalizedString("screen.profile.metric.weight", value: "Weight", comment: ""),
+                                    value: weightText,
+                                    symbol: "scalemass",
+                                    tone: .mint
+                                ) {
+                                    beginEdit(.weight)
+                                }
+
+                                MetricCard(
+                                    title: NSLocalizedString("gender", value: "Gender", comment: ""),
+                                    value: genderDisplayText,
+                                    symbol: "figure.arms.open",
+                                    tone: .mint
+                                ) {
+                                    genderBinding.wrappedValue = genderBinding.wrappedValue == .male ? .female : .male
+                                }
                             }
                         }
-                    }
-
-                    profileSection(
-                        title: NSLocalizedString(
-                            "screen.profile.section.preferences",
-                            value: "Preferences",
-                            comment: ""
-                        )
-                    ) {
-                        PreferenceSelectorCard(selection: genderBinding)
-                    }
-
-                    // MARK: - Privacy Visibility Card
-                    ProfileVisibilityCard(
-                        isPublic: $isProfilePublic,
-                        isSyncing: isSyncingPrivacy,
-                        syncFailed: privacySyncFailed
-                    ) { newValue in
-                        toggleVisibility(newValue)
                     }
 
                     profileSection(
@@ -358,7 +335,7 @@ struct ProfileScreen: View {
 
                             AppActionRow(
                                 icon: "camera.viewfinder",
-                                iconFill: ProfilePalette.sand.opacity(0.3),
+                                iconFill: ProfilePalette.mint.opacity(0.3),
                                 title: NSLocalizedString(
                                     "screen.profile.progressPhotos.title",
                                     value: "Progress Photos",
@@ -368,7 +345,8 @@ struct ProfileScreen: View {
                                     "screen.profile.progressPhotos.subtitle",
                                     value: "Track your body transformation",
                                     comment: ""
-                                )
+                                ),
+                                tone: .mint
                             ) {
                                 showProgressPhotos = true
                             }
@@ -534,7 +512,7 @@ struct ProfileScreen: View {
                 value: bodyFatMetric.value,
                 unit: bodyFatMetric.unit,
                 symbol: "drop.fill",
-                tone: .sand
+                tone: .mint
             ),
             BioMetricDetail(
                 id: "muscle-mass",
@@ -562,7 +540,7 @@ struct ProfileScreen: View {
                 value: bmrMetric.value,
                 unit: bmrMetric.unit,
                 symbol: "flame.circle.fill",
-                tone: .sand
+                tone: .mint
             )
         ]
     }
@@ -633,6 +611,15 @@ struct ProfileScreen: View {
             format: NSLocalizedString("screen.profile.metric.weight.value", value: "%d kg", comment: ""),
             profile.weightKg
         )
+    }
+
+    private var genderDisplayText: String {
+        switch genderBinding.wrappedValue {
+        case .male:
+            return NSLocalizedString("gender.male", value: "ذكر", comment: "")
+        case .female:
+            return NSLocalizedString("gender.female", value: "أنثى", comment: "")
+        }
     }
 
     private var currentWeightDisplay: String {
@@ -819,7 +806,7 @@ private struct ProfileVisibilityCard: View {
     private var isRTL: Bool { layoutDirection == .rightToLeft }
 
     private var accentColor: Color {
-        isPublic ? ProfilePalette.mint : ProfilePalette.sand
+        isPublic ? ProfilePalette.mint : ProfilePalette.mint
     }
 
     private var statusIcon: String {
@@ -978,7 +965,7 @@ private struct ProfileBackdrop: View {
                 .offset(x: -148, y: -238)
 
             Circle()
-                .fill(ProfilePalette.sand.opacity(0.20))
+                .fill(ProfilePalette.mint.opacity(0.15))
                 .frame(width: 280, height: 280)
                 .blur(radius: 56)
                 .offset(x: 148, y: -110)
@@ -1452,6 +1439,7 @@ private struct AppActionRow: View {
     let iconFill: Color
     let title: String
     let subtitle: String
+    var tone: ProfileSurfaceTone = .sand
     let action: () -> Void
 
     @Environment(\.layoutDirection) private var layoutDirection
@@ -1514,7 +1502,7 @@ private struct AppActionRow: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background {
-                ProfileSurface(tone: .pearl, cornerRadius: 20)
+                ProfileSurface(tone: tone, cornerRadius: 20)
             }
         }
         .buttonStyle(ProfileCardButtonStyle())
@@ -1903,7 +1891,7 @@ private struct ProfileProgressBar: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [ProfilePalette.mint, ProfilePalette.sand.opacity(0.9)],
+                            colors: [ProfilePalette.mint, ProfilePalette.mint.opacity(0.5)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )

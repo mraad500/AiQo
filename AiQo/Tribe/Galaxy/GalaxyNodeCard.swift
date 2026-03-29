@@ -179,7 +179,7 @@ struct GalaxyChallengeMiniCard: View {
                 )
         )
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .onTapGesture(perform: onTap)
+        .simultaneousGesture(TapGesture().onEnded { onTap() })
     }
 }
 

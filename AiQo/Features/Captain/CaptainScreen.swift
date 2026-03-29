@@ -277,7 +277,8 @@ struct CaptainScreen: View {
 
     private var topChrome: some View {
         AiQoScreenTopChrome(
-            horizontalInset: 24,
+            horizontalInset: 10,
+            profileVerticalOffset: -3,
             onProfileTap: { viewModel.showProfile = true }
         ) {
             HStack {

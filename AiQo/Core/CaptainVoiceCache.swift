@@ -128,6 +128,8 @@ actor CaptainVoiceCache {
             return
         }
 
+        var consecutiveFailures = 0
+
         for phrase in CachedPhrase.allCases {
             guard !isCached(phrase) else { continue }
 
@@ -135,8 +137,15 @@ actor CaptainVoiceCache {
                 let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: phrase.rawValue)
                 store(audio: audioData, for: phrase)
                 logger.notice("voice_cache_stored phrase=\(phrase.cacheFileName, privacy: .public)")
+                consecutiveFailures = 0
             } catch {
-                logger.error("voice_cache_failed phrase=\(phrase.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+                consecutiveFailures += 1
+                logger.warning("voice_cache_failed phrase=\(phrase.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+                // Stop trying if API keeps failing (e.g. expired subscription)
+                if consecutiveFailures >= 2 {
+                    logger.notice("voice_cache_aborted reason=repeated_failures")
+                    break
+                }
             }
 
             // Rate limit protection

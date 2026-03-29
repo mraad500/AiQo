@@ -93,19 +93,13 @@ enum HybridBrainServiceConfigurationError: LocalizedError {
 private struct HybridBrainServiceConfiguration: Sendable {
     let endpointURL: URL
     let apiKey: String
-    let promptID: String
-    let promptVersion: String
 }
 
 private enum HybridBrainServiceConfig {
     static let apiKeyName = "CAPTAIN_API_KEY"
     static let fallbackAPIKeyName = "COACH_BRAIN_LLM_API_KEY"
-    // SECURITY TODO: Route through a backend proxy before v2.0
-    // Direct client→OpenAI exposes the API key in the binary and sends user data
-    // without an intermediary. For v1.0 this is an accepted risk documented in the audit.
-    static let endpoint = "https://api.openai.com/v1/responses"
-    static let promptID = "pmpt_6989314757d48190b10842e9b852048d0f4dbc957002f486"
-    static let promptVersion = "9"
+    static let model = "gemini-3-flash-preview"
+    static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
 
     static func resolve(
         bundle: Bundle = .main,
@@ -120,15 +114,13 @@ private enum HybridBrainServiceConfig {
         guard let apiKey else {
             throw HybridBrainServiceConfigurationError.missingAPIKey
         }
-        guard let endpointURL = URL(string: endpoint) else {
+        guard let endpointURL = URL(string: "\(baseEndpoint)/\(model):generateContent?key=\(apiKey)") else {
             throw HybridBrainServiceConfigurationError.invalidEndpoint
         }
 
         return HybridBrainServiceConfiguration(
             endpointURL: endpointURL,
-            apiKey: apiKey,
-            promptID: promptID,
-            promptVersion: promptVersion
+            apiKey: apiKey
         )
     }
 
@@ -143,42 +135,32 @@ private enum HybridBrainServiceConfig {
     }
 }
 
-private struct HybridBrainResponsesResponse: Decodable {
-    struct Output: Decodable {
+private struct GeminiResponse: Decodable {
+    struct Candidate: Decodable {
         struct Content: Decodable {
-            let type: String?
-            let text: String?
+            struct Part: Decodable {
+                let text: String?
+            }
+
+            let parts: [Part]?
         }
 
-        let type: String?
-        let content: [Content]?
+        let content: Content?
     }
 
-    let output: [Output]?
-    let outputTextValue: String?
-
-    enum CodingKeys: String, CodingKey {
-        case output
-        case outputTextValue = "output_text"
-    }
+    let candidates: [Candidate]?
 
     var outputText: String {
-        if let outputTextValue {
-            let trimmed = outputTextValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                return trimmed
-            }
-        }
-
-        return output?
-            .flatMap { $0.content ?? [] }
+        candidates?
+            .compactMap { $0.content }
+            .flatMap { $0.parts ?? [] }
             .compactMap(\.text)
             .joined()
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 }
 
-private struct HybridBrainAPIErrorEnvelope: Decodable {
+private struct GeminiAPIErrorEnvelope: Decodable {
     struct APIError: Decodable {
         let message: String?
     }
@@ -268,7 +250,6 @@ private extension HybridBrainService {
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
-        urlRequest.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.httpBody = try JSONSerialization.data(
             withJSONObject: makeRequestBody(
                 configuration: configuration,
@@ -276,11 +257,14 @@ private extension HybridBrainService {
             )
         )
 
+        logger.notice("gemini_request url=\(configuration.endpointURL.absoluteString.prefix(80), privacy: .public)")
+
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: urlRequest)
         } catch {
+            logger.error("gemini_network_error error=\(error.localizedDescription, privacy: .public)")
             throw isNetworkUnavailable(error)
                 ? HybridBrainServiceError.networkUnavailable
                 : HybridBrainServiceError.requestFailed
@@ -290,25 +274,27 @@ private extension HybridBrainService {
             throw HybridBrainServiceError.invalidResponse
         }
 
+        logger.notice("gemini_response status=\(httpResponse.statusCode)")
+
         guard (200...299).contains(httpResponse.statusCode) else {
-            if let envelope = try? JSONDecoder().decode(HybridBrainAPIErrorEnvelope.self, from: data),
-               let message = envelope.error?.message?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !message.isEmpty {
-                logger.error(
-                    "hybrid_brain_bad_status status=\(httpResponse.statusCode) message=\(message, privacy: .public)"
-                )
-            }
+            let rawBody = String(data: data, encoding: .utf8) ?? "nil"
+            logger.error(
+                "gemini_bad_status status=\(httpResponse.statusCode) body=\(rawBody.prefix(500), privacy: .public)"
+            )
             throw HybridBrainServiceError.badStatusCode(httpResponse.statusCode)
         }
 
-        let decoded: HybridBrainResponsesResponse
+        let decoded: GeminiResponse
         do {
-            decoded = try JSONDecoder().decode(HybridBrainResponsesResponse.self, from: data)
+            decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
         } catch {
+            let rawBody = String(data: data, encoding: .utf8) ?? "nil"
+            logger.error("gemini_decode_error body=\(rawBody.prefix(500), privacy: .public)")
             throw HybridBrainServiceError.invalidResponse
         }
 
         let outputText = decoded.outputText
+        logger.notice("gemini_output length=\(outputText.count)")
         guard !outputText.isEmpty else {
             throw HybridBrainServiceError.emptyResponse
         }
@@ -320,222 +306,95 @@ private extension HybridBrainService {
         configuration: HybridBrainServiceConfiguration,
         request: HybridBrainRequest
     ) -> [String: Any] {
-        [
-            "prompt": [
-                "id": configuration.promptID,
-                "version": configuration.promptVersion
-            ],
-            "input": makeInputMessages(for: request),
-            "text": [
-                "format": [
-                    "type": "json_schema",
-                    "name": "captain_structured_response",
-                    "description": "Captain Hamoudi structured reply for the AiQo chat UI.",
-                    "strict": true,
-                    "schema": structuredResponseSchema()
+        return [
+            "systemInstruction": [
+                "parts": [
+                    ["text": developerContextMessage(for: request)]
                 ]
             ],
-            "max_output_tokens": 900,
-            "store": false
+            "contents": makeGeminiContents(for: request),
+            "generationConfig": [
+                "maxOutputTokens": 900,
+                "temperature": 0.7
+            ]
         ]
     }
 
-    func makeInputMessages(for request: HybridBrainRequest) -> [[String: Any]] {
-        var messages: [[String: Any]] = [
-            [
-                "role": "developer",
-                "content": [
-                    [
-                        "type": "input_text",
-                        "text": developerContextMessage(for: request)
-                    ]
-                ]
-            ]
-        ]
-
+    func makeGeminiContents(for request: HybridBrainRequest) -> [[String: Any]] {
         let lastUserIndex = request.conversation.lastIndex(where: { $0.role == .user })
+
+        // Build raw entries first, then merge consecutive same-role messages
+        // because Gemini requires strictly alternating user/model roles.
+        struct Entry {
+            let role: String
+            var parts: [[String: Any]]
+        }
+
+        var entries: [Entry] = []
 
         for index in request.conversation.indices {
             let message = request.conversation[index]
             let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
+            guard message.role != .system else { continue }
 
-            // Responses API: assistant messages use "output_text", all others use "input_text"
-            let textType = message.role == .assistant ? "output_text" : "input_text"
-
-            var content: [[String: Any]] = [
-                [
-                    "type": textType,
-                    "text": trimmed
-                ]
-            ]
+            let role = message.role == .assistant ? "model" : "user"
+            var parts: [[String: Any]] = [["text": trimmed]]
 
             if index == lastUserIndex,
                request.screenContext == .kitchen,
                let attachedImageData = request.attachedImageData {
-                content.append(
-                    [
-                        "type": "input_image",
-                        "image_url": makeDataURL(for: attachedImageData),
-                        "detail": "low"
+                parts.append([
+                    "inlineData": [
+                        "mimeType": "image/jpeg",
+                        "data": attachedImageData.base64EncodedString()
                     ]
-                )
+                ])
             }
 
-            messages.append(
-                [
-                    "role": roleLabel(for: message.role),
-                    "content": content
-                ]
-            )
+            // Merge with previous entry if same role (Gemini requires alternating roles)
+            if let last = entries.last, last.role == role {
+                entries[entries.count - 1].parts.append(contentsOf: parts)
+            } else {
+                entries.append(Entry(role: role, parts: parts))
+            }
         }
 
-        return messages
-    }
-
-    func roleLabel(for role: CaptainConversationRole) -> String {
-        switch role {
-        case .system:
-            return "developer"
-        case .user:
-            return "user"
-        case .assistant:
-            return "assistant"
+        // Gemini requires the first content to be "user" role
+        if let first = entries.first, first.role == "model" {
+            entries.insert(Entry(role: "user", parts: [["text": "..."]]), at: 0)
         }
+
+        return entries.map { ["role": $0.role, "parts": $0.parts] }
     }
 
     func developerContextMessage(for request: HybridBrainRequest) -> String {
         promptBuilder.build(for: request)
     }
 
-    func structuredResponseSchema() -> [String: Any] {
-        let exerciseSchema: [String: Any] = [
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["name", "sets", "repsOrDuration"],
-            "properties": [
-                "name": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "sets": [
-                    "type": "integer",
-                    "minimum": 1
-                ],
-                "repsOrDuration": [
-                    "type": "string",
-                    "minLength": 1
-                ]
-            ]
-        ]
-
-        let workoutPlanSchema: [String: Any] = [
-            "type": ["object", "null"],
-            "additionalProperties": false,
-            "required": ["title", "exercises"],
-            "properties": [
-                "title": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "exercises": [
-                    "type": "array",
-                    "minItems": 1,
-                    "items": exerciseSchema
-                ]
-            ]
-        ]
-
-        let mealSchema: [String: Any] = [
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["type", "description", "calories"],
-            "properties": [
-                "type": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "description": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "calories": [
-                    "type": "integer",
-                    "minimum": 1
-                ]
-            ]
-        ]
-
-        let mealPlanSchema: [String: Any] = [
-            "type": ["object", "null"],
-            "additionalProperties": false,
-            "required": ["meals"],
-            "properties": [
-                "meals": [
-                    "type": "array",
-                    "minItems": 1,
-                    "items": mealSchema
-                ]
-            ]
-        ]
-
-        let spotifyRecommendationSchema: [String: Any] = [
-            "type": ["object", "null"],
-            "additionalProperties": false,
-            "required": ["vibeName", "description", "spotifyURI"],
-            "properties": [
-                "vibeName": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "description": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "spotifyURI": [
-                    "type": "string",
-                    "minLength": 1
-                ]
-            ]
-        ]
-
-        let quickRepliesSchema: [String: Any] = [
-            "type": ["array", "null"],
-            "items": [
-                "type": "string"
-            ]
-        ]
-
-        return [
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["message", "quickReplies", "workoutPlan", "mealPlan", "spotifyRecommendation"],
-            "properties": [
-                "message": [
-                    "type": "string",
-                    "minLength": 1
-                ],
-                "quickReplies": quickRepliesSchema,
-                "workoutPlan": workoutPlanSchema,
-                "mealPlan": mealPlanSchema,
-                "spotifyRecommendation": spotifyRecommendationSchema
-            ]
-        ]
-    }
-
-    func makeDataURL(for data: Data) -> String {
-        "data:image/jpeg;base64,\(data.base64EncodedString())"
-    }
-
     func decodeStructuredResponse(from rawText: String) throws -> CaptainStructuredResponse {
-        guard let data = rawText.data(using: .utf8) else {
+        // Strip markdown code fences Gemini sometimes wraps JSON in
+        let cleaned = rawText
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let data = cleaned.data(using: .utf8) else {
             throw HybridBrainServiceError.invalidStructuredResponse
         }
 
         do {
             return try JSONDecoder().decode(CaptainStructuredResponse.self, from: data)
         } catch {
-            throw HybridBrainServiceError.invalidStructuredResponse
+            // If structured parsing fails, wrap the raw text as a simple message response
+            let fallback = CaptainStructuredResponse(
+                message: cleaned,
+                quickReplies: nil,
+                workoutPlan: nil,
+                mealPlan: nil,
+                spotifyRecommendation: nil
+            )
+            return fallback
         }
     }
 

@@ -403,8 +403,10 @@ final class LegacyCalculationViewModel: ObservableObject {
         var readTypes = Set<HKObjectType>()
         let quantityReadIDs: [HKQuantityTypeIdentifier] = [
             .stepCount, .activeEnergyBurned, .distanceWalkingRunning,
-            .heartRate, .restingHeartRate, .heartRateVariabilitySDNN,
-            .walkingHeartRateAverage, .bodyMass, .dietaryWater, .vo2Max
+            .distanceCycling, .heartRate, .restingHeartRate,
+            .heartRateVariabilitySDNN, .walkingHeartRateAverage,
+            .oxygenSaturation, .vo2Max, .bodyMass, .dietaryWater,
+            .appleStandTime
         ]
         for id in quantityReadIDs {
             if let t = HKObjectType.quantityType(forIdentifier: id) { readTypes.insert(t) }
@@ -416,7 +418,10 @@ final class LegacyCalculationViewModel: ObservableObject {
         readTypes.insert(HKObjectType.activitySummaryType())
 
         var writeTypes = Set<HKSampleType>()
-        for id: HKQuantityTypeIdentifier in [.dietaryWater, .bodyMass, .distanceWalkingRunning] {
+        for id: HKQuantityTypeIdentifier in [
+            .heartRate, .heartRateVariabilitySDNN, .restingHeartRate,
+            .vo2Max, .distanceWalkingRunning, .dietaryWater, .bodyMass
+        ] {
             if let t = HKQuantityType.quantityType(forIdentifier: id) { writeTypes.insert(t) }
         }
         writeTypes.insert(HKObjectType.workoutType())

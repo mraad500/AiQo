@@ -62,8 +62,7 @@ struct CaptainChatView: View {
                                                         .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
                                                 )
                                         }
-                                        .buttonStyle(.plain)
-                                        .aiQoPressEffect()
+                                        .buttonStyle(AiQoPressButtonStyle())
                                     }
                                 }
                                 .padding(.horizontal, 20)

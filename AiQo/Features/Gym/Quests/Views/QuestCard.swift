@@ -47,7 +47,7 @@ struct QuestCard: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, minHeight: 158)
+        .frame(maxWidth: .infinity, minHeight: 138)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(cardTint)

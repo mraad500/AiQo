@@ -40,7 +40,7 @@ struct WorkoutCategoriesView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            // Cards (scrollable)
+            // Cards (scrollable) — left side
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 14) {
                     ForEach(Array(currentItems.enumerated()), id: \.element.id) { index, item in
@@ -63,7 +63,6 @@ struct WorkoutCategoriesView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCardPressStyle())
-                        .aiQoPressEffect()
                         .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
                     }
                 }
@@ -73,10 +72,11 @@ struct WorkoutCategoriesView: View {
                 .padding(.bottom, 100)
             }
 
-            // Vertical side filter
+            // Vertical side filter — right side
             clubSideFilter
                 .frame(width: 58)
         }
+        .environment(\.layoutDirection, .leftToRight)
         .onAppear {
             animateCards(for: currentItems)
         }

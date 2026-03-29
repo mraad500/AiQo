@@ -8,35 +8,29 @@ protocol CoachBrainTranslating: Sendable {
 }
 
 struct CoachBrainLLMTranslator: CoachBrainTranslating {
-    private struct ChatCompletionsRequest: Encodable {
-        let model: String
-        let messages: [Message]
-        let temperature: Double
-        let maxTokens: Int
+    private struct GeminiTranslationResponse: Decodable {
+        struct Candidate: Decodable {
+            struct Content: Decodable {
+                struct Part: Decodable {
+                    let text: String?
+                }
 
-        enum CodingKeys: String, CodingKey {
-            case model
-            case messages
-            case temperature
-            case maxTokens = "max_tokens"
-        }
-    }
-
-    private struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    private struct ChatCompletionsResponse: Decodable {
-        struct Choice: Decodable {
-            struct ResponseMessage: Decodable {
-                let content: String
+                let parts: [Part]?
             }
 
-            let message: ResponseMessage
+            let content: Content?
         }
 
-        let choices: [Choice]
+        let candidates: [Candidate]?
+
+        var outputText: String {
+            candidates?
+                .compactMap { $0.content }
+                .flatMap { $0.parts ?? [] }
+                .compactMap(\.text)
+                .joined()
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        }
     }
 
     enum Error: LocalizedError, Equatable {
@@ -65,7 +59,6 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
     private let session: URLSession
     private let bundle: Bundle
     private let processInfo: ProcessInfo
-    private let model: String
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CoachBrainTranslator"
@@ -74,13 +67,11 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
     init(
         session: URLSession = .shared,
         bundle: Bundle = .main,
-        processInfo: ProcessInfo = .processInfo,
-        model: String = "gpt-4o-mini"
+        processInfo: ProcessInfo = .processInfo
     ) {
         self.session = session
         self.bundle = bundle
         self.processInfo = processInfo
-        self.model = model
     }
 
     func translate(_ text: String, systemPrompt: String) async throws -> String {
@@ -93,22 +84,33 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
             bundle: bundle,
             processInfo: processInfo
         )
-        var request = URLRequest(url: configuration.endpointURL)
+
+        let endpointWithKey = appendAPIKey(
+            to: configuration.endpointURL,
+            apiKey: configuration.apiKey
+        )
+
+        var request = URLRequest(url: endpointWithKey)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
 
-        let body = ChatCompletionsRequest(
-            model: model,
-            messages: [
-                Message(role: "system", content: systemPrompt),
-                Message(role: "user", content: payload)
+        let body: [String: Any] = [
+            "systemInstruction": [
+                "parts": [["text": systemPrompt]]
             ],
-            temperature: 0.2,
-            maxTokens: 180
-        )
-        request.httpBody = try JSONEncoder().encode(body)
+            "contents": [
+                [
+                    "role": "user",
+                    "parts": [["text": payload]]
+                ]
+            ],
+            "generationConfig": [
+                "temperature": 0.2,
+                "maxOutputTokens": 180
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data
         let response: URLResponse
@@ -130,19 +132,29 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
             throw Error.badStatusCode(httpResponse.statusCode)
         }
 
-        let decoded: ChatCompletionsResponse
+        let decoded: GeminiTranslationResponse
         do {
-            decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+            decoded = try JSONDecoder().decode(GeminiTranslationResponse.self, from: data)
         } catch {
             throw Error.invalidResponse
         }
 
-        guard let translated = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines),
-              !translated.isEmpty else {
+        let translated = decoded.outputText
+        guard !translated.isEmpty else {
             throw Error.emptyResponse
         }
 
         return translated
+    }
+
+    private func appendAPIKey(to url: URL, apiKey: String) -> URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url
+        }
+        var queryItems = components.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "key", value: apiKey))
+        components.queryItems = queryItems
+        return components.url ?? url
     }
 
     private func isNetworkUnavailable(_ error: Swift.Error) -> Bool {

@@ -34,8 +34,7 @@ struct DailyAuraView: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .aiQoPressEffect()
+        .buttonStyle(AiQoPressButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("تقدم اليوم \(viewModel.progressPercentText)")
         .accessibilityHint("اضغط مرتين لعرض الأهداف اليومية")

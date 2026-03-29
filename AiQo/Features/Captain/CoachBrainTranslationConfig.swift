@@ -24,7 +24,7 @@ enum CoachBrainTranslationConfig {
     static let apiKeyName = "COACH_BRAIN_LLM_API_KEY"
     static let endpointName = "COACH_BRAIN_LLM_API_URL"
 
-    private static let defaultEndpoint = "https://api.openai.com/v1/responses"
+    private static let defaultEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CoachBrainTranslationConfig"

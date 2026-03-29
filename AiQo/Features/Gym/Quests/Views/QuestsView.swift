@@ -9,7 +9,7 @@ struct PeaksRecordsView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(alignment: .trailing, spacing: 10) {
+            LazyVStack(alignment: .trailing, spacing: 14) {
                 Text("الأرقام القياسية")
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -20,12 +20,11 @@ struct PeaksRecordsView: View {
                     NavigationLink(value: record) {
                         RecordCardVertical(record: record, index: index)
                     }
-                    .buttonStyle(.plain)
-                    .aiQoPressEffect()
+                    .buttonStyle(AiQoPressButtonStyle())
                 }
             }
             .padding(.top, 4)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 22)
             .padding(.bottom, 120)
         }
         .environment(\.layoutDirection, .rightToLeft)
@@ -66,18 +65,19 @@ struct BattleChallengesView: View {
 
                     if questEngine.isStageUnlocked(selectedStageID) {
                         ForEach(Array(selectedStage.quests.enumerated()), id: \.element.id) { index, quest in
-                            QuestCard(
-                                quest: quest,
-                                progress: questEngine.cardProgress(for: quest),
-                                isLocked: false,
-                                referenceDate: currentTime
-                            )
-                            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .onTapGesture {
+                            Button {
                                 questSheetDetent = .fraction(0.5)
                                 selectedQuest = quest
+                            } label: {
+                                QuestCard(
+                                    quest: quest,
+                                    progress: questEngine.cardProgress(for: quest),
+                                    isLocked: false,
+                                    referenceDate: currentTime
+                                )
+                                .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                             }
-                            .aiQoPressEffect()
+                            .buttonStyle(AiQoPressButtonStyle())
                         }
                     } else {
                         lockedStageMessage
@@ -96,11 +96,12 @@ struct BattleChallengesView: View {
                     }
                 }
                 .padding(.top, 4)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 16)
                 .padding(.bottom, 120)
             }
             .environment(\.layoutDirection, .rightToLeft)
         }
+        .environment(\.layoutDirection, .rightToLeft)
         .overlay(alignment: .top) {
             if let centerToastMessage {
                 Text(centerToastMessage)
@@ -366,7 +367,7 @@ struct RecordCardVertical: View {
     let index: Int
 
     private var cardBackground: Color {
-        index.isMultiple(of: 2) ? Color(hex: "B7E5D2") : Color(hex: "EBCF97")
+        index.isMultiple(of: 2) ? Color(red: 0.77, green: 0.94, blue: 0.86) : Color(red: 0.97, green: 0.84, blue: 0.64)
     }
 
     var body: some View {

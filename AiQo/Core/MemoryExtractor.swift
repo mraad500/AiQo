@@ -214,16 +214,21 @@ struct MemoryExtractor: Sendable {
             request.httpMethod = "POST"
             request.timeoutInterval = 15
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
 
             let body: [String: Any] = [
-                "model": "gpt-4o-mini",
-                "messages": [
-                    ["role": "system", "content": systemPrompt],
-                    ["role": "user", "content": userContent]
+                "systemInstruction": [
+                    "parts": [["text": systemPrompt]]
                 ],
-                "max_tokens": 200,
-                "temperature": 0.1
+                "contents": [
+                    [
+                        "role": "user",
+                        "parts": [["text": userContent]]
+                    ]
+                ],
+                "generationConfig": [
+                    "maxOutputTokens": 200,
+                    "temperature": 0.1
+                ]
             ]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -236,10 +241,11 @@ struct MemoryExtractor: Sendable {
             }
 
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let firstChoice = choices.first,
-                  let message = firstChoice["message"] as? [String: Any],
-                  let content = message["content"] as? String else {
+                  let candidates = json["candidates"] as? [[String: Any]],
+                  let firstCandidate = candidates.first,
+                  let candidateContent = firstCandidate["content"] as? [String: Any],
+                  let parts = candidateContent["parts"] as? [[String: Any]],
+                  let content = parts.first?["text"] as? String else {
                 return
             }
 
@@ -302,7 +308,7 @@ struct MemoryExtractor: Sendable {
         guard let apiKey else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
             throw URLError(.badURL)
         }
 

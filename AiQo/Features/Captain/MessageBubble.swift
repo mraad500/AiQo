@@ -18,9 +18,9 @@ struct MessageBubble<Content: View>: View {
 
     private var bubbleColor: Color {
         if isUser {
-            return Color(hex: "B7E5D2")
+            return Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB Mint
         }
-        return Color(hex: "EBCF97").opacity(0.35)
+        return Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3 Sand
     }
 
     private var textColor: Color {

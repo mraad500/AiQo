@@ -35,7 +35,6 @@ struct RecipeCardView: View {
                 .fill(Color.kitchenMint)
         )
         .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 4)
-        .aiQoPressEffect()
     }
 }
 

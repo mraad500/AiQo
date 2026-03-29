@@ -8,7 +8,7 @@
 		<string>aiqo.captain.inactivity-check</string>
 	</array>
 	<key>CAPTAIN_API_KEY</key>
-	<string>$(CAPTAIN_API_KEY)</string>
+	<string>AIzaSyCQVkKbrEFIn91gQeF9FxF82tgAHso1ucI</string>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CAPTAIN_VOICE_API_KEY</key>
@@ -34,9 +34,9 @@
 		</dict>
 	</array>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
-	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
+	<string>AIzaSyCQVkKbrEFIn91gQeF9FxF82tgAHso1ucI</string>
 	<key>COACH_BRAIN_LLM_API_URL</key>
-	<string>$(COACH_BRAIN_LLM_API_URL)</string>
+	<string>https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>
@@ -64,7 +64,7 @@
 	<key>SPIRITUAL_WHISPERS_LLM_API_KEY</key>
 	<string></string>
 	<key>SPIRITUAL_WHISPERS_LLM_API_URL</key>
-	<string>https://api.openai.com/v1/chat/completions</string>
+	<string>https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent</string>
 	<key>SPOTIFY_CLIENT_ID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SUPABASE_ANON_KEY</key>

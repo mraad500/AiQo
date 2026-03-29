@@ -71,6 +71,7 @@ struct ImpactContainerView: View {
             impactSideFilter
                 .frame(width: 58)
         }
+        .environment(\.layoutDirection, .leftToRight)
     }
 
     private var impactSideFilter: some View {

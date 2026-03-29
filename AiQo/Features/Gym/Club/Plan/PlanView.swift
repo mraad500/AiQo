@@ -32,6 +32,7 @@ struct PlanView: View {
             planSideFilter
                 .frame(width: 58)
         }
+        .environment(\.layoutDirection, .leftToRight)
         .onAppear {
             activeRecordProject = RecordProjectManager.shared.activeProject()
         }

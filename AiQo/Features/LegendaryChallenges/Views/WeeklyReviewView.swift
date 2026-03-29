@@ -339,7 +339,7 @@ struct WeeklyReviewView: View {
                 ?? normalized(env["COACH_BRAIN_LLM_API_KEY"])
                 ?? normalized(info["COACH_BRAIN_LLM_API_KEY"] as? String)
 
-            guard let apiKey, let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            guard let apiKey, let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
                 return nil
             }
 
@@ -347,16 +347,21 @@ struct WeeklyReviewView: View {
             request.httpMethod = "POST"
             request.timeoutInterval = 25
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
             let body: [String: Any] = [
-                "model": "gpt-4o-mini",
-                "messages": [
-                    ["role": "system", "content": systemPrompt],
-                    ["role": "user", "content": "راجع أسبوعي وعطني رأيك"]
+                "systemInstruction": [
+                    "parts": [["text": systemPrompt]]
                 ],
-                "max_tokens": 300,
-                "temperature": 0.7
+                "contents": [
+                    [
+                        "role": "user",
+                        "parts": [["text": "راجع أسبوعي وعطني رأيك"]]
+                    ]
+                ],
+                "generationConfig": [
+                    "maxOutputTokens": 300,
+                    "temperature": 0.7
+                ]
             ]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -366,10 +371,11 @@ struct WeeklyReviewView: View {
                   (200...299).contains(httpResponse.statusCode) else { return nil }
 
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let firstChoice = choices.first,
-                  let message = firstChoice["message"] as? [String: Any],
-                  let content = message["content"] as? String else { return nil }
+                  let candidates = json["candidates"] as? [[String: Any]],
+                  let firstCandidate = candidates.first,
+                  let candidateContent = firstCandidate["content"] as? [String: Any],
+                  let parts = candidateContent["parts"] as? [[String: Any]],
+                  let content = parts.first?["text"] as? String else { return nil }
 
             let cleanContent = content
                 .replacingOccurrences(of: "```json", with: "")

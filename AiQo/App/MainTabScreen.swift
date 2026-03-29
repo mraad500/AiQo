@@ -63,6 +63,7 @@ struct MainTabScreen: View {
             }
             .accessibilityHint(NSLocalizedString("tab.captain.hint", value: "Chat with your AI health coach", comment: ""))
         }
+        .environment(\.layoutDirection, .rightToLeft)
         .tint(appTint)
         .onChange(of: tabRouter.selectedTab) {
             HapticEngine.selection()

@@ -144,9 +144,16 @@ struct HomeStatCard: View {
                 
                 Spacer(minLength: 0)
                 
-                // Bottom: Value + Unit (aligned baseline) - INCREASED SPACING from 3 to 6
-                // Only show unit if displayValue doesn't already contain it
+                // Bottom: Value + Unit — trailing-aligned with inset from edge
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    // Only show unit if displayValue doesn't already contain it (fixes "L L" issue)
+                    if shouldShowUnit {
+                        Text(kind.unit)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.black.opacity(0.5))
+                            .padding(.bottom, 2)
+                    }
+
                     Text(displayValue)
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.black.opacity(0.85))
@@ -154,22 +161,15 @@ struct HomeStatCard: View {
                         .id(valueChangeID)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
-                    
-                    // Only show unit if displayValue doesn't already contain it (fixes "L L" issue)
-                    if shouldShowUnit {
-                        Text(kind.unit)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(.black.opacity(0.5))
-                            .padding(.leading, 2) // Additional padding for better spacing
-                            .padding(.bottom, 2)
-                    }
                 }
+                .padding(.trailing, 10)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(.top, 16)
             .padding(.bottom, 18)
             .padding(.horizontal, 16)
         }
-        .frame(height: 100)
+        .frame(height: 80)
     }
     
     // MARK: - Animations

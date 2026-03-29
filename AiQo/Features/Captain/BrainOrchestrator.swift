@@ -1,6 +1,11 @@
 import Foundation
+import os.log
 
 struct BrainOrchestrator: Sendable {
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "BrainOrchestrator"
+    )
     private enum Route {
         case local
         case cloud
@@ -45,11 +50,14 @@ struct BrainOrchestrator: Sendable {
             }
         case .cloud:
             do {
+                logger.notice("cloud_request_started")
                 baseReply = try await cloudService.generateReply(
                     request: routedRequest,
                     userName: userName
                 )
+                logger.notice("cloud_request_succeeded")
             } catch {
+                logger.error("cloud_request_failed error=\(error.localizedDescription, privacy: .public)")
                 baseReply = try await generateLocalReply(for: routedRequest)
             }
         }

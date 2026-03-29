@@ -398,7 +398,6 @@ struct AnimatedMealButton: View {
                     action()
                 }
             }
-            .aiQoPressEffect()
     }
 
     private func triggerWaveAnimation() {

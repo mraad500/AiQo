@@ -281,9 +281,11 @@ struct TribeLeaderboardView: View {
                                 .easeOut(duration: 0.4).delay(Double(index) * 0.05),
                                 value: appeared
                             )
-                            .onTapGesture {
-                                selectedUser = entry
-                            }
+                            .simultaneousGesture(
+                                TapGesture().onEnded {
+                                    selectedUser = entry
+                                }
+                            )
                     }
                 }
                 .padding(.horizontal, 24)

@@ -73,9 +73,11 @@ struct ConstellationCanvasView: View {
         Color.clear
             .frame(width: 60, height: 60)
             .contentShape(Circle())
-            .onTapGesture {
-                viewModel.select(node: node)
-            }
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    viewModel.select(node: node)
+                }
+            )
             .onLongPressGesture(minimumDuration: 0.35) {
                 viewModel.select(node: node)
                 viewModel.sendSparkFromSelected()
