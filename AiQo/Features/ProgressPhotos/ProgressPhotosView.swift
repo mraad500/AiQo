@@ -65,7 +65,7 @@ struct ProgressPhotosView: View {
                     }
                 }
             }
-            .navigationTitle("صور التقدم")
+            .navigationTitle(NSLocalizedString("photos.title", comment: ""))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -136,11 +136,11 @@ struct ProgressPhotosView: View {
                 .foregroundStyle(ProgressPalette.mint)
 
             VStack(spacing: 8) {
-                Text("ابدأ رحلة التحول")
+                Text(NSLocalizedString("photos.startJourney", comment: ""))
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(ProgressPalette.textPrimary)
 
-                Text("صوّر جسمك كل أسبوع وشوف الفرق بعينك.\nالصور تنحفظ على جهازك فقط.")
+                Text(NSLocalizedString("photos.emptyDescription", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(ProgressPalette.textSecondary)
                     .multilineTextAlignment(.center)
@@ -150,7 +150,7 @@ struct ProgressPhotosView: View {
             Button {
                 showAddSheet = true
             } label: {
-                Label("أضف أول صورة", systemImage: "camera.fill")
+                Label(NSLocalizedString("photos.addFirst", comment: ""), systemImage: "camera.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 32)
@@ -178,7 +178,7 @@ struct ProgressPhotosView: View {
         HStack(spacing: 0) {
             summaryItem(
                 value: "\(store.totalPhotos)",
-                label: "صورة",
+                label: NSLocalizedString("photos.photo", comment: ""),
                 icon: "photo.stack.fill",
                 tint: ProgressPalette.mint
             )
@@ -190,7 +190,7 @@ struct ProgressPhotosView: View {
 
                 summaryItem(
                     value: "\(firstEntry.daysSinceCapture)",
-                    label: "يوم",
+                    label: NSLocalizedString("photos.day", comment: ""),
                     icon: "calendar",
                     tint: ProgressPalette.sand
                 )
@@ -203,7 +203,7 @@ struct ProgressPhotosView: View {
 
                 summaryItem(
                     value: String(format: "%+.1f", weightChange),
-                    label: "كغم",
+                    label: NSLocalizedString("photos.kg", comment: ""),
                     icon: "scalemass.fill",
                     tint: weightChange <= 0 ? .green : .orange
                 )
@@ -249,11 +249,11 @@ struct ProgressPhotosView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("قارن التقدم")
+                    Text(NSLocalizedString("photos.compareProgress", comment: ""))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(ProgressPalette.textPrimary)
 
-                    Text("شوف الفرق بين أول صورة وآخر صورة")
+                    Text(NSLocalizedString("photos.compareDescription", comment: ""))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(ProgressPalette.textSecondary)
                 }
@@ -285,7 +285,7 @@ struct ProgressPhotosView: View {
 
     private var photoGridSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("الألبوم")
+            Text(NSLocalizedString("photos.album", comment: ""))
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(ProgressPalette.textPrimary)
 
@@ -322,8 +322,8 @@ struct ProgressPhotosView: View {
                     // أزرار اختيار الصورة
                     VStack(spacing: 14) {
                         sourceButton(
-                            title: "التقط صورة",
-                            subtitle: "استخدم الكاميرا",
+                            title: NSLocalizedString("photos.takePhoto", comment: ""),
+                            subtitle: NSLocalizedString("photos.useCamera", comment: ""),
                             icon: "camera.fill",
                             tint: ProgressPalette.mint
                         ) {
@@ -337,8 +337,8 @@ struct ProgressPhotosView: View {
                             photoLibrary: .shared()
                         ) {
                             sourceButtonLabel(
-                                title: "اختر من المعرض",
-                                subtitle: "من ألبوم الصور",
+                                title: NSLocalizedString("photos.chooseGallery", comment: ""),
+                                subtitle: NSLocalizedString("photos.fromAlbum", comment: ""),
                                 icon: "photo.on.rectangle",
                                 tint: ProgressPalette.sand
                             )
@@ -364,11 +364,11 @@ struct ProgressPhotosView: View {
                                 .foregroundStyle(ProgressPalette.sand)
                                 .frame(width: 24)
 
-                            TextField("الوزن (اختياري)", text: $inputWeight)
+                            TextField(NSLocalizedString("photos.weightOptional", comment: ""), text: $inputWeight)
                                 .keyboardType(.decimalPad)
                                 .textFieldStyle(.plain)
 
-                            Text("كغم")
+                            Text(NSLocalizedString("photos.kg", comment: ""))
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(ProgressPalette.textSecondary)
                         }
@@ -383,7 +383,7 @@ struct ProgressPhotosView: View {
                                 .foregroundStyle(ProgressPalette.mint)
                                 .frame(width: 24)
 
-                            TextField("ملاحظة (اختياري)", text: $inputNote)
+                            TextField(NSLocalizedString("photos.noteOptional", comment: ""), text: $inputNote)
                                 .textFieldStyle(.plain)
                         }
                         .padding(14)
@@ -402,7 +402,7 @@ struct ProgressPhotosView: View {
                     Button {
                         savePhoto()
                     } label: {
-                        Text("حفظ الصورة ✨")
+                        Text(NSLocalizedString("photos.savePhoto", comment: ""))
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -430,11 +430,11 @@ struct ProgressPhotosView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("صورة جديدة")
+            .navigationTitle(NSLocalizedString("photos.newPhoto", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("إلغاء") {
+                    Button(NSLocalizedString("photos.cancel", comment: "")) {
                         resetInputs()
                         showAddSheet = false
                     }
@@ -600,17 +600,17 @@ private struct PhotoDetailSheet: View {
 
                     // التفاصيل
                     VStack(spacing: 14) {
-                        detailRow(icon: "calendar", label: "التاريخ", value: entry.formattedDate)
+                        detailRow(icon: "calendar", label: NSLocalizedString("photos.date", comment: ""), value: entry.formattedDate)
 
                         if let weight = entry.weightKg {
-                            detailRow(icon: "scalemass.fill", label: "الوزن", value: String(format: "%.1f كغم", weight))
+                            detailRow(icon: "scalemass.fill", label: NSLocalizedString("photos.weight", comment: ""), value: String(format: "%.1f \(NSLocalizedString("photos.kg", comment: ""))", weight))
                         }
 
                         if let note = entry.note, !note.isEmpty {
-                            detailRow(icon: "note.text", label: "ملاحظة", value: note)
+                            detailRow(icon: "note.text", label: NSLocalizedString("photos.note", comment: ""), value: note)
                         }
 
-                        detailRow(icon: "clock", label: "من", value: "\(entry.daysSinceCapture) يوم")
+                        detailRow(icon: "clock", label: NSLocalizedString("photos.since", comment: ""), value: "\(entry.daysSinceCapture) \(NSLocalizedString("photos.day", comment: ""))")
                     }
                     .padding(20)
                     .background(
@@ -627,7 +627,7 @@ private struct PhotoDetailSheet: View {
                     Button(role: .destructive) {
                         showDeleteConfirm = true
                     } label: {
-                        Label("حذف الصورة", systemImage: "trash")
+                        Label(NSLocalizedString("photos.deletePhoto", comment: ""), systemImage: "trash")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.red.opacity(0.8))
                     }
@@ -656,14 +656,14 @@ private struct PhotoDetailSheet: View {
                     }
                 }
             }
-            .alert("حذف الصورة؟", isPresented: $showDeleteConfirm) {
-                Button("حذف", role: .destructive) {
+            .alert(NSLocalizedString("photos.deleteConfirmTitle", comment: ""), isPresented: $showDeleteConfirm) {
+                Button(NSLocalizedString("photos.delete", comment: ""), role: .destructive) {
                     store.deleteEntry(entry)
                     dismiss()
                 }
-                Button("إلغاء", role: .cancel) {}
+                Button(NSLocalizedString("photos.cancel", comment: ""), role: .cancel) {}
             } message: {
-                Text("هالصورة بتنحذف نهائياً من الجهاز.")
+                Text(NSLocalizedString("photos.deleteMessage", comment: ""))
             }
             .task {
                 loadedImage = await store.loadImageAsync(for: entry)
@@ -709,7 +709,7 @@ struct ComparePhotosSheet: View {
                 // العنوان
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("البداية")
+                        Text(NSLocalizedString("photos.beginning", comment: ""))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(ProgressPalette.sand)
                         Text(firstEntry.shortDate)
@@ -735,7 +735,7 @@ struct ComparePhotosSheet: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("الحين")
+                        Text(NSLocalizedString("photos.now", comment: ""))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(ProgressPalette.mint)
                         Text(latestEntry.shortDate)
@@ -800,7 +800,7 @@ struct ComparePhotosSheet: View {
 
                         // Labels
                         HStack {
-                            Text("قبل")
+                            Text(NSLocalizedString("photos.before", comment: ""))
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
@@ -810,7 +810,7 @@ struct ComparePhotosSheet: View {
 
                             Spacer()
 
-                            Text("بعد")
+                            Text(NSLocalizedString("photos.after", comment: ""))
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
@@ -835,7 +835,7 @@ struct ComparePhotosSheet: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("المقارنة")
+            .navigationTitle(NSLocalizedString("photos.comparison", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

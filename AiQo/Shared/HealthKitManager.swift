@@ -63,6 +63,10 @@ final class HealthKitManager: ObservableObject {
     
     /// Request authorization for all required HealthKit data types
     func requestAuthorization(completion: @escaping (Bool, Error?) -> Void) {
+        guard HealthKitService.permissionFlowEnabled else {
+            completion(false, nil)
+            return
+        }
         guard HKHealthStore.isHealthDataAvailable() else {
             completion(false, NSError(domain: "HealthKit", code: -1,
                 userInfo: [NSLocalizedDescriptionKey: "HealthKit is not available on this device"]))

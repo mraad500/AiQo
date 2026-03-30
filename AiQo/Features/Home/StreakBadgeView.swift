@@ -34,7 +34,7 @@ struct StreakBadgeView: View {
                     )
             )
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("streak \(streakManager.currentStreak) يوم متتالي")
+            .accessibilityLabel("streak \(streakManager.currentStreak) \(NSLocalizedString("streak.consecutiveDays", comment: ""))")
         }
     }
 
@@ -62,7 +62,7 @@ struct StreakDetailCard: View {
             // الهيدر
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("الالتزام")
+                    Text(NSLocalizedString("streak.commitment", comment: ""))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
 
                     Text(streakManager.motivationMessage)
@@ -81,7 +81,7 @@ struct StreakDetailCard: View {
                             .font(.system(size: 28, weight: .black, design: .rounded))
                             .contentTransition(.numericText())
                     }
-                    Text("يوم متتالي")
+                    Text(NSLocalizedString("streak.consecutiveDays", comment: ""))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -94,7 +94,7 @@ struct StreakDetailCard: View {
             HStack(spacing: 0) {
                 statItem(
                     value: "\(streakManager.longestStreak)",
-                    label: "أطول streak",
+                    label: NSLocalizedString("streak.longestStreak", comment: ""),
                     icon: "trophy.fill",
                     tint: .orange
                 )
@@ -103,7 +103,7 @@ struct StreakDetailCard: View {
 
                 statItem(
                     value: String(format: "%.0f%%", streakManager.weeklyConsistency),
-                    label: "التزام الأسبوع",
+                    label: NSLocalizedString("streak.weekCommitment", comment: ""),
                     icon: "chart.line.uptrend.xyaxis",
                     tint: mint
                 )
@@ -112,7 +112,7 @@ struct StreakDetailCard: View {
 
                 statItem(
                     value: streakManager.todayCompleted ? "✅" : "⬜️",
-                    label: "اليوم",
+                    label: NSLocalizedString("streak.today", comment: ""),
                     icon: "checkmark.circle",
                     tint: streakManager.todayCompleted ? .green : .gray
                 )

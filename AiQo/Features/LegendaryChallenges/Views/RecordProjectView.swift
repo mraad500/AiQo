@@ -35,7 +35,7 @@ struct RecordProjectView: View {
             )
             .ignoresSafeArea()
         )
-        .navigationTitle("المشروع")
+        .navigationTitle(NSLocalizedString("project.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
         .onAppear {
@@ -46,20 +46,20 @@ struct RecordProjectView: View {
                 WeeklyReviewView(project: project)
             }
         }
-        .alert("إنهاء المشروع", isPresented: $showEndConfirmation) {
-            Button("إلغاء", role: .cancel) {}
-            Button("نعم، متأكد") { showFinalEndConfirmation = true }
+        .alert(NSLocalizedString("recordProject.endProject", comment: ""), isPresented: $showEndConfirmation) {
+            Button(NSLocalizedString("recordProject.cancel", comment: ""), role: .cancel) {}
+            Button(NSLocalizedString("recordProject.yesConfirm", comment: "")) { showFinalEndConfirmation = true }
         } message: {
-            Text("متأكد تبي تنهي مشروع كسر رقم \"\(project.recordTitle)\"؟")
+            Text(String(format: NSLocalizedString("recordProject.endProjectMessage", comment: ""), project.recordTitle))
         }
-        .alert("⚠️ تأكيد نهائي", isPresented: $showFinalEndConfirmation) {
-            Button("إلغاء", role: .cancel) {}
-            Button("احذف المشروع نهائياً", role: .destructive) {
+        .alert(NSLocalizedString("recordProject.finalConfirmTitle", comment: ""), isPresented: $showFinalEndConfirmation) {
+            Button(NSLocalizedString("recordProject.cancel", comment: ""), role: .cancel) {}
+            Button(NSLocalizedString("recordProject.deletePermanently", comment: ""), role: .destructive) {
                 RecordProjectManager.shared.abandonProject(project)
                 dismiss()
             }
         } message: {
-            Text("هالخطوة ما تنعكس. بيتم حذف كل بيانات المشروع والخطة المثبتة. متأكد 100%؟")
+            Text(NSLocalizedString("recordProject.finalConfirmMessage", comment: ""))
         }
     }
 
@@ -86,7 +86,7 @@ struct RecordProjectView: View {
                         .font(.system(size: 24, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.primary)
 
-                    Text("الأسبوع \(project.currentWeek) من \(project.totalWeeks)")
+                    Text(String(format: NSLocalizedString("project.weekOf", comment: ""), project.currentWeek, project.totalWeeks))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.45))
                 }
@@ -95,7 +95,7 @@ struct RecordProjectView: View {
 
             HStack(spacing: 20) {
                 VStack(spacing: 4) {
-                    Text("الهدف")
+                    Text(NSLocalizedString("project.goal", comment: ""))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.45))
                     Text("\(formatValue(project.targetValue)) \(project.unit)")
@@ -108,7 +108,7 @@ struct RecordProjectView: View {
                     .frame(width: 1, height: 30)
 
                 VStack(spacing: 4) {
-                    Text("أفضل أداء")
+                    Text(NSLocalizedString("project.bestPerformance", comment: ""))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.45))
                     Text("\(formatValue(project.bestPerformance)) \(project.unit)")
@@ -129,7 +129,7 @@ struct RecordProjectView: View {
 
     private var weeklyPlanSection: some View {
         VStack(alignment: .trailing, spacing: 12) {
-            Text("خطة هذا الأسبوع")
+            Text(NSLocalizedString("project.weekPlan", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -138,7 +138,7 @@ struct RecordProjectView: View {
                     dayRow(day)
                 }
             } else {
-                Text("جاري تحميل الخطة...")
+                Text(NSLocalizedString("recordProject.loadingPlan", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.45))
             }
@@ -171,7 +171,7 @@ struct RecordProjectView: View {
                     .foregroundStyle(Color.primary.opacity(0.4))
             }
 
-            Text("يوم \(day.day)")
+            Text(String(format: NSLocalizedString("project.dayNumber", comment: ""), day.day))
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary.opacity(0.35))
                 .frame(width: 40)
@@ -191,11 +191,11 @@ struct RecordProjectView: View {
 
     private var measurementSection: some View {
         VStack(alignment: .trailing, spacing: 12) {
-            Text("قياس الأسبوع")
+            Text(NSLocalizedString("project.weekMeasure", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
-            Text("كم \(project.unit) قدرت تسوي؟")
+            Text(String(format: NSLocalizedString("project.howMuch", comment: ""), project.unit))
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.primary.opacity(0.55))
 
@@ -210,7 +210,7 @@ struct RecordProjectView: View {
                         }
                     }
                 } label: {
-                    Text("سجّل")
+                    Text(NSLocalizedString("project.record", comment: ""))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
                         .padding(.horizontal, 20)
@@ -222,7 +222,7 @@ struct RecordProjectView: View {
                 }
                 .buttonStyle(.plain)
 
-                TextField("الرقم", text: $checkpointInput)
+                TextField(NSLocalizedString("project.numberPlaceholder", comment: ""), text: $checkpointInput)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
@@ -234,7 +234,7 @@ struct RecordProjectView: View {
             }
 
             if showCheckpointConfirmation {
-                Text("تم التسجيل ✓")
+                Text(NSLocalizedString("project.recorded", comment: ""))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(GymTheme.mint)
                     .transition(.opacity)
@@ -262,11 +262,11 @@ struct RecordProjectView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("📋 المراجعة وضبط البوصلة")
+                    Text(NSLocalizedString("recordProject.reviewTitle", comment: ""))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
 
-                    Text("مراجعة أسبوعية مع الكابتن")
+                    Text(NSLocalizedString("recordProject.reviewSubtitle", comment: ""))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.45))
                 }
@@ -291,7 +291,7 @@ struct RecordProjectView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("🗨️ كابتن حمّودي")
+                Text(NSLocalizedString("assessment.captainSays", comment: ""))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.5))
 
@@ -325,7 +325,7 @@ struct RecordProjectView: View {
         } label: {
             HStack {
                 Spacer()
-                Text("🛑 إنهاء المشروع")
+                Text(NSLocalizedString("recordProject.endProjectButton", comment: ""))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.red)
                 Spacer()

@@ -7,6 +7,8 @@ struct LegacyCalculationScreenView: View {
     @StateObject private var viewModel = LegacyCalculationViewModel()
     @State private var introAppeared = false
     @State private var resultAppeared = false
+    @State private var hasGrantedPermissions = false
+    @State private var isRequestingPermissions = false
 
     var body: some View {
         ZStack {
@@ -53,20 +55,128 @@ struct LegacyCalculationScreenView: View {
                         .lineSpacing(6)
 
                     Text(NSLocalizedString("legacy.intro.tagline", value: "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.", comment: ""))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(AuthFlowTheme.mint)
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundStyle(Color(hex: "C6EFDB"))
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color(hex: "F7D7A7"), lineWidth: 1.5)
+                        )
                 }
 
-                AuthPrimaryButton(
-                    title: NSLocalizedString("legacy.continue", value: "متابعة", comment: ""),
-                    isEnabled: true,
-                    action: { viewModel.primaryButtonTapped() }
-                )
+                // Permission Card
+                Button {
+                    guard !isRequestingPermissions && !hasGrantedPermissions else { return }
+                    isRequestingPermissions = true
+                    Task { @MainActor in
+                        HealthKitService.permissionFlowEnabled = true
+                        _ = try? await HealthKitService.shared.requestAuthorization()
+                        _ = await NotificationService.shared.ensureAuthorizationIfNeeded()
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            hasGrantedPermissions = true
+                            isRequestingPermissions = false
+                        }
+                    }
+                } label: {
+                    HStack(spacing: AiQoSpacing.sm) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AiQoRadius.control)
+                                .fill(AuthFlowTheme.mint.opacity(0.12))
+                                .frame(width: 44, height: 44)
 
-                AuthSecondaryButton(title: NSLocalizedString("legacy.skip", value: "ليس الآن", comment: "")) {
-                    viewModel.skipToHome()
+                            if hasGrantedPermissions {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(AuthFlowTheme.mint)
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "heart.text.square.fill")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                .foregroundStyle(AuthFlowTheme.mint)
+                                .transition(.scale.combined(with: .opacity))
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(hasGrantedPermissions
+                                 ? NSLocalizedString("legacy.permissions.granted", value: "تم منح الصلاحيات", comment: "")
+                                 : NSLocalizedString("legacy.permissions.title", value: "منح صلاحيات الصحة والإشعارات", comment: ""))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+
+                            if !hasGrantedPermissions {
+                                Text(NSLocalizedString("legacy.permissions.subtitle", value: "مطلوب للمتابعة", comment: ""))
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if isRequestingPermissions {
+                            ProgressView()
+                                .tint(AuthFlowTheme.mint)
+                        } else if !hasGrantedPermissions {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(AiQoSpacing.md)
+                    .background {
+                        RoundedRectangle(cornerRadius: AiQoRadius.card)
+                            .fill(hasGrantedPermissions
+                                  ? AuthFlowTheme.mint.opacity(0.08)
+                                  : Color.primary.opacity(0.04))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AiQoRadius.card)
+                                    .strokeBorder(hasGrantedPermissions
+                                                  ? AuthFlowTheme.mint.opacity(0.3)
+                                                  : Color.primary.opacity(0.08), lineWidth: 1)
+                            )
+                    }
                 }
+                .buttonStyle(AiQoPressButtonStyle())
+                .disabled(isRequestingPermissions || hasGrantedPermissions)
+                .accessibilityLabel(NSLocalizedString("legacy.permissions.a11y", value: "منح صلاحيات الصحة والإشعارات", comment: ""))
+
+                Button { viewModel.primaryButtonTapped() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.left")
+                        Text(NSLocalizedString("legacy.continue", value: "متابعة", comment: ""))
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(hex: "C6EFDB"))
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasGrantedPermissions)
+                .opacity(hasGrantedPermissions ? 1 : 0.5)
+                .animation(.easeInOut(duration: 0.3), value: hasGrantedPermissions)
+
+                Button { viewModel.skipToHome() } label: {
+                    Text(NSLocalizedString("legacy.skip", value: "ليس الآن", comment: ""))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(.primary.opacity(0.6))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(hex: "F7D7A7").opacity(0.4))
+                        )
+                }
+                .buttonStyle(.plain)
             }
             .padding(28)
             .glassCard()
@@ -110,7 +220,7 @@ struct LegacyCalculationScreenView: View {
                             .foregroundStyle(.secondary)
                         Text("\(model.level)")
                             .font(.system(size: 64, weight: .black, design: .rounded))
-                            .foregroundStyle(AuthFlowTheme.mint)
+                            .foregroundStyle(Color(hex: "C6EFDB"))
                     }
 
                     Spacer()
@@ -134,7 +244,7 @@ struct LegacyCalculationScreenView: View {
                             .fill(Color.gray.opacity(0.12))
 
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(AuthFlowTheme.mint)
+                            .fill(Color(hex: "C6EFDB"))
                             .frame(width: geo.size.width * min(Double(model.level) / 50.0, 1.0))
                             .frame(maxWidth: .infinity, alignment: .trailing)
                     }
@@ -155,28 +265,28 @@ struct LegacyCalculationScreenView: View {
                         title: NSLocalizedString("legacy.metric.steps", value: "الخطوات", comment: ""),
                         value: model.totalSteps.formatted(),
                         points: model.stepsPoints,
-                        color: AuthFlowTheme.mint
+                        color: Color(hex: "C6EFDB")
                     )
                     AuthMetricRow(
                         symbol: "flame.fill",
                         title: NSLocalizedString("legacy.metric.calories", value: "السعرات", comment: ""),
                         value: model.totalCalories.formatted(),
                         points: model.caloriesPoints,
-                        color: AuthFlowTheme.sand
+                        color: Color(hex: "F7D7A7")
                     )
                     AuthMetricRow(
                         symbol: "location.fill",
                         title: NSLocalizedString("legacy.metric.distance", value: "المسافة", comment: ""),
                         value: "\(String(format: "%.1f", model.totalDistanceKM)) \(NSLocalizedString("unit.km", value: "كم", comment: ""))",
                         points: model.distancePoints,
-                        color: AuthFlowTheme.mint
+                        color: Color(hex: "C6EFDB")
                     )
                     AuthMetricRow(
                         symbol: "moon.fill",
                         title: NSLocalizedString("legacy.metric.sleep", value: "النوم", comment: ""),
                         value: "\(String(format: "%.1f", model.totalSleepHours)) \(NSLocalizedString("unit.hours.short", value: "س", comment: ""))",
                         points: model.sleepPoints,
-                        color: AuthFlowTheme.sand
+                        color: Color(hex: "F7D7A7")
                     )
 
                     Divider()
@@ -186,16 +296,26 @@ struct LegacyCalculationScreenView: View {
                         title: NSLocalizedString("legacy.metric.total", value: "المجموع", comment: ""),
                         value: "—",
                         points: model.totalPoints,
-                        color: AuthFlowTheme.mint
+                        color: Color(hex: "C6EFDB")
                     )
                 }
 
                 // Go home button
-                AuthPrimaryButton(
-                    title: NSLocalizedString("legacy.goHome", value: "الذهاب إلى الرئيسية", comment: ""),
-                    isEnabled: true,
-                    action: { viewModel.goHome() }, icon: "house.fill"
-                )
+                Button { viewModel.goHome() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "house.fill")
+                        Text(NSLocalizedString("legacy.goHome", value: "الذهاب إلى الرئيسية", comment: ""))
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(hex: "C6EFDB"))
+                    )
+                }
+                .buttonStyle(.plain)
             }
             .padding(28)
             .glassCard()

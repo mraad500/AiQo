@@ -36,8 +36,8 @@ struct DailyAuraView: View {
         }
         .buttonStyle(AiQoPressButtonStyle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("تقدم اليوم \(viewModel.progressPercentText)")
-        .accessibilityHint("اضغط مرتين لعرض الأهداف اليومية")
+        .accessibilityLabel(String(format: NSLocalizedString("aura.a11y.progress", comment: ""), viewModel.progressPercentText))
+        .accessibilityHint(NSLocalizedString("aura.a11y.hint", comment: ""))
         .accessibilityAddTraits(.isButton)
         .task {
             await viewModel.onAppear()
@@ -290,19 +290,28 @@ private struct DailyGoalsSheetView: View {
     @ObservedObject var viewModel: DailyAuraViewModel
     @State private var selectedTab: DailyGoalsTab = .goals
 
-    enum DailyGoalsTab: String, CaseIterable, Identifiable {
-        case goals = "Goals"
-        case history = "History"
+    enum DailyGoalsTab: CaseIterable, Identifiable {
+        case goals
+        case history
 
-        var id: String { rawValue }
+        var id: String { localizedTitle }
+
+        var localizedTitle: String {
+            switch self {
+            case .goals:
+                return NSLocalizedString("aura.goals", comment: "")
+            case .history:
+                return NSLocalizedString("aura.history", comment: "")
+            }
+        }
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Picker("Daily Goals", selection: $selectedTab) {
+                Picker(NSLocalizedString("aura.dailyGoals", comment: ""), selection: $selectedTab) {
                     ForEach(DailyGoalsTab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
+                        Text(tab.localizedTitle).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -316,7 +325,7 @@ private struct DailyGoalsSheetView: View {
                 Spacer(minLength: 0)
             }
             .padding(16)
-            .navigationTitle("Daily Goals")
+            .navigationTitle(NSLocalizedString("aura.dailyGoals", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -330,7 +339,7 @@ private struct DailyGoalsSheetView: View {
                         set: { viewModel.updateStepsGoal($0) }
                     ), in: 1000...50000, step: 500) {
                         HStack {
-                            Text("Steps Goal")
+                            Text(NSLocalizedString("aura.stepsGoal", comment: ""))
                             Spacer()
                             Text("\(viewModel.goals.steps)")
                                 .foregroundStyle(.secondary)
@@ -342,7 +351,7 @@ private struct DailyGoalsSheetView: View {
                         set: { viewModel.updateCaloriesGoal($0) }
                     ), in: 100...5000, step: 50) {
                         HStack {
-                            Text("Calories Goal")
+                            Text(NSLocalizedString("aura.caloriesGoal", comment: ""))
                             Spacer()
                             Text("\(Int(viewModel.goals.activeCalories.rounded()))")
                                 .foregroundStyle(.secondary)
@@ -353,7 +362,7 @@ private struct DailyGoalsSheetView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Today")
+                    Text(NSLocalizedString("aura.today", comment: ""))
                         .font(.headline)
                     Text("Steps: \(viewModel.stepsToday)")
                     Text("Calories: \(Int(viewModel.caloriesToday.rounded())) kcal")

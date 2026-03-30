@@ -17,38 +17,56 @@ struct LanguageSelectionView: View {
                     .clipped()
                     .ignoresSafeArea()
 
-                // Overlaid controls
+                // Overlaid controls — anchored from bottom
                 VStack(spacing: 0) {
                     Spacer()
 
-                    // Language picker card — positioned over "System language" area
-                    AuthFlowCard {
-                        VStack(spacing: 16) {
-                            Text("لغة النظام")
-                                .font(.aiqoHeading(18))
+                    // Language picker card — compact with native segmented control
+                    VStack(spacing: 12) {
+                        Text(NSLocalizedString("lang.systemAr", comment: ""))
+                            .font(.aiqoHeading(16))
 
-                            Text("System language")
-                                .font(.aiqoBody(14))
-                                .foregroundStyle(.secondary)
+                        Text(NSLocalizedString("lang.systemEn", comment: ""))
+                            .font(.aiqoBody(13))
+                            .foregroundStyle(.secondary)
 
-                            // Segmented tabs
-                            HStack(spacing: 0) {
-                                languageTab(.arabic, title: "عربي")
-                                languageTab(.english, title: "English")
-                            }
-                            .padding(4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.black.opacity(0.05))
-                            )
+                        Picker("", selection: $selectedLanguage) {
+                            Text(NSLocalizedString("lang.arabic", comment: "")).tag(AppLanguage.arabic)
+                            Text(NSLocalizedString("lang.english", comment: "")).tag(AppLanguage.english)
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: selectedLanguage) { _, _ in
+                            HapticEngine.selection()
                         }
                     }
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(.ultraThinMaterial)
+
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.92), .white.opacity(0.8)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .stroke(.white.opacity(0.72), lineWidth: 1)
+                        }
+                    )
+                    .shadow(color: AuthFlowTheme.cardShadow, radius: 18, x: 0, y: 10)
+                    .shadow(color: .white.opacity(0.48), radius: 8, x: 0, y: -2)
+                    .padding(.horizontal, 40)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
 
                     Spacer()
-                        .frame(height: 28)
+                        .frame(height: 16)
 
                     // Continue button
                     Button {
@@ -57,11 +75,11 @@ struct LanguageSelectionView: View {
                         onContinue()
                     } label: {
                         VStack(spacing: 4) {
-                            Text(selectedLanguage == .arabic ? "استكشف مستواك الحقيقي" : "Explore your real level")
+                            Text(NSLocalizedString("lang.explore", comment: ""))
                                 .font(.aiqoHeading(18))
                                 .foregroundStyle(.white)
 
-                            Text(selectedLanguage == .arabic ? "EXPLORE YOUR REAL LEVEL" : "استكشف مستواك الحقيقي")
+                            Text(NSLocalizedString("lang.exploreSubtitle", comment: ""))
                                 .font(.aiqoCaption(13))
                                 .foregroundStyle(.white.opacity(0.7))
                                 .tracking(1)
@@ -69,7 +87,7 @@ struct LanguageSelectionView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 72)
                         .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color(hex: "5ECDB7"), Color(hex: "2AA88E")],
@@ -86,7 +104,7 @@ struct LanguageSelectionView: View {
                     .offset(y: appeared ? 0 : 15)
 
                     Spacer()
-                        .frame(height: geo.safeAreaInsets.bottom + 40)
+                        .frame(height: geo.size.height * 0.10)
                 }
             }
         }
@@ -98,39 +116,4 @@ struct LanguageSelectionView: View {
         }
     }
 
-    // MARK: - Language Tab
-
-    @ViewBuilder
-    private func languageTab(_ language: AppLanguage, title: String) -> some View {
-        let isSelected = selectedLanguage == language
-
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                selectedLanguage = language
-            }
-            HapticEngine.selection()
-        } label: {
-            Text(title)
-                .font(.aiqoLabel(16))
-                .foregroundStyle(isSelected ? .white : .primary.opacity(0.6))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(
-                    Group {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [AuthFlowTheme.mint, AuthFlowTheme.mint.opacity(0.85)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .shadow(color: AuthFlowTheme.mint.opacity(0.3), radius: 6, y: 3)
-                        }
-                    }
-                )
-        }
-        .buttonStyle(.plain)
-    }
 }

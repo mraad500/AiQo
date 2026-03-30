@@ -65,7 +65,7 @@ struct InviteCardView: View {
             Image(systemName: "shield.lefthalf.filled")
                 .font(.system(size: 28))
                 .symbolRenderingMode(.hierarchical)
-            Text("دعوة قبيلة")
+            Text(NSLocalizedString("inviteCard.title", comment: ""))
         }
         .font(.system(size: 32, weight: .semibold, design: .rounded))
         .foregroundStyle(Color(hex: "B7E5D2"))
@@ -130,7 +130,7 @@ struct InviteCardView: View {
 
     private var inviterSection: some View {
         VStack(spacing: 12) {
-            Text("دعوة من")
+            Text(NSLocalizedString("inviteCard.from", comment: ""))
                 .font(.system(size: 26, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.6))
 
@@ -144,7 +144,7 @@ struct InviteCardView: View {
 
     private var codeSection: some View {
         VStack(spacing: 16) {
-            Text("رمز الانضمام")
+            Text(NSLocalizedString("inviteCard.joinCode", comment: ""))
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.6))
 
@@ -178,7 +178,7 @@ struct InviteCardView: View {
                         Image(systemName: "qrcode")
                             .font(.system(size: 80))
                             .foregroundStyle(.white.opacity(0.25))
-                        Text("QR")
+                        Text(NSLocalizedString("inviteCard.qr", comment: ""))
                             .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.3))
                     }
@@ -198,7 +198,7 @@ struct InviteCardView: View {
                 .font(.system(size: 20))
                 .symbolRenderingMode(.hierarchical)
 
-            Text("صالح حتى \(validUntil)")
+            Text(String(format: NSLocalizedString("inviteCard.validUntil", comment: ""), validUntil))
         }
         .font(.system(size: 24, weight: .medium, design: .rounded))
         .foregroundStyle(.white.opacity(0.7))

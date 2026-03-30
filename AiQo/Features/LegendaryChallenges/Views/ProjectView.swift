@@ -26,7 +26,7 @@ struct ProjectView: View {
             .padding(.bottom, 40)
         }
         .background(Color.white.ignoresSafeArea())
-        .navigationTitle("المشروع")
+        .navigationTitle(NSLocalizedString("project.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
     }
@@ -56,7 +56,7 @@ struct ProjectView: View {
                             .font(.system(size: 24, weight: .heavy, design: .rounded))
                             .foregroundStyle(Color.primary)
 
-                        Text("الأسبوع \(project.currentWeek) من \(project.targetWeeks)")
+                        Text(String(format: NSLocalizedString("project.weekOf", comment: ""), project.currentWeek, project.targetWeeks))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.primary.opacity(0.45))
                     }
@@ -66,7 +66,7 @@ struct ProjectView: View {
                 // Personal best vs target
                 HStack(spacing: 20) {
                     VStack(spacing: 4) {
-                        Text("أفضل أداء")
+                        Text(NSLocalizedString("project.bestPerformance", comment: ""))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.primary.opacity(0.45))
                         Text("\(formatValue(project.personalBest)) \(record.unit)")
@@ -79,7 +79,7 @@ struct ProjectView: View {
                         .frame(width: 1, height: 30)
 
                     VStack(spacing: 4) {
-                        Text("الهدف")
+                        Text(NSLocalizedString("project.goal", comment: ""))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.primary.opacity(0.45))
                         Text("\(record.formattedTarget) \(record.unit)")
@@ -101,7 +101,7 @@ struct ProjectView: View {
 
     private var weeklyPlanSection: some View {
         VStack(alignment: .trailing, spacing: 12) {
-            Text("خطة هذا الأسبوع")
+            Text(NSLocalizedString("project.weekPlan", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -150,7 +150,7 @@ struct ProjectView: View {
                 }
 
                 // Day number
-                Text("يوم \(task.dayNumber)")
+                Text(String(format: NSLocalizedString("project.dayNumber", comment: ""), task.dayNumber))
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.35))
                     .frame(width: 40)
@@ -169,12 +169,12 @@ struct ProjectView: View {
     // DESIGN: Appears once per week — user logs their current attempt
     private var weeklyCheckpointCard: some View {
         VStack(alignment: .trailing, spacing: 12) {
-            Text("قياس الأسبوع")
+            Text(NSLocalizedString("project.weekMeasure", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             if let record {
-                Text("كم \(record.unit) قدرت تسوي؟")
+                Text(String(format: NSLocalizedString("project.howMuch", comment: ""), record.unit))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.55))
             }
@@ -191,7 +191,7 @@ struct ProjectView: View {
                         }
                     }
                 } label: {
-                    Text("سجّل")
+                    Text(NSLocalizedString("project.record", comment: ""))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
                         .padding(.horizontal, 20)
@@ -203,7 +203,7 @@ struct ProjectView: View {
                 }
                 .buttonStyle(.plain)
 
-                TextField("الرقم", text: $checkpointInput)
+                TextField(NSLocalizedString("project.numberPlaceholder", comment: ""), text: $checkpointInput)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
@@ -215,7 +215,7 @@ struct ProjectView: View {
             }
 
             if showCheckpointConfirmation {
-                Text("تم التسجيل ✓")
+                Text(NSLocalizedString("project.recorded", comment: ""))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(GymTheme.mint)
                     .transition(.opacity)
@@ -241,7 +241,7 @@ struct ProjectView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("كابتن حمّودي")
+                Text(NSLocalizedString("project.captainHamoudi", comment: ""))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.5))
 

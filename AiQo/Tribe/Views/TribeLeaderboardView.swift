@@ -52,6 +52,14 @@ private enum TimeFilter: String, CaseIterable {
     case allTime = "كل الوقت"
     case monthly = "شهري"
     case weekly = "أسبوعي"
+
+    var localizedTitle: String {
+        switch self {
+        case .allTime: return NSLocalizedString("leaderboard.allTime", comment: "")
+        case .monthly: return NSLocalizedString("leaderboard.monthly", comment: "")
+        case .weekly: return NSLocalizedString("leaderboard.weekly", comment: "")
+        }
+    }
 }
 
 // MARK: - TribeLeaderboardView
@@ -183,7 +191,7 @@ struct TribeLeaderboardView: View {
 
     private var headerView: some View {
         HStack {
-            Text("إمارة")
+            Text(NSLocalizedString("leaderboard.emirate", comment: ""))
                 .font(.system(size: 34, weight: .heavy))
                 .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -215,7 +223,7 @@ struct TribeLeaderboardView: View {
     private var filterPills: some View {
         HStack(spacing: 8) {
             ForEach(TimeFilter.allCases, id: \.self) { filter in
-                Text(filter.rawValue)
+                Text(filter.localizedTitle)
                     .font(.system(size: 13, weight: filter == selectedFilter ? .bold : .medium))
                     .foregroundStyle(filter == selectedFilter ? Color(hex: "1A1A1A") : Color(hex: "999999"))
                     .padding(.vertical, 8)
@@ -432,7 +440,7 @@ struct TribeLeaderboardView: View {
             .frame(height: pillarHeight)
             .overlay {
                 VStack(spacing: 4) {
-                    Text("المستوى")
+                    Text(NSLocalizedString("leaderboard.level", comment: ""))
                         .font(.system(size: 11))
                         .foregroundStyle(Color(hex: "999999"))
                     Text(entry.level.arabicFormatted)
@@ -573,7 +581,7 @@ struct TribeLeaderboardView: View {
             // "أنت" + progress badge
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("أنت")
+                    Text(NSLocalizedString("leaderboard.you", comment: ""))
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -723,15 +731,15 @@ private struct UserDetailSheet: View {
 
             // Stats grid
             HStack(spacing: 12) {
-                statCard(label: "الترتيب", value: "#\(entry.rank)", bg: Color(hex: "FBE8DB"))
-                statCard(label: "المستوى", value: "\(entry.level)", bg: Color(hex: "E8F7F0"))
-                statCard(label: "النقاط", value: formattedPoints, bg: Color(hex: "F5E8CD"))
+                statCard(label: NSLocalizedString("leaderboard.rank", comment: ""), value: "#\(entry.rank)", bg: Color(hex: "FBE8DB"))
+                statCard(label: NSLocalizedString("leaderboard.level", comment: ""), value: "\(entry.level)", bg: Color(hex: "E8F7F0"))
+                statCard(label: NSLocalizedString("leaderboard.points", comment: ""), value: formattedPoints, bg: Color(hex: "F5E8CD"))
             }
             .padding(.horizontal, 24)
 
             // Status row
             HStack(spacing: 6) {
-                Text("عالمي")
+                Text(NSLocalizedString("leaderboard.global", comment: ""))
                     .font(.system(size: 13))
                     .foregroundStyle(Color(hex: "888888"))
 
@@ -739,7 +747,7 @@ private struct UserDetailSheet: View {
                     .fill(Color(hex: "CCCCCC"))
                     .frame(width: 3, height: 3)
 
-                Text(entry.isPrivate ? "حساب خاص 🔒" : "حساب عام")
+                Text(entry.isPrivate ? NSLocalizedString("leaderboard.privateAccount", comment: "") : NSLocalizedString("leaderboard.publicAccount", comment: ""))
                     .font(.system(size: 13))
                     .foregroundStyle(Color(hex: "888888"))
             }

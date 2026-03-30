@@ -32,18 +32,18 @@ struct SmartWakeCalculatorView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Smart Wake Calculator")
+            Text(NSLocalizedString("smartwake.title", comment: ""))
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
-            Text("حاسبة الاستيقاظ الذكي")
+            Text(NSLocalizedString("smartwake.title", comment: ""))
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
         }
     }
 
     private var modePicker: some View {
-        Picker("وضع الحاسبة", selection: modeBinding) {
+        Picker(NSLocalizedString("smartwake.mode", comment: ""), selection: modeBinding) {
             ForEach(SmartWakeMode.allCases) { mode in
                 Text(mode.title).tag(mode)
             }
@@ -52,9 +52,9 @@ struct SmartWakeCalculatorView: View {
     }
 
     private var bedtimeInputSection: some View {
-        SmartWakeInputCard(title: "اختر وقت النوم") {
+        SmartWakeInputCard(title: NSLocalizedString("smartwake.selectSleep", comment: "")) {
             DatePicker(
-                "اختر وقت النوم",
+                NSLocalizedString("smartwake.selectSleep", comment: ""),
                 selection: bedtimeBinding,
                 displayedComponents: .hourAndMinute
             )
@@ -68,9 +68,9 @@ struct SmartWakeCalculatorView: View {
 
     private var wakeTimeInputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SmartWakeInputCard(title: "اختر آخر وقت لازم تصحى بيه") {
+            SmartWakeInputCard(title: NSLocalizedString("smartwake.selectWake", comment: "")) {
                 DatePicker(
-                    "اختر آخر وقت لازم تصحى بيه",
+                    NSLocalizedString("smartwake.selectWake", comment: ""),
                     selection: latestWakeTimeBinding,
                     displayedComponents: .hourAndMinute
                 )
@@ -82,11 +82,11 @@ struct SmartWakeCalculatorView: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("نافذة الاستيقاظ")
+                Text(NSLocalizedString("smartwake.wakeWindow", comment: ""))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
-                Picker("نافذة الاستيقاظ", selection: wakeWindowBinding) {
+                Picker(NSLocalizedString("smartwake.wakeWindow", comment: ""), selection: wakeWindowBinding) {
                     ForEach(SmartWakeWindow.allCases) { window in
                         Text(window.title).tag(window)
                     }
@@ -101,7 +101,7 @@ struct SmartWakeCalculatorView: View {
     private func resultsSection(featuredRecommendation: SmartWakeRecommendation) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("أفضل وقت مقترح للاستيقاظ")
+                Text(NSLocalizedString("smartwake.bestSuggestion", comment: ""))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
@@ -141,7 +141,7 @@ struct SmartWakeCalculatorView: View {
 
             if !viewModel.alternateRecommendations.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("اقتراحات أخرى")
+                    Text(NSLocalizedString("smartwake.otherSuggestions", comment: ""))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
@@ -180,12 +180,12 @@ struct SmartWakeCalculatorView: View {
     private func resultSubtitle(for recommendation: SmartWakeRecommendation) -> String {
         switch viewModel.mode {
         case .fromBedtime:
-            return "اعتمادًا على دورات النوم التقديرية"
+            return NSLocalizedString("smartwake.cyclesBased", comment: "")
         case .fromWakeTime:
             if recommendation.isWithinSmartWindow {
-                return "ضمن نافذة الاستيقاظ الذكي"
+                return NSLocalizedString("smartwake.withinWindow", comment: "")
             }
-            return "اعتمادًا على دورات النوم التقديرية"
+            return NSLocalizedString("smartwake.cyclesBased", comment: "")
         }
     }
 
@@ -305,15 +305,15 @@ private struct SmartWakeFeaturedRecommendationCard: View {
                     alignment: .leading,
                     spacing: 10
                 ) {
-                    SmartWakeMetricPill(title: "عدد الدورات", value: "\(recommendation.cycleCount)")
-                    SmartWakeMetricPill(title: "مدة النوم المتوقعة", value: SmartWakeFormatters.duration(recommendation.estimatedSleepDuration))
-                    SmartWakeMetricPill(title: "مستوى الثقة", value: recommendation.confidenceLabel)
+                    SmartWakeMetricPill(title: NSLocalizedString("smartwake.cycles", comment: ""), value: "\(recommendation.cycleCount)")
+                    SmartWakeMetricPill(title: NSLocalizedString("smartwake.expectedDuration", comment: ""), value: SmartWakeFormatters.duration(recommendation.estimatedSleepDuration))
+                    SmartWakeMetricPill(title: NSLocalizedString("smartwake.confidence", comment: ""), value: recommendation.confidenceLabel)
 
                     if mode == .fromWakeTime {
-                        SmartWakeMetricPill(title: "آخر وقت مسموح", value: SmartWakeFormatters.time(latestWakeTime))
-                        SmartWakeMetricPill(title: "نافذة الاستيقاظ", value: wakeWindow.title)
+                        SmartWakeMetricPill(title: NSLocalizedString("smartwake.latestAllowed", comment: ""), value: SmartWakeFormatters.time(latestWakeTime))
+                        SmartWakeMetricPill(title: NSLocalizedString("smartwake.wakeWindow", comment: ""), value: wakeWindow.title)
                     } else {
-                        SmartWakeMetricPill(title: "النتيجة", value: recommendation.isBest ? "الأقرب للتوازن" : recommendation.badge)
+                        SmartWakeMetricPill(title: NSLocalizedString("smartwake.result", comment: ""), value: recommendation.isBest ? NSLocalizedString("smartwake.bestBalance", comment: "") : recommendation.badge)
                     }
                 }
             }
@@ -398,7 +398,7 @@ private struct SmartWakeAlternateRecommendationCard: View {
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 6) {
-                    Text("\(recommendation.cycleCount) دورات")
+                    Text(String(format: NSLocalizedString("smartwake.cyclesFormat", comment: ""), recommendation.cycleCount))
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundStyle(AiQoTheme.Colors.textPrimary)
 

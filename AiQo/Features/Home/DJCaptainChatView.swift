@@ -58,7 +58,7 @@ private extension DJCaptainChatView {
             DJCaptainAvatarView(size: 46)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("DJ Hamoudi 🎧")
+                Text(NSLocalizedString("dj.title", comment: ""))
                     .font(.system(size: 19, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
 
@@ -74,7 +74,7 @@ private extension DJCaptainChatView {
                     .fill(captainBrain.isLoading ? Color.aiqoBeige : Color.aiqoMint)
                     .frame(width: 8, height: 8)
 
-                Text(captainBrain.isLoading ? "يفكر" : "جاهز")
+                Text(captainBrain.isLoading ? NSLocalizedString("dj.thinking", comment: "") : NSLocalizedString("dj.ready", comment: ""))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.76))
             }
@@ -92,7 +92,7 @@ private extension DJCaptainChatView {
     }
 
     var headerStatusText: String {
-        captainBrain.coachState.statusText ?? "اسأل الكابتن عن mood أو playlist يناسب يومك"
+        captainBrain.coachState.statusText ?? NSLocalizedString("dj.headerFallback", comment: "")
     }
 
     var headerBackground: some View {
@@ -119,7 +119,7 @@ private extension DJCaptainChatView {
                 .frame(height: 10)
 
             HStack(alignment: .bottom, spacing: 12) {
-                TextField("اطلب مود الأغاني من الكابتن...", text: $draftText, axis: .vertical)
+                TextField(NSLocalizedString("dj.placeholder", comment: ""), text: $draftText, axis: .vertical)
                     .focused($isComposerFocused)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)

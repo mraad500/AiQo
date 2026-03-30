@@ -80,7 +80,7 @@ struct WaterDetailSheetView: View {
         }
         .padding(.top, 16)
         .padding(.trailing, 20)
-        .accessibilityLabel("Close")
+        .accessibilityLabel(NSLocalizedString("water.close", comment: ""))
     }
     
     /// "Water" title label
@@ -108,7 +108,7 @@ struct WaterDetailSheetView: View {
     /// "+ 0.25 L" capsule button
     private var addWaterButton: some View {
         Button(action: addWater) {
-            Text("+ 0.25 L")
+            Text(NSLocalizedString("water.add", comment: ""))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 200, height: 55)
@@ -117,8 +117,8 @@ struct WaterDetailSheetView: View {
         }
         .buttonStyle(BounceButtonStyle())
         .sensoryFeedback(.selection, trigger: addWaterFeedbackTrigger)
-        .accessibilityLabel("Add 0.25 liters of water")
-        .accessibilityHint("Double tap to log water intake")
+        .accessibilityLabel(NSLocalizedString("water.a11y.add", comment: ""))
+        .accessibilityHint(NSLocalizedString("water.a11y.hint", comment: ""))
     }
     
     // MARK: - Actions

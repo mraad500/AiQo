@@ -78,11 +78,11 @@ struct SleepDetailCardView: View {
 
     private var timeframeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("التنقل الزمني")
+            Text(NSLocalizedString("sleep.timeNavigation", comment: ""))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
 
-            Picker("التنقل الزمني", selection: timeframeBinding) {
+            Picker(NSLocalizedString("sleep.timeNavigation", comment: ""), selection: timeframeBinding) {
                 ForEach(TimeScope.allCases) { scope in
                     Text(scope.nativeSleepTitle)
                         .tag(scope)
@@ -94,7 +94,7 @@ struct SleepDetailCardView: View {
 
     private var summaryAndChartSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Sleep Architecture")
+            Text(NSLocalizedString("sleep.architecture", comment: ""))
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
@@ -129,14 +129,14 @@ struct SleepDetailCardView: View {
         } else if let errorMessage {
             emptyState(
                 systemImage: "waveform.badge.exclamationmark",
-                title: "Sleep stages unavailable",
+                title: NSLocalizedString("sleep.stages.unavailable", comment: ""),
                 message: errorMessage
             )
         } else if sleepStages.isEmpty {
             emptyState(
                 systemImage: "bed.double.circle",
-                title: "No staged sleep data yet",
-                message: "Wear Apple Watch during sleep to unlock Core, Deep, REM, and Awake stages here."
+                title: NSLocalizedString("sleep.stages.noData", comment: ""),
+                message: NSLocalizedString("sleep.stages.noDataMessage", comment: "")
             )
         } else {
             sleepStageChart
@@ -148,8 +148,8 @@ struct SleepDetailCardView: View {
         if historicalPoints.isEmpty {
             emptyState(
                 systemImage: "chart.xyaxis.line",
-                title: "No historical sleep trend yet",
-                message: "Switch back to اليوم or wait for more HealthKit history to populate weekly and monthly sleep trends."
+                title: NSLocalizedString("sleep.trend.noData", comment: ""),
+                message: NSLocalizedString("sleep.trend.noDataMessage", comment: "")
             )
         } else {
             historicalSleepChart
@@ -161,13 +161,13 @@ struct SleepDetailCardView: View {
             BarMark(
                 xStart: .value("Start", segment.startDate),
                 xEnd: .value("End", segment.endDate),
-                y: .value("Session", "Last Night")
+                y: .value("Session", NSLocalizedString("sleep.lastNight", comment: ""))
             )
             .foregroundStyle(segment.stage.gradient)
             .cornerRadius(8)
         }
         .chartLegend(.hidden)
-        .chartYScale(domain: ["Last Night"])
+        .chartYScale(domain: [NSLocalizedString("sleep.lastNight", comment: "")])
         .chartYAxis(.hidden)
         .chartXScale(domain: chartDomain)
         .chartXAxis {
@@ -267,7 +267,7 @@ struct SleepDetailCardView: View {
 
     private var legendSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Sleep Stages")
+            Text(NSLocalizedString("sleep.stages", comment: ""))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
@@ -307,7 +307,7 @@ struct SleepDetailCardView: View {
                 .tint(AiQoTheme.Colors.accent)
                 .scaleEffect(1.1)
 
-            Text("Syncing last night’s sleep stages...")
+            Text(NSLocalizedString("sleep.syncing", comment: ""))
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
         }
@@ -363,7 +363,7 @@ struct SleepDetailCardView: View {
         if selectedTimeframe == .day {
             guard let start = sleepStages.first?.startDate,
                   let end = sleepStages.last?.endDate else {
-                return "Last night will appear here after the next HealthKit sync."
+                return NSLocalizedString("sleep.nextSync", comment: "")
             }
 
             return "Last night • \(formattedTime(start)) - \(formattedTime(end))"
@@ -812,15 +812,15 @@ private extension TimeScope {
     var historicalSubtitle: String {
         switch self {
         case .day:
-            return "Last night"
+            return NSLocalizedString("sleep.subtitle.day", comment: "")
         case .week:
-            return "Weekly sleep rhythm"
+            return NSLocalizedString("sleep.subtitle.week", comment: "")
         case .month:
-            return "Monthly sleep rhythm"
+            return NSLocalizedString("sleep.subtitle.month", comment: "")
         case .year:
-            return "Yearly sleep trend"
+            return NSLocalizedString("sleep.subtitle.year", comment: "")
         case .allTime:
-            return "All recorded sleep history"
+            return NSLocalizedString("sleep.subtitle.all", comment: "")
         }
     }
 }

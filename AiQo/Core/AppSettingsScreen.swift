@@ -61,9 +61,9 @@ struct AppSettingsScreen: View {
                     .font(.subheadline.weight(.semibold))
 
                     Picker(NSLocalizedString("settings.coachLanguage", value: "Coach Language / لغة الكابتن", comment: ""), selection: $notificationLanguage) {
-                        Text("Arabic")
+                        Text(NSLocalizedString("settings.coachLang.arabic", comment: ""))
                             .tag(CoachNotificationLanguage.arabic.rawValue)
-                        Text("English")
+                        Text(NSLocalizedString("settings.coachLang.english", comment: ""))
                             .tag(CoachNotificationLanguage.english.rawValue)
                     }
                     .pickerStyle(.segmented)

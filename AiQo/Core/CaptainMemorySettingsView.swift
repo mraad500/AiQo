@@ -31,18 +31,18 @@ struct CaptainMemorySettingsView: View {
                 clearSection
             }
         }
-        .navigationTitle("ذاكرة الكابتن")
+        .navigationTitle(NSLocalizedString("memory.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
         .onAppear { loadMemories() }
-        .alert("مسح كل الذاكرة", isPresented: $showClearConfirmation) {
-            Button("إلغاء", role: .cancel) {}
-            Button("مسح الكل", role: .destructive) {
+        .alert(NSLocalizedString("memory.clearAll", comment: ""), isPresented: $showClearConfirmation) {
+            Button(NSLocalizedString("memory.cancel", comment: ""), role: .cancel) {}
+            Button(NSLocalizedString("memory.clearAllButton", comment: ""), role: .destructive) {
                 MemoryStore.shared.clearAll()
                 loadMemories()
             }
         } message: {
-            Text("متأكد تبي تمسح كل ذاكرة الكابتن؟ هالخطوة ما تنعكس.")
+            Text(NSLocalizedString("memory.clearConfirmMessage", comment: ""))
         }
     }
 
@@ -54,11 +54,11 @@ struct CaptainMemorySettingsView: View {
                 Text("🧠")
                     .font(.system(size: 40))
 
-                Text("ذاكرة الكابتن")
+                Text(NSLocalizedString("memory.title", comment: ""))
                     .font(.system(size: 20, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.primary)
 
-                Text("المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن")
+                Text(NSLocalizedString("memory.subtitle", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.5))
                     .multilineTextAlignment(.center)
@@ -83,9 +83,9 @@ struct CaptainMemorySettingsView: View {
         Section {
             Toggle(isOn: $isEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("تفعيل ذاكرة الكابتن")
+                    Text(NSLocalizedString("memory.enable", comment: ""))
                         .font(.system(size: 15, weight: .semibold))
-                    Text("يوقف حفظ واستخراج المعلومات")
+                    Text(NSLocalizedString("memory.enableSubtitle", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -141,7 +141,7 @@ struct CaptainMemorySettingsView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Text("مسح كل الذاكرة")
+                    Text(NSLocalizedString("memory.clearAll", comment: ""))
                         .font(.system(size: 15, weight: .bold))
                     Spacer()
                 }
@@ -165,44 +165,44 @@ struct CaptainMemorySettingsView: View {
 
     private func categoryLabel(_ category: String) -> String {
         switch category {
-        case "identity": return "الهوية"
-        case "goal": return "الأهداف"
-        case "body": return "الجسم"
-        case "preference": return "التفضيلات"
-        case "mood": return "المزاج"
-        case "injury": return "الإصابات"
-        case "nutrition": return "التغذية"
-        case "workout_history": return "تاريخ التمارين"
-        case "sleep": return "النوم"
-        case "insight": return "ملاحظات"
-        case "active_record_project": return "مشروع كسر الرقم"
+        case "identity": return NSLocalizedString("memory.cat.identity", comment: "")
+        case "goal": return NSLocalizedString("memory.cat.goal", comment: "")
+        case "body": return NSLocalizedString("memory.cat.body", comment: "")
+        case "preference": return NSLocalizedString("memory.cat.preference", comment: "")
+        case "mood": return NSLocalizedString("memory.cat.mood", comment: "")
+        case "injury": return NSLocalizedString("memory.cat.injury", comment: "")
+        case "nutrition": return NSLocalizedString("memory.cat.nutrition", comment: "")
+        case "workout_history": return NSLocalizedString("memory.cat.workoutHistory", comment: "")
+        case "sleep": return NSLocalizedString("memory.cat.sleep", comment: "")
+        case "insight": return NSLocalizedString("memory.cat.insight", comment: "")
+        case "active_record_project": return NSLocalizedString("memory.cat.recordProject", comment: "")
         default: return category
         }
     }
 
     private func keyLabel(_ key: String) -> String {
         switch key {
-        case "user_name": return "الاسم"
-        case "weight": return "الوزن"
-        case "height": return "الطول"
-        case "age": return "العمر"
-        case "goal": return "الهدف"
-        case "sleep_hours": return "ساعات النوم"
-        case "fitness_level": return "مستوى اللياقة"
-        case "training_days": return "أيام التمرين"
-        case "mood": return "المزاج"
-        case "diet_preference": return "تفضيل غذائي"
-        case "preferred_workout": return "تمرين مفضل"
-        case "available_equipment": return "معدات متاحة"
-        case "water_intake": return "شرب الماء"
-        case "active_project_record_id": return "معرّف المشروع"
-        case "active_project_title": return "اسم المشروع"
-        case "steps_avg": return "معدل الخطوات"
-        case "sleep_avg": return "معدل النوم"
-        case "active_calories_avg": return "معدل السعرات"
-        case "resting_heart_rate": return "معدل النبض"
+        case "user_name": return NSLocalizedString("memory.key.name", comment: "")
+        case "weight": return NSLocalizedString("memory.key.weight", comment: "")
+        case "height": return NSLocalizedString("memory.key.height", comment: "")
+        case "age": return NSLocalizedString("memory.key.age", comment: "")
+        case "goal": return NSLocalizedString("memory.key.goal", comment: "")
+        case "sleep_hours": return NSLocalizedString("memory.key.sleepHours", comment: "")
+        case "fitness_level": return NSLocalizedString("memory.key.fitnessLevel", comment: "")
+        case "training_days": return NSLocalizedString("memory.key.trainingDays", comment: "")
+        case "mood": return NSLocalizedString("memory.key.mood", comment: "")
+        case "diet_preference": return NSLocalizedString("memory.key.dietPreference", comment: "")
+        case "preferred_workout": return NSLocalizedString("memory.key.preferredWorkout", comment: "")
+        case "available_equipment": return NSLocalizedString("memory.key.equipment", comment: "")
+        case "water_intake": return NSLocalizedString("memory.key.waterIntake", comment: "")
+        case "active_project_record_id": return NSLocalizedString("memory.key.projectId", comment: "")
+        case "active_project_title": return NSLocalizedString("memory.key.projectTitle", comment: "")
+        case "steps_avg": return NSLocalizedString("memory.key.stepsAvg", comment: "")
+        case "sleep_avg": return NSLocalizedString("memory.key.sleepAvg", comment: "")
+        case "active_calories_avg": return NSLocalizedString("memory.key.caloriesAvg", comment: "")
+        case "resting_heart_rate": return NSLocalizedString("memory.key.heartRate", comment: "")
         default:
-            if key.hasPrefix("injury_") { return "إصابة" }
+            if key.hasPrefix("injury_") { return NSLocalizedString("memory.key.injury", comment: "") }
             return key
         }
     }

@@ -9,11 +9,11 @@ struct TribeLogScreen: View {
         VStack(alignment: .leading, spacing: 14) {
             TribeGlassCard(cornerRadius: 28, padding: 16, tint: Color.white.opacity(0.02)) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("السجل")
+                    Text(NSLocalizedString("tribeLog.title", comment: ""))
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("آخر 10 أحداث داخل القبيلة.")
+                    Text(NSLocalizedString("tribeLog.subtitle", comment: ""))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.58))
                 }

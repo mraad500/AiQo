@@ -99,18 +99,18 @@ struct ArenaTabView: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Color.aiqoMint)
 
-            Text("القبائل تتنافس — وأنت؟")
+            Text(NSLocalizedString("arena.tribesCompete", comment: ""))
                 .font(.system(.headline, design: .rounded, weight: .bold))
                 .foregroundStyle(TribePalette.textPrimary)
 
-            Text("أنشئ قبيلتك مع الاشتراك العائلي أو انضم لقبيلة صديقك")
+            Text(NSLocalizedString("arena.createOrJoin", comment: ""))
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(TribePalette.textSecondary)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 12) {
                 Button { showCreateTribe = true } label: {
-                    Text("أنشئ قبيلة")
+                    Text(NSLocalizedString("arena.createTribe", comment: ""))
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -123,7 +123,7 @@ struct ArenaTabView: View {
                 }
 
                 Button { showJoinTribe = true } label: {
-                    Text("انضم برمز")
+                    Text(NSLocalizedString("arena.joinWithCode", comment: ""))
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundStyle(Color(hex: "2D6B4A"))
                         .frame(maxWidth: .infinity)

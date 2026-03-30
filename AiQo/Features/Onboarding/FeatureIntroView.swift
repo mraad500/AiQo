@@ -6,12 +6,12 @@ private extension Color {
     static let fiPrimaryBackground = Color(hex: "F5F7FB")
     static let fiTextPrimary       = Color(hex: "0F1721")
     static let fiTextSecondary     = Color(hex: "5F6F80")
-    static let fiAccent            = Color(hex: "5ECDB7")
-    static let fiBrandMint         = Color(hex: "C4F0DB")
-    static let fiBrandSand         = Color(hex: "E8CC8C")
+    static let fiAccent            = Color(hex: "C6EFDB")
+    static let fiBrandMint         = Color(hex: "C6EFDB")
+    static let fiBrandSand         = Color(hex: "F7D7A7")
     static let fiDotInactive       = Color(hex: "EEF2F7")
-    static let fiCtaLeading        = Color(hex: "7CE0D2")
-    static let fiCtaTrailing       = Color(hex: "A4C8FF")
+    static let fiCtaLeading        = Color(hex: "C6EFDB")
+    static let fiCtaTrailing       = Color(hex: "F7D7A7")
 }
 
 // MARK: - Main View
@@ -89,9 +89,7 @@ struct FeatureIntroView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
-                isArabic
-                    ? "صفحة \(currentPage + 1) من ٣"
-                    : "Page \(currentPage + 1) of 3"
+                String(format: NSLocalizedString("featureIntro.pageOf", comment: ""), currentPage + 1)
             )
 
             // CTA Button
@@ -125,7 +123,7 @@ struct FeatureIntroView: View {
             // Skip
             if currentPage < 2 {
                 Button { onComplete() } label: {
-                    Text(isArabic ? "تخطي" : "Skip")
+                    Text(NSLocalizedString("featureIntro.skip", comment: ""))
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(Color.fiTextSecondary)
                         .frame(minHeight: 44)
@@ -139,9 +137,9 @@ struct FeatureIntroView: View {
 
     private var ctaTitle: String {
         guard currentPage < 2 else {
-            return isArabic ? "ابدأ رحلتك" : "Start Your Journey"
+            return NSLocalizedString("featureIntro.startJourney", comment: "")
         }
-        return isArabic ? "التالي" : "Next"
+        return NSLocalizedString("featureIntro.next", comment: "")
     }
 
     // MARK: - Animation Trigger
@@ -201,7 +199,7 @@ private struct FeatureIntroPage1: View {
                     .scaledToFit()
                     .frame(maxHeight: geo.size.height * 0.50)
                     .shadow(color: .black.opacity(0.09), radius: 30, x: 0, y: 15)
-                    .accessibilityLabel(isArabic ? "كابتن حمّودي" : "Captain Hamoudi")
+                    .accessibilityLabel(NSLocalizedString("featureIntro.captainHamoudi", comment: ""))
                     .opacity(show ? 1 : 0)
                     .offset(y: show ? 0 : (reduceMotion ? 0 : 34))
                     .scaleEffect(show ? 1 : (reduceMotion ? 1 : 0.88))
@@ -214,10 +212,8 @@ private struct FeatureIntroPage1: View {
 
             // ── Card ─────────────────────────────────────────────────
             FeatureIntroCard(
-                title: isArabic ? "كابتن حمّودي" : "Captain Hamoudi",
-                subtitle: isArabic
-                    ? "مدربك الذكي. يعرف جسمك، يفهم أهدافك، ويوجّهك كل يوم بأسلوب يناسبك."
-                    : "Your AI coach. He knows your body, understands your goals, and guides you daily — in a style that fits you."
+                title: NSLocalizedString("featureIntro.captainHamoudi", comment: ""),
+                subtitle: NSLocalizedString("featureIntro.captainSubtitle", comment: "")
             )
             .padding(.horizontal, 24)
             .opacity(show ? 1 : 0)
@@ -246,16 +242,12 @@ private struct FeatureIntroPage2: View {
             workoutsComposition
                 .frame(height: geo.size.height * 0.48)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(
-                    isArabic ? "تمارين وتحديات وقمم" : "Workouts, challenges and peaks"
-                )
+                .accessibilityLabel(NSLocalizedString("featureIntro.workoutsAccessibility", comment: ""))
 
             // ── Card ─────────────────────────────────────────────────
             FeatureIntroCard(
-                title: isArabic ? "تمارين، تحديات، وقمم" : "Workouts, Challenges & Peaks",
-                subtitle: isArabic
-                    ? "تمارين مصممة لك. تحديات يومية وأسبوعية. ومشاريع لكسر الأرقام القياسية — كلها مع الكابتن."
-                    : "Workouts designed for you. Daily and weekly challenges. Record-breaking projects — all with the Captain."
+                title: NSLocalizedString("featureIntro.workoutsTitle", comment: ""),
+                subtitle: NSLocalizedString("featureIntro.workoutsSubtitle", comment: "")
             )
             .padding(.horizontal, 24)
             .opacity(show ? 1 : 0)
@@ -322,16 +314,12 @@ private struct FeatureIntroPage3: View {
             kitchenComposition
                 .frame(height: geo.size.height * 0.48)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(
-                    isArabic ? "مطبخ الكيمياء" : "Alchemy Kitchen"
-                )
+                .accessibilityLabel(NSLocalizedString("featureIntro.kitchenAccessibility", comment: ""))
 
             // ── Card ─────────────────────────────────────────────────
             FeatureIntroCard(
-                title: isArabic ? "مطبخ الكيمياء" : "Alchemy Kitchen",
-                subtitle: isArabic
-                    ? "خطط وجبات ذكية، تصوير الأكل وتحليله، ومتابعة السعرات والبروتين — كل يوم."
-                    : "Smart meal plans, food photo analysis, and daily calorie & protein tracking."
+                title: NSLocalizedString("featureIntro.kitchenTitle", comment: ""),
+                subtitle: NSLocalizedString("featureIntro.kitchenSubtitle", comment: "")
             )
             .padding(.horizontal, 24)
             .opacity(show ? 1 : 0)

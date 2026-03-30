@@ -59,9 +59,11 @@ struct AiQoApp: App {
         // تنظيف الذكريات القديمة
         MemoryStore.shared.removeStale()
 
-        // مزامنة HealthKit مع الذاكرة
-        Task {
-            await HealthKitMemoryBridge.syncHealthDataToMemory()
+        // مزامنة HealthKit مع الذاكرة — فقط بعد اكتمال الأونبوردنق
+        if UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation") {
+            Task {
+                await HealthKitMemoryBridge.syncHealthDataToMemory()
+            }
         }
     }
 
@@ -106,40 +108,45 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         FreeTrialManager.shared.refreshState()
 
         LocalizationManager.shared.applySavedLanguage()
-        NotificationService.shared.requestPermissions()
         NotificationCategoryManager.shared.registerAllCategories()
         NotificationIntelligenceManager.shared.registerBackgroundTasks()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
 
-        application.registerForRemoteNotifications()
+        // All permission-dependent services are deferred until the FULL onboarding is complete.
+        // Every flag must be true — prevents stale UserDefaults from triggering permissions.
+        let didCompleteOnboarding = UserDefaults.standard.bool(forKey: "didSelectLanguage")
+            && UserDefaults.standard.bool(forKey: "didShowFirstAuthScreen")
+            && UserDefaults.standard.bool(forKey: "didCompleteDatingProfile")
+            && UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation")
+            && UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro")
+        if didCompleteOnboarding {
+            HealthKitService.permissionFlowEnabled = true
+            NotificationService.shared.requestPermissions()
+            application.registerForRemoteNotifications()
+            MorningHabitOrchestrator.shared.start()
+            SleepSessionObserver.shared.start()
 
-        MorningHabitOrchestrator.shared.start()
-        SleepSessionObserver.shared.start()
+            Task {
+                await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+            }
 
-        Task {
-            await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+            if AppSettingsStore.shared.notificationsEnabled {
+                scheduleAngelNotifications()
+                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
+                SmartNotificationScheduler.shared.scheduleSmartNotifications()
+            } else {
+                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
+            }
         }
 
-        if AppSettingsStore.shared.notificationsEnabled {
-            scheduleAngelNotifications()
-            NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
-        } else {
-            NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
-        }
-        
         if #available(iOS 16.0, *) {
             AiQoWorkoutShortcuts.updateAppShortcutParameters()
         }
 
         // تسجيل Siri Shortcuts
         SiriShortcutsManager.shared.donateAllShortcuts()
-
-        // إشعارات ذكية
-        if AppSettingsStore.shared.notificationsEnabled {
-            SmartNotificationScheduler.shared.scheduleSmartNotifications()
-        }
 
         // تحقق من الـ Streak
         StreakManager.shared.checkStreakContinuity()
@@ -173,13 +180,23 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
         reloadWidgetTimelines()
         clearAppBadge()
-        MorningHabitOrchestrator.shared.start()
-        SleepSessionObserver.shared.start()
 
-        Task {
-            await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
-            await MorningHabitOrchestrator.shared.refreshMonitoringState()
-            await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
+        // Only start HealthKit-dependent services for users who completed ALL onboarding steps.
+        let allOnboardingDone = UserDefaults.standard.bool(forKey: "didSelectLanguage")
+            && UserDefaults.standard.bool(forKey: "didShowFirstAuthScreen")
+            && UserDefaults.standard.bool(forKey: "didCompleteDatingProfile")
+            && UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation")
+            && UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro")
+        if allOnboardingDone {
+            HealthKitService.permissionFlowEnabled = true
+            MorningHabitOrchestrator.shared.start()
+            SleepSessionObserver.shared.start()
+
+            Task {
+                await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+                await MorningHabitOrchestrator.shared.refreshMonitoringState()
+                await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
+            }
         }
 
         if CaptainNotificationHandler.shared.hasPendingMessage() {

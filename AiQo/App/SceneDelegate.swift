@@ -64,10 +64,20 @@ final class AppFlowController: ObservableObject {
 
     func finishOnboardingRequestingPermissions() {
         Task { @MainActor in
+            HealthKitService.permissionFlowEnabled = true
             await requestFullHealthKitPermissions()
             requestNotificationAuthorizationIfNeeded()
             await protectionModel.requestAuthorization()
             finalizeOnboarding()
+
+            // Start HealthKit-dependent services now that onboarding is complete
+            // and permissions have been granted (deferred from AppDelegate for new users).
+            UIApplication.shared.registerForRemoteNotifications()
+            MorningHabitOrchestrator.shared.start()
+            SleepSessionObserver.shared.start()
+            Task {
+                await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
+            }
         }
     }
 

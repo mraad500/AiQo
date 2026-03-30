@@ -159,7 +159,7 @@ private struct ArenaComposerCard: View {
     var body: some View {
         TribeGlassCard(cornerRadius: 28, padding: 16, tint: Color.white.opacity(0.02)) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("إنشاء تحدٍ جديد")
+                Text(NSLocalizedString("arena.createChallenge", comment: ""))
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
 
@@ -183,7 +183,7 @@ private struct ArenaComposerCard: View {
                     }
                 } label: {
                     HStack {
-                        Text("الهدف")
+                        Text(NSLocalizedString("arena.goal", comment: ""))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.62))
 
@@ -209,7 +209,7 @@ private struct ArenaComposerCard: View {
                     )
                 }
 
-                TextField("عنوان التحدي (اختياري)", text: $viewModel.customTitle)
+                TextField(NSLocalizedString("arena.titlePlaceholder", comment: ""), text: $viewModel.customTitle)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(.horizontal, 14)
@@ -225,7 +225,7 @@ private struct ArenaComposerCard: View {
                     .foregroundStyle(.white)
 
                 Button(action: onCreate) {
-                    Text("إضافة التحدي")
+                    Text(NSLocalizedString("arena.addChallenge", comment: ""))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -241,7 +241,7 @@ private struct ArenaComposerCard: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("تحديات المجرة مختارة من AiQo، ويمكنك إنشاء تحديات شخصية أو قبلية فقط.")
+                Text(NSLocalizedString("arena.galaxyNote", comment: ""))
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.54))
             }

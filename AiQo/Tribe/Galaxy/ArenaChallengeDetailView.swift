@@ -20,18 +20,18 @@ struct ArenaChallengeDetailView: View {
 
     private var timeRemaining: String {
         let interval = challenge.endAt.timeIntervalSince(Date())
-        if interval <= 0 { return "انتهى" }
+        if interval <= 0 { return NSLocalizedString("challengeDetail.ended", comment: "") }
 
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
 
         if hours >= 24 {
             let days = hours / 24
-            return "\(days) يوم"
+            return String(format: NSLocalizedString("challengeDetail.dayUnit", comment: ""), days)
         } else if hours > 0 {
-            return "\(hours) ساعة \(minutes) دقيقة"
+            return String(format: NSLocalizedString("challengeDetail.hourMinute", comment: ""), hours, minutes)
         } else {
-            return "\(minutes) دقيقة"
+            return String(format: NSLocalizedString("challengeDetail.minuteUnit", comment: ""), minutes)
         }
     }
 
@@ -245,7 +245,7 @@ struct ArenaChallengeDetailView: View {
                     Image(systemName: "trophy.fill")
                         .foregroundStyle(.orange)
 
-                    Text("المتصدرين")
+                    Text(NSLocalizedString("challengeDetail.topScorers", comment: ""))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
@@ -341,11 +341,11 @@ struct ArenaChallengeDetailView: View {
                 .foregroundStyle(.green)
                 .symbolEffect(.bounce, value: isCompleted)
 
-            Text("مكتمل! 🎉")
+            Text(NSLocalizedString("challengeDetail.completed", comment: ""))
                 .font(.system(size: 22, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
 
-            Text("أحسنت! أكملت التحدي بنجاح")
+            Text(NSLocalizedString("challengeDetail.wellDone", comment: ""))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.6))
         }

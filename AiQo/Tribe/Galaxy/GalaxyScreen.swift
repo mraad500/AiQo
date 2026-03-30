@@ -32,7 +32,7 @@ struct GalaxyScreen: View {
 
             GalaxyExperienceCard(viewModel: viewModel)
 
-            Text("كل روح مرتبطة بالمصدر")
+            Text(NSLocalizedString("galaxy.soulConnected", comment: ""))
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.58))
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -55,11 +55,11 @@ struct GalaxyExperienceCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("المجرة")
+                        Text(NSLocalizedString("tribe.galaxy.title", comment: ""))
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
-                        Text(viewModel.cardMode == .network ? "شبكة هادئة حول المصدر" : "تحديات القبيلة داخل نفس المدار")
+                        Text(viewModel.cardMode == .network ? NSLocalizedString("galaxy.networkSubtitle", comment: "") : NSLocalizedString("galaxy.arenaSubtitle", comment: ""))
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.62))
                     }
@@ -92,7 +92,7 @@ struct GalaxyExperienceCard: View {
                             Image(systemName: "scope")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.60))
-                            Text("تحديات يومية وشهرية مع مسارات شخصية وقبلية ومجرية.")
+                            Text(NSLocalizedString("galaxy.challengesDescription", comment: ""))
                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                 .foregroundStyle(.white.opacity(0.58))
                         }
@@ -141,7 +141,7 @@ private struct GalaxyArenaSheet: View {
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 8) {
-                    Text("مهام المدار")
+                    Text(NSLocalizedString("galaxy.orbitMissions", comment: ""))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
 

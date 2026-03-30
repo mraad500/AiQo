@@ -12,12 +12,12 @@ struct ArenaQuickChallengesView: View {
                 HStack {
                     Image(systemName: "bolt.fill")
                         .foregroundStyle(.orange)
-                    Text("تحديات سريعة")
+                    Text(NSLocalizedString("quickChallenge.title", comment: ""))
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                 }
 
-                Text("اختر تحدي وابدأ فوراً!")
+                Text(NSLocalizedString("quickChallenge.subtitle", comment: ""))
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.5))
 
@@ -98,16 +98,16 @@ struct QuickChallengeTemplate: Identifiable {
 
     var durationText: String {
         if durationHours >= 24 {
-            return "\(durationHours / 24) يوم"
+            return String(format: NSLocalizedString("quickChallenge.duration.day", comment: ""), durationHours / 24)
         }
-        return "\(durationHours) ساعة"
+        return String(format: NSLocalizedString("quickChallenge.duration.hour", comment: ""), durationHours)
     }
 
     static let allTemplates: [QuickChallengeTemplate] = [
         QuickChallengeTemplate(
             emoji: "🏃",
-            title: "ماراثون قصير",
-            subtitle: "10K خطوة",
+            title: NSLocalizedString("quickChallenge.shortMarathon", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.10kSteps", comment: ""),
             metricType: .steps,
             target: 10_000,
             durationHours: 24,
@@ -115,8 +115,8 @@ struct QuickChallengeTemplate: Identifiable {
         ),
         QuickChallengeTemplate(
             emoji: "💧",
-            title: "يوم رطب",
-            subtitle: "8 أكواب ماء",
+            title: NSLocalizedString("quickChallenge.wetDay", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.8cups", comment: ""),
             metricType: .water,
             target: 8,
             durationHours: 24,
@@ -124,8 +124,8 @@ struct QuickChallengeTemplate: Identifiable {
         ),
         QuickChallengeTemplate(
             emoji: "🚫",
-            title: "بدون سكر",
-            subtitle: "24 ساعة",
+            title: NSLocalizedString("quickChallenge.noSugar", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.24hours", comment: ""),
             metricType: .sugarFree,
             target: 1,
             durationHours: 24,
@@ -133,8 +133,8 @@ struct QuickChallengeTemplate: Identifiable {
         ),
         QuickChallengeTemplate(
             emoji: "🧘",
-            title: "لحظة هدوء",
-            subtitle: "15 دقيقة تأمل",
+            title: NSLocalizedString("quickChallenge.calmMoment", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.15minMeditation", comment: ""),
             metricType: .calmMinutes,
             target: 15,
             durationHours: 4,
@@ -142,8 +142,8 @@ struct QuickChallengeTemplate: Identifiable {
         ),
         QuickChallengeTemplate(
             emoji: "😴",
-            title: "نوم مبكر",
-            subtitle: "8 ساعات نوم",
+            title: NSLocalizedString("quickChallenge.earlySleep", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.8hoursSleep", comment: ""),
             metricType: .sleep,
             target: 8,
             durationHours: 24,
@@ -151,8 +151,8 @@ struct QuickChallengeTemplate: Identifiable {
         ),
         QuickChallengeTemplate(
             emoji: "⚡️",
-            title: "سبرنت الخطوات",
-            subtitle: "5K خلال 3 ساعات",
+            title: NSLocalizedString("quickChallenge.stepsSprint", comment: ""),
+            subtitle: NSLocalizedString("quickChallenge.5kIn3hours", comment: ""),
             metricType: .steps,
             target: 5_000,
             durationHours: 3,

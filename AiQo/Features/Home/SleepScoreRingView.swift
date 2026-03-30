@@ -62,11 +62,11 @@ struct SleepScoreRingView: View {
                     .contentTransition(.numericText())
                     .minimumScaleFactor(0.7)
 
-                Text("من 100")
+                Text(NSLocalizedString("sleep.score.outOf", comment: ""))
                     .font(.system(size: size * 0.05, weight: .semibold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
 
-                Text("تقييم النوم")
+                Text(NSLocalizedString("sleep.score.title", comment: ""))
                     .font(.system(size: size * 0.055, weight: .bold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
             }

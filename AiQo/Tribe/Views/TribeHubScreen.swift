@@ -13,13 +13,13 @@ private enum TribeHubSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .core:
-            return "المركز"
+            return NSLocalizedString("tribeHub.center", comment: "")
         case .arena:
-            return "الأرينا"
+            return NSLocalizedString("tribeHub.arena", comment: "")
         case .feed:
-            return "السجل"
+            return NSLocalizedString("tribeHub.log", comment: "")
         case .galaxy:
-            return "المجرة"
+            return NSLocalizedString("tribeHub.galaxy", comment: "")
         }
     }
 }
@@ -117,9 +117,9 @@ struct TribeHubScreen: View {
     private var energyStatusLine: String {
         let remaining = max(energyTarget - energyCurrent, 0)
         if remaining == 0 {
-            return "تم فتح الدرع اليوم."
+            return NSLocalizedString("tribeHub.shieldComplete", comment: "")
         }
-        return "باقي \(remaining) حتى نفتح الدرع"
+        return String(format: NSLocalizedString("tribeHub.shieldRemaining", comment: ""), remaining)
     }
 
     var body: some View {
@@ -197,7 +197,7 @@ struct TribeHubScreen: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("إمارة")
+            Text(NSLocalizedString("tribeHub.emirate", comment: ""))
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(usesPremiumSurface ? Color.white : Color.primary)
                 .onLongPressGesture(minimumDuration: 1.2) {
@@ -205,9 +205,9 @@ struct TribeHubScreen: View {
                     forcePreviewMode.toggle()
                     if forcePreviewMode {
                         previewController.apply(state: .member)
-                        toastMessage = "تم تفعيل وضع العرض"
+                        toastMessage = NSLocalizedString("tribeHub.previewOn", comment: "")
                     } else {
-                        toastMessage = "تم إيقاف وضع العرض"
+                        toastMessage = NSLocalizedString("tribeHub.previewOff", comment: "")
                     }
                     clearToastAfterDelay()
                     #endif
@@ -216,7 +216,7 @@ struct TribeHubScreen: View {
             Spacer(minLength: 0)
 
             if canShowPreviewControls {
-                Button("وضع العرض") {
+                Button(NSLocalizedString("tribeHub.displayMode", comment: "")) {
                     isPreviewModeSheetPresented = true
                 }
                 .buttonStyle(.plain)
@@ -294,7 +294,7 @@ struct TribeHubScreen: View {
             TribeEnergyCoreCard(
                 progressValue: energyCurrent,
                 targetValue: energyTarget,
-                headline: "طاقة القبيلة اليوم",
+                headline: NSLocalizedString("tribeHub.tribeEnergyToday", comment: ""),
                 statusLine: energyStatusLine
             )
 
@@ -344,14 +344,14 @@ struct TribeHubScreen: View {
         VStack(spacing: 14) {
             TribeGlassPanel(style: .soft, tint: UIColor.systemTeal) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("مركز القبيلة جاهز")
+                    Text(NSLocalizedString("tribeHub.hubReady", comment: ""))
                         .font(.system(size: 22, weight: .semibold, design: .rounded))
 
-                    Text("أنشئ قبيلة إذا كنت على الخطة العائلية، أو انضم بكود دعوة. بعد الدخول ستظهر طاقة القبيلة والمهام والأعضاء هنا.")
+                    Text(NSLocalizedString("tribeHub.hubReadyDesc", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    Text(canCreateTribe ? "يمكنك إنشاء القبيلة الآن." : "الخطة العائلية مطلوبة لإنشاء قبيلة.")
+                    Text(canCreateTribe ? NSLocalizedString("tribeHub.canCreate", comment: "") : NSLocalizedString("tribeHub.familyRequired", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
@@ -362,7 +362,7 @@ struct TribeHubScreen: View {
                             isPaywallPresented = true
                         }
                     } label: {
-                        Text(canCreateTribe ? "إنشاء قبيلة" : "الخطة العائلية مطلوبة")
+                        Text(canCreateTribe ? NSLocalizedString("tribeHub.createTribe", comment: "") : NSLocalizedString("tribeHub.familyPlanRequired", comment: ""))
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -375,10 +375,10 @@ struct TribeHubScreen: View {
 
             TribeGlassPanel(style: .glass, tint: UIColor.systemBlue) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("انضمام بكود")
+                    Text(NSLocalizedString("tribeHub.joinWithCode", comment: ""))
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
 
-                    TextField("اكتب كود الدعوة", text: $inviteCode)
+                    TextField(NSLocalizedString("tribeHub.enterCode", comment: ""), text: $inviteCode)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .padding(.horizontal, 14)
@@ -399,7 +399,7 @@ struct TribeHubScreen: View {
                             }
                         }
                     } label: {
-                        Text("انضم الآن")
+                        Text(NSLocalizedString("tribeHub.joinNow", comment: ""))
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -414,7 +414,7 @@ struct TribeHubScreen: View {
 
     private var previewSections: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("معاينة لما سيظهر بعد دخولك القبيلة")
+            Text(NSLocalizedString("tribeHub.previewHint", comment: ""))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)
@@ -422,7 +422,7 @@ struct TribeHubScreen: View {
             TribeEnergyCoreCard(
                 progressValue: energyCurrent,
                 targetValue: energyTarget,
-                headline: "طاقة القبيلة اليوم",
+                headline: NSLocalizedString("tribeHub.tribeEnergyToday", comment: ""),
                 statusLine: energyStatusLine
             )
 
@@ -434,7 +434,7 @@ struct TribeHubScreen: View {
     }
 
     private func handleSparkSent() {
-        toastMessage = "تم إرسال شرارة"
+        toastMessage = NSLocalizedString("tribeHub.sparkSent", comment: "")
         clearToastAfterDelay()
     }
 
@@ -445,7 +445,7 @@ struct TribeHubScreen: View {
             tribeStore.addContribution(amount: amount, from: tribeStore.actionMemberId)
         }
 
-        toastMessage = "تمت إضافة المساهمة"
+        toastMessage = NSLocalizedString("tribeHub.contributionAdded", comment: "")
         clearToastAfterDelay()
     }
 
@@ -474,7 +474,7 @@ struct TribeHubScreen: View {
                 Text(title)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
 
-                Text("انضم إلى قبيلة أولاً حتى يظهر هذا القسم ببياناتك الحقيقية.")
+                Text(NSLocalizedString("tribeHub.joinFirst", comment: ""))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -515,11 +515,11 @@ struct TribeHubScreen: View {
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("ادخل إلى المجرة")
+                    Text(NSLocalizedString("tribeHub.enterGalaxy", comment: ""))
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("خريطة الأرواح، التحديات، وشرارة سريعة داخل نفس المدار.")
+                    Text(NSLocalizedString("tribeHub.enterGalaxyDesc", comment: ""))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.64))
                         .fixedSize(horizontal: false, vertical: true)
@@ -583,10 +583,10 @@ struct TribeMissionsListView: View {
     var body: some View {
         TribeGlassPanel(style: .glass, tint: UIColor.systemIndigo) {
             VStack(alignment: .leading, spacing: 12) {
-                sectionHeader(title: "مهام القبيلة", subtitle: "خطوات جماعية قصيرة وواضحة.")
+                sectionHeader(title: NSLocalizedString("tribeHub.missions", comment: ""), subtitle: NSLocalizedString("tribeHub.missionsSubtitle", comment: ""))
 
                 if missions.isEmpty {
-                    Text("لا توجد مهام حالياً.")
+                    Text(NSLocalizedString("tribeHub.noMissions", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -669,15 +669,15 @@ struct TribeMembersListView: View {
         TribeGlassPanel(style: .soft, tint: UIColor.systemOrange) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("أعضاء القبيلة")
+                    Text(NSLocalizedString("tribeHub.tribeMembers", comment: ""))
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    Text("المعروض هنا: الاسم عند العام فقط، والمستوى والطاقة العامة للجميع. لا تُعرض أي بيانات صحية.")
+                    Text(NSLocalizedString("tribeHub.membersPrivacy", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 if members.isEmpty {
-                    Text("لا يوجد أعضاء بعد.")
+                    Text(NSLocalizedString("tribeHub.noMembers", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -721,7 +721,7 @@ private struct TribeHubSettingsCard: View {
                             .font(.system(size: 21, weight: .semibold, design: .rounded))
 
                         if showsOwnerBadge {
-                            Text("قائد")
+                            Text(NSLocalizedString("tribeHub.leader", comment: ""))
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -730,30 +730,30 @@ private struct TribeHubSettingsCard: View {
                         }
                     }
 
-                    Text("كود الدعوة: \(tribe.inviteCode)")
+                    Text(String(format: NSLocalizedString("tribeHub.inviteCodeFormat", comment: ""), tribe.inviteCode))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("خصوصية ملفك داخل القبيلة")
+                    Text(NSLocalizedString("tribeHub.profilePrivacy", comment: ""))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
 
-                    Picker("خصوصية ملفك داخل القبيلة", selection: $privacyMode) {
+                    Picker(NSLocalizedString("tribeHub.profilePrivacy", comment: ""), selection: $privacyMode) {
                         ForEach(PrivacyMode.allCases, id: \.rawValue) { mode in
                             Text(mode.title).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
 
-                    Text("الملف الخاص يخفي اسمك وصورتك الحقيقية، ويُبقي فقط المستوى ومساهمة الطاقة العامة.")
+                    Text(NSLocalizedString("tribeHub.privateDesc", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 if showsCreateButton {
                     Button(action: onCreate) {
-                        Text("إنشاء قبيلة")
+                        Text(NSLocalizedString("tribeHub.createTribe", comment: ""))
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -765,7 +765,7 @@ private struct TribeHubSettingsCard: View {
                 }
 
                 Button(role: .destructive, action: onLeave) {
-                    Text("مغادرة القبيلة")
+                    Text(NSLocalizedString("tribeHub.leaveTribe", comment: ""))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -789,18 +789,18 @@ private struct TribeHubMemberRow: View {
         HStack(spacing: 12) {
             memberAvatar
 
-            Text(member.privacyMode == .public ? member.displayName : "عضو")
+            Text(member.privacyMode == .public ? member.displayName : NSLocalizedString("tribeHub.memberLabel", comment: ""))
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
             Spacer(minLength: 8)
 
-            Text("طاقة \(member.energyContributionToday)")
+            Text(String(format: NSLocalizedString("tribeHub.energyFormat", comment: ""), member.energyContributionToday))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("Lv \(member.level)")
+            Text(String(format: NSLocalizedString("tribeHub.levelFormat", comment: ""), member.level))
                 .font(.caption)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
@@ -812,7 +812,7 @@ private struct TribeHubMemberRow: View {
                     onSendSpark()
                 } label: {
                     if sparkStyle == .text {
-                        Text("شرارة")
+                        Text(NSLocalizedString("tribeHub.spark", comment: ""))
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
@@ -828,7 +828,7 @@ private struct TribeHubMemberRow: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSendSpark)
-                .accessibilityLabel("إرسال شرارة")
+                .accessibilityLabel(NSLocalizedString("tribeHub.sendSpark", comment: ""))
             }
         }
         .padding(12)
@@ -892,20 +892,20 @@ private struct TribeHubCreateTribeSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("اسم القبيلة") {
-                    TextField("مثال: Calm Core", text: $tribeName)
+                Section(NSLocalizedString("tribeHub.tribeName", comment: "")) {
+                    TextField(NSLocalizedString("tribeHub.tribeNamePlaceholder", comment: ""), text: $tribeName)
                 }
             }
-            .navigationTitle("إنشاء قبيلة")
+            .navigationTitle(NSLocalizedString("tribeHub.createTribe", comment: ""))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("إلغاء") {
+                    Button(NSLocalizedString("tribeHub.cancel", comment: "")) {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("إنشاء") {
+                    Button(NSLocalizedString("tribeHub.create", comment: "")) {
                         onCreate(tribeName)
                         dismiss()
                     }
@@ -942,7 +942,7 @@ private struct TribePreviewModeSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            .navigationTitle("وضع العرض")
+            .navigationTitle(NSLocalizedString("tribeHub.displayMode", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
         }
     }

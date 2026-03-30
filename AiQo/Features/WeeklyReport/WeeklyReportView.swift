@@ -47,7 +47,7 @@ struct WeeklyReportView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("تقرير الأسبوع")
+            .navigationTitle(NSLocalizedString("weeklyReport.title", comment: ""))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -65,7 +65,7 @@ struct WeeklyReportView: View {
                         Button {
                             shareAsImage()
                         } label: {
-                            Label("مشاركة كصورة", systemImage: "photo")
+                            Label(NSLocalizedString("weeklyReport.shareAsImage", comment: ""), systemImage: "photo")
                         }
 
                         Button {
@@ -76,10 +76,10 @@ struct WeeklyReportView: View {
 
                         ShareLink(
                             item: shareText,
-                            subject: Text("تقرير AiQo الأسبوعي"),
-                            message: Text("شوف تقدمي هالأسبوع!")
+                            subject: Text(NSLocalizedString("weeklyReport.shareSubject", comment: "")),
+                            message: Text(NSLocalizedString("weeklyReport.shareMessage", comment: ""))
                         ) {
-                            Label("مشاركة نص", systemImage: "text.bubble")
+                            Label(NSLocalizedString("weeklyReport.shareText", comment: ""), systemImage: "text.bubble")
                         }
 
                         Divider()
@@ -87,13 +87,13 @@ struct WeeklyReportView: View {
                         Button {
                             exportPDF()
                         } label: {
-                            Label("تصدير PDF", systemImage: "doc.richtext")
+                            Label(NSLocalizedString("weeklyReport.exportPDF", comment: ""), systemImage: "doc.richtext")
                         }
 
                         Button {
                             exportCSV()
                         } label: {
-                            Label("تصدير CSV", systemImage: "tablecells")
+                            Label(NSLocalizedString("weeklyReport.exportCSV", comment: ""), systemImage: "tablecells")
                         }
                     } label: {
                         Image(systemName: "square.and.arrow.up")
@@ -225,7 +225,7 @@ struct WeeklyReportView: View {
                         .font(.system(size: 42, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
 
-                    Text("من 100")
+                    Text(NSLocalizedString("weeklyReport.outOf100", comment: ""))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -249,7 +249,7 @@ struct WeeklyReportView: View {
     @ViewBuilder
     private func dailyChartSection(_ data: WeeklyReportData) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("الخطوات اليومية")
+            Text(NSLocalizedString("weeklyReport.dailySteps", comment: ""))
                 .font(.headline)
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -311,25 +311,25 @@ struct WeeklyReportView: View {
     @ViewBuilder
     private func workoutSummarySection(_ data: WeeklyReportData) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("ملخص التمارين", systemImage: "flame.fill")
+            Label(NSLocalizedString("weeklyReport.workoutSummary", comment: ""), systemImage: "flame.fill")
                 .font(.headline)
 
             HStack(spacing: 20) {
                 workoutStatItem(
                     value: "\(data.workoutCount)",
-                    label: "تمرين",
+                    label: NSLocalizedString("weeklyReport.workout", comment: ""),
                     icon: "figure.strengthtraining.traditional"
                 )
 
                 workoutStatItem(
                     value: "\(data.totalWorkoutMinutes)",
-                    label: "دقيقة",
+                    label: NSLocalizedString("weeklyReport.minutes", comment: ""),
                     icon: "clock.fill"
                 )
 
                 workoutStatItem(
                     value: String(format: "%.0f", Double(data.totalWorkoutMinutes) / Double(max(data.workoutCount, 1))),
-                    label: "معدل / تمرين",
+                    label: NSLocalizedString("weeklyReport.avgPerWorkout", comment: ""),
                     icon: "chart.bar.fill"
                 )
             }
@@ -389,7 +389,7 @@ struct WeeklyReportView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("جاري تحضير التقرير...")
+            Text(NSLocalizedString("weeklyReport.loading", comment: ""))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -434,24 +434,24 @@ struct WeeklyReportView: View {
     }
 
     private func scoreEmoji(_ score: Int) -> String {
-        if score >= 90 { return "أسطوري! 🏆" }
-        if score >= 75 { return "ممتاز! 💪" }
-        if score >= 50 { return "جيد، كمّل! 🔥" }
-        if score >= 25 { return "ابدأ الأسبوع القادم أقوى 💫" }
-        return "الأسبوع القادم أحسن إن شاء الله 🌱"
+        if score >= 90 { return NSLocalizedString("weeklyReport.scoreLegendary", comment: "") }
+        if score >= 75 { return NSLocalizedString("weeklyReport.scoreExcellent", comment: "") }
+        if score >= 50 { return NSLocalizedString("weeklyReport.scoreGood", comment: "") }
+        if score >= 25 { return NSLocalizedString("weeklyReport.scoreKeepGoing", comment: "") }
+        return NSLocalizedString("weeklyReport.scoreNextWeek", comment: "")
     }
 
     private func motivationMessage(score: Int) -> (emoji: String, text: String) {
         if score >= 90 {
-            return ("🏆", "أسبوع أسطوري! أنت وحش يا بطل. خلّي هالزخم مستمر.")
+            return ("🏆", NSLocalizedString("weeklyReport.motiveLegendary", comment: ""))
         } else if score >= 75 {
-            return ("💪", "أسبوع ممتاز! شغلك واضح. شوي وتوصل القمة.")
+            return ("💪", NSLocalizedString("weeklyReport.motiveExcellent", comment: ""))
         } else if score >= 50 {
-            return ("🔥", "أسبوع جيد! عندك أساس قوي. زيد شوي بالتمارين والنوم.")
+            return ("🔥", NSLocalizedString("weeklyReport.motiveGood", comment: ""))
         } else if score >= 25 {
-            return ("💫", "بداية حلوة! كل خطوة تقربك لهدفك. الأسبوع الجاي بيكون أحسن.")
+            return ("💫", NSLocalizedString("weeklyReport.motiveKeepGoing", comment: ""))
         } else {
-            return ("🌱", "كل أسبوع فرصة جديدة. ابدأ بأشياء بسيطة وبتشوف الفرق.")
+            return ("🌱", NSLocalizedString("weeklyReport.motiveNextWeek", comment: ""))
         }
     }
 }
@@ -531,7 +531,7 @@ struct ReportMetricCard: View {
             Text(String(format: "%.0f%%", abs(metric.changePercent)))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
 
-            Text("عن الأسبوع الماضي")
+            Text(NSLocalizedString("weeklyReport.vsLastWeek", comment: ""))
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
         }

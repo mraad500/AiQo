@@ -16,7 +16,7 @@ struct TribeInviteView: View {
                         .foregroundStyle(Color.aiqoMint)
                         .padding(.top, 16)
 
-                    Text("دعوة أعضاء جدد")
+                    Text(NSLocalizedString("tribe.invite.newMembers", comment: ""))
                         .font(.system(.title3, design: .rounded, weight: .bold))
                         .foregroundStyle(TribePalette.textPrimary)
 
@@ -26,7 +26,7 @@ struct TribeInviteView: View {
 
                     // رمز الدعوة
                     VStack(spacing: 8) {
-                        Text("رمز الدعوة")
+                        Text(NSLocalizedString("tribe.invite.code", comment: ""))
                             .font(.system(.caption, design: .rounded, weight: .semibold))
                             .foregroundStyle(TribePalette.textTertiary)
 
@@ -57,7 +57,7 @@ struct TribeInviteView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
-                                Text(didCopy ? "تم النسخ!" : "نسخ الرمز")
+                                Text(didCopy ? NSLocalizedString("tribe.invite.copied", comment: "") : NSLocalizedString("tribe.invite.copyCode", comment: ""))
                             }
                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             .foregroundStyle(Color(hex: "2D6B4A"))
@@ -76,7 +76,7 @@ struct TribeInviteView: View {
                                 } else {
                                     Image(systemName: "square.and.arrow.up")
                                 }
-                                Text("شارك كصورة")
+                                Text(NSLocalizedString("tribe.invite.shareImage", comment: ""))
                             }
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
                             .foregroundStyle(.white)
@@ -93,7 +93,7 @@ struct TribeInviteView: View {
 
                     // قائمة الأعضاء
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("الأعضاء")
+                        Text(NSLocalizedString("tribe.invite.membersSection", comment: ""))
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
                             .foregroundStyle(TribePalette.textPrimary)
 
@@ -110,7 +110,7 @@ struct TribeInviteView: View {
                                         Image(systemName: "crown.fill")
                                             .font(.system(size: 9))
                                             .symbolRenderingMode(.hierarchical)
-                                        Text("المؤسس")
+                                        Text(NSLocalizedString("tribe.invite.founder", comment: ""))
                                     }
                                     .font(.system(.caption2, design: .rounded, weight: .semibold))
                                     .foregroundStyle(Color.aiqoSand)
@@ -151,7 +151,7 @@ struct TribeInviteView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("إغلاق") { dismiss() }
+                    Button(NSLocalizedString("tribe.invite.close", comment: "")) { dismiss() }
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(Color(hex: "2D6B4A"))
                 }

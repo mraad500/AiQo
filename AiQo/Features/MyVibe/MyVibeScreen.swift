@@ -75,7 +75,7 @@ private extension MyVibeScreen {
                             .frame(width: 7, height: 7)
                             .shadow(color: viewModel.isPlaying ? Color(hex: "8AE3D1").opacity(0.8) : .clear, radius: 4)
 
-                        Text(viewModel.isPlaying ? "LIVE" : "IDLE")
+                        Text(viewModel.isPlaying ? NSLocalizedString("vibe.live", comment: "") : NSLocalizedString("vibe.idle", comment: ""))
                             .font(.system(size: 10, weight: .heavy, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.8))
                     }
@@ -95,12 +95,12 @@ private extension MyVibeScreen {
 
             // Title overlay at bottom-left
             VStack(alignment: .leading, spacing: 6) {
-                Text("MY VIBE")
+                Text(NSLocalizedString("vibe.myVibe", comment: ""))
                     .font(.system(size: 11, weight: .heavy, design: .monospaced))
                     .tracking(2.4)
                     .foregroundStyle(Color(hex: "8AE3D1").opacity(0.9))
 
-                Text("DJ Hamoudi")
+                Text(NSLocalizedString("vibe.djHamoudi", comment: ""))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
@@ -127,7 +127,7 @@ private extension MyVibeScreen {
 private extension MyVibeScreen {
     var vibeTimeline: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("BIOLOGICAL TIMELINE")
+            Text(NSLocalizedString("vibe.bioTimeline", comment: ""))
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(Color.white.opacity(0.4))
@@ -179,7 +179,7 @@ private extension MyVibeScreen {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("BIO-FREQUENCY")
+                    Text(NSLocalizedString("vibe.bioFrequency", comment: ""))
                         .font(.system(size: 10, weight: .heavy, design: .monospaced))
                         .tracking(1.2)
                         .foregroundStyle(Color.white.opacity(0.46))
@@ -270,13 +270,13 @@ private extension MyVibeScreen {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text("SPOTIFY")
+                        Text(NSLocalizedString("vibe.spotifyLabel", comment: ""))
                             .font(.system(size: 10, weight: .heavy, design: .monospaced))
                             .tracking(1.2)
                             .foregroundStyle(Color.white.opacity(0.46))
 
                         if viewModel.isSpotifyConnected {
-                            Text("CONNECTED")
+                            Text(NSLocalizedString("vibe.connected", comment: ""))
                                 .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                 .foregroundStyle(Color(hex: "1DB954"))
                                 .padding(.horizontal, 6)
@@ -327,7 +327,7 @@ private extension MyVibeScreen {
                 HStack(spacing: 6) {
                     Image(systemName: "music.mic")
                         .font(.system(size: 11, weight: .semibold))
-                    Text("DJ Override Active")
+                    Text(NSLocalizedString("vibe.djOverride", comment: ""))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                 }
                 .foregroundStyle(Color(hex: "8AE3D1").opacity(0.8))
@@ -363,7 +363,7 @@ private extension MyVibeScreen {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color(hex: "8AE3D1").opacity(0.7))
 
-            TextField("Ask DJ Hamoudi for a mood override...", text: $viewModel.djSearchText)
+            TextField(NSLocalizedString("vibe.djPlaceholder", comment: ""), text: $viewModel.djSearchText)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(.white)
                 .submitLabel(.send)

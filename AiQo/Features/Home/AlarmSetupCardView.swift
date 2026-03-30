@@ -10,7 +10,7 @@ struct AlarmSetupCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ضبط منبه للاستيقاظ")
+            Text(NSLocalizedString("alarm.setWake", comment: ""))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
@@ -27,7 +27,7 @@ struct AlarmSetupCardView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("الوقت المحدد للمنبه")
+                        Text(NSLocalizedString("alarm.scheduledTime", comment: ""))
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(helperForeground)
 
@@ -87,13 +87,13 @@ struct AlarmSetupCardView: View {
     private var helperText: String {
         switch saveState {
         case .idle:
-            return "اضبط هذا الوقت كمنبه للاستيقاظ"
+            return NSLocalizedString("alarm.helper.idle", comment: "")
         case .requestingPermission:
-            return "جاري طلب إذن المنبه..."
+            return NSLocalizedString("alarm.helper.requestingPermission", comment: "")
         case .saving:
-            return "جاري حفظ المنبه..."
+            return NSLocalizedString("alarm.helper.saving", comment: "")
         case .saved:
-            return "هذا الوقت صار منبهك القادم"
+            return NSLocalizedString("alarm.helper.saved", comment: "")
         case .denied(let message):
             return message
         case .failed(let message):
@@ -104,17 +104,17 @@ struct AlarmSetupCardView: View {
     private var buttonTitle: String {
         switch saveState {
         case .idle:
-            return "حفظ"
+            return NSLocalizedString("alarm.button.idle", comment: "")
         case .requestingPermission:
-            return "جاري طلب الإذن..."
+            return NSLocalizedString("alarm.button.requestingPermission", comment: "")
         case .saving:
-            return "جاري حفظ المنبه..."
+            return NSLocalizedString("alarm.button.saving", comment: "")
         case .saved:
-            return "تم الحفظ"
+            return NSLocalizedString("alarm.button.saved", comment: "")
         case .denied:
-            return "الإعدادات"
+            return NSLocalizedString("alarm.button.denied", comment: "")
         case .failed:
-            return "حاول مرة ثانية"
+            return NSLocalizedString("alarm.button.failed", comment: "")
         }
     }
 
@@ -132,15 +132,15 @@ struct AlarmSetupCardView: View {
     private var badgeTitle: String? {
         switch saveState {
         case .saved:
-            return "المنبه مضبوط"
+            return NSLocalizedString("alarm.badge.saved", comment: "")
         case .requestingPermission:
-            return "طلب الإذن"
+            return NSLocalizedString("alarm.badge.requestingPermission", comment: "")
         case .saving:
-            return "جارٍ الحفظ"
+            return NSLocalizedString("alarm.badge.saving", comment: "")
         case .denied:
-            return "إذن مطلوب"
+            return NSLocalizedString("alarm.badge.denied", comment: "")
         case .failed:
-            return "تعذر الحفظ"
+            return NSLocalizedString("alarm.badge.failed", comment: "")
         case .idle:
             return nil
         }

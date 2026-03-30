@@ -27,7 +27,7 @@ struct RecordDetailView: View {
             .padding(.bottom, 40)
         }
         .background(Color.white.ignoresSafeArea())
-        .navigationTitle("التحدّيات الأسطورية")
+        .navigationTitle(NSLocalizedString("recordDetail.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navigateToProject) {
             if let project = viewModel.activeProject {
@@ -43,10 +43,10 @@ struct RecordDetailView: View {
         .navigationDestination(isPresented: $navigateToAssessment) {
             FitnessAssessmentView(record: record)
         }
-        .alert("عندك مشروع نشط", isPresented: $showActiveProjectAlert) {
-            Button("تمام", role: .cancel) {}
+        .alert(NSLocalizedString("recordDetail.activeProjectAlert", comment: ""), isPresented: $showActiveProjectAlert) {
+            Button(NSLocalizedString("recordDetail.ok", comment: ""), role: .cancel) {}
         } message: {
-            Text("عندك مشروع نشط حالياً. لازم تنهيه أول قبل ما تبدأ مشروع جديد.")
+            Text(NSLocalizedString("recordDetail.activeProjectMessage", comment: ""))
         }
         .environment(\.layoutDirection, .rightToLeft)
     }
@@ -92,9 +92,9 @@ struct RecordDetailView: View {
 
     private var infoCardsRow: some View {
         HStack(spacing: 10) {
-            infoCard(title: "الصعوبة", value: record.difficulty.labelAr, color: GymTheme.beige)
-            infoCard(title: "المدة المتوقعة", value: "\(record.estimatedWeeks) أسبوع", color: GymTheme.mint)
-            infoCard(title: "الفئة", value: record.category.rawValue, color: GymTheme.beige)
+            infoCard(title: NSLocalizedString("recordDetail.difficulty", comment: ""), value: record.difficulty.labelAr, color: GymTheme.beige)
+            infoCard(title: NSLocalizedString("recordDetail.estimatedDuration", comment: ""), value: "\(record.estimatedWeeks) \(NSLocalizedString("recordDetail.weeks", comment: ""))", color: GymTheme.mint)
+            infoCard(title: NSLocalizedString("recordDetail.category", comment: ""), value: record.category.rawValue, color: GymTheme.beige)
         }
     }
 
@@ -120,7 +120,7 @@ struct RecordDetailView: View {
 
     private var storySection: some View {
         VStack(alignment: .trailing, spacing: 10) {
-            Text("القصة")
+            Text(NSLocalizedString("recordDetail.story", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -142,7 +142,7 @@ struct RecordDetailView: View {
 
     private var requirementsSection: some View {
         VStack(alignment: .trailing, spacing: 10) {
-            Text("المتطلبات")
+            Text(NSLocalizedString("recordDetail.requirements", comment: ""))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -186,7 +186,7 @@ struct RecordDetailView: View {
         } label: {
             HStack {
                 Spacer()
-                Text("ابدأ المشروع ويا الكابتن 🚀")
+                Text(NSLocalizedString("recordDetail.startProject", comment: ""))
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
                 Spacer()

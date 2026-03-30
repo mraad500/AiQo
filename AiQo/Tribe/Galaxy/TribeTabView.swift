@@ -44,9 +44,9 @@ struct TribeTabView: View {
                 TribeInviteView(tribe: tribe)
             }
         }
-        .alert("تبي تطلع من القبيلة؟", isPresented: $showLeaveConfirmation) {
-            Button("لا، أبي أبقى", role: .cancel) { }
-            Button("أطلع", role: .destructive) {
+        .alert(NSLocalizedString("tribeTab.leaveAlert", comment: ""), isPresented: $showLeaveConfirmation) {
+            Button(NSLocalizedString("tribeTab.stayButton", comment: ""), role: .cancel) { }
+            Button(NSLocalizedString("tribeTab.leaveButton", comment: ""), role: .destructive) {
                 isLeaving = true
                 Task {
                     let success = await arenaVM.leaveTribe(context: modelContext)
@@ -57,7 +57,7 @@ struct TribeTabView: View {
                 }
             }
         } message: {
-            Text("إذا طلعت، بتفقد مكانك بالقبيلة")
+            Text(NSLocalizedString("tribeTab.leaveWarning", comment: ""))
         }
     }
 
@@ -90,7 +90,7 @@ struct TribeTabView: View {
                         }
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.system(size: 14))
-                        Text("مغادرة القبيلة")
+                        Text(NSLocalizedString("tribeTab.leaveTribe", comment: ""))
                             .font(.system(.subheadline, design: .rounded, weight: .medium))
                     }
                     .foregroundStyle(Color.red.opacity(0.7))

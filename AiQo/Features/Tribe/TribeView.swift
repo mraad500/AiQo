@@ -14,9 +14,9 @@ private enum EmaraTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .global: return "العالمية"
-        case .arena: return "الارينا"
-        case .tribe: return "القبيلة"
+        case .global: return NSLocalizedString("emara.global", comment: "")
+        case .arena: return NSLocalizedString("emara.arena", comment: "")
+        case .tribe: return NSLocalizedString("emara.tribe", comment: "")
         }
     }
 }
@@ -141,7 +141,7 @@ struct TribeView: View {
     // MARK: - Screen Title
 
     private var screenTitle: some View {
-        Text("إمارة")
+        Text(NSLocalizedString("emara.title", comment: ""))
             .font(.system(size: 30, weight: .bold, design: .rounded))
             .foregroundStyle(TribeLeaderboardPalette.textPrimary)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -178,9 +178,9 @@ struct TribeView: View {
 
             // Native segmented picker
             Picker("", selection: $selectedTab) {
-                Text("القبيلة").tag(EmaraTab.tribe)
-                Text("الارينا").tag(EmaraTab.arena)
-                Text("العالمية").tag(EmaraTab.global)
+                Text(NSLocalizedString("emara.tribe", comment: "")).tag(EmaraTab.tribe)
+                Text(NSLocalizedString("emara.arena", comment: "")).tag(EmaraTab.arena)
+                Text(NSLocalizedString("emara.global", comment: "")).tag(EmaraTab.global)
             }
             .pickerStyle(.segmented)
             .frame(height: 36)
@@ -307,7 +307,7 @@ struct TribeView: View {
                 .foregroundStyle(TribeLeaderboardPalette.textSecondary)
 
             // Level badge
-            Text("المستوى \(user.level.arabicFormatted)")
+            Text(String(format: NSLocalizedString("emara.levelFormat", comment: ""), user.level.arabicFormatted))
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(TribeLeaderboardPalette.textPrimary)
                 .padding(.horizontal, 8)
@@ -361,7 +361,7 @@ struct TribeView: View {
                         }
                         .foregroundStyle(TribeLeaderboardPalette.textPrimary)
 
-                        Text("المستوى \(user.level.arabicFormatted)")
+                        Text(String(format: NSLocalizedString("emara.levelFormat", comment: ""), user.level.arabicFormatted))
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(TribeLeaderboardPalette.textTertiary)
                     }
@@ -568,7 +568,7 @@ private struct TribeRingMemberCard: View {
                     }
                     .foregroundStyle(TribeLeaderboardPalette.textPrimary)
 
-                    Text("المستوى \(member.level.arabicFormatted)")
+                    Text(String(format: NSLocalizedString("emara.levelFormat", comment: ""), member.level.arabicFormatted))
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(TribeLeaderboardPalette.textTertiary)
                 }
@@ -596,7 +596,7 @@ private struct TribeUserRowCard: View {
                     HStack(spacing: 8) {
                         labelChip(
                             icon: "sparkles",
-                            text: "المستوى \(user.level.arabicFormatted)",
+                            text: String(format: NSLocalizedString("emara.levelFormat", comment: ""), user.level.arabicFormatted),
                             tint: TribeLeaderboardPalette.sand
                         )
                         labelChip(
@@ -641,7 +641,7 @@ private struct TribeUserRowCard: View {
                         .foregroundStyle(TribeLeaderboardPalette.textPrimary)
                         .monospacedDigit()
 
-                    Text("عالمي")
+                    Text(NSLocalizedString("leaderboard.global", comment: ""))
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(TribeLeaderboardPalette.textTertiary)
                 }
@@ -713,8 +713,8 @@ private struct TribeUserDetailSheet: View {
                         }
 
                         HStack(spacing: 10) {
-                            detailMetric(title: "المستوى", value: user.level.arabicFormatted, tint: TribeLeaderboardPalette.sand)
-                            detailMetric(title: "النقاط", value: user.points.arabicFormatted, tint: TribeLeaderboardPalette.mint)
+                            detailMetric(title: NSLocalizedString("leaderboard.level", comment: ""), value: user.level.arabicFormatted, tint: TribeLeaderboardPalette.sand)
+                            detailMetric(title: NSLocalizedString("leaderboard.points", comment: ""), value: user.points.arabicFormatted, tint: TribeLeaderboardPalette.mint)
                         }
 
                         if user.isCurrentUser || !user.isProfilePublic {
@@ -788,9 +788,9 @@ private struct ProfileVisibilityBadge: View {
 
     private var label: String {
         if isCurrentUser {
-            return isProfilePublic ? "ملف عام" : "ملف خاص"
+            return isProfilePublic ? NSLocalizedString("emara.profilePublic", comment: "") : NSLocalizedString("emara.profilePrivate", comment: "")
         }
-        return isProfilePublic ? "عام" : "حساب خاص"
+        return isProfilePublic ? NSLocalizedString("emara.public", comment: "") : NSLocalizedString("emara.private", comment: "")
     }
 
     private var backgroundTint: Color {
@@ -835,7 +835,7 @@ private struct AvatarView: View {
             }
 
             if showsPrivateCaption && !user.isProfilePublic {
-                Text("حساب خاص")
+                Text(NSLocalizedString("emara.private", comment: ""))
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(TribeLeaderboardPalette.textSecondary)
             }
@@ -943,7 +943,7 @@ private final class TribeViewModel: ObservableObject {
     private static func makeCurrentUser() -> TribeLeaderboardUser {
         let profile = UserProfileStore.shared.current
         let displayName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        ? "أنت"
+        ? NSLocalizedString("leaderboard.you", comment: "")
         : profile.name
         let rawUsername = profile.username?.trimmingCharacters(in: .whitespacesAndNewlines)
 

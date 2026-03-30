@@ -37,19 +37,19 @@ struct TribePulseScreenView: View {
 
                 HStack(spacing: 10) {
                     TribeMetricPill(
-                        title: "الانسجام",
+                        title: NSLocalizedString("pulse.harmony", comment: ""),
                         value: resolvedProgressValue,
                         tint: TribeModernPalette.mint
                     )
 
                     TribeMetricPill(
-                        title: "الأعضاء",
+                        title: NSLocalizedString("pulse.members", comment: ""),
                         value: "\(activeMemberCount)",
                         tint: TribeModernPalette.sand
                     )
 
                     TribeMetricPill(
-                        title: "الطاقة",
+                        title: NSLocalizedString("pulse.energy", comment: ""),
                         value: totalEnergyText,
                         tint: TribeModernPalette.lavender
                     )
@@ -133,7 +133,7 @@ struct TribePulseHeroCard: View {
                             TribePulseTag(text: selectedMember.compactSectorLabel, tint: selectedMember.accentColor)
                         }
 
-                        TribePulseTag(text: "Tribe Pulse", tint: TribeModernPalette.mint)
+                        TribePulseTag(text: NSLocalizedString("pulse.tribePulse", comment: ""), tint: TribeModernPalette.mint)
                     }
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -143,14 +143,14 @@ struct TribePulseHeroCard: View {
                         .multilineTextAlignment(.trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
-                    Text("انسجام اليوم \(progressValue)")
+                    Text(String(format: NSLocalizedString("pulse.todayHarmony", comment: ""), progressValue))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(TribeModernPalette.textPrimary)
                         .monospacedDigit()
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
                     if activeMemberCount > 0 {
-                        Text("\(activeMemberCount) أعضاء نشطين")
+                        Text(String(format: NSLocalizedString("pulse.activeMembers", comment: ""), activeMemberCount))
                             .tribeRoundedFont(size: 12, weight: .medium)
                             .foregroundStyle(TribeModernPalette.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -554,7 +554,7 @@ struct TribeMemberCard: View {
                 .monospacedDigit()
                 .minimumScaleFactor(0.8)
 
-            Text("طاقة")
+            Text(NSLocalizedString("pulse.energy", comment: ""))
                 .tribeRoundedFont(size: 11, weight: .medium)
                 .foregroundStyle(TribeModernPalette.textSecondary)
         }
@@ -588,7 +588,7 @@ private struct TribePulseMembersSection: View {
                     .padding(.vertical, 5)
                     .background(Color.white.opacity(0.72), in: Capsule(style: .continuous))
 
-                Text("الأعضاء")
+                Text(NSLocalizedString("pulse.members", comment: ""))
                     .tribeRoundedFont(size: 12, weight: .medium)
                     .foregroundStyle(TribeModernPalette.textSecondary)
             }

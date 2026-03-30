@@ -12,7 +12,7 @@ struct HallOfFameFullView: View {
                         HStack(spacing: 14) {
                             // رقم الأسبوع
                             VStack(spacing: 2) {
-                                Text("الأسبوع")
+                                Text(NSLocalizedString("hallOfFame.week", comment: ""))
                                     .font(.system(.caption2, design: .rounded))
                                     .foregroundStyle(TribePalette.textTertiary)
                                 Text("\(entry.weekNumber)")
@@ -65,11 +65,11 @@ struct HallOfFameFullView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("سجل الأمجاد")
+            .navigationTitle(NSLocalizedString("hallOfFame.title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("إغلاق") { dismiss() }
+                    Button(NSLocalizedString("hallOfFame.close", comment: "")) { dismiss() }
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(Color(hex: "2D6B4A"))
                 }

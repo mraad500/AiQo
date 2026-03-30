@@ -1585,3 +1585,571 @@
 "nutrition.addMeal.title" = "Add Meal";
 "nutrition.addMeal.button" = "Add Meal ✨";
 "nutrition.cancel" = "Cancel";
+
+// MARK: - Legacy Calculation Screen
+"legacy.intro.body" = "%@, AiQo determines your level based on your complete health history stored on your device — every step you walked, every hour you slept, and every effort over the years.";
+"legacy.intro.tagline" = "You're not starting from zero — you're coming with a history.";
+"legacy.permissions.granted" = "Permissions granted";
+"legacy.permissions.title" = "Grant Health & Notification Permissions";
+"legacy.permissions.subtitle" = "Required to continue";
+"legacy.permissions.a11y" = "Grant Health & Notification Permissions";
+"legacy.continue" = "Continue";
+"legacy.skip" = "Not Now";
+"legacy.result.level" = "Level";
+"legacy.result.total" = "Total: %@ points";
+"legacy.metric.steps" = "Steps";
+"legacy.metric.calories" = "Calories";
+"legacy.metric.distance" = "Distance";
+"legacy.metric.sleep" = "Sleep";
+"legacy.metric.total" = "Total";
+"legacy.goHome" = "Go to Home";
+"legacy.fallbackName" = "You";
+"legacy.loading.permissions.title" = "Requesting Apple Health";
+"legacy.loading.permissions.subtitle" = "One-time access to your full health history";
+"legacy.loading.locating.title" = "Locating first record";
+"legacy.loading.locating.subtitle" = "Searching for your oldest available health data";
+"legacy.loading.aggregating.title" = "Gathering your full history";
+"legacy.loading.aggregating.subtitle" = "Steps, calories, distance and sleep from day one";
+"legacy.loading.finalizing.title" = "Shaping your level";
+"legacy.loading.finalizing.subtitle" = "Turning your health history into a clear, personal level";
+"legacy.loading.timeout.title" = "Data took longer than expected";
+"legacy.loading.timeout.subtitle" = "We'll continue with available data";
+"legacy.loading.unauthorized.title" = "Permission not granted";
+"legacy.loading.unauthorized.subtitle" = "You can enable Apple Health later from Settings";
+"legacy.rank.1.title" = "Beginner";
+"legacy.rank.1.desc" = "Every journey starts with a step. AiQo is with you from here.";
+"legacy.rank.2.title" = "Mover";
+"legacy.rank.2.desc" = "You've started moving and building habits. Keep going!";
+"legacy.rank.3.title" = "Active";
+"legacy.rank.3.desc" = "Your body thanks you. Your level is rising steadily.";
+"legacy.rank.4.title" = "Disciplined";
+"legacy.rank.4.desc" = "Your commitment is clear. You're above average.";
+"legacy.rank.5.title" = "Strong";
+"legacy.rank.5.desc" = "Strong data. Your body speaks and you listen.";
+"legacy.rank.6.title" = "Warrior";
+"legacy.rank.6.desc" = "Few reach here. You're a true warrior.";
+"legacy.rank.7.title" = "Champion";
+"legacy.rank.7.desc" = "Your numbers speak for you. A champion by all measures.";
+"legacy.rank.8.title" = "Sports Legend";
+"legacy.rank.8.desc" = "Your numbers show you take your health seriously. AiQo is now your official partner.";
+"legacy.rank.9.title" = "Superhuman";
+"legacy.rank.9.desc" = "An unbelievable level. You're pushing the limits.";
+"legacy.rank.10.title" = "Living Legend";
+"legacy.rank.10.desc" = "You're at the absolute peak. Your health history is extraordinary.";
+"legacy.rank.0.title" = "Rookie";
+"legacy.rank.0.desc" = "Let's get started!";
+"unit.km" = "km";
+"unit.hours.short" = "h";
+
+/* ═══════════════════════════════════════════════════════════
+   MISSING TRANSLATIONS – Added for full localization coverage
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Daily Aura ─── */
+"aura.goals" = "Goals";
+"aura.history" = "History";
+"aura.dailyGoals" = "Daily Goals";
+"aura.stepsGoal" = "Steps Goal";
+"aura.caloriesGoal" = "Calories Goal";
+"aura.today" = "Today";
+"aura.a11y.progress" = "Today's progress %@";
+"aura.a11y.hint" = "Double tap to view daily goals";
+
+/* ─── Sleep Detail ─── */
+"sleep.timeNavigation" = "Time Navigation";
+"sleep.architecture" = "Sleep Architecture";
+"sleep.stages" = "Sleep Stages";
+"sleep.stages.unavailable" = "Sleep stages unavailable";
+"sleep.stages.noData" = "No staged sleep data yet";
+"sleep.stages.noDataMessage" = "Wear Apple Watch during sleep to unlock Core, Deep, REM, and Awake stages here.";
+"sleep.trend.noData" = "No historical sleep trend yet";
+"sleep.trend.noDataMessage" = "Switch back to Today or wait for more HealthKit history to populate weekly and monthly sleep trends.";
+"sleep.syncing" = "Syncing last night's sleep stages...";
+"sleep.lastNight" = "Last Night";
+"sleep.nextSync" = "Last night will appear here after the next HealthKit sync.";
+"sleep.subtitle.day" = "Last night";
+"sleep.subtitle.week" = "Weekly sleep rhythm";
+"sleep.subtitle.month" = "Monthly sleep rhythm";
+"sleep.subtitle.year" = "Yearly sleep trend";
+"sleep.subtitle.all" = "All recorded sleep history";
+"sleep.score.outOf" = "out of 100";
+"sleep.score.title" = "Sleep Score";
+
+/* ─── Smart Wake Calculator ─── */
+"smartwake.title" = "Smart Wake Calculator";
+"smartwake.mode" = "Calculator Mode";
+"smartwake.selectSleep" = "Select sleep time";
+"smartwake.selectWake" = "Select latest wake time";
+"smartwake.wakeWindow" = "Wake Window";
+"smartwake.bestSuggestion" = "Best suggested wake time";
+"smartwake.otherSuggestions" = "Other suggestions";
+"smartwake.cyclesBased" = "Based on estimated sleep cycles";
+"smartwake.withinWindow" = "Within smart wake window";
+"smartwake.cycles" = "Number of cycles";
+"smartwake.expectedDuration" = "Expected sleep duration";
+"smartwake.confidence" = "Confidence level";
+"smartwake.latestAllowed" = "Latest allowed time";
+"smartwake.result" = "Result";
+"smartwake.bestBalance" = "Best balance";
+"smartwake.cyclesFormat" = "%d cycles";
+
+/* ─── Alarm Setup ─── */
+"alarm.setWake" = "Set wake alarm";
+"alarm.scheduledTime" = "Scheduled alarm time";
+"alarm.helper.ready" = "Set this time as your wake alarm";
+"alarm.helper.requesting" = "Requesting alarm permission...";
+"alarm.helper.saving" = "Saving alarm...";
+"alarm.helper.saved" = "This time is now your next alarm";
+"alarm.button.save" = "Save";
+"alarm.button.requesting" = "Requesting permission...";
+"alarm.button.saving" = "Saving alarm...";
+"alarm.button.saved" = "Saved";
+"alarm.button.settings" = "Settings";
+"alarm.button.retry" = "Try again";
+"alarm.badge.set" = "Alarm set";
+"alarm.badge.request" = "Request permission";
+"alarm.badge.saving" = "Saving";
+"alarm.badge.required" = "Permission required";
+"alarm.badge.failed" = "Save failed";
+
+/* ─── DJ Captain Chat ─── */
+"dj.title" = "DJ Hamoudi 🎧";
+"dj.thinking" = "Thinking";
+"dj.ready" = "Ready";
+"dj.headerFallback" = "Ask the captain about a mood or playlist for your day";
+"dj.placeholder" = "Ask the captain for a song mood...";
+
+/* ─── Water Detail ─── */
+"water.close" = "Close";
+"water.add" = "+ 0.25 L";
+"water.a11y.add" = "Add 0.25 liters of water";
+"water.a11y.hint" = "Double tap to log water intake";
+
+/* ─── Streak Badge ─── */
+"streak.a11y" = "streak %d consecutive days";
+"streak.commitment" = "Commitment";
+"streak.consecutiveDays" = "consecutive days";
+"streak.longestStreak" = "Longest streak";
+"streak.weekCommitment" = "Week commitment";
+"streak.today" = "Today";
+
+/* ─── My Vibe ─── */
+"vibe.live" = "LIVE";
+"vibe.idle" = "IDLE";
+"vibe.myVibe" = "MY VIBE";
+"vibe.djHamoudi" = "DJ Hamoudi";
+"vibe.bioTimeline" = "BIOLOGICAL TIMELINE";
+"vibe.bioFrequency" = "BIO-FREQUENCY";
+"vibe.spotifyLabel" = "SPOTIFY";
+"vibe.connected" = "CONNECTED";
+"vibe.djOverride" = "DJ Override Active";
+"vibe.djPlaceholder" = "Ask DJ Hamoudi for a mood override...";
+
+/* ─── Galaxy Screen ─── */
+"galaxy.soulConnected" = "Every soul is connected to the source";
+"galaxy.networkSubtitle" = "A soft network around the source";
+"galaxy.arenaSubtitle" = "Tribe challenges within the same orbit";
+"galaxy.challengesDescription" = "Daily and monthly challenges with personal, tribal, and galactic paths.";
+"galaxy.orbitMissions" = "Orbit missions";
+
+/* ─── Arena Screen ─── */
+"arena.createChallenge" = "Create new challenge";
+"arena.goal" = "Goal";
+"arena.titlePlaceholder" = "Challenge title (optional)";
+"arena.addChallenge" = "Add challenge";
+"arena.galaxyNote" = "Galaxy challenges are curated by AiQo. You can only create personal or tribal challenges.";
+
+/* ─── Arena Tab ─── */
+"arena.tribesCompete" = "Tribes are competing — and you?";
+"arena.createOrJoin" = "Create your tribe with the family plan or join a friend's tribe";
+"arena.createTribe" = "Create tribe";
+"arena.joinWithCode" = "Join with code";
+
+/* ─── Tribe Invite ─── */
+"tribe.invite.newMembers" = "Invite new members";
+"tribe.invite.membersFormat" = "%@ — %d/5 members";
+"tribe.invite.code" = "Invite code";
+"tribe.invite.copied" = "Copied!";
+"tribe.invite.copyCode" = "Copy code";
+"tribe.invite.shareImage" = "Share as image";
+"tribe.invite.membersSection" = "Members";
+"tribe.invite.founder" = "Founder";
+"tribe.invite.close" = "Close";
+
+/* ─── Invite Card ─── */
+"inviteCard.title" = "Tribe invitation";
+"inviteCard.from" = "Invitation from";
+"inviteCard.joinCode" = "Join code";
+"inviteCard.qr" = "QR";
+"inviteCard.validUntil" = "Valid until %@";
+"inviteCard.membersCount" = "%d/5 members";
+
+/* ─── Tribe Tab ─── */
+"tribeTab.leaveAlert" = "Do you want to leave the tribe?";
+"tribeTab.stayButton" = "No, I want to stay";
+"tribeTab.leaveButton" = "Leave";
+"tribeTab.leaveWarning" = "If you leave, you'll lose your place in the tribe";
+"tribeTab.leaveTribe" = "Leave tribe";
+
+/* ─── Hall of Fame ─── */
+"hallOfFame.week" = "Week";
+"hallOfFame.title" = "Hall of Fame";
+"hallOfFame.close" = "Close";
+
+/* ─── Quick Challenges ─── */
+"quickChallenge.title" = "Quick challenges";
+"quickChallenge.subtitle" = "Choose a challenge and start immediately!";
+"quickChallenge.duration.day" = "%d day";
+"quickChallenge.duration.hour" = "%d hour";
+"quickChallenge.shortMarathon" = "Short marathon";
+"quickChallenge.10kSteps" = "10K steps";
+"quickChallenge.wetDay" = "Wet day";
+"quickChallenge.8cups" = "8 cups of water";
+"quickChallenge.noSugar" = "No sugar";
+"quickChallenge.24hours" = "24 hours";
+"quickChallenge.calmMoment" = "Calm moment";
+"quickChallenge.15minMeditation" = "15 minutes meditation";
+"quickChallenge.earlySleep" = "Early sleep";
+"quickChallenge.8hoursSleep" = "8 hours of sleep";
+"quickChallenge.stepsSprint" = "Steps sprint";
+"quickChallenge.5kIn3hours" = "5K within 3 hours";
+
+/* ─── Arena Challenge Detail ─── */
+"challengeDetail.ended" = "Ended";
+"challengeDetail.dayUnit" = "%d day";
+"challengeDetail.hourMinute" = "%d hour %d minute";
+"challengeDetail.minuteUnit" = "%d minute";
+"challengeDetail.timeRemaining" = "Time remaining";
+"challengeDetail.perContribution" = "Per contribution";
+"challengeDetail.participants" = "Participants";
+"challengeDetail.topScorers" = "Top scorers";
+"challengeDetail.levelFormat" = "Level %@";
+"challengeDetail.contributeFormat" = "Contribute +%d %@";
+"challengeDetail.completed" = "Completed! 🎉";
+"challengeDetail.wellDone" = "Well done! You completed the challenge successfully";
+
+/* ─── Challenge History ─── */
+"challengeHistory.myAchievements" = "My achievements";
+"challengeHistory.challenge" = "challenge";
+"challengeHistory.noChallenges" = "No completed challenges yet";
+"challengeHistory.completeFirst" = "Complete a challenge first and see your achievements here!";
+"challengeHistory.badges" = "Badges";
+"challengeHistory.badge.start" = "The Beginning";
+"challengeHistory.badge.start.req" = "First challenge";
+"challengeHistory.badge.persistent" = "Persistent";
+"challengeHistory.badge.persistent.req" = "5 challenges";
+"challengeHistory.badge.warrior" = "Warrior";
+"challengeHistory.badge.warrior.req" = "10 challenges";
+"challengeHistory.badge.legend" = "Legend";
+"challengeHistory.badge.legend.req" = "25 challenges";
+"challengeHistory.badge.immortal" = "Immortal";
+"challengeHistory.badge.immortal.req" = "50 challenges";
+"challengeHistory.badge.walker" = "Walker";
+"challengeHistory.badge.walker.req" = "Steps challenge";
+"challengeHistory.badge.hydrator" = "Hydrator";
+"challengeHistory.badge.hydrator.req" = "Water challenge";
+
+/* ─── Tribe Log ─── */
+"tribeLog.title" = "Log";
+"tribeLog.subtitle" = "Last 10 events inside the tribe.";
+
+/* ─── Tribe Hub ─── */
+"tribeHub.center" = "Hub";
+"tribeHub.arena" = "Arena";
+"tribeHub.log" = "Log";
+"tribeHub.galaxy" = "Galaxy";
+"tribeHub.shieldComplete" = "Shield charged for today.";
+"tribeHub.shieldRemaining" = "%d left to unlock the shield";
+"tribeHub.emirate" = "Emirate";
+"tribeHub.previewOn" = "Preview mode activated";
+"tribeHub.previewOff" = "Preview mode deactivated";
+"tribeHub.displayMode" = "Display mode";
+"tribeHub.tribeEnergyToday" = "Tribe energy today";
+"tribeHub.hubReady" = "Tribe hub ready";
+"tribeHub.hubReadyDesc" = "Create a tribe if you are on the family plan, or join with an invite code. After joining, tribe energy, missions, and members will appear here.";
+"tribeHub.canCreate" = "You can create a tribe now.";
+"tribeHub.familyRequired" = "Family plan required to create a tribe.";
+"tribeHub.createTribe" = "Create tribe";
+"tribeHub.familyPlanRequired" = "Family plan required";
+"tribeHub.joinWithCode" = "Join with code";
+"tribeHub.enterCode" = "Enter invite code";
+"tribeHub.joinNow" = "Join now";
+"tribeHub.previewHint" = "Preview of what will appear after you join a tribe";
+"tribeHub.sparkSent" = "Spark sent";
+"tribeHub.contributionAdded" = "Contribution added";
+"tribeHub.joinFirst" = "Join a tribe first so this section shows your real data.";
+"tribeHub.enterGalaxy" = "Enter Galaxy";
+"tribeHub.enterGalaxyDesc" = "Soul map, challenges, and a quick spark within the same orbit.";
+"tribeHub.missions" = "Tribe missions";
+"tribeHub.missionsSubtitle" = "Short and clear group steps.";
+"tribeHub.noMissions" = "No missions currently.";
+"tribeHub.tribeMembers" = "Tribe members";
+"tribeHub.membersPrivacy" = "Shown here: public name only, plus level and general energy for everyone. No health data is displayed.";
+"tribeHub.noMembers" = "No members yet.";
+"tribeHub.leader" = "Leader";
+"tribeHub.inviteCodeFormat" = "Invite code: %@";
+"tribeHub.profilePrivacy" = "Your profile privacy in tribe";
+"tribeHub.privateDesc" = "Private profile hides your name and photo, keeping only level and general energy contribution.";
+"tribeHub.leaveTribe" = "Leave tribe";
+"tribeHub.memberLabel" = "Member";
+"tribeHub.energyFormat" = "Energy %d";
+"tribeHub.levelFormat" = "Lv %d";
+"tribeHub.spark" = "Spark";
+"tribeHub.sendSpark" = "Send spark";
+"tribeHub.tribeName" = "Tribe name";
+"tribeHub.namePlaceholder" = "Example: Calm Core";
+"tribeHub.cancel" = "Cancel";
+"tribeHub.create" = "Create";
+
+/* ─── Tribe Pulse ─── */
+"pulse.harmony" = "Harmony";
+"pulse.members" = "Members";
+"pulse.energy" = "Energy";
+"pulse.tribePulse" = "Tribe Pulse";
+"pulse.todayHarmony" = "Today's harmony %@";
+"pulse.activeMembers" = "%d active members";
+
+/* ─── Tribe Leaderboard ─── */
+"leaderboard.allTime" = "All Time";
+"leaderboard.monthly" = "Monthly";
+"leaderboard.weekly" = "Weekly";
+"leaderboard.emirate" = "Emirate";
+"leaderboard.level" = "Level";
+"leaderboard.you" = "You";
+"leaderboard.rank" = "Rank";
+"leaderboard.points" = "Points";
+"leaderboard.global" = "Global";
+"leaderboard.privateAccount" = "Private account 🔒";
+"leaderboard.publicAccount" = "Public account";
+
+/* ─── Tribe View / Emara ─── */
+"emara.global" = "Global";
+"emara.arena" = "Arena";
+"emara.tribe" = "Tribe";
+"emara.title" = "Emirate";
+"emara.levelFormat" = "Level %@";
+"emara.profilePublic" = "Public profile";
+"emara.profilePrivate" = "Private profile";
+"emara.public" = "Public";
+"emara.private" = "Private account";
+
+/* ─── Fitness Assessment ─── */
+"assessment.title" = "Engine Assessment";
+"assessment.checkBody" = "Check your body readiness";
+"assessment.twoSystems" = "Your body has two systems:";
+"assessment.sympathetic" = "One presses gas 🔥 Sympathetic (for movement and stress)";
+"assessment.parasympathetic" = "And one presses brake 🧊 Parasympathetic (for rest and recovery)";
+"assessment.brakeTest" = "This test reveals your brake power — how your body recovers after effort.";
+"assessment.howItWorks" = "How does it work?";
+"assessment.step1" = "3 minutes effort (step up and down)";
+"assessment.step2" = "1 minute rest (sitting and relaxed)";
+"assessment.step3" = "Instant result";
+"assessment.needsWatch" = "Needs Apple Watch to measure your heart rate accurately";
+"assessment.disclaimer" = "This assessment is for fitness purposes only and is not a substitute for medical advice.";
+"assessment.startButton" = "Let's start the assessment ⚡";
+"assessment.skipButton" = "Skip assessment";
+"assessment.bpm" = "bpm";
+"assessment.stepUpDown" = "Step up and down";
+"assessment.warmup" = "Warm-up";
+"assessment.moderate" = "Moderate";
+"assessment.intense" = "Intense";
+"assessment.maximum" = "Maximum";
+"assessment.relax" = "Relax... breathe deeply 🧘";
+"assessment.peakHR" = "Peak HR:";
+"assessment.peakHRLabel" = "Peak HR";
+"assessment.recoveryHR" = "Recovery HR";
+"assessment.difference" = "Difference";
+"assessment.captainSays" = "🗨️ Captain Hamoudi:";
+"assessment.startPlan" = "Start plan 🚀";
+
+/* ─── Project View ─── */
+"project.title" = "Project";
+"project.weekOf" = "Week %d of %d";
+"project.bestPerformance" = "Best performance";
+"project.goal" = "Goal";
+"project.weekPlan" = "This week's plan";
+"project.dayNumber" = "Day %d";
+"project.weekMeasure" = "Weekly measurement";
+"project.howMuch" = "How many %@ can you do?";
+"project.record" = "Record";
+"project.numberPlaceholder" = "Number";
+"project.recorded" = "Recorded ✓";
+"project.captainHamoudi" = "Captain Hamoudi";
+
+/* ─── Record Detail ─── */
+"recordDetail.title" = "Legendary Challenges";
+"recordDetail.activeProject" = "Active project exists";
+"recordDetail.ok" = "OK";
+"recordDetail.activeProjectMessage" = "You have an active project. You must finish it first before starting a new one.";
+"recordDetail.difficulty" = "Difficulty";
+"recordDetail.expectedDuration" = "Expected duration";
+"recordDetail.weekUnit" = "week";
+"recordDetail.category" = "Category";
+"recordDetail.story" = "Story";
+"recordDetail.requirements" = "Requirements";
+"recordDetail.startProject" = "Start project with Captain 🚀";
+
+/* ─── Record Project ─── */
+"recordProject.endProject" = "End project";
+"recordProject.cancel" = "Cancel";
+"recordProject.confirmEnd" = "Yes, I'm sure";
+"recordProject.endMessage" = "Are you sure you want to end the record-breaking project \"%@\"?";
+"recordProject.finalConfirm" = "⚠️ Final confirmation";
+"recordProject.deleteForever" = "Delete project permanently";
+"recordProject.deleteWarning" = "This action cannot be reversed. All project data and pinned plan will be deleted. Are you 100% sure?";
+"recordProject.loadingPlan" = "Loading plan...";
+"recordProject.weeklyReview" = "📋 Review and calibrate";
+"recordProject.reviewSubtitle" = "Weekly review with Captain";
+"recordProject.captainHamoudi" = "🗨️ Captain Hamoudi";
+"recordProject.endProjectButton" = "🛑 End project";
+
+/* ─── Weekly Review ─── */
+"review.obstacle.injury" = "Injury / Pain";
+"review.obstacle.busy" = "Busy / No time";
+"review.obstacle.fatigue" = "Fatigue / Exhaustion";
+"review.obstacle.none" = "Nothing, everything is fine";
+"review.title" = "Review and calibrate";
+"review.close" = "Close";
+"review.weight" = "⚖️ Your current weight";
+"review.kgUnit" = "kg";
+"review.bestPerformance" = "💪 Best performance this week";
+"review.howWere" = "📝 How were the workouts?";
+"review.rateWeek" = "⭐ Rate your week";
+"review.obstacles" = "😤 Was there anything that stopped or affected you?";
+"review.sendToCaptain" = "Send to Captain Hamoudi 📤";
+"review.fallbackMessage" = "Well done! Keep the same level 💪";
+
+/* ─── Weekly Review Result ─── */
+"reviewResult.onTrack" = "On track!";
+"reviewResult.needsAdjust" = "Needs adjustment";
+"reviewResult.captainSays" = "🗨️ Captain Hamoudi:";
+"reviewResult.adjustments" = "Adjustments:";
+"reviewResult.noAdjust" = "No adjustments";
+"reviewResult.done" = "Done ✓";
+
+/* ─── Progress Photos ─── */
+"photos.title" = "Progress Photos";
+"photos.startJourney" = "Start your transformation journey";
+"photos.takeWeekly" = "Photo yourself weekly and see the difference with your own eyes.\nPhotos are saved on your device only.";
+"photos.addFirst" = "Add first photo";
+"photos.photoUnit" = "photo";
+"photos.dayUnit" = "day";
+"photos.kgUnit" = "kg";
+"photos.compareProgress" = "Compare progress";
+"photos.compareDesc" = "See the difference between first and last photo";
+"photos.album" = "Album";
+"photos.takePhoto" = "Take photo";
+"photos.useCamera" = "Use camera";
+"photos.chooseGallery" = "Choose from gallery";
+"photos.fromAlbum" = "From photo album";
+"photos.weightOptional" = "Weight (optional)";
+"photos.noteOptional" = "Note (optional)";
+"photos.savePhoto" = "Save photo ✨";
+"photos.newPhoto" = "New photo";
+"photos.date" = "Date";
+"photos.weight" = "Weight";
+"photos.note" = "Note";
+"photos.from" = "from";
+"photos.deletePhoto" = "Delete photo";
+"photos.deleteConfirm" = "Delete photo?";
+"photos.delete" = "Delete";
+"photos.deleteMessage" = "This photo will be permanently deleted from the device.";
+"photos.start" = "Start";
+"photos.now" = "Now";
+"photos.before" = "Before";
+"photos.after" = "After";
+"photos.comparison" = "Comparison";
+
+/* ─── Weekly Report ─── */
+"weeklyReport.shareImage" = "Share as image";
+"weeklyReport.instagramStories" = "Instagram Stories";
+"weeklyReport.reportTitle" = "AiQo Weekly Report";
+"weeklyReport.reportMessage" = "See my progress this week!";
+"weeklyReport.shareText" = "Share text";
+"weeklyReport.exportPDF" = "Export PDF";
+"weeklyReport.exportCSV" = "Export CSV";
+"weeklyReport.outOf100" = "out of 100";
+"weeklyReport.dailySteps" = "Daily Steps";
+"weeklyReport.workoutSummary" = "Workout Summary";
+"weeklyReport.workoutUnit" = "workout";
+"weeklyReport.minuteUnit" = "minute";
+"weeklyReport.avgPerWorkout" = "avg / workout";
+"weeklyReport.preparing" = "Preparing report...";
+"weeklyReport.aboutLastWeek" = "About last week";
+
+/* ─── Feature Intro ─── */
+"featureIntro.skip" = "Skip";
+"featureIntro.startJourney" = "Start Your Journey";
+"featureIntro.next" = "Next";
+"featureIntro.captainTitle" = "Captain Hamoudi";
+"featureIntro.captainDesc" = "Your AI coach. He knows your body, understands your goals, and guides you daily — in a style that fits you.";
+"featureIntro.workoutsTitle" = "Workouts, Challenges & Peaks";
+"featureIntro.workoutsDesc" = "Workouts designed for you. Daily and weekly challenges. Record-breaking projects — all with the Captain.";
+"featureIntro.kitchenTitle" = "Kitchen";
+"featureIntro.kitchenDesc" = "Smart meal plans, food photo analysis, and daily calorie & protein tracking.";
+
+/* ─── Active Recovery ─── */
+"recovery.title" = "ACTIVE RECOVERY";
+"recovery.liveHR" = "Live HR: %d BPM";
+"recovery.motivational" = "Strength isn't raising your heart rate...\nStrength is getting it back under control.";
+"recovery.inhale" = "Breathe in deeply...";
+"recovery.exhale" = "Exhale slowly...";
+
+/* ─── Captain Memory ─── */
+"memory.title" = "Captain Memory";
+"memory.clearAll" = "Clear all memory";
+"memory.clearCancel" = "Cancel";
+"memory.clearConfirm" = "Clear all";
+"memory.clearMessage" = "Are you sure you want to clear all Captain memory? This action cannot be reversed.";
+"memory.subtitle" = "Information the Captain remembers to help you better";
+"memory.enableToggle" = "Enable Captain memory";
+"memory.enableDesc" = "Stops saving and extracting information";
+"memory.clearButton" = "Clear all memory";
+"memory.category.identity" = "Identity";
+"memory.category.goals" = "Goals";
+"memory.category.body" = "Body";
+"memory.category.preferences" = "Preferences";
+"memory.category.mood" = "Mood";
+"memory.category.injuries" = "Injuries";
+"memory.category.nutrition" = "Nutrition";
+"memory.category.history" = "Training history";
+"memory.category.sleep" = "Sleep";
+"memory.category.notes" = "Notes";
+"memory.category.recordProject" = "Record-breaking project";
+"memory.key.name" = "Name";
+"memory.key.weight" = "Weight";
+"memory.key.height" = "Height";
+"memory.key.age" = "Age";
+"memory.key.goal" = "Goal";
+"memory.key.sleepHours" = "Sleep hours";
+"memory.key.fitnessLevel" = "Fitness level";
+"memory.key.trainingDays" = "Training days";
+"memory.key.mood" = "Mood";
+"memory.key.dietPreference" = "Dietary preference";
+"memory.key.favExercise" = "Favorite exercise";
+"memory.key.equipment" = "Available equipment";
+"memory.key.water" = "Water intake";
+"memory.key.projectId" = "Project ID";
+"memory.key.projectName" = "Project name";
+"memory.key.avgSteps" = "Average steps";
+"memory.key.avgSleep" = "Average sleep";
+"memory.key.avgCalories" = "Average calories";
+"memory.key.avgHR" = "Average HR";
+"memory.key.injury" = "Injury";
+
+/* ─── Language Selection ─── */
+"lang.systemAr" = "System language";
+"lang.systemEn" = "System language";
+"lang.arabic" = "Arabic";
+"lang.english" = "English";
+"lang.explore" = "Explore your real level";
+
+/* ─── App Settings ─── */
+"settings.coachLang.arabic" = "Arabic";
+"settings.coachLang.english" = "English";
+
+/* ─── Profile Privacy ─── */
+"profile.publicAccount" = "Public account";
+"profile.visibleToTribes" = "Visible to tribes and arena";
+"profile.hideName" = "Turning this off will hide your name and make it private whenever you want.";
+"profile.updateFailed" = "Update failed — try again";

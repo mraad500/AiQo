@@ -15,7 +15,7 @@ struct ActiveRecoveryView: View {
     @State private var showRewardCaption: Bool = false
 
     @State private var avatarScale: CGFloat = 1.0
-    @State private var breathingInstruction = "استنشق بعمق..."
+    @State private var breathingInstruction = NSLocalizedString("recovery.inhale", comment: "")
     @State private var breathingTask: Task<Void, Never>?
 
     private let ticker = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
@@ -47,7 +47,7 @@ struct ActiveRecoveryView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 16) {
-                Text("ACTIVE RECOVERY")
+                Text(NSLocalizedString("recovery.title", comment: ""))
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
                     .tracking(2)
                     .foregroundStyle(.white.opacity(0.82))
@@ -57,7 +57,7 @@ struct ActiveRecoveryView: View {
                     .monospacedDigit()
                     .foregroundStyle(.white)
 
-                Text("Live HR: \(Int(session.heartRate.rounded())) BPM")
+                Text(String(format: NSLocalizedString("recovery.liveHR", comment: ""), Int(session.heartRate.rounded())))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.92))
 
@@ -77,7 +77,7 @@ struct ActiveRecoveryView: View {
                     .padding(.top, 14)
 
                 if showRewardCaption {
-                    Text("مو القوة إنك تعلي النبض...\nالقوة إنك ترجع تسيطر عليه.")
+                    Text(NSLocalizedString("recovery.motivational", comment: ""))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -148,7 +148,7 @@ struct ActiveRecoveryView: View {
         breathingTask?.cancel()
         breathingTask = Task { @MainActor in
             while !Task.isCancelled {
-                breathingInstruction = "استنشق بعمق..."
+                breathingInstruction = NSLocalizedString("recovery.inhale", comment: "")
                 withAnimation(.easeInOut(duration: 4.0)) {
                     avatarScale = 1.15
                 }
@@ -156,7 +156,7 @@ struct ActiveRecoveryView: View {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 guard !Task.isCancelled else { break }
 
-                breathingInstruction = "زفير ببطء..."
+                breathingInstruction = NSLocalizedString("recovery.exhale", comment: "")
                 withAnimation(.easeInOut(duration: 6.0)) {
                     avatarScale = 1.0
                 }

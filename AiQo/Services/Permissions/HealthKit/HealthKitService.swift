@@ -23,6 +23,10 @@ actor HealthKitService {
     // Singleton
     static let shared = HealthKitService()
 
+    /// Set to true by the permission card to allow authorization requests.
+    /// Prevents any accidental HealthKit permission dialogs during onboarding.
+    nonisolated(unsafe) static var permissionFlowEnabled = false
+
     let store = HKHealthStore()
     private var isAuthorized = false
     private var lastWidgetSnapshot: WidgetSnapshot?
@@ -34,6 +38,7 @@ actor HealthKitService {
     @discardableResult
     func requestAuthorization() async throws -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
+        guard Self.permissionFlowEnabled else { return false }
 
         // ===== Read Types =====
         let quantityIds: [HKQuantityTypeIdentifier] = [

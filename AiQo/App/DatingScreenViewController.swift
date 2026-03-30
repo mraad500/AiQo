@@ -106,19 +106,16 @@ struct ProfileSetupView: View {
                                 text: $weightText,
                                 icon: "scalemass.fill",
                                 suffix: NSLocalizedString("unit.kg", value: "كغم", comment: ""),
-                                keyboardType: .decimalPad
+                                keyboardType: .asciiCapableNumberPad
                             )
                             AuthFlowTextField(
                                 title: localized("dating.height", fallback: "الطول"),
                                 text: $heightText,
                                 icon: "ruler.fill",
                                 suffix: NSLocalizedString("unit.cm", value: "سم", comment: ""),
-                                keyboardType: .numberPad
+                                keyboardType: .asciiCapableNumberPad
                             )
                         }
-
-                        // MARK: - Privacy Toggle
-                        SetupPrivacyToggleCard(isPublic: $isProfilePublic)
 
                         AuthPrimaryButton(
                             title: localized("dating.continue", fallback: "متابعة"),

@@ -15,10 +15,10 @@ struct WeeklyReviewView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let obstacles = [
-        "إصابة / ألم",
-        "انشغال / وقت",
-        "تعب / إرهاق",
-        "ما في شي، كل شي تمام"
+        NSLocalizedString("review.obstacle.injury", comment: ""),
+        NSLocalizedString("review.obstacle.busy", comment: ""),
+        NSLocalizedString("review.obstacle.fatigue", comment: ""),
+        NSLocalizedString("review.obstacle.none", comment: "")
     ]
 
     var body: some View {
@@ -37,12 +37,12 @@ struct WeeklyReviewView: View {
             .padding(.bottom, 40)
         }
         .background(Color.white.ignoresSafeArea())
-        .navigationTitle("المراجعة وضبط البوصلة")
+        .navigationTitle(NSLocalizedString("review.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("إغلاق") { dismiss() }
+                Button(NSLocalizedString("review.close", comment: "")) { dismiss() }
             }
         }
         .sheet(isPresented: $showResult) {
@@ -58,7 +58,7 @@ struct WeeklyReviewView: View {
     // MARK: - Week Header
 
     private var weekHeader: some View {
-        Text("الأسبوع \(project.currentWeek)")
+        Text(String(format: NSLocalizedString("review.weekNumber", comment: ""), project.currentWeek))
             .font(.system(size: 22, weight: .heavy, design: .rounded))
             .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -68,12 +68,12 @@ struct WeeklyReviewView: View {
 
     private var weightInput: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Label("⚖️ وزنك الحالي", systemImage: "")
+            Label(NSLocalizedString("review.currentWeight", comment: ""), systemImage: "")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             HStack(spacing: 8) {
-                Text("كغم")
+                Text(NSLocalizedString("review.kg", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.45))
 
@@ -100,7 +100,7 @@ struct WeeklyReviewView: View {
 
     private var performanceInput: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Text("💪 أفضل أداء هالأسبوع")
+            Text(NSLocalizedString("review.bestPerformance", comment: ""))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -132,7 +132,7 @@ struct WeeklyReviewView: View {
 
     private var feedbackInput: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Text("📝 شلون كانت التمارين؟")
+            Text(NSLocalizedString("review.howWereWorkouts", comment: ""))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -159,7 +159,7 @@ struct WeeklyReviewView: View {
 
     private var ratingSection: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Text("⭐ قيّم أسبوعك")
+            Text(NSLocalizedString("review.rateWeek", comment: ""))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -189,7 +189,7 @@ struct WeeklyReviewView: View {
 
     private var obstaclesSection: some View {
         VStack(alignment: .trailing, spacing: 10) {
-            Text("😤 في شي منعك أو أثر عليك؟")
+            Text(NSLocalizedString("review.obstacles", comment: ""))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -238,7 +238,7 @@ struct WeeklyReviewView: View {
                     ProgressView()
                         .tint(.primary)
                 } else {
-                    Text("أرسل للكابتن حمّودي 📤")
+                    Text(NSLocalizedString("review.submitButton", comment: ""))
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
                 }

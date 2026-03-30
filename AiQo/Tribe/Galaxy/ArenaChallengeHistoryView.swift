@@ -14,7 +14,7 @@ struct ArenaChallengeHistoryView: View {
                     Image(systemName: "trophy.fill")
                         .foregroundStyle(.orange)
 
-                    Text("إنجازاتي")
+                    Text(NSLocalizedString("challengeHistory.myAchievements", comment: ""))
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
 
@@ -25,7 +25,7 @@ struct ArenaChallengeHistoryView: View {
                         Text("\(historyStore.completedChallenges.count)")
                             .font(.system(size: 22, weight: .black, design: .rounded))
                             .foregroundStyle(.orange)
-                        Text("تحدي")
+                        Text(NSLocalizedString("challengeHistory.challenge", comment: ""))
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -38,11 +38,11 @@ struct ArenaChallengeHistoryView: View {
                             .font(.system(size: 36))
                             .foregroundStyle(.white.opacity(0.2))
 
-                        Text("لا توجد تحديات مكتملة بعد")
+                        Text(NSLocalizedString("challengeHistory.noChallenges", comment: ""))
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.4))
 
-                        Text("أكمل تحدي أول وشوف إنجازاتك هنا!")
+                        Text(NSLocalizedString("challengeHistory.completeFirst", comment: ""))
                             .font(.system(size: 12, weight: .regular, design: .rounded))
                             .foregroundStyle(.white.opacity(0.3))
                     }
@@ -60,7 +60,7 @@ struct ArenaChallengeHistoryView: View {
                     Divider()
                         .background(Color.white.opacity(0.1))
 
-                    Text("البادجات")
+                    Text(NSLocalizedString("challengeHistory.badges", comment: ""))
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.6))
 

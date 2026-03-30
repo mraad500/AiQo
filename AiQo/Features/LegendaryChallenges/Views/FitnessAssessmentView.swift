@@ -42,7 +42,7 @@ struct FitnessAssessmentView: View {
             default: explanationStep
             }
         }
-        .navigationTitle(step == 1 ? "قياس المحرك" : "")
+        .navigationTitle(step == 1 ? NSLocalizedString("assessment.title", comment: "") : "")
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
         .navigationDestination(isPresented: $navigateToProject) {
@@ -72,33 +72,33 @@ struct FitnessAssessmentView: View {
 
                 // Title
                 VStack(spacing: 8) {
-                    Text("قياس المحرك")
+                    Text(NSLocalizedString("assessment.title", comment: ""))
                         .font(.system(size: 28, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.primary)
 
-                    Text("فحص جاهزية جسمك")
+                    Text(NSLocalizedString("assessment.checkBody", comment: ""))
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.5))
                 }
 
                 // Explanation card
                 VStack(alignment: .trailing, spacing: 12) {
-                    Text("جسمك فيه نظامين:")
+                    Text(NSLocalizedString("assessment.twoSystems", comment: ""))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
 
                     // CHANGED: Added السمبثاوي and الباراسمبثاوي
                     VStack(alignment: .trailing, spacing: 8) {
-                        Text("واحد يدوس بنزين 🔥 السمبثاوي (للحركة والتوتر)")
+                        Text(NSLocalizedString("assessment.sympathetic", comment: ""))
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.primary.opacity(0.7))
 
-                        Text("وواحد يدوس بريك 🧊 الباراسمبثاوي (للراحة والاسترداد)")
+                        Text(NSLocalizedString("assessment.parasympathetic", comment: ""))
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.primary.opacity(0.7))
                     }
 
-                    Text("هالفحص يكشف قوة البريك حقّك — يعني شلون جسمك يسترد بعد الجهد.")
+                    Text(NSLocalizedString("assessment.brakeTest", comment: ""))
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.7))
                         .multilineTextAlignment(.trailing)
@@ -113,13 +113,13 @@ struct FitnessAssessmentView: View {
 
                 // How it works
                 VStack(alignment: .trailing, spacing: 12) {
-                    Text("كيف يشتغل؟")
+                    Text(NSLocalizedString("assessment.howItWorks", comment: ""))
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.primary)
 
-                    howItWorksRow(icon: "⏱️", text: "٣ دقايق جهد (صعود ونزول على درجة)")
-                    howItWorksRow(icon: "🪑", text: "دقيقة راحة (كاعد ومرتاح)")
-                    howItWorksRow(icon: "📊", text: "النتيجة فورية")
+                    howItWorksRow(icon: "⏱️", text: NSLocalizedString("assessment.step1", comment: ""))
+                    howItWorksRow(icon: "🪑", text: NSLocalizedString("assessment.step2", comment: ""))
+                    howItWorksRow(icon: "📊", text: NSLocalizedString("assessment.step3", comment: ""))
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(16)
@@ -131,7 +131,7 @@ struct FitnessAssessmentView: View {
                 // Watch requirement
                 HStack(spacing: 10) {
                     Spacer()
-                    Text("يحتاج Apple Watch حتى نقيس نبضك بدقة")
+                    Text(NSLocalizedString("assessment.needsWatch", comment: ""))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.6))
                     Text("⌚")
@@ -144,7 +144,7 @@ struct FitnessAssessmentView: View {
                 )
 
                 // Disclaimer
-                Text("هذا التقييم لأغراض اللياقة فقط وليس بديلاً عن استشارة طبية.")
+                Text(NSLocalizedString("assessment.disclaimer", comment: ""))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.35))
                     .multilineTextAlignment(.center)
@@ -162,7 +162,7 @@ struct FitnessAssessmentView: View {
                         }
                     }
                 } label: {
-                    ctaLabel("يلا نبدأ الفحص ⚡")
+                    ctaLabel(NSLocalizedString("assessment.startButton", comment: ""))
                 }
                 .buttonStyle(.plain)
 
@@ -170,7 +170,7 @@ struct FitnessAssessmentView: View {
                 Button {
                     skipAssessment()
                 } label: {
-                    Text("تخطي الفحص")
+                    Text(NSLocalizedString("assessment.skipButton", comment: ""))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.35))
                 }
@@ -221,7 +221,7 @@ struct FitnessAssessmentView: View {
                     .monospacedDigit()
                     .contentTransition(.numericText())
 
-                Text("bpm")
+                Text(NSLocalizedString("assessment.bpm", comment: ""))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Color.primary.opacity(0.4))
             }
@@ -253,7 +253,7 @@ struct FitnessAssessmentView: View {
                 Image(systemName: "figure.step.training")
                     .font(.system(size: 14))
                     .foregroundStyle(GymTheme.mint)
-                Text("صعود ونزول على الدرجة")
+                Text(NSLocalizedString("assessment.stepUpDown", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.45))
             }
@@ -268,16 +268,16 @@ struct FitnessAssessmentView: View {
         let color: Color
 
         if hr < 100 {
-            zone = "إحماء"
+            zone = NSLocalizedString("assessment.warmup", comment: "")
             color = Color.blue.opacity(0.6)
         } else if hr < 130 {
-            zone = "معتدل"
+            zone = NSLocalizedString("assessment.moderate", comment: "")
             color = Color.green.opacity(0.7)
         } else if hr < 160 {
-            zone = "مكثّف"
+            zone = NSLocalizedString("assessment.intense", comment: "")
             color = Color.orange
         } else {
-            zone = "أقصى"
+            zone = NSLocalizedString("assessment.max", comment: "")
             color = Color.red.opacity(0.8)
         }
 
@@ -305,7 +305,7 @@ struct FitnessAssessmentView: View {
             Spacer()
 
             // Recovery title
-            Text("استرخ... تنفّس بعمق 🧘")
+            Text(NSLocalizedString("assessment.relax", comment: ""))
                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -323,7 +323,7 @@ struct FitnessAssessmentView: View {
                     .monospacedDigit()
                     .contentTransition(.numericText())
 
-                Text("bpm")
+                Text(NSLocalizedString("assessment.bpm", comment: ""))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Color.primary.opacity(0.4))
             }
@@ -333,7 +333,7 @@ struct FitnessAssessmentView: View {
                 Text("\(Int(hrrManager.peakHeartRate)) bpm")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.5))
-                Text("أعلى نبض:")
+                Text(NSLocalizedString("assessment.peakHR", comment: ""))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.4))
             }
@@ -370,11 +370,11 @@ struct FitnessAssessmentView: View {
 
                 // Stats card
                 VStack(spacing: 14) {
-                    statRow(label: "أعلى نبض", value: "\(Int(hrrManager.peakHeartRate)) bpm")
+                    statRow(label: NSLocalizedString("assessment.peakHRLabel", comment: ""), value: "\(Int(hrrManager.peakHeartRate)) bpm")
                     Divider().opacity(0.3)
-                    statRow(label: "نبض الاسترداد", value: "\(Int(hrrManager.recoveryHeartRate)) bpm")
+                    statRow(label: NSLocalizedString("assessment.recoveryHR", comment: ""), value: "\(Int(hrrManager.recoveryHeartRate)) bpm")
                     Divider().opacity(0.3)
-                    statRow(label: "الفرق", value: "\(Int(hrrManager.hrrDrop)) نبضة")
+                    statRow(label: NSLocalizedString("assessment.difference", comment: ""), value: "\(Int(hrrManager.hrrDrop)) نبضة")
                 }
                 .padding(16)
                 .background(
@@ -384,7 +384,7 @@ struct FitnessAssessmentView: View {
 
                 // Captain comment
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("🗨️ كابتن حمّودي:")
+                    Text(NSLocalizedString("assessment.captainSays", comment: ""))
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary.opacity(0.5))
 
@@ -402,7 +402,7 @@ struct FitnessAssessmentView: View {
                 )
 
                 // Disclaimer
-                Text("هذا التقييم لأغراض اللياقة فقط وليس بديلاً عن استشارة طبية.")
+                Text(NSLocalizedString("assessment.disclaimer", comment: ""))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.35))
                     .multilineTextAlignment(.center)
@@ -417,7 +417,7 @@ struct FitnessAssessmentView: View {
                             ProgressView()
                                 .tint(.primary)
                         } else {
-                            Text("ابدأ الخطة 🚀")
+                            Text(NSLocalizedString("assessment.startPlan", comment: ""))
                                 .font(.system(size: 17, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.primary)
                         }

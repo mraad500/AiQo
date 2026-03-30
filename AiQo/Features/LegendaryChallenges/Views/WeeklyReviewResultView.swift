@@ -14,13 +14,13 @@ struct WeeklyReviewResultView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(result.isOnTrack ? GymTheme.mint : .orange)
 
-            Text(result.isOnTrack ? "ماشي صح!" : "نحتاج نعدّل")
+            Text(result.isOnTrack ? NSLocalizedString("reviewResult.onTrack", comment: "") : NSLocalizedString("reviewResult.needsAdjustment", comment: ""))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             // رسالة الكابتن
             VStack(alignment: .trailing, spacing: 8) {
-                Text("🗨️ كابتن حمّودي:")
+                Text(NSLocalizedString("assessment.captainSays", comment: ""))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.5))
 
@@ -39,11 +39,11 @@ struct WeeklyReviewResultView: View {
 
             // التعديلات
             VStack(alignment: .trailing, spacing: 8) {
-                Text("التعديلات:")
+                Text(NSLocalizedString("reviewResult.adjustments", comment: ""))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.5))
 
-                Text(result.adjustments ?? "ما في تعديل")
+                Text(result.adjustments ?? NSLocalizedString("reviewResult.noAdjustments", comment: ""))
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.7))
                     .multilineTextAlignment(.trailing)
@@ -79,7 +79,7 @@ struct WeeklyReviewResultView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Text("تم ✓")
+                    Text(NSLocalizedString("reviewResult.done", comment: ""))
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
                     Spacer()
