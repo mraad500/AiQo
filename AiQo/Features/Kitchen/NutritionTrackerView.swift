@@ -57,13 +57,13 @@ struct NutritionSummaryCard: View {
         VStack(spacing: 18) {
             // العنوان
             HStack {
-                Label("التغذية اليومية", systemImage: "chart.pie.fill")
+                Label(NSLocalizedString("nutrition.daily", value: "التغذية اليومية", comment: "Daily nutrition"), systemImage: "chart.pie.fill")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textPrimary)
 
                 Spacer()
 
-                Text("\(totalCalories) / \(calorieGoal) سعرة")
+                Text(String(format: NSLocalizedString("nutrition.calories.progress", value: "%d / %d سعرة", comment: "Calories progress"), totalCalories, calorieGoal))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textSecondary)
             }
@@ -74,34 +74,34 @@ struct NutritionSummaryCard: View {
             // الـ Macros الأربعة
             HStack(spacing: 14) {
                 macroRing(
-                    label: "بروتين",
+                    label: NSLocalizedString("nutrition.protein", value: "بروتين", comment: "Protein"),
                     value: totalProtein,
                     goal: proteinGoal,
-                    unit: "غ",
+                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.proteinColor
                 )
 
                 macroRing(
-                    label: "كارب",
+                    label: NSLocalizedString("nutrition.carbs", value: "كارب", comment: "Carbs"),
                     value: totalCarbs,
                     goal: carbGoal,
-                    unit: "غ",
+                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.carbColor
                 )
 
                 macroRing(
-                    label: "دهون",
+                    label: NSLocalizedString("nutrition.fat", value: "دهون", comment: "Fat"),
                     value: totalFat,
                     goal: fatGoal,
-                    unit: "غ",
+                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.fatColor
                 )
 
                 macroRing(
-                    label: "ألياف",
+                    label: NSLocalizedString("nutrition.fiber", value: "ألياف", comment: "Fiber"),
                     value: totalFiber,
                     goal: fiberGoal,
-                    unit: "غ",
+                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.fiberColor
                 )
             }
@@ -259,16 +259,16 @@ struct NutritionGoalsEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("السعرات الحرارية") {
+                Section(NSLocalizedString("nutrition.goals.calories", value: "السعرات الحرارية", comment: "Calories section")) {
                     Stepper(
-                        "\(calorieGoal) سعرة",
+                        String(format: NSLocalizedString("nutrition.goals.calorieValue", value: "%d سعرة", comment: ""), calorieGoal),
                         value: $calorieGoal,
                         in: 1200...5000,
                         step: 100
                     )
                 }
 
-                Section("البروتين (غرام)") {
+                Section(NSLocalizedString("nutrition.goals.protein", value: "البروتين (غرام)", comment: "Protein section")) {
                     Stepper(
                         String(format: "%.0f غ", proteinGoal),
                         value: $proteinGoal,
@@ -277,7 +277,7 @@ struct NutritionGoalsEditor: View {
                     )
                 }
 
-                Section("الكربوهيدرات (غرام)") {
+                Section(NSLocalizedString("nutrition.goals.carbs", value: "الكربوهيدرات (غرام)", comment: "Carbs section")) {
                     Stepper(
                         String(format: "%.0f غ", carbGoal),
                         value: $carbGoal,
@@ -286,7 +286,7 @@ struct NutritionGoalsEditor: View {
                     )
                 }
 
-                Section("الدهون (غرام)") {
+                Section(NSLocalizedString("nutrition.goals.fat", value: "الدهون (غرام)", comment: "Fat section")) {
                     Stepper(
                         String(format: "%.0f غ", fatGoal),
                         value: $fatGoal,
@@ -295,7 +295,7 @@ struct NutritionGoalsEditor: View {
                     )
                 }
 
-                Section("الألياف (غرام)") {
+                Section(NSLocalizedString("nutrition.goals.fiber", value: "الألياف (غرام)", comment: "Fiber section")) {
                     Stepper(
                         String(format: "%.0f غ", fiberGoal),
                         value: $fiberGoal,
@@ -305,7 +305,7 @@ struct NutritionGoalsEditor: View {
                 }
 
                 Section {
-                    Button("استعادة القيم الافتراضية") {
+                    Button(NSLocalizedString("nutrition.goals.reset", value: "استعادة القيم الافتراضية", comment: "Reset defaults")) {
                         calorieGoal = 2200
                         proteinGoal = 150
                         carbGoal = 250
@@ -315,11 +315,11 @@ struct NutritionGoalsEditor: View {
                     .foregroundStyle(.red.opacity(0.7))
                 }
             }
-            .navigationTitle("أهداف التغذية")
+            .navigationTitle(NSLocalizedString("nutrition.goals.title", value: "أهداف التغذية", comment: "Nutrition goals title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("حفظ") {
+                    Button(NSLocalizedString("nutrition.goals.save", value: "حفظ", comment: "Save")) {
                         dismiss()
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -351,11 +351,11 @@ struct QuickAddMealView: View {
                 VStack(spacing: 20) {
                     // نوع الوجبة
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("نوع الوجبة")
+                        Text(NSLocalizedString("nutrition.mealType", value: "نوع الوجبة", comment: "Meal type"))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(NutritionPalette.textSecondary)
 
-                        Picker("نوع الوجبة", selection: $mealType) {
+                        Picker(NSLocalizedString("nutrition.mealType", value: "نوع الوجبة", comment: ""), selection: $mealType) {
                             ForEach(KitchenMealType.allCases) { type in
                                 Text(type.localizedTitle).tag(type)
                             }
@@ -366,7 +366,7 @@ struct QuickAddMealView: View {
                     // اسم الوجبة
                     inputField(
                         icon: "fork.knife",
-                        placeholder: "اسم الوجبة",
+                        placeholder: NSLocalizedString("nutrition.mealName", value: "اسم الوجبة", comment: "Meal name placeholder"),
                         text: $mealName,
                         keyboard: .default,
                         tint: NutritionPalette.sand
@@ -375,7 +375,7 @@ struct QuickAddMealView: View {
                     // السعرات
                     inputField(
                         icon: "flame.fill",
-                        placeholder: "السعرات",
+                        placeholder: NSLocalizedString("nutrition.caloriesPlaceholder", value: "السعرات", comment: "Calories placeholder"),
                         text: $calories,
                         keyboard: .numberPad,
                         tint: NutritionPalette.sand,
@@ -385,12 +385,12 @@ struct QuickAddMealView: View {
                     // Macros Grid
                     HStack(spacing: 12) {
                         macroInput(
-                            label: "بروتين",
+                            label: NSLocalizedString("nutrition.protein", value: "بروتين", comment: ""),
                             text: $protein,
                             color: NutritionPalette.proteinColor
                         )
                         macroInput(
-                            label: "كارب",
+                            label: NSLocalizedString("nutrition.carbs", value: "كارب", comment: ""),
                             text: $carbs,
                             color: NutritionPalette.carbColor
                         )
@@ -398,12 +398,12 @@ struct QuickAddMealView: View {
 
                     HStack(spacing: 12) {
                         macroInput(
-                            label: "دهون",
+                            label: NSLocalizedString("nutrition.fat", value: "دهون", comment: ""),
                             text: $fat,
                             color: NutritionPalette.fatColor
                         )
                         macroInput(
-                            label: "ألياف",
+                            label: NSLocalizedString("nutrition.fiber", value: "ألياف", comment: ""),
                             text: $fiber,
                             color: NutritionPalette.fiberColor
                         )
@@ -416,7 +416,7 @@ struct QuickAddMealView: View {
                     Button {
                         saveMeal()
                     } label: {
-                        Text("أضف الوجبة ✨")
+                        Text(NSLocalizedString("nutrition.addMeal.button", value: "أضف الوجبة ✨", comment: "Add meal button"))
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -445,11 +445,11 @@ struct QuickAddMealView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("أضف وجبة")
+            .navigationTitle(NSLocalizedString("nutrition.addMeal.title", value: "أضف وجبة", comment: "Add meal title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("إلغاء") { dismiss() }
+                    Button(NSLocalizedString("nutrition.cancel", value: "إلغاء", comment: "Cancel")) { dismiss() }
                         .foregroundStyle(NutritionPalette.textSecondary)
                 }
             }
@@ -583,7 +583,7 @@ struct DailyFoodLogView: View {
                 Button {
                     showAddMeal = true
                 } label: {
-                    Label("أضف وجبة", systemImage: "plus.circle.fill")
+                    Label(NSLocalizedString("nutrition.addMeal", value: "أضف وجبة", comment: "Add meal"), systemImage: "plus.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)
@@ -597,7 +597,7 @@ struct DailyFoodLogView: View {
                 Button {
                     showGoalsEditor = true
                 } label: {
-                    Label("الأهداف", systemImage: "target")
+                    Label(NSLocalizedString("nutrition.goals", value: "الأهداف", comment: "Goals"), systemImage: "target")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(NutritionPalette.textPrimary)
                         .padding(.horizontal, 16)

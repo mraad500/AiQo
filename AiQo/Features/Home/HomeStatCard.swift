@@ -75,19 +75,14 @@ struct HomeStatCard: View {
     var body: some View {
         // Use Button with PlainButtonStyle to completely remove white highlight/bubble on tap
         Button(action: {
-            triggerWaveAnimation()
+            HapticEngine.light()
             onTap?()
         }) {
             cardContent
         }
-        .buttonStyle(.plain) // Force plain style - no highlight
-        .contentShape(Rectangle()) // Ensure entire card is tappable
-        // 1. Floating animation offset (cloud-like movement)
+        .buttonStyle(AiQoPressButtonStyle())
+        .contentShape(Rectangle())
         .offset(y: floatOffsetY)
-        
-        // 2. 3D Tilt & Scale effect
-        .scaleEffect(isPressed ? 0.92 : 1.0)
-        .rotation3DEffect(.degrees(tapRotation), axis: (x: 1, y: 0, z: 0))
         
         .onAppear {
             startFloatingAnimation()

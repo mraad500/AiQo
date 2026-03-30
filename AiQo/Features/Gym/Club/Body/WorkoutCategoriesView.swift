@@ -46,13 +46,10 @@ struct WorkoutCategoriesView: View {
                     ForEach(Array(currentItems.enumerated()), id: \.element.id) { index, item in
                         let isFeatured = selectedCategory == .cardio && index == 0
 
-                        NavigationLink {
-                            WorkoutPlaceholderDetailView(
-                                item: item,
-                                backgroundColor: cardGradientPrimary(for: index),
-                                linkedExercise: WorkoutCategoriesCatalog.linkedExercise(for: item),
-                                onSelectExercise: onSelectExercise
-                            )
+                        Button {
+                            if let exercise = WorkoutCategoriesCatalog.linkedExercise(for: item) {
+                                onSelectExercise(exercise)
+                            }
                         } label: {
                             ClubWorkoutCard(
                                 item: item,
@@ -63,7 +60,7 @@ struct WorkoutCategoriesView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCardPressStyle())
-                        .accessibilityHint(Text("افتح تفاصيل \(item.title)"))
+                        .accessibilityHint(Text("افتح جلسة \(item.title)"))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -321,12 +318,17 @@ private struct WorkoutPlaceholderDetailView: View {
 private struct GlassCardPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .rotation3DEffect(
-                .degrees(configuration.isPressed ? 1.2 : 0),
+                .degrees(configuration.isPressed ? 8.0 : 0),
                 axis: (x: 1, y: 0, z: 0)
             )
-            .animation(.spring(response: 0.24, dampingFraction: 0.8), value: configuration.isPressed)
+            .animation(
+                configuration.isPressed
+                    ? .spring(response: 0.10, dampingFraction: 0.5)
+                    : .spring(response: 1.2, dampingFraction: 0.85),
+                value: configuration.isPressed
+            )
     }
 }
 

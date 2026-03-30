@@ -6,7 +6,11 @@ struct PlanView: View {
     @State private var activeRecordProject: RecordProject?
     @State private var navigateToRecordProject = false
 
-    private let periods = ["اليوم", "الشهر", "السنة"]
+    private let periods = [
+        NSLocalizedString("plan.period.today", value: "اليوم", comment: "Today filter"),
+        NSLocalizedString("plan.period.month", value: "الشهر", comment: "Month filter"),
+        NSLocalizedString("plan.period.year", value: "السنة", comment: "Year filter")
+    ]
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -67,7 +71,7 @@ struct PlanView: View {
                     HStack(spacing: 6) {
                         Text("🏆")
                             .font(.system(size: 12))
-                        Text("مشروع كسر الرقم")
+                        Text(NSLocalizedString("plan.recordProject", value: "مشروع كسر الرقم", comment: "Record breaking project label"))
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -76,7 +80,7 @@ struct PlanView: View {
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
 
-                    Text("الأسبوع \(project.currentWeek) من \(project.totalWeeks)")
+                    Text(String(format: NSLocalizedString("plan.weekProgress", value: "الأسبوع %d من %d", comment: "Week X of Y"), project.currentWeek, project.totalWeeks))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -132,7 +136,7 @@ struct PlanView: View {
         .clipShape(RoundedRectangle(cornerRadius: 25))
         .padding(.top, 120)
         .animation(.easeInOut(duration: 0.3), value: railSelection)
-        .accessibilityLabel(Text("فلاتر الخطة"))
+        .accessibilityLabel(Text(NSLocalizedString("plan.filter.accessibility", value: "فلاتر الخطة", comment: "Plan filters accessibility")))
     }
 }
 
@@ -167,7 +171,7 @@ private struct CaptainLiveWorkoutPlanCard: View {
                 .frame(width: 46, height: 46)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Captain Hamoudi Plan")
+                    Text(NSLocalizedString("plan.captainPlan", value: "Captain Hamoudi Plan", comment: "Captain plan label"))
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
@@ -181,7 +185,7 @@ private struct CaptainLiveWorkoutPlanCard: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("التمارين المقترحة")
+                Text(NSLocalizedString("plan.suggestedExercises", value: "التمارين المقترحة", comment: "Suggested exercises"))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
 
@@ -201,7 +205,7 @@ private struct CaptainLiveWorkoutPlanCard: View {
 
                                 Spacer(minLength: 12)
 
-                                Text("\(exercise.sets) Sets")
+                                Text(String(format: NSLocalizedString("plan.sets", value: "%d Sets", comment: "Number of sets"), exercise.sets))
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundStyle(.primary)
                                     .padding(.horizontal, 12)

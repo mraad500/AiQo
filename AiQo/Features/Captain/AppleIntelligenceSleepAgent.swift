@@ -51,9 +51,9 @@ struct SleepSession: Sendable {
 }
 
 enum AppleIntelligenceSleepAgentError: LocalizedError {
-    case emptyResponse
+    case emptyResponse(session: SleepSession)
     /// Apple Intelligence مو متاح — يصعد للـ orchestrator عشان يحوّله للـ cloud
-    case modelUnavailable(sleepSummary: String)
+    case modelUnavailable(sleepSummary: String, session: SleepSession)
 
     var errorDescription: String? {
         switch self {
@@ -82,7 +82,8 @@ struct AppleIntelligenceSleepAgent: Sendable {
             case .unavailable(let reason):
                 logger.notice("sleep_agent_unavailable reason=\(String(describing: reason), privacy: .public)")
                 throw AppleIntelligenceSleepAgentError.modelUnavailable(
-                    sleepSummary: buildArabicSummary(for: sleepSession)
+                    sleepSummary: buildArabicSummary(for: sleepSession),
+                    session: sleepSession
                 )
             }
 
@@ -105,7 +106,7 @@ struct AppleIntelligenceSleepAgent: Sendable {
                 let generated = sanitize(response.content)
 
                 guard !generated.isEmpty else {
-                    throw AppleIntelligenceSleepAgentError.emptyResponse
+                    throw AppleIntelligenceSleepAgentError.emptyResponse(session: sleepSession)
                 }
 
                 logger.notice("sleep_agent_succeeded")
@@ -114,7 +115,8 @@ struct AppleIntelligenceSleepAgent: Sendable {
                 if case .unsupportedLanguageOrLocale = generationError {
                     logger.notice("sleep_agent_unsupported_locale")
                     throw AppleIntelligenceSleepAgentError.modelUnavailable(
-                        sleepSummary: buildArabicSummary(for: sleepSession)
+                        sleepSummary: buildArabicSummary(for: sleepSession),
+                        session: sleepSession
                     )
                 }
 
@@ -130,12 +132,13 @@ struct AppleIntelligenceSleepAgent: Sendable {
 #endif
 
         throw AppleIntelligenceSleepAgentError.modelUnavailable(
-            sleepSummary: buildArabicSummary(for: sleepSession)
+            sleepSummary: buildArabicSummary(for: sleepSession),
+            session: sleepSession
         )
     }
 }
 
-private extension AppleIntelligenceSleepAgent {
+extension AppleIntelligenceSleepAgent {
     var generationTriggerPrompt: String {
         "شلون نوم المستخدم؟ حلله هسه بالعراقي."
     }
@@ -230,7 +233,7 @@ private extension AppleIntelligenceSleepAgent {
         return parts.joined(separator: "\n")
     }
 
-    /// تحليل نوم محسوب بالكامل on-device بـ Swift — يُستخدم لمّا Apple Intelligence مو متاح
+    /// تحليل نوم محسوب بالكامل on-device بـ Swift — يُستخدم لمّا Apple Intelligence والـ cloud مو متاحين
     func availabilityFallback(
         for session: SleepSession,
         reasonDescription: String

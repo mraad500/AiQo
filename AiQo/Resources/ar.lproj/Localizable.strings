@@ -1523,3 +1523,64 @@
 
 /* Level Up */
 "levelUp.celebration" = "وصلت للمستوى %d 🎉";
+
+/* Settings — Account */
+"settings.section.account" = "الحساب";
+"settings.logout" = "تسجيل خروج";
+"settings.logout.title" = "تسجيل خروج";
+"settings.logout.confirm" = "تسجيل خروج";
+"settings.logout.message" = "متأكد تبي تسجل خروج؟";
+"settings.deleteAccount" = "حذف الحساب";
+"settings.deleteAccount.title" = "حذف الحساب";
+"settings.deleteAccount.confirm" = "حذف";
+"settings.deleteAccount.message" = "راح ينحذف حسابك وكل البيانات المرتبطة بيه بشكل نهائي. هاي العملية ما تنعكس.";
+"settings.cancel" = "إلغاء";
+"settings.coachLanguage" = "لغة الكابتن";
+"settings.section.captain" = "كابتن حمّودي";
+"settings.captainMemory" = "ذاكرة الكابتن 🧠";
+"settings.captainMemory.subtitle" = "المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن";
+"settings.section.community" = "المجتمع";
+"settings.tribe" = "AiQo Tribe";
+"settings.tribe.subtitle" = "معاينات VIP، طقوس، ومساحات الأعضاء القادمة.";
+
+/* Paywall */
+"paywall.title" = "AiQo Premium";
+"paywall.joinTribe" = "انضم لقبيلة AIQO";
+"paywall.tribe" = "القبيلة";
+
+/* Plan View */
+"plan.period.today" = "اليوم";
+"plan.period.month" = "الشهر";
+"plan.period.year" = "السنة";
+"plan.recordProject" = "مشروع كسر الرقم";
+"plan.weekProgress" = "الأسبوع %d من %d";
+"plan.filter.accessibility" = "فلاتر الخطة";
+"plan.captainPlan" = "خطة كابتن حمّودي";
+"plan.suggestedExercises" = "التمارين المقترحة";
+"plan.sets" = "%d مجموعات";
+
+/* Nutrition */
+"nutrition.daily" = "التغذية اليومية";
+"nutrition.calories.progress" = "%d / %d سعرة";
+"nutrition.protein" = "بروتين";
+"nutrition.carbs" = "كارب";
+"nutrition.fat" = "دهون";
+"nutrition.fiber" = "ألياف";
+"nutrition.gram" = "غ";
+"nutrition.goals.calories" = "السعرات الحرارية";
+"nutrition.goals.calorieValue" = "%d سعرة";
+"nutrition.goals.protein" = "البروتين (غرام)";
+"nutrition.goals.carbs" = "الكربوهيدرات (غرام)";
+"nutrition.goals.fat" = "الدهون (غرام)";
+"nutrition.goals.fiber" = "الألياف (غرام)";
+"nutrition.goals.reset" = "استعادة القيم الافتراضية";
+"nutrition.goals.title" = "أهداف التغذية";
+"nutrition.goals.save" = "حفظ";
+"nutrition.goals" = "الأهداف";
+"nutrition.mealType" = "نوع الوجبة";
+"nutrition.mealName" = "اسم الوجبة";
+"nutrition.caloriesPlaceholder" = "السعرات";
+"nutrition.addMeal" = "أضف وجبة";
+"nutrition.addMeal.title" = "أضف وجبة";
+"nutrition.addMeal.button" = "أضف الوجبة ✨";
+"nutrition.cancel" = "إلغاء";

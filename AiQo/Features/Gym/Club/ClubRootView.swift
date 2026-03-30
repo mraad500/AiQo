@@ -79,17 +79,12 @@ struct ClubRootView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(.systemBackground).ignoresSafeArea()
-
-            VStack(spacing: 0) {
+        selectedContentView
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transaction { $0.animation = nil }
+            .safeAreaInset(edge: .top, spacing: 0) {
                 topHeaderBar
-                selectedContentView
-                    .padding(.top, 19.5)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .animation(.easeInOut(duration: 0.3), value: selectedTab)
-        }
         .toolbar(.hidden, for: .navigationBar)
         .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
         .sheet(item: $presentedExercise) { presented in
@@ -160,23 +155,18 @@ struct ClubRootView: View {
         switch selectedTab {
         case .body:
             BodyView(onSelectExercise: handleExerciseSelection)
-                .transition(.opacity)
 
         case .plan:
             PlanView()
-                .transition(.opacity)
 
         case .peaks:
             PeaksRecordsView()
-                .transition(.opacity)
 
         case .battle:
             BattleChallengesView(questEngine: questEngine)
-                .transition(.opacity)
 
         case .impact:
             ImpactContainerView(winsStore: winsStore)
-                .transition(.opacity)
         }
     }
 

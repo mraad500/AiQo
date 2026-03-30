@@ -1239,40 +1239,27 @@ struct VibeDashboardTriggerButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
+            Group {
+                if let vibeIconName {
+                    Image(vibeIconName)
+                        .renderingMode(.original)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: imageSize, height: imageSize)
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(.ultraThinMaterial)
 
-                Circle()
-                    .fill(surfaceGradient)
-
-                Circle()
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.10))
-
-                Group {
-                    if let vibeIconName {
-                        iconGlow
-
-                        Image(vibeIconName)
-                            .renderingMode(.original)
-                            .interpolation(.high)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: imageSize, height: imageSize)
-                            .opacity(1)
-                    } else {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: fallbackSymbolSize, weight: .semibold))
                             .foregroundStyle(Color(red: 0.34, green: 0.30, blue: 0.26))
                             .frame(width: fallbackFrameSize, height: fallbackFrameSize)
                     }
+                    .frame(width: buttonSize, height: buttonSize)
                 }
-
-                Circle()
-                    .strokeBorder(borderTint, lineWidth: 1)
             }
-            .frame(width: buttonSize, height: buttonSize)
-            .shadow(color: shadowTint, radius: 14, x: 0, y: 7)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)

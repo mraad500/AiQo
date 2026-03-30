@@ -193,14 +193,14 @@ final class HomeViewModel: ObservableObject {
     private let cardTints: [MetricKind: String] = [
         .steps: "mint",
         .calories: "mint",
-        .stand: "sand",
+        .stand: "mint",
         .water: "sand",
-        .sleep: "mint",
+        .sleep: "sand",
         .distance: "mint"
     ]
-    
+
     /// Grid layout order
-    private let gridOrder: [MetricKind] = [.steps, .calories, .stand, .water, .sleep, .distance]
+    private let gridOrder: [MetricKind] = [.steps, .calories, .sleep, .water, .stand, .distance]
     
     // MARK: - Initialization
     

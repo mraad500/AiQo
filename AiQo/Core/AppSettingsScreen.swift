@@ -1,11 +1,15 @@
 import SwiftUI
 import UserNotifications
+import Supabase
 
 struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
     @State private var showTribeFlow = false
     @State private var showDeveloperPanel = false
+    @State private var showLogoutConfirmation = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
     @AppStorage(TribeScreenshotMode.key) private var screenshotModeEnabled = false
     #if DEBUG
@@ -47,10 +51,16 @@ struct AppSettingsScreen: View {
                 )
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Coach Language / لغة الكابتن")
-                        .font(.subheadline.weight(.semibold))
+                    Text(
+                        NSLocalizedString(
+                            "settings.coachLanguage",
+                            value: "Coach Language / لغة الكابتن",
+                            comment: ""
+                        )
+                    )
+                    .font(.subheadline.weight(.semibold))
 
-                    Picker("Coach Language / لغة الكابتن", selection: $notificationLanguage) {
+                    Picker(NSLocalizedString("settings.coachLanguage", value: "Coach Language / لغة الكابتن", comment: ""), selection: $notificationLanguage) {
                         Text("Arabic")
                             .tag(CoachNotificationLanguage.arabic.rawValue)
                         Text("English")
@@ -118,16 +128,18 @@ struct AppSettingsScreen: View {
                 .padding(.vertical, 4)
             }
 
-            Section("كابتن حمّودي") {
+            Section(
+                NSLocalizedString("settings.section.captain", value: "كابتن حمّودي", comment: "Captain section")
+            ) {
                 NavigationLink {
                     CaptainMemorySettingsView()
                 } label: {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("ذاكرة الكابتن 🧠")
+                            Text(NSLocalizedString("settings.captainMemory", value: "ذاكرة الكابتن 🧠", comment: "Captain memory title"))
                                 .foregroundStyle(.primary)
 
-                            Text("المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن")
+                            Text(NSLocalizedString("settings.captainMemory.subtitle", value: "المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن", comment: "Captain memory subtitle"))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -141,16 +153,18 @@ struct AppSettingsScreen: View {
                 }
             }
 
-            Section("Community") {
+            Section(
+                NSLocalizedString("settings.section.community", value: "Community", comment: "Community section")
+            ) {
                 Button {
                     showTribeFlow = true
                 } label: {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("AiQo Tribe")
+                            Text(NSLocalizedString("settings.tribe", value: "AiQo Tribe", comment: "Tribe title"))
                                 .foregroundStyle(.primary)
 
-                            Text("VIP community previews, rituals, and future member spaces.")
+                            Text(NSLocalizedString("settings.tribe.subtitle", value: "VIP community previews, rituals, and future member spaces.", comment: "Tribe subtitle"))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -171,6 +185,60 @@ struct AppSettingsScreen: View {
 
             Section("referral.section".localized) {
                 ReferralSettingsRow()
+            }
+
+            Section(
+                NSLocalizedString(
+                    "settings.section.account",
+                    value: "Account",
+                    comment: "Settings account section"
+                )
+            ) {
+                Button {
+                    showLogoutConfirmation = true
+                } label: {
+                    HStack {
+                        Text(
+                            NSLocalizedString(
+                                "settings.logout",
+                                value: "Log Out",
+                                comment: "Logout button"
+                            )
+                        )
+                        .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showDeleteAccountConfirmation = true
+                } label: {
+                    HStack {
+                        Text(
+                            NSLocalizedString(
+                                "settings.deleteAccount",
+                                value: "Delete Account",
+                                comment: "Delete account button"
+                            )
+                        )
+                        .foregroundStyle(.red)
+                        Spacer()
+                        if isDeletingAccount {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(isDeletingAccount)
             }
 
             Section("legal.section".localized) {
@@ -284,11 +352,69 @@ struct AppSettingsScreen: View {
             let normalized = CoachNotificationLanguage(rawValue: language) ?? .arabic
             NotificationPreferencesStore.shared.language = normalized == .english ? .english : .arabic
         }
+        .alert(
+            NSLocalizedString("settings.logout.title", value: "Log Out", comment: ""),
+            isPresented: $showLogoutConfirmation
+        ) {
+            Button(NSLocalizedString("settings.logout.confirm", value: "Log Out", comment: ""), role: .destructive) {
+                AppFlowController.shared.logout()
+            }
+            Button(NSLocalizedString("settings.cancel", value: "Cancel", comment: ""), role: .cancel) { }
+        } message: {
+            Text(
+                NSLocalizedString(
+                    "settings.logout.message",
+                    value: "Are you sure you want to log out?",
+                    comment: ""
+                )
+            )
+        }
+        .alert(
+            NSLocalizedString("settings.deleteAccount.title", value: "Delete Account", comment: ""),
+            isPresented: $showDeleteAccountConfirmation
+        ) {
+            Button(NSLocalizedString("settings.deleteAccount.confirm", value: "Delete", comment: ""), role: .destructive) {
+                deleteAccount()
+            }
+            Button(NSLocalizedString("settings.cancel", value: "Cancel", comment: ""), role: .cancel) { }
+        } message: {
+            Text(
+                NSLocalizedString(
+                    "settings.deleteAccount.message",
+                    value: "This will permanently delete your account and all associated data. This action cannot be undone.",
+                    comment: ""
+                )
+            )
+        }
         .sheet(isPresented: $showTribeFlow) {
             TribeExperienceFlowView(source: .settings)
         }
         .sheet(isPresented: $showDeveloperPanel) {
             DeveloperPanelView()
+        }
+    }
+
+    private func deleteAccount() {
+        isDeletingAccount = true
+
+        Task {
+            do {
+                // Call Supabase RPC to delete user data and mark account for deletion
+                try await SupabaseService.shared.client
+                    .rpc("delete_user_account")
+                    .execute()
+            } catch {
+                // Even if the server-side deletion fails, sign out locally.
+                // The user can contact support if server-side cleanup is needed.
+                #if DEBUG
+                print("Account deletion RPC failed:", error)
+                #endif
+            }
+
+            await MainActor.run {
+                isDeletingAccount = false
+                AppFlowController.shared.logout()
+            }
         }
     }
 

@@ -8,7 +8,7 @@
 		<string>aiqo.captain.inactivity-check</string>
 	</array>
 	<key>CAPTAIN_API_KEY</key>
-	<string>AIzaSyCQVkKbrEFIn91gQeF9FxF82tgAHso1ucI</string>
+	<string>$(CAPTAIN_API_KEY)</string>
 	<key>CAPTAIN_ARABIC_API_URL</key>
 	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CAPTAIN_VOICE_API_KEY</key>
@@ -34,7 +34,7 @@
 		</dict>
 	</array>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
-	<string>AIzaSyCQVkKbrEFIn91gQeF9FxF82tgAHso1ucI</string>
+	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
 	<key>COACH_BRAIN_LLM_API_URL</key>
 	<string>https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent</string>
 	<key>LSApplicationQueriesSchemes</key>
@@ -68,9 +68,9 @@
 	<key>SPOTIFY_CLIENT_ID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SUPABASE_ANON_KEY</key>
-	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M</string>
+	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>
-	<string>https://zidbsrepqpbucqzxnwgk.supabase.co</string>
+	<string>$(SUPABASE_URL)</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
 	<string>true</string>
 	<key>TRIBE_FEATURE_VISIBLE</key>

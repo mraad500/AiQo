@@ -1524,3 +1524,64 @@
 
 /* Level Up */
 "levelUp.celebration" = "You reached level %d 🎉";
+
+/* Settings — Account */
+"settings.section.account" = "Account";
+"settings.logout" = "Log Out";
+"settings.logout.title" = "Log Out";
+"settings.logout.confirm" = "Log Out";
+"settings.logout.message" = "Are you sure you want to log out?";
+"settings.deleteAccount" = "Delete Account";
+"settings.deleteAccount.title" = "Delete Account";
+"settings.deleteAccount.confirm" = "Delete";
+"settings.deleteAccount.message" = "This will permanently delete your account and all associated data. This action cannot be undone.";
+"settings.cancel" = "Cancel";
+"settings.coachLanguage" = "Coach Language";
+"settings.section.captain" = "Captain Hamoudi";
+"settings.captainMemory" = "Captain Memory 🧠";
+"settings.captainMemory.subtitle" = "Information the Captain remembers to help you better";
+"settings.section.community" = "Community";
+"settings.tribe" = "AiQo Tribe";
+"settings.tribe.subtitle" = "VIP community previews, rituals, and future member spaces.";
+
+/* Paywall */
+"paywall.title" = "AiQo Premium";
+"paywall.joinTribe" = "JOIN THE AIQO TRIBE";
+"paywall.tribe" = "Tribe";
+
+/* Plan View */
+"plan.period.today" = "Today";
+"plan.period.month" = "Month";
+"plan.period.year" = "Year";
+"plan.recordProject" = "Record Breaking Project";
+"plan.weekProgress" = "Week %d of %d";
+"plan.filter.accessibility" = "Plan Filters";
+"plan.captainPlan" = "Captain Hamoudi Plan";
+"plan.suggestedExercises" = "Suggested Exercises";
+"plan.sets" = "%d Sets";
+
+/* Nutrition */
+"nutrition.daily" = "Daily Nutrition";
+"nutrition.calories.progress" = "%d / %d cal";
+"nutrition.protein" = "Protein";
+"nutrition.carbs" = "Carbs";
+"nutrition.fat" = "Fat";
+"nutrition.fiber" = "Fiber";
+"nutrition.gram" = "g";
+"nutrition.goals.calories" = "Calories";
+"nutrition.goals.calorieValue" = "%d cal";
+"nutrition.goals.protein" = "Protein (grams)";
+"nutrition.goals.carbs" = "Carbohydrates (grams)";
+"nutrition.goals.fat" = "Fat (grams)";
+"nutrition.goals.fiber" = "Fiber (grams)";
+"nutrition.goals.reset" = "Restore Defaults";
+"nutrition.goals.title" = "Nutrition Goals";
+"nutrition.goals.save" = "Save";
+"nutrition.goals" = "Goals";
+"nutrition.mealType" = "Meal Type";
+"nutrition.mealName" = "Meal Name";
+"nutrition.caloriesPlaceholder" = "Calories";
+"nutrition.addMeal" = "Add Meal";
+"nutrition.addMeal.title" = "Add Meal";
+"nutrition.addMeal.button" = "Add Meal ✨";
+"nutrition.cancel" = "Cancel";

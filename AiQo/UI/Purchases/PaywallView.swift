@@ -34,7 +34,7 @@ struct PaywallView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Text("JOIN THE AIQO TRIBE")
+                            Text("paywall.joinTribe".localized)
                                 .font(.system(.caption, design: .rounded, weight: .semibold))
                                 .tracking(1.2)
                                 .foregroundStyle(.secondary)
@@ -84,6 +84,10 @@ struct PaywallView: View {
                     .disabled(processingProductID != nil || purchaseManager.productLoadErrorMessage != nil)
                 }
 
+                Section {
+                    LegalLinksView()
+                }
+
                 #if DEBUG
                 if purchaseManager.productLoadErrorMessage != nil, let debugDetails = purchaseManager.productLoadDebugDetails {
                     Section("DEBUG") {
@@ -124,7 +128,7 @@ struct PaywallView: View {
                     }
                 }
             }
-            .navigationTitle("AiQo Premium")
+            .navigationTitle("paywall.title".localized)
             .task {
                 await reloadProducts()
             }
@@ -161,7 +165,7 @@ struct PaywallView: View {
                 Spacer()
 
                 if SubscriptionProductIDs.isFamily(productID: productID) {
-                    Label("Tribe", systemImage: "person.3.fill")
+                    Label("paywall.tribe".localized, systemImage: "person.3.fill")
                         .font(.caption)
                         .labelStyle(.titleAndIcon)
                         .foregroundStyle(.secondary)

@@ -14,15 +14,18 @@ struct BrainOrchestrator: Sendable {
     private let localService: LocalBrainService
     private let cloudService: CloudBrainService
     private let sanitizer: PrivacySanitizer
+    private let sleepAgent: AppleIntelligenceSleepAgent
 
     init(
         localService: LocalBrainService = LocalBrainService(),
         cloudService: CloudBrainService = CloudBrainService(),
-        sanitizer: PrivacySanitizer = PrivacySanitizer()
+        sanitizer: PrivacySanitizer = PrivacySanitizer(),
+        sleepAgent: AppleIntelligenceSleepAgent = AppleIntelligenceSleepAgent()
     ) {
         self.localService = localService
         self.cloudService = cloudService
         self.sanitizer = sanitizer
+        self.sleepAgent = sleepAgent
     }
 
     func processMessage(
@@ -37,15 +40,38 @@ struct BrainOrchestrator: Sendable {
             do {
                 baseReply = try await generateLocalReply(for: routedRequest)
             } catch let error as AppleIntelligenceSleepAgentError {
-                // Apple Intelligence مو متاح — نرسل ملخص النوم (أرقام مجمّعة فقط) للـ cloud
-                if case .modelUnavailable(let sleepSummary) = error {
-                    baseReply = try await generateCloudSleepReply(
-                        originalRequest: routedRequest,
-                        sleepSummary: sleepSummary,
-                        userName: userName
-                    )
-                } else {
-                    throw error
+                switch error {
+                case .modelUnavailable(let sleepSummary, let session):
+                    // Apple Intelligence مو متاح — نجرب الـ cloud، وإذا فشل نستخدم التحليل المحسوب
+                    do {
+                        baseReply = try await generateCloudSleepReply(
+                            originalRequest: routedRequest,
+                            sleepSummary: sleepSummary,
+                            userName: userName
+                        )
+                    } catch {
+                        logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                        baseReply = makeComputedSleepReply(
+                            session: session,
+                            language: routedRequest.language
+                        )
+                    }
+                case .emptyResponse(let session):
+                    // الرد المحلي طلع فاضي — نجرب الـ cloud
+                    do {
+                        let sleepSummary = sleepAgent.buildArabicSummary(for: session)
+                        baseReply = try await generateCloudSleepReply(
+                            originalRequest: routedRequest,
+                            sleepSummary: sleepSummary,
+                            userName: userName
+                        )
+                    } catch {
+                        logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                        baseReply = makeComputedSleepReply(
+                            session: session,
+                            language: routedRequest.language
+                        )
+                    }
                 }
             }
         case .cloud:
@@ -155,6 +181,33 @@ private extension BrainOrchestrator {
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation,
             rawText: reply.rawText
+        )
+    }
+
+    /// تحليل نوم محسوب بالكامل محلياً — يُستخدم لمّا المحلي والـ cloud كلاهما فشلوا
+    func makeComputedSleepReply(
+        session: SleepSession,
+        language: AppLanguage
+    ) -> HybridBrainServiceReply {
+        let message = sleepAgent.availabilityFallback(
+            for: session,
+            reasonDescription: "cloud_and_local_unavailable"
+        )
+        let sanitizedMessage = CaptainPersonaBuilder.sanitizeResponse(message)
+        let structuredResponse = CaptainStructuredResponse(
+            message: sanitizedMessage,
+            workoutPlan: nil,
+            mealPlan: nil
+        )
+        let rawText = (try? encode(structuredResponse)) ?? sanitizedMessage
+
+        return HybridBrainServiceReply(
+            message: sanitizedMessage,
+            quickReplies: nil,
+            workoutPlan: nil,
+            mealPlan: nil,
+            spotifyRecommendation: nil,
+            rawText: rawText
         )
     }
 

@@ -17,8 +17,6 @@ struct PrimarySegmentedTabs: View {
     let tabs: [ClubTopTab]
     @Binding var selection: ClubTopTab
 
-    @State private var bounceScale: CGFloat = 1.0
-
     var body: some View {
         ClubNativeSegmentedControl(
             items: tabs,
@@ -27,17 +25,6 @@ struct PrimarySegmentedTabs: View {
             accessibilityLabel: L10n.t("club_top_tabs_accessibility")
         )
         .frame(maxWidth: .infinity)
-        .scaleEffect(bounceScale)
-        .onChange(of: selection) { _, _ in
-            withAnimation(.spring(response: 0.12, dampingFraction: 0.5)) {
-                bounceScale = 0.98
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    bounceScale = 1.0
-                }
-            }
-        }
     }
 }
 

@@ -193,19 +193,15 @@ struct HomeView: View {
     
     private var kitchenSection: some View {
         VStack(spacing: 0) {
-            Spacer()
-                .frame(height: 8)
-
             KitchenShortcutButton {
                 viewModel.openKitchen()
             }
-            .offset(y: 2)
-            
+            .offset(y: 9)
+
             Text(NSLocalizedString("tab.kitchen", comment: "Kitchen title under icon"))
-                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .padding(.top, -4)
         }
-        .frame(height: 112)
     }
 
     // MARK: - Emirate Card
