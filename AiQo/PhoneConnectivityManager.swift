@@ -743,6 +743,23 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     }
 
     private func handleIncomingWCData(_ message: [String: Any]) {
+        // Handle standalone Watch workout completion (from WatchConnectivityService)
+        if let event = message["event"] as? String, event == "workout_completed" {
+            let cal = message["calories"] as? Double ?? 0
+            let dur = message["duration_minutes"] as? Double ?? 0
+            let type = message["workout_type"] as? String ?? ""
+            let dist = message["distance_km"] as? Double ?? 0
+
+            Task { @MainActor in
+                // Award XP: same formula as Watch summary
+                let xp = Int(cal * 0.8 + dur * 2)
+                // TODO: Integrate with LevelStore.shared.addXP(xp)
+                print("[AiQo] Watch workout received: \(type) — \(xp) XP")
+            }
+            logEvent("watch workout completed: \(type) cal=\(cal) dur=\(dur) dist=\(dist)")
+            return
+        }
+
         if let payloadData = message[WorkoutSyncDictionaryKey.workoutCompanionMessage] as? Data {
             do {
                 let companionMessage = try WorkoutSyncCodec.decodeCompanionMessage(payloadData)
