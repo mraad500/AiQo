@@ -8,7 +8,6 @@ import WatchConnectivity
 import AppIntents
 import HealthKit
 import WidgetKit
-import FirebaseCore
 
 @main
 struct AiQoApp: App {
