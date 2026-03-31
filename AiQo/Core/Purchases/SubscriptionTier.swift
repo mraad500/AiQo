@@ -17,8 +17,6 @@ enum SubscriptionTier: Int, Comparable {
         case SubscriptionProductIDs.coreMonthly:        return .core
         case SubscriptionProductIDs.proMonthly:         return .pro
         case SubscriptionProductIDs.intelligenceMonthly: return .intelligence
-        case SubscriptionProductIDs.legacyIndividual,
-             SubscriptionProductIDs.legacyFamily:       return .core
         default:                                         return .none
         }
     }

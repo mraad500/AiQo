@@ -3,36 +3,72 @@ import Combine
 import StoreKit
 
 enum PremiumPlan: String, CaseIterable, Identifiable {
-    case individual
-    case family
+    case core
+    case pro
+    case intelligence
+
+    // Legacy aliases kept only to avoid breaking older preview and tribe code paths.
+    static var individual: PremiumPlan { .core }
+    static var family: PremiumPlan { .intelligence }
 
     var id: String { rawValue }
 
     var canonicalProductID: String {
         switch self {
-        case .individual:
-            return SubscriptionProductIDs.legacyIndividual
-        case .family:
-            return SubscriptionProductIDs.legacyFamily
+        case .core:
+            return SubscriptionProductIDs.coreMonthly
+        case .pro:
+            return SubscriptionProductIDs.proMonthly
+        case .intelligence:
+            return SubscriptionProductIDs.intelligenceMonthly
         }
     }
 
     var title: String {
         switch self {
-        case .individual:
-            return "premium.plan.individual".localized
-        case .family:
-            return "premium.plan.family".localized
+        case .core:
+            return "AiQo Core"
+        case .pro:
+            return "AiQo Pro"
+        case .intelligence:
+            return "AiQo Intelligence"
         }
     }
 
     var description: String {
         switch self {
-        case .individual:
-            return "premium.plan.individual.description".localized
-        case .family:
-            return "premium.plan.family.description".localized
+        case .core:
+            return localized(
+                ar: "الكابتن حمّودي، Gym، Kitchen، My Vibe، Challenges، والإشعارات الذكية.",
+                en: "Captain Hamoudi, Gym, Kitchen, My Vibe, Challenges, and smart notifications."
+            )
+        case .pro:
+            return localized(
+                ar: "كل ميزات Core، بالإضافة إلى قمم، خطة تمرين أسبوعية بالذكاء الاصطناعي، وتقييم HRR.",
+                en: "All Core features, plus Peaks, Weekly AI Workout Plan, and HRR Assessment."
+            )
+        case .intelligence:
+            return localized(
+                ar: "كل ميزات Pro، بالإضافة إلى ذاكرة موسعة 500، نموذج Gemini Pro، وتحليلات متقدمة.",
+                en: "All Pro features, plus Extended Memory (500), Gemini Pro Model, and advanced analytics."
+            )
         }
+    }
+
+    static func fromStoredValue(_ value: String) -> PremiumPlan? {
+        switch value {
+        case "individual":
+            return .core
+        case "family":
+            return .intelligence
+        default:
+            return PremiumPlan(rawValue: value)
+        }
+    }
+
+    private func localized(ar: String, en: String) -> String {
+        let isArabic = Locale.current.language.languageCode?.identifier == "ar"
+        return isArabic ? ar : en
     }
 }
 

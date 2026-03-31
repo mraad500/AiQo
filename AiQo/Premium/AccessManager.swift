@@ -185,7 +185,7 @@ final class AccessManager: ObservableObject {
         }
 
         if let storedPlan = defaults.string(forKey: Keys.selectedPreviewPlan),
-           let plan = PremiumPlan(rawValue: storedPlan) {
+           let plan = PremiumPlan.fromStoredValue(storedPlan) {
             selectedPreviewPlan = plan
         } else {
             selectedPreviewPlan = .family

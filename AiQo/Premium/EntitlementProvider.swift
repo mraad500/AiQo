@@ -43,11 +43,20 @@ struct StoreKitEntitlementProvider: EntitlementProvider {
     }
 
     private func resolvedPlan(for productId: String?) -> PremiumPlan? {
-        guard SubscriptionProductIDs.isAnyPremium(productID: productId) else {
+        guard let productId, SubscriptionProductIDs.isAnyPremium(productID: productId) else {
             return nil
         }
 
-        return SubscriptionProductIDs.isFamily(productID: productId) ? .family : .individual
+        switch SubscriptionTier.from(productID: productId) {
+        case .core:
+            return .core
+        case .pro:
+            return .pro
+        case .intelligence:
+            return .intelligence
+        case .none:
+            return nil
+        }
     }
 }
 
@@ -58,7 +67,7 @@ struct PreviewEntitlementProvider: EntitlementProvider {
     func snapshot() -> EntitlementSnapshot {
         EntitlementSnapshot(
             hasTribeAccess: true,
-            hasFamilyPlanAccess: selectedPlan == .family,
+            hasFamilyPlanAccess: selectedPlan == .intelligence,
             activePlan: selectedPlan,
             activeProductId: selectedPlan.canonicalProductID,
             isPreviewOverride: true
