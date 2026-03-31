@@ -1,11 +1,11 @@
 import Foundation
 
-/// مرجع واحد لشخصية الكابتن — يُستخدم في cloud + local + fallback
+/// Single source of truth for Captain Hamoudi's persona constraints.
+/// Used across cloud, local, and fallback paths.
 enum CaptainPersonaBuilder {
 
     // MARK: - Banned Phrases
 
-    /// عبارات محظورة — إذا صدرت من الـ LLM تُمسح أو تُستبدل
     static let bannedPhrases = [
         "بالتأكيد",
         "بكل سرور",
@@ -29,16 +29,14 @@ enum CaptainPersonaBuilder {
         for phrase in bannedPhrases {
             result = result.replacingOccurrences(of: phrase, with: "")
         }
-        // Collapse double spaces left behind
         while result.contains("  ") {
             result = result.replacingOccurrences(of: "  ", with: " ")
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: - Persona Prompt Fragment
+    // MARK: - Prompt Fragments
 
-    /// Banned-phrases directive to append to any system prompt
     static func bannedPhrasesDirective() -> String {
         let joined = bannedPhrases.map { "「\($0)」" }.joined(separator: ", ")
         return """
@@ -49,19 +47,20 @@ enum CaptainPersonaBuilder {
         """
     }
 
-    /// Response length rules
     static func responseLengthRules() -> String {
         """
         === RESPONSE LENGTH RULES ===
-        - Simple question → 2-3 sentences max
+        - Simple question → 1-2 sentences max. No padding.
         - Workout/meal plan request → structured plan with clear bullet points
         - Emotional support → one warm sentence then a follow-up question
         - NEVER ramble without reason. Brevity is strength.
         - Max 3 actionable points per response. Never a list of 10.
+        - NEVER repeat the same sentence, idea, or phrase within the same reply.
+        - If a reply exceeds 4 sentences for a simple question, cut it down.
+        - Do NOT open with health stats — open with the direct answer or a human reaction.
         """
     }
 
-    /// Full captain persona instructions combining all directives
     static func buildInstructions() -> String {
         """
         \(bannedPhrasesDirective())

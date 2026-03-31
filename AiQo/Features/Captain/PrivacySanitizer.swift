@@ -3,7 +3,18 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
+/// Privacy-first sanitizer that enforces Apple's privacy guidelines before any data leaves the device.
+///
+/// Guarantees:
+/// - PII (emails, phones, UUIDs, IPs) redacted to "[REDACTED]"
+/// - User names normalized to "User" in cloud payloads
+/// - Conversation truncated to LAST 4 messages only (prevents hallucination, saves tokens)
+/// - Health data bucketed: steps by 50, calories by 10
+/// - Kitchen images stripped of EXIF/GPS metadata
 struct PrivacySanitizer: Sendable {
+
+    // MARK: - Constants
+
     private let genericUserToken = "User"
     private let redactionToken = "[REDACTED]"
     private let redactedProfileToken = "[REDACTED_PROFILE]"
@@ -15,6 +26,53 @@ struct PrivacySanitizer: Sendable {
     private let maximumSteps = 100_000
     private let maximumCalories = 10_000
     private let maximumLevel = 100
+
+    // MARK: - PII Redaction Rules
+
+    private static let piiRedactionRules: [RedactionRule] = [
+        // Email addresses
+        RedactionRule(
+            pattern: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
+            template: "[REDACTED]"
+        ),
+        // Phone numbers (7+ digits with optional separators)
+        RedactionRule(
+            pattern: #"(?<!\d)(?:\+?\d[\d\-\s\(\)]{7,}\d)"#,
+            template: "[REDACTED]"
+        ),
+        // UUIDs (8-4-4-4-12 hex pattern)
+        RedactionRule(
+            pattern: #"\b[0-9A-F]{8}\-[0-9A-F]{4}\-[1-5][0-9A-F]{3}\-[89AB][0-9A-F]{3}\-[0-9A-F]{12}\b"#,
+            template: "[REDACTED]"
+        ),
+        // @mentions → "User"
+        RedactionRule(
+            pattern: #"@[A-Za-z0-9_\.]{2,}"#,
+            template: "User"
+        ),
+        // URLs
+        RedactionRule(
+            pattern: #"https?://\S+"#,
+            template: "[REDACTED]"
+        ),
+        // Long numeric sequences (card numbers, etc.)
+        RedactionRule(
+            pattern: #"\b(?:\d[ -]?){10,}\b"#,
+            template: "[REDACTED]"
+        ),
+        // IP addresses
+        RedactionRule(
+            pattern: #"\b(?:\d{1,3}\.){3}\d{1,3}\b"#,
+            template: "[REDACTED]"
+        ),
+        // Long base64-like tokens
+        RedactionRule(
+            pattern: #"\b[a-z0-9]{24,}\b"#,
+            template: "[REDACTED]"
+        )
+    ]
+
+    // MARK: - Cloud Sanitization Pipeline
 
     func sanitizeForCloud(
         _ request: HybridBrainRequest,
@@ -30,8 +88,6 @@ struct PrivacySanitizer: Sendable {
             ? sanitizeKitchenImageData(request.attachedImageData)
             : nil
 
-        // Instead of blanking userProfileSummary entirely, inject cloud-safe memories
-        // (no PII — only goals, preferences, mood, injury, nutrition, insights)
         let safeProfile = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return HybridBrainRequest(
@@ -44,15 +100,23 @@ struct PrivacySanitizer: Sendable {
         )
     }
 
+    // MARK: - Text Sanitization
+
     func sanitizeText(_ text: String, knownUserName: String?) -> String {
         var sanitized = normalizedWhitespace(in: text)
         guard !sanitized.isEmpty else { return "" }
 
+        // Step 1: Replace self-identifying phrases ("my name is X")
         sanitized = replaceSelfIdentifyingPhrases(in: sanitized)
+
+        // Step 2: Replace explicit profile fields ("name:", "email:", etc.)
         sanitized = replaceExplicitProfileFields(in: sanitized)
+
+        // Step 3: Replace known user name globally → "User"
         sanitized = replaceKnownUserName(in: sanitized, knownUserName: knownUserName)
 
-        for rule in Self.directRedactionRules {
+        // Step 4: Apply PII regex redaction (emails, phones, UUIDs, IPs)
+        for rule in Self.piiRedactionRules {
             sanitized = replacingMatches(
                 in: sanitized,
                 pattern: rule.pattern,
@@ -61,6 +125,7 @@ struct PrivacySanitizer: Sendable {
             )
         }
 
+        // Step 5: Collapse consecutive redaction tokens
         sanitized = sanitized
             .replacingOccurrences(
                 of: #"(\s*(?:\[REDACTED\]|\[REDACTED_PROFILE\]|User)\s*){2,}"#,
@@ -73,6 +138,8 @@ struct PrivacySanitizer: Sendable {
         return sanitized
     }
 
+    // MARK: - Name Injection (post-generation, into Captain's reply)
+
     func injectUserName(into response: String, userName: String) -> String {
         let trimmedResponse = response.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -81,30 +148,38 @@ struct PrivacySanitizer: Sendable {
             return trimmedResponse
         }
 
+        let firstName = trimmedName.components(separatedBy: " ").first ?? trimmedName
+
+        // Replace explicit placeholders
         let placeholders = ["[USER_NAME]", "{{userName}}", "{{user_name}}", "%USER_NAME%"]
         for placeholder in placeholders where trimmedResponse.contains(placeholder) {
-            return trimmedResponse.replacingOccurrences(of: placeholder, with: trimmedName)
+            return trimmedResponse.replacingOccurrences(of: placeholder, with: firstName)
         }
 
+        // Don't double-prepend if name already present
         let lowercasedResponse = trimmedResponse.lowercased()
-        let lowercasedName = trimmedName.lowercased()
+        let lowercasedFirstName = firstName.lowercased()
         let prefixTokens = ["،", ",", ":", " "]
-        if prefixTokens.contains(where: { lowercasedResponse.hasPrefix(lowercasedName + $0) }) {
+
+        if prefixTokens.contains(where: { lowercasedResponse.hasPrefix(lowercasedFirstName + $0) }) {
+            return trimmedResponse
+        }
+        if trimmedResponse.hasPrefix("يا \(firstName)") {
             return trimmedResponse
         }
 
         let separator = containsArabicCharacters(in: trimmedResponse) ? "، " : ", "
-        return "\(trimmedName)\(separator)\(trimmedResponse)"
+        return "\(firstName)\(separator)\(trimmedResponse)"
     }
+
+    // MARK: - Kitchen Image Sanitization (strips EXIF/GPS via re-encoding)
 
     func sanitizeKitchenImageData(_ imageData: Data?) -> Data? {
         guard let imageData else { return nil }
         guard let source = CGImageSourceCreateWithData(
             imageData as CFData,
             [kCGImageSourceShouldCache: false] as CFDictionary
-        ) else {
-            return nil
-        }
+        ) else { return nil }
 
         let thumbnailOptions: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -114,12 +189,8 @@ struct PrivacySanitizer: Sendable {
         ]
 
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(
-            source,
-            0,
-            thumbnailOptions as CFDictionary
-        ) else {
-            return nil
-        }
+            source, 0, thumbnailOptions as CFDictionary
+        ) else { return nil }
 
         let destinationData = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
@@ -127,25 +198,23 @@ struct PrivacySanitizer: Sendable {
             UTType.jpeg.identifier as CFString,
             1,
             nil
-        ) else {
-            return nil
-        }
+        ) else { return nil }
 
-        let destinationOptions: [CFString: Any] = [
-            kCGImageDestinationLossyCompressionQuality: kitchenImageCompressionQuality
-        ]
+        CGImageDestinationAddImage(
+            destination,
+            cgImage,
+            [kCGImageDestinationLossyCompressionQuality: kitchenImageCompressionQuality] as CFDictionary
+        )
 
-        // Re-encoding a fresh CGImage drops source metadata such as EXIF and GPS.
-        CGImageDestinationAddImage(destination, cgImage, destinationOptions as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
-            return nil
-        }
-
+        guard CGImageDestinationFinalize(destination) else { return nil }
         return destinationData as Data
     }
 }
 
+// MARK: - Private Helpers
+
 private extension PrivacySanitizer {
+
     struct RedactionRule: Sendable {
         let pattern: String
         let template: String
@@ -162,82 +231,56 @@ private extension PrivacySanitizer {
         }
     }
 
-    static let directRedactionRules: [RedactionRule] = [
-        RedactionRule(pattern: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"(?<!\d)(?:\+?\d[\d\-\s\(\)]{7,}\d)"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"\b[0-9A-F]{8}\-[0-9A-F]{4}\-[1-5][0-9A-F]{3}\-[89AB][0-9A-F]{3}\-[0-9A-F]{12}\b"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"@[A-Za-z0-9_\.]{2,}"#, template: "User"),
-        RedactionRule(pattern: #"https?://\S+"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"\b(?:\d[ -]?){10,}\b"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"\b(?:\d{1,3}\.){3}\d{1,3}\b"#, template: "[REDACTED]"),
-        RedactionRule(pattern: #"\b[a-z0-9]{24,}\b"#, template: "[REDACTED]")
-    ]
+    // MARK: - Conversation Sanitization (truncate to last 4 messages)
 
     func sanitizeConversation(
         _ conversation: [CaptainConversationMessage],
         knownUserName: String?
     ) -> [CaptainConversationMessage] {
-        let truncatedConversation = Array(conversation.suffix(maxConversationMessages))
-        var sanitizedConversation: [CaptainConversationMessage] = []
+        let truncated = Array(conversation.suffix(maxConversationMessages))
+        var sanitized: [CaptainConversationMessage] = []
 
-        for message in truncatedConversation {
+        for message in truncated {
             let sanitizedContent = sanitizeText(message.content, knownUserName: knownUserName)
 
             if !sanitizedContent.isEmpty {
-                sanitizedConversation.append(
-                    CaptainConversationMessage(
-                        role: message.role,
-                        content: sanitizedContent
-                    )
-                )
+                sanitized.append(CaptainConversationMessage(role: message.role, content: sanitizedContent))
                 continue
             }
 
+            // Preserve user messages even if fully redacted
             guard message.role == .user else { continue }
-            sanitizedConversation.append(
-                CaptainConversationMessage(
-                    role: .user,
-                    content: "User request."
-                )
-            )
+            sanitized.append(CaptainConversationMessage(role: .user, content: "User request."))
         }
 
-        if sanitizedConversation.contains(where: { $0.role == .user }) {
-            return sanitizedConversation
+        #if DEBUG
+        print("PrivacySanitizer — Cloud payload: \(sanitized.count) messages (truncated from \(conversation.count)).")
+        #endif
+
+        if sanitized.contains(where: { $0.role == .user }) {
+            return sanitized
         }
 
-        return [
-            CaptainConversationMessage(
-                role: .user,
-                content: "User request."
-            )
-        ]
+        return [CaptainConversationMessage(role: .user, content: "User request.")]
     }
 
-    func sanitizeHealthContext(_ context: CaptainContextData) -> CaptainContextData {
-        let currentSteps = bucketedNonNegativeInt(
-            context.steps,
-            bucketSize: stepsBucketSize,
-            maximum: maximumSteps
-        )
-        let currentCalories = bucketedNonNegativeInt(
-            context.calories,
-            bucketSize: caloriesBucketSize,
-            maximum: maximumCalories
-        )
+    // MARK: - Health Data Bucketing
 
-        return CaptainContextData(
-            steps: currentSteps,
-            calories: currentCalories,
+    func sanitizeHealthContext(_ context: CaptainContextData) -> CaptainContextData {
+        CaptainContextData(
+            steps: bucketedNonNegativeInt(context.steps, bucketSize: stepsBucketSize, maximum: maximumSteps),
+            calories: bucketedNonNegativeInt(context.calories, bucketSize: caloriesBucketSize, maximum: maximumCalories),
             vibe: "General",
             level: clamp(context.level, minimum: 1, maximum: maximumLevel)
         )
     }
 
+    // MARK: - Self-Identifying Phrase Replacement
+
     func replaceSelfIdentifyingPhrases(in text: String) -> String {
         var sanitized = text
 
-        let semanticRules: [RedactionRule] = [
+        let rules: [RedactionRule] = [
             RedactionRule(
                 pattern: #"(?i)\b(my name is|call me|you can call me)\s+[A-Z\u0600-\u06FF][A-Za-z\u0600-\u06FF' -]{0,40}"#,
                 template: "$1 \(genericUserToken)"
@@ -256,22 +299,19 @@ private extension PrivacySanitizer {
             )
         ]
 
-        for rule in semanticRules {
-            sanitized = replacingMatches(
-                in: sanitized,
-                pattern: rule.pattern,
-                with: rule.template,
-                options: rule.options
-            )
+        for rule in rules {
+            sanitized = replacingMatches(in: sanitized, pattern: rule.pattern, with: rule.template, options: rule.options)
         }
 
         return sanitized
     }
 
+    // MARK: - Profile Field Replacement
+
     func replaceExplicitProfileFields(in text: String) -> String {
         var sanitized = text
 
-        let profileFieldRules: [RedactionRule] = [
+        let rules: [RedactionRule] = [
             RedactionRule(
                 pattern: #"(?i)\b(name|full name|username|user name)\b\s*[:=]?\s*[^,\n]+"#,
                 template: "$1 \(genericUserToken)"
@@ -290,31 +330,29 @@ private extension PrivacySanitizer {
             )
         ]
 
-        for rule in profileFieldRules {
-            sanitized = replacingMatches(
-                in: sanitized,
-                pattern: rule.pattern,
-                with: rule.template,
-                options: rule.options
-            )
+        for rule in rules {
+            sanitized = replacingMatches(in: sanitized, pattern: rule.pattern, with: rule.template, options: rule.options)
         }
 
         return sanitized
     }
 
+    // MARK: - Known Name Replacement
+
     func replaceKnownUserName(in text: String, knownUserName: String?) -> String {
         guard let knownUserName else { return text }
-
-        let trimmedName = knownUserName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return text }
+        let trimmed = knownUserName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return text }
 
         return replacingMatches(
             in: text,
-            pattern: NSRegularExpression.escapedPattern(for: trimmedName),
+            pattern: NSRegularExpression.escapedPattern(for: trimmed),
             with: genericUserToken,
             options: [.caseInsensitive]
         )
     }
+
+    // MARK: - Utility
 
     func normalizedWhitespace(in text: String) -> String {
         text
@@ -322,21 +360,13 @@ private extension PrivacySanitizer {
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 
-    func bucketedNonNegativeInt(
-        _ value: Int,
-        bucketSize: Int,
-        maximum: Int
-    ) -> Int {
-        let clampedValue = clamp(value, minimum: 0, maximum: maximum)
-        guard bucketSize > 1 else { return clampedValue }
-        return Int((Double(clampedValue) / Double(bucketSize)).rounded()) * bucketSize
+    func bucketedNonNegativeInt(_ value: Int, bucketSize: Int, maximum: Int) -> Int {
+        let clamped = clamp(value, minimum: 0, maximum: maximum)
+        guard bucketSize > 1 else { return clamped }
+        return Int((Double(clamped) / Double(bucketSize)).rounded()) * bucketSize
     }
 
-    func clamp(
-        _ value: Int,
-        minimum: Int,
-        maximum: Int
-    ) -> Int {
+    func clamp(_ value: Int, minimum: Int, maximum: Int) -> Int {
         min(max(value, minimum), maximum)
     }
 
@@ -349,7 +379,6 @@ private extension PrivacySanitizer {
         guard let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
             return text
         }
-
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
         return expression.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: template)
     }

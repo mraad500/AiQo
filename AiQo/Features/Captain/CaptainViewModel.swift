@@ -411,17 +411,31 @@ final class CaptainViewModel: ObservableObject {
             try await transitionCoachState(to: .typing, hold: 0.18, requestID: requestID)
             try ensureActiveRequest(requestID)
 
-            currentWorkoutPlan = reply.workoutPlan
-            currentMealPlan = reply.mealPlan
-            quickReplies = reply.quickReplies ?? []
+            // Validate and clean the reply before displaying:
+            // 1. Remove duplicate sentences
+            // 2. Trigger fallback if English ratio is too high in Arabic mode
+            let validated = validateResponse(
+                CaptainStructuredResponse(
+                    message: reply.message,
+                    quickReplies: reply.quickReplies,
+                    workoutPlan: reply.workoutPlan,
+                    mealPlan: reply.mealPlan,
+                    spotifyRecommendation: reply.spotifyRecommendation
+                ),
+                screenContext: screenContext
+            )
+
+            currentWorkoutPlan = validated.workoutPlan
+            currentMealPlan = validated.mealPlan
+            quickReplies = validated.quickReplies ?? []
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
-            let assistantReply = reply.message
+            let assistantReply = validated.message
 
             let replyMessage = ChatMessage(
                 text: assistantReply,
                 isUser: false,
-                spotifyRecommendation: reply.spotifyRecommendation
+                spotifyRecommendation: validated.spotifyRecommendation
             )
 
             withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
@@ -722,7 +736,8 @@ final class CaptainViewModel: ObservableObject {
                     arabic: NSLocalizedString("captain.error.serviceUnavailable", value: "السيرفر يحتاج استراحة، جرّب بعد شوي", comment: "Service unavailable 503 error"),
                     english: "The server needs a break, try again shortly."
                 )
-            case .badStatusCode, .invalidResponse, .emptyResponse, .emptyConversation, .missingUserMessage:
+            case .badStatusCode, .invalidResponse, .emptyResponse, .emptyConversation,
+                 .missingUserMessage, .missingAPIKey, .invalidEndpoint:
                 break
             }
         }
@@ -850,5 +865,78 @@ private extension CaptainViewModel {
             "deep sleep", "rem"
         ]
         return sleepKeywords.contains { lowered.contains($0) }
+    }
+
+    /// Post-processes a structured response before it reaches the UI.
+    /// 1. Removes duplicate sentences within the message.
+    /// 2. Falls back to a generic Arabic reply if the English character ratio is too high in Arabic mode.
+    func validateResponse(
+        _ response: CaptainStructuredResponse,
+        screenContext: ScreenContext
+    ) -> CaptainStructuredResponse {
+        var message = response.message
+
+        // 1. Remove duplicate sentences (split on common Arabic/Latin sentence terminators)
+        let separators = CharacterSet(charactersIn: ".،؟!\n")
+        let sentences = message
+            .components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.count > 3 } // ignore trivial fragments
+
+        var seen = Set<String>()
+        var unique: [String] = []
+        for sentence in sentences {
+            let normalized = sentence
+                .lowercased()
+                .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            guard seen.insert(normalized).inserted else { continue }
+            unique.append(sentence)
+        }
+
+        // Rebuild only when we actually removed something
+        if unique.count < sentences.count, !unique.isEmpty {
+            message = unique.joined(separator: ".")
+        }
+
+        // 2. Language ratio guard — Arabic mode only
+        if AppSettingsStore.shared.appLanguage == .arabic {
+            let ratio = Self.englishCharRatio(in: message)
+            if ratio > 0.4 {
+                #if DEBUG
+                print("⚠️ CaptainViewModel.validateResponse — English ratio \(String(format: "%.0f", ratio * 100))% in Arabic mode. Triggering generic fallback.")
+                #endif
+                return CaptainStructuredResponse(
+                    message: CaptainFallbackPolicy.genericArabicFallback(),
+                    quickReplies: ["شنو هدفك اليوم؟", "حلل نومي", "سوّيلي وجبة"],
+                    workoutPlan: nil,
+                    mealPlan: nil,
+                    // Preserve a Spotify card if present — it's structured data, not language content
+                    spotifyRecommendation: response.spotifyRecommendation
+                )
+            }
+        }
+
+        // Return original if nothing changed
+        if message == response.message {
+            return response
+        }
+
+        return CaptainStructuredResponse(
+            message: message,
+            quickReplies: response.quickReplies,
+            workoutPlan: response.workoutPlan,
+            mealPlan: response.mealPlan,
+            spotifyRecommendation: response.spotifyRecommendation
+        )
+    }
+
+    /// Returns the fraction of non-whitespace characters that are ASCII Latin letters (a-z, A-Z).
+    /// Used to detect English leakage in Arabic-mode responses.
+    static func englishCharRatio(in text: String) -> Double {
+        let nonWhitespace = text.unicodeScalars.filter { !$0.properties.isWhitespace }
+        let total = nonWhitespace.count
+        guard total > 0 else { return 0 }
+        let english = nonWhitespace.filter { $0.value >= 0x41 && $0.value <= 0x7A }.count
+        return Double(english) / Double(total)
     }
 }

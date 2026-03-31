@@ -1,15 +1,18 @@
 import Foundation
 import os.log
 
+/// The Routing Engine — routes requests between local (on-device) and cloud (Gemini API).
+///
+/// Routing Rules:
+/// - `.sleepAnalysis` → ALWAYS local (raw sleep stages NEVER leave the device)
+/// - `.gym`, `.kitchen`, `.peaks`, `.myVibe`, `.mainChat` → Cloud (Gemini)
+///
+/// Fallback Chain: Cloud fails → Local fallback → Localized error message
 struct BrainOrchestrator: Sendable {
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "BrainOrchestrator"
     )
-    private enum Route {
-        case local
-        case cloud
-    }
 
     private let localService: LocalBrainService
     private let cloudService: CloudBrainService
@@ -28,77 +31,31 @@ struct BrainOrchestrator: Sendable {
         self.sleepAgent = sleepAgent
     }
 
+    // MARK: - Public API
+
     func processMessage(
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
-        let routedRequest = requestByInterceptingStrictSleepDataIntent(request)
+        let routedRequest = interceptSleepIntent(request)
         let baseReply: HybridBrainServiceReply
 
         switch route(for: routedRequest) {
         case .local:
-            do {
-                baseReply = try await generateLocalReply(for: routedRequest)
-            } catch let error as AppleIntelligenceSleepAgentError {
-                switch error {
-                case .modelUnavailable(let sleepSummary, let session):
-                    // Apple Intelligence مو متاح — نجرب الـ cloud، وإذا فشل نستخدم التحليل المحسوب
-                    do {
-                        baseReply = try await generateCloudSleepReply(
-                            originalRequest: routedRequest,
-                            sleepSummary: sleepSummary,
-                            userName: userName
-                        )
-                    } catch {
-                        logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
-                        baseReply = makeComputedSleepReply(
-                            session: session,
-                            language: routedRequest.language
-                        )
-                    }
-                case .emptyResponse(let session):
-                    // الرد المحلي طلع فاضي — نجرب الـ cloud
-                    do {
-                        let sleepSummary = sleepAgent.buildArabicSummary(for: session)
-                        baseReply = try await generateCloudSleepReply(
-                            originalRequest: routedRequest,
-                            sleepSummary: sleepSummary,
-                            userName: userName
-                        )
-                    } catch {
-                        logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
-                        baseReply = makeComputedSleepReply(
-                            session: session,
-                            language: routedRequest.language
-                        )
-                    }
-                }
-            }
+            baseReply = await processLocalRoute(request: routedRequest, userName: userName)
+
         case .cloud:
-            do {
-                logger.notice("cloud_request_started")
-                baseReply = try await cloudService.generateReply(
-                    request: routedRequest,
-                    userName: userName
-                )
-                logger.notice("cloud_request_succeeded")
-            } catch {
-                logger.error("cloud_request_failed error=\(error.localizedDescription, privacy: .public)")
-                baseReply = try await generateLocalReply(for: routedRequest)
-            }
+            baseReply = await processCloudRoute(request: routedRequest, userName: userName)
         }
 
-        return makePersonalizedReply(baseReply, userName: userName)
+        return personalizeReply(baseReply, userName: userName)
     }
 
     func startStreamingReply(
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainStreamingSession {
-        let reply = try await processMessage(
-            request: request,
-            userName: userName
-        )
+        let reply = try await processMessage(request: request, userName: userName)
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
             quickReplies: reply.quickReplies,
@@ -114,21 +71,29 @@ struct BrainOrchestrator: Sendable {
     }
 }
 
+// MARK: - Routing Logic
+
 private extension BrainOrchestrator {
-    static let strictSleepTopicPatterns: [String] = [
-        #"\b(?:sleep|slept|sleeping|sleep quality|deep sleep|rem|nap|last night)\b"#,
-        #"(?<![\p{L}\p{N}_])(?:نوم|نمت|نومي|نومتك|نومتـي|نومي)(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])(?:نوم البارحة|مرحلة النوم|مراحل النوم|النوم العميق|ريم)(?![\p{L}\p{N}_])"#
-    ]
 
-    static let strictSleepDataPatterns: [String] = [
-        #"\b(?:analy[sz]e|analysis|how much|show me|read|track|score|data|metrics|stages?|healthkit)\b"#,
-        #"\b(?:did i sleep well|how did i sleep|how much did i sleep)\b"#,
-        #"(?<![\p{L}\p{N}_])(?:تحليل|حلل|شكد|قديش|بيانات|داتا|مراحل|اقرأ|قراية|سكرين|سكور|صحة|هيلث)(?![\p{L}\p{N}_])"#,
-        #"(?<![\p{L}\p{N}_])(?:تحليل نومي|بيانات نومي|شلون نمت|شكد نمت|اقرأ نومي|مراحل نومي)(?![\p{L}\p{N}_])"#
-    ]
+    enum Route {
+        case local
+        case cloud
+    }
 
-    func requestByInterceptingStrictSleepDataIntent(_ request: HybridBrainRequest) -> HybridBrainRequest {
+    /// Strict routing: sleep → local, everything else → cloud
+    func route(for request: HybridBrainRequest) -> Route {
+        switch request.screenContext {
+        case .sleepAnalysis:
+            return .local
+        case .gym, .kitchen, .peaks, .myVibe, .mainChat:
+            return .cloud
+        }
+    }
+
+    // MARK: - Sleep Intent Interception
+
+    /// Detects sleep-related queries and forces them to the local route
+    func interceptSleepIntent(_ request: HybridBrainRequest) -> HybridBrainRequest {
         guard request.screenContext != .sleepAnalysis,
               isStrictSleepDataRequest(latestUserMessage(in: request)) else {
             return request
@@ -144,23 +109,96 @@ private extension BrainOrchestrator {
         )
     }
 
-    private func route(for request: HybridBrainRequest) -> Route {
-        switch request.screenContext {
-        case .sleepAnalysis:
-            return .local
-        case .gym, .kitchen, .peaks, .myVibe, .mainChat:
-            return .cloud
+    // MARK: - Local Route Processing
+
+    func processLocalRoute(
+        request: HybridBrainRequest,
+        userName: String?
+    ) async -> HybridBrainServiceReply {
+        do {
+            return try await generateLocalReply(for: request)
+        } catch let error as AppleIntelligenceSleepAgentError {
+            return await handleSleepAgentError(error, request: request, userName: userName)
+        } catch {
+            logger.error("local_route_failed error=\(error.localizedDescription, privacy: .public)")
+            return makeLocalizedErrorReply(language: request.language)
         }
     }
+
+    func handleSleepAgentError(
+        _ error: AppleIntelligenceSleepAgentError,
+        request: HybridBrainRequest,
+        userName: String?
+    ) async -> HybridBrainServiceReply {
+        switch error {
+        case .modelUnavailable(let sleepSummary, let session):
+            // Apple Intelligence unavailable → try cloud with aggregated summary → computed fallback
+            do {
+                return try await generateCloudSleepReply(
+                    originalRequest: request,
+                    sleepSummary: sleepSummary,
+                    userName: userName
+                )
+            } catch {
+                logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                return makeComputedSleepReply(session: session, language: request.language)
+            }
+
+        case .emptyResponse(let session):
+            do {
+                let summary = sleepAgent.buildArabicSummary(for: session)
+                return try await generateCloudSleepReply(
+                    originalRequest: request,
+                    sleepSummary: summary,
+                    userName: userName
+                )
+            } catch {
+                logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                return makeComputedSleepReply(session: session, language: request.language)
+            }
+        }
+    }
+
+    // MARK: - Cloud Route Processing
+
+    func processCloudRoute(
+        request: HybridBrainRequest,
+        userName: String?
+    ) async -> HybridBrainServiceReply {
+        do {
+            logger.notice("cloud_request_started")
+            let reply = try await cloudService.generateReply(request: request, userName: userName)
+            logger.notice("cloud_request_succeeded")
+            return reply
+        } catch {
+            logger.error("cloud_request_failed error=\(error.localizedDescription, privacy: .public)")
+
+            // If the cloud call itself failed with a network-level error (bad status, no connection)
+            // we SKIP the Apple Intelligence local fallback entirely — it will also fail due to
+            // language mismatch (ar-SA vs en) and throw "GenerativeModelsAvailability is unavailable".
+            // Return the hardcoded offline message directly to avoid a second crash.
+            if isAppleIntelligenceSkippableError(error) || isNetworkError(error) {
+                logger.notice("apple_intelligence_skipped reason=cloud_error_implies_local_unavailable")
+                return makeNetworkErrorReply(language: request.language)
+            }
+
+            // Otherwise try Apple Intelligence as a local fallback
+            do {
+                return try await generateLocalReply(for: request)
+            } catch {
+                logger.error("local_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                return makeNetworkErrorReply(language: request.language)
+            }
+        }
+    }
+
+    // MARK: - Local Reply Generation
 
     func generateLocalReply(for request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
         let promptRouter = PromptRouter(language: request.language)
         let localRequest = LocalBrainRequest(
             conversation: request.conversation.map {
-                LocalConversationMessage(
-                    role: localRole(for: $0.role),
-                    content: $0.content
-                )
+                LocalConversationMessage(role: localRole(for: $0.role), content: $0.content)
             },
             screenContext: request.screenContext,
             language: request.language,
@@ -184,7 +222,46 @@ private extension BrainOrchestrator {
         )
     }
 
-    /// تحليل نوم محسوب بالكامل محلياً — يُستخدم لمّا المحلي والـ cloud كلاهما فشلوا
+    // MARK: - Cloud Sleep Fallback (aggregated summary only — no raw stages)
+
+    func generateCloudSleepReply(
+        originalRequest: HybridBrainRequest,
+        sleepSummary: String,
+        userName: String?
+    ) async throws -> HybridBrainServiceReply {
+        let sleepUserMessage = """
+        حلل نومي.
+
+        بيانات نومي:
+        \(sleepSummary)
+
+        اكتب 3 جمل بس بالعراقي. استخدم الأرقام الدقيقة من البيانات. لا تكتب أكثر من 3 جمل.
+        """
+
+        var modifiedConversation = originalRequest.conversation
+        if let lastUserIndex = modifiedConversation.lastIndex(where: { $0.role == .user }) {
+            modifiedConversation[lastUserIndex] = CaptainConversationMessage(
+                role: .user,
+                content: sleepUserMessage
+            )
+        } else {
+            modifiedConversation.append(CaptainConversationMessage(role: .user, content: sleepUserMessage))
+        }
+
+        let cloudRequest = HybridBrainRequest(
+            conversation: modifiedConversation,
+            screenContext: .mainChat,
+            language: originalRequest.language,
+            contextData: originalRequest.contextData,
+            userProfileSummary: originalRequest.userProfileSummary,
+            attachedImageData: nil
+        )
+
+        return try await cloudService.generateReply(request: cloudRequest, userName: userName)
+    }
+
+    // MARK: - Computed Sleep Reply (fully on-device, no AI)
+
     func makeComputedSleepReply(
         session: SleepSession,
         language: AppLanguage
@@ -194,11 +271,7 @@ private extension BrainOrchestrator {
             reasonDescription: "cloud_and_local_unavailable"
         )
         let sanitizedMessage = CaptainPersonaBuilder.sanitizeResponse(message)
-        let structuredResponse = CaptainStructuredResponse(
-            message: sanitizedMessage,
-            workoutPlan: nil,
-            mealPlan: nil
-        )
+        let structuredResponse = CaptainStructuredResponse(message: sanitizedMessage)
         let rawText = (try? encode(structuredResponse)) ?? sanitizedMessage
 
         return HybridBrainServiceReply(
@@ -211,62 +284,96 @@ private extension BrainOrchestrator {
         )
     }
 
-    /// لمّا Apple Intelligence مو متاح، نرسل ملخص النوم المجمّع (بدون بيانات خام) للـ OpenAI API
-    func generateCloudSleepReply(
-        originalRequest: HybridBrainRequest,
-        sleepSummary: String,
-        userName: String?
-    ) async throws -> HybridBrainServiceReply {
-        // نستبدل رسالة المستخدم الأخيرة بالـ sleep context + طلب التحليل
-        // هيچي ما تضيع بالـ sanitizer أو الـ truncation
-        let sleepUserMessage = """
-        حلل نومي.
+    // MARK: - Network / Offline Error Reply
 
-        بيانات نومي:
-        \(sleepSummary)
+    /// Returns a warm, human-readable offline message in the user's language.
+    /// Used when both cloud AND local Apple Intelligence are unavailable.
+    func makeNetworkErrorReply(language: AppLanguage) -> HybridBrainServiceReply {
+        let message = language == .arabic
+            ? CaptainFallbackPolicy.networkErrorArabic()
+            : CaptainFallbackPolicy.networkErrorEnglish()
 
-        اكتب 3 جمل بس بالعراقي. استخدم الأرقام الدقيقة من البيانات. لا تكتب أكثر من 3 جمل.
-        """
+        let structuredResponse = CaptainStructuredResponse(message: message)
+        let rawText = (try? encode(structuredResponse)) ?? message
 
-        var modifiedConversation = originalRequest.conversation
-        // نشيل رسالة المستخدم الأخيرة ونحطها بدالها وحدة فيها الـ sleep data
-        if let lastUserIndex = modifiedConversation.lastIndex(where: { $0.role == .user }) {
-            modifiedConversation[lastUserIndex] = CaptainConversationMessage(
-                role: .user,
-                content: sleepUserMessage
-            )
-        } else {
-            modifiedConversation.append(CaptainConversationMessage(
-                role: .user,
-                content: sleepUserMessage
-            ))
-        }
-
-        let cloudRequest = HybridBrainRequest(
-            conversation: modifiedConversation,
-            screenContext: .mainChat,
-            language: originalRequest.language,
-            contextData: originalRequest.contextData,
-            userProfileSummary: originalRequest.userProfileSummary,
-            attachedImageData: nil
-        )
-
-        return try await cloudService.generateReply(
-            request: cloudRequest,
-            userName: userName
+        return HybridBrainServiceReply(
+            message: message,
+            quickReplies: nil,
+            workoutPlan: nil,
+            mealPlan: nil,
+            spotifyRecommendation: nil,
+            rawText: rawText
         )
     }
 
-    func makePersonalizedReply(
+    // MARK: - Localized Error Fallback (final safety net)
+
+    func makeLocalizedErrorReply(language: AppLanguage) -> HybridBrainServiceReply {
+        let message: String
+        if language == .arabic {
+            message = CaptainFallbackPolicy.genericArabicFallback()
+        } else {
+            message = CaptainFallbackPolicy.genericEnglishFallback()
+        }
+
+        let structuredResponse = CaptainStructuredResponse(message: message)
+        let rawText = (try? encode(structuredResponse)) ?? message
+
+        return HybridBrainServiceReply(
+            message: message,
+            quickReplies: nil,
+            workoutPlan: nil,
+            mealPlan: nil,
+            spotifyRecommendation: nil,
+            rawText: rawText
+        )
+    }
+
+    // MARK: - Error Classification Helpers
+
+    /// Returns true for any HybridBrainServiceError that implies the local Apple Intelligence
+    /// path will also fail (network down, bad status, etc.).
+    func isAppleIntelligenceSkippableError(_ error: Error) -> Bool {
+        guard let brainError = error as? HybridBrainServiceError else { return false }
+        switch brainError {
+        case .networkUnavailable, .badStatusCode, .requestFailed, .emptyResponse, .invalidResponse:
+            return true
+        case .emptyConversation, .missingUserMessage, .invalidStructuredResponse,
+             .missingAPIKey, .invalidEndpoint:
+            return false
+        }
+    }
+
+    /// Returns true for low-level NSURLError network failures.
+    func isNetworkError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == NSURLErrorDomain else {
+            if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+                return isNetworkError(underlying)
+            }
+            return false
+        }
+        switch nsError.code {
+        case NSURLErrorNotConnectedToInternet,
+             NSURLErrorCannotConnectToHost,
+             NSURLErrorCannotFindHost,
+             NSURLErrorTimedOut,
+             NSURLErrorNetworkConnectionLost:
+            return true
+        default:
+            return false
+        }
+    }
+
+    // MARK: - Personalization
+
+    func personalizeReply(
         _ reply: HybridBrainServiceReply,
         userName: String?
     ) -> HybridBrainServiceReply {
         let personalizedMessage: String
         if let userName, !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            personalizedMessage = sanitizer.injectUserName(
-                into: reply.message,
-                userName: userName
-            )
+            personalizedMessage = sanitizer.injectUserName(into: reply.message, userName: userName)
         } else {
             personalizedMessage = reply.message
         }
@@ -290,14 +397,13 @@ private extension BrainOrchestrator {
         )
     }
 
+    // MARK: - Helpers
+
     func localRole(for role: CaptainConversationRole) -> LocalConversationRole {
         switch role {
-        case .system:
-            return .system
-        case .user:
-            return .user
-        case .assistant:
-            return .assistant
+        case .system:    return .system
+        case .user:      return .user
+        case .assistant: return .assistant
         }
     }
 
@@ -305,49 +411,13 @@ private extension BrainOrchestrator {
         request.conversation.last(where: { $0.role == .user })?.content ?? ""
     }
 
-    func requiresCloudPlanning(for message: String) -> Bool {
-        containsAny(message, keywords: [
-            "plan", "routine", "program", "meal plan", "workout plan", "weekly", "schedule",
-            "split", "macros", "recipe", "challenge", "build me", "create me",
-            "خطة", "برنامج", "روتين", "جدول", "اسبوع", "أسبوع", "وجبات", "تمرين", "تمارين",
-            "ماكروز", "وصفة", "تحدي", "رتبلي", "سوّيلي", "سويلي", "ابنيلي"
-        ])
-    }
-
-    func isStrictSleepDataRequest(_ message: String) -> Bool {
-        let normalized = normalizedIntentText(message)
-        let hasSleepTopic = Self.strictSleepTopicPatterns.contains { pattern in
-            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
-        }
-        guard hasSleepTopic else { return false }
-
-        return Self.strictSleepDataPatterns.contains { pattern in
-            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
-        }
-    }
-
-    func containsAny(_ text: String, keywords: [String]) -> Bool {
-        let normalizedText = normalizedIntentText(text)
-        return keywords.contains { keyword in
-            normalizedText.contains(normalizedIntentText(keyword))
-        }
-    }
-
-    func normalizedIntentText(_ text: String) -> String {
-        text
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .replacingOccurrences(of: "ـ", with: "")
-    }
-
     func encode(_ response: CaptainStructuredResponse) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(response)
-
         guard let rawText = String(data: data, encoding: .utf8) else {
-            throw LocalBrainServiceError.invalidStructuredResponse
+            throw HybridBrainServiceError.invalidStructuredResponse
         }
-
         return rawText
     }
 
@@ -361,25 +431,49 @@ private extension BrainOrchestrator {
                 }
                 continuation.finish()
             }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
     nonisolated static func chunked(_ text: String, size: Int) -> [String] {
         guard size > 0, !text.isEmpty else { return [text] }
-
         var chunks: [String] = []
         var startIndex = text.startIndex
-
         while startIndex < text.endIndex {
             let endIndex = text.index(startIndex, offsetBy: size, limitedBy: text.endIndex) ?? text.endIndex
             chunks.append(String(text[startIndex..<endIndex]))
             startIndex = endIndex
         }
-
         return chunks
+    }
+
+    // MARK: - Sleep Intent Detection
+
+    static let sleepTopicPatterns: [String] = [
+        #"\b(?:sleep|slept|sleeping|sleep quality|deep sleep|rem|nap|last night)\b"#,
+        #"(?<![\p{L}\p{N}_])(?:نوم|نمت|نومي|نومتك|نومتـي)(?![\p{L}\p{N}_])"#,
+        #"(?<![\p{L}\p{N}_])(?:نوم البارحة|مرحلة النوم|مراحل النوم|النوم العميق|ريم)(?![\p{L}\p{N}_])"#
+    ]
+
+    static let sleepDataPatterns: [String] = [
+        #"\b(?:analy[sz]e|analysis|how much|show me|read|track|score|data|metrics|stages?|healthkit)\b"#,
+        #"\b(?:did i sleep well|how did i sleep|how much did i sleep)\b"#,
+        #"(?<![\p{L}\p{N}_])(?:تحليل|حلل|شكد|قديش|بيانات|داتا|مراحل|اقرأ|قراية|سكرين|سكور|صحة|هيلث)(?![\p{L}\p{N}_])"#,
+        #"(?<![\p{L}\p{N}_])(?:تحليل نومي|بيانات نومي|شلون نمت|شكد نمت|اقرأ نومي|مراحل نومي)(?![\p{L}\p{N}_])"#
+    ]
+
+    func isStrictSleepDataRequest(_ message: String) -> Bool {
+        let normalized = message
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .replacingOccurrences(of: "ـ", with: "")
+
+        let hasSleepTopic = Self.sleepTopicPatterns.contains { pattern in
+            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+        guard hasSleepTopic else { return false }
+
+        return Self.sleepDataPatterns.contains { pattern in
+            normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
     }
 }

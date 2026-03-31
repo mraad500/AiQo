@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Conversation Types
+
 enum CaptainConversationRole: String, Sendable {
     case system
     case user
@@ -10,12 +12,9 @@ enum CaptainConversationRole: String, Sendable {
 struct CaptainConversationMessage: Sendable {
     let role: CaptainConversationRole
     let content: String
-
-    init(role: CaptainConversationRole, content: String) {
-        self.role = role
-        self.content = content
-    }
 }
+
+// MARK: - Request / Reply
 
 struct HybridBrainRequest: Sendable {
     let conversation: [CaptainConversationMessage]
@@ -25,9 +24,7 @@ struct HybridBrainRequest: Sendable {
     let userProfileSummary: String
     let attachedImageData: Data?
 
-    var hasAttachedImage: Bool {
-        attachedImageData != nil
-    }
+    var hasAttachedImage: Bool { attachedImageData != nil }
 }
 
 struct HybridBrainServiceReply: Sendable {
@@ -44,6 +41,8 @@ struct HybridBrainStreamingSession: Sendable {
     let fallbackResponse: CaptainStructuredResponse
 }
 
+// MARK: - Errors
+
 enum HybridBrainServiceError: LocalizedError {
     case emptyConversation
     case missingUserMessage
@@ -53,87 +52,77 @@ enum HybridBrainServiceError: LocalizedError {
     case badStatusCode(Int)
     case networkUnavailable
     case requestFailed
+    case missingAPIKey       // Secrets.xcconfig not set or key is empty
+    case invalidEndpoint     // URL construction failed
 
     var errorDescription: String? {
         switch self {
         case .emptyConversation:
-            return "Captain hybrid generation cannot run with an empty conversation."
+            return NSLocalizedString("captain.error.emptyConversation", comment: "")
         case .missingUserMessage:
-            return "Captain hybrid generation requires a user message."
+            return NSLocalizedString("captain.error.missingUserMessage", comment: "")
         case .invalidStructuredResponse:
-            return "Captain hybrid generation produced invalid structured JSON."
+            return NSLocalizedString("captain.error.invalidJSON", comment: "")
         case .invalidResponse:
-            return "Captain hybrid generation returned an invalid response."
+            return NSLocalizedString("captain.error.invalidResponse", comment: "")
         case .emptyResponse:
-            return "Captain hybrid generation returned an empty response."
-        case .badStatusCode(let statusCode):
-            return "Captain hybrid generation returned status code \(statusCode)."
+            return NSLocalizedString("captain.error.emptyResponse", comment: "")
+        case .badStatusCode(let code):
+            return String(format: NSLocalizedString("captain.error.badStatus", comment: ""), code)
         case .networkUnavailable:
-            return "Captain hybrid generation is temporarily unavailable."
+            return NSLocalizedString("captain.error.networkUnavailable", comment: "")
         case .requestFailed:
-            return "Captain hybrid generation request failed."
-        }
-    }
-}
-
-enum HybridBrainServiceConfigurationError: LocalizedError {
-    case missingAPIKey
-    case invalidEndpoint
-
-    var errorDescription: String? {
-        switch self {
+            return NSLocalizedString("captain.error.requestFailed", comment: "")
         case .missingAPIKey:
-            return "Captain API key is missing from configuration."
+            return "Captain API key is missing. Add CAPTAIN_API_KEY to Secrets.xcconfig."
         case .invalidEndpoint:
-            return "Captain prompt endpoint is invalid."
+            return "Captain API endpoint URL could not be constructed."
         }
     }
 }
 
-private struct HybridBrainServiceConfiguration: Sendable {
-    let endpointURL: URL
-    let apiKey: String
-}
+// MARK: - Gemini API Configuration
 
-private enum HybridBrainServiceConfig {
-    static let apiKeyName = "CAPTAIN_API_KEY"
-    static let fallbackAPIKeyName = "COACH_BRAIN_LLM_API_KEY"
-    static let model = "gemini-3-flash-preview"
+private enum GeminiConfig {
+    static let model = "gemini-2.0-flash-exp"
     static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
+    static let requestTimeoutSeconds: TimeInterval = 35
 
-    static func resolve(
-        bundle: Bundle = .main,
-        processInfo: ProcessInfo = .processInfo
-    ) throws -> HybridBrainServiceConfiguration {
-        let info = bundle.infoDictionary ?? [:]
-        let apiKey = normalized(processInfo.environment[apiKeyName])
-            ?? normalized(info[apiKeyName] as? String)
-            ?? normalized(processInfo.environment[fallbackAPIKeyName])
-            ?? normalized(info[fallbackAPIKeyName] as? String)
-
-        guard let apiKey else {
-            throw HybridBrainServiceConfigurationError.missingAPIKey
+    /// Resolves the API key at runtime from Info.plist (populated by Secrets.xcconfig).
+    /// The key is NEVER hardcoded here — it flows via:
+    ///   Secrets.xcconfig  →  Build Settings  →  Info.plist $(CAPTAIN_API_KEY)  →  here
+    static func resolvedAPIKey() throws -> String {
+        // 1) Info.plist (primary — set via Secrets.xcconfig build variable)
+        if let key = Bundle.main.object(forInfoDictionaryKey: "CAPTAIN_API_KEY") as? String,
+           isValid(key) {
+            return key
         }
-        guard let endpointURL = URL(string: "\(baseEndpoint)/\(model):generateContent?key=\(apiKey)") else {
-            throw HybridBrainServiceConfigurationError.invalidEndpoint
+        // 2) Environment variable (CI / TestFlight builds)
+        if let key = ProcessInfo.processInfo.environment["CAPTAIN_API_KEY"],
+           isValid(key) {
+            return key
         }
-
-        return HybridBrainServiceConfiguration(
-            endpointURL: endpointURL,
-            apiKey: apiKey
-        )
+        throw HybridBrainServiceError.missingAPIKey
     }
 
-    private static func normalized(_ value: String?) -> String? {
-        guard let value else { return nil }
+    static func endpointURL() throws -> URL {
+        let key = try resolvedAPIKey()
+        guard let url = URL(string: "\(baseEndpoint)/\(model):generateContent?key=\(key)") else {
+            throw HybridBrainServiceError.invalidEndpoint
+        }
+        return url
+    }
 
+    /// Rejects empty strings and unexpanded Xcode placeholders like "$(CAPTAIN_API_KEY)".
+    private static func isValid(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
-
-        return trimmed
+        return !trimmed.isEmpty
+            && !trimmed.hasPrefix("$(")
+            && trimmed != "YOUR_API_KEY_HERE"
     }
 }
+
+// MARK: - Gemini Response Decoding
 
 private struct GeminiResponse: Decodable {
     struct Candidate: Decodable {
@@ -141,10 +130,8 @@ private struct GeminiResponse: Decodable {
             struct Part: Decodable {
                 let text: String?
             }
-
             let parts: [Part]?
         }
-
         let content: Content?
     }
 
@@ -160,18 +147,12 @@ private struct GeminiResponse: Decodable {
     }
 }
 
-private struct GeminiAPIErrorEnvelope: Decodable {
-    struct APIError: Decodable {
-        let message: String?
-    }
-
-    let error: APIError?
-}
+// MARK: - HybridBrainService (Gemini 3 Flash Cloud Transport)
 
 struct HybridBrainService: Sendable {
     private let session: URLSession
-    private let bundle: Bundle
     private let promptBuilder: CaptainPromptBuilder
+    private let jsonParser: LLMJSONParser
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "HybridBrainService"
@@ -179,22 +160,20 @@ struct HybridBrainService: Sendable {
 
     init(
         session: URLSession = .shared,
-        bundle: Bundle = .main,
-        promptBuilder: CaptainPromptBuilder = CaptainPromptBuilder()
+        promptBuilder: CaptainPromptBuilder = CaptainPromptBuilder(),
+        jsonParser: LLMJSONParser = LLMJSONParser()
     ) {
         self.session = session
-        self.bundle = bundle
         self.promptBuilder = promptBuilder
+        self.jsonParser = jsonParser
     }
+
+    // MARK: - Public API
 
     func generateReply(request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
         try validate(request)
 
-        let configuration = try HybridBrainServiceConfig.resolve(bundle: bundle)
-        let structuredResponse = try await requestCloudResponse(
-            configuration: configuration,
-            request: request
-        )
+        let structuredResponse = try await requestCloudResponse(request: request)
         let rawText = try encodeStructuredResponse(structuredResponse)
 
         return HybridBrainServiceReply(
@@ -224,40 +203,34 @@ struct HybridBrainService: Sendable {
     }
 }
 
-private extension HybridBrainService {
-    func validate(_ request: HybridBrainRequest) throws {
-        let normalizedConversation = request.conversation.compactMap { message -> CaptainConversationMessage? in
-            let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            return CaptainConversationMessage(role: message.role, content: trimmed)
-        }
+// MARK: - Private Implementation
 
-        guard !normalizedConversation.isEmpty else {
-            throw HybridBrainServiceError.emptyConversation
+private extension HybridBrainService {
+
+    func validate(_ request: HybridBrainRequest) throws {
+        let nonEmpty = request.conversation.filter {
+            !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        guard normalizedConversation.contains(where: { $0.role == .user }) else {
+        guard !nonEmpty.isEmpty else { throw HybridBrainServiceError.emptyConversation }
+        guard nonEmpty.contains(where: { $0.role == .user }) else {
             throw HybridBrainServiceError.missingUserMessage
         }
     }
 
-    func requestCloudResponse(
-        configuration: HybridBrainServiceConfiguration,
-        request: HybridBrainRequest
-    ) async throws -> CaptainStructuredResponse {
-        var urlRequest = URLRequest(url: configuration.endpointURL)
+    // MARK: - Network
+
+    func requestCloudResponse(request: HybridBrainRequest) async throws -> CaptainStructuredResponse {
+        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL())
         urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 35
+        urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         urlRequest.httpBody = try JSONSerialization.data(
-            withJSONObject: makeRequestBody(
-                configuration: configuration,
-                request: request
-            )
+            withJSONObject: makeRequestBody(request: request)
         )
 
-        logger.notice("gemini_request url=\(configuration.endpointURL.absoluteString.prefix(80), privacy: .public)")
+        logger.notice("gemini_request model=\(GeminiConfig.model, privacy: .public)")
 
         let data: Data
         let response: URLResponse
@@ -278,9 +251,7 @@ private extension HybridBrainService {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let rawBody = String(data: data, encoding: .utf8) ?? "nil"
-            logger.error(
-                "gemini_bad_status status=\(httpResponse.statusCode) body=\(rawBody.prefix(500), privacy: .public)"
-            )
+            logger.error("gemini_bad_status status=\(httpResponse.statusCode) body=\(rawBody.prefix(500), privacy: .public)")
             throw HybridBrainServiceError.badStatusCode(httpResponse.statusCode)
         }
 
@@ -299,22 +270,32 @@ private extension HybridBrainService {
             throw HybridBrainServiceError.emptyResponse
         }
 
-        return try decodeStructuredResponse(from: outputText)
+        // Use LLMJSONParser for robust extraction
+        let fallback = CaptainStructuredResponse(message: outputText)
+        return jsonParser.decode(outputText, fallback: fallback)
     }
 
-    func makeRequestBody(
-        configuration: HybridBrainServiceConfiguration,
-        request: HybridBrainRequest
-    ) -> [String: Any] {
+    // MARK: - Request Body
+
+    func makeRequestBody(request: HybridBrainRequest) -> [String: Any] {
+        let maxOutputTokens: Int = {
+            switch request.screenContext {
+            case .mainChat, .myVibe, .sleepAnalysis:
+                return 600
+            case .gym, .kitchen, .peaks:
+                return 900
+            }
+        }()
+
         return [
             "systemInstruction": [
                 "parts": [
-                    ["text": developerContextMessage(for: request)]
+                    ["text": promptBuilder.build(for: request)]
                 ]
             ],
             "contents": makeGeminiContents(for: request),
             "generationConfig": [
-                "maxOutputTokens": 900,
+                "maxOutputTokens": maxOutputTokens,
                 "temperature": 0.7
             ]
         ]
@@ -323,8 +304,7 @@ private extension HybridBrainService {
     func makeGeminiContents(for request: HybridBrainRequest) -> [[String: Any]] {
         let lastUserIndex = request.conversation.lastIndex(where: { $0.role == .user })
 
-        // Build raw entries first, then merge consecutive same-role messages
-        // because Gemini requires strictly alternating user/model roles.
+        // Gemini requires strictly alternating user/model roles
         struct Entry {
             let role: String
             var parts: [[String: Any]]
@@ -335,24 +315,24 @@ private extension HybridBrainService {
         for index in request.conversation.indices {
             let message = request.conversation[index]
             let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            guard message.role != .system else { continue }
+            guard !trimmed.isEmpty, message.role != .system else { continue }
 
             let role = message.role == .assistant ? "model" : "user"
             var parts: [[String: Any]] = [["text": trimmed]]
 
+            // Attach kitchen image to the last user message only
             if index == lastUserIndex,
                request.screenContext == .kitchen,
-               let attachedImageData = request.attachedImageData {
+               let imageData = request.attachedImageData {
                 parts.append([
                     "inlineData": [
                         "mimeType": "image/jpeg",
-                        "data": attachedImageData.base64EncodedString()
+                        "data": imageData.base64EncodedString()
                     ]
                 ])
             }
 
-            // Merge with previous entry if same role (Gemini requires alternating roles)
+            // Merge consecutive same-role messages
             if let last = entries.last, last.role == role {
                 entries[entries.count - 1].parts.append(contentsOf: parts)
             } else {
@@ -360,7 +340,7 @@ private extension HybridBrainService {
             }
         }
 
-        // Gemini requires the first content to be "user" role
+        // Gemini requires first content to be "user"
         if let first = entries.first, first.role == "model" {
             entries.insert(Entry(role: "user", parts: [["text": "..."]]), at: 0)
         }
@@ -368,35 +348,7 @@ private extension HybridBrainService {
         return entries.map { ["role": $0.role, "parts": $0.parts] }
     }
 
-    func developerContextMessage(for request: HybridBrainRequest) -> String {
-        promptBuilder.build(for: request)
-    }
-
-    func decodeStructuredResponse(from rawText: String) throws -> CaptainStructuredResponse {
-        // Strip markdown code fences Gemini sometimes wraps JSON in
-        let cleaned = rawText
-            .replacingOccurrences(of: "```json", with: "")
-            .replacingOccurrences(of: "```", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard let data = cleaned.data(using: .utf8) else {
-            throw HybridBrainServiceError.invalidStructuredResponse
-        }
-
-        do {
-            return try JSONDecoder().decode(CaptainStructuredResponse.self, from: data)
-        } catch {
-            // If structured parsing fails, wrap the raw text as a simple message response
-            let fallback = CaptainStructuredResponse(
-                message: cleaned,
-                quickReplies: nil,
-                workoutPlan: nil,
-                mealPlan: nil,
-                spotifyRecommendation: nil
-            )
-            return fallback
-        }
-    }
+    // MARK: - Response Encoding
 
     func encodeStructuredResponse(_ response: CaptainStructuredResponse) throws -> String {
         let encoder = JSONEncoder()
@@ -410,6 +362,8 @@ private extension HybridBrainService {
         return rawText
     }
 
+    // MARK: - Token Streaming
+
     func tokenStream(for rawText: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task.detached(priority: .utility) {
@@ -420,31 +374,26 @@ private extension HybridBrainService {
                 }
                 continuation.finish()
             }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
     nonisolated static func chunked(_ text: String, size: Int) -> [String] {
         guard size > 0, !text.isEmpty else { return [text] }
-
         var chunks: [String] = []
         var startIndex = text.startIndex
-
         while startIndex < text.endIndex {
             let endIndex = text.index(startIndex, offsetBy: size, limitedBy: text.endIndex) ?? text.endIndex
             chunks.append(String(text[startIndex..<endIndex]))
             startIndex = endIndex
         }
-
         return chunks
     }
 
+    // MARK: - Network Availability
+
     func isNetworkUnavailable(_ error: Error) -> Bool {
         let nsError = error as NSError
-
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorNotConnectedToInternet,
@@ -457,11 +406,9 @@ private extension HybridBrainService {
                 break
             }
         }
-
         if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
             return isNetworkUnavailable(underlying)
         }
-
         return false
     }
 }
