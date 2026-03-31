@@ -43,6 +43,8 @@ struct AiQoBottomCTA: View {
             .buttonStyle(.plain)
             .disabled(!isEnabled)
             .opacity(isEnabled ? 1 : 0.7)
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(.isButton)
         }
         .padding(AiQoSpacing.md)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.ctaContainer, style: .continuous))

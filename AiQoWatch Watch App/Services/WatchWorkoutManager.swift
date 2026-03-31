@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import HealthKit
+import WatchConnectivity
 
 /// Thin bridge over `WorkoutManager.shared` that exposes the same API
 /// used by the new AiQo Watch views while preserving the full iPhone ↔ Watch
@@ -91,6 +92,24 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     self.summaryDuration = self.core.displayElapsedTime
                     self.summaryAvgHeartRate = Int(self.core.averageHeartRate)
                     self.summaryDistance = self.core.distance / 1000.0
+
+                    // Send workout completion to iPhone for XP processing
+                    if WCSession.isSupported() {
+                        let data: [String: Any] = [
+                            "event": "workout_completed",
+                            "calories": Double(self.summaryCalories),
+                            "duration_minutes": self.summaryDuration / 60.0,
+                            "workout_type": self.currentType?.rawValue ?? "other",
+                            "distance_km": self.summaryDistance,
+                            "timestamp": Date().timeIntervalSince1970
+                        ]
+                        let wcSession = WCSession.default
+                        if wcSession.isReachable {
+                            wcSession.sendMessage(data, replyHandler: nil, errorHandler: nil)
+                        } else {
+                            wcSession.transferUserInfo(data)
+                        }
+                    }
                 }
                 self.showingSummary = showing
             }

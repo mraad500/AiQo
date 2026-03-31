@@ -13,6 +13,10 @@ struct LevelUpCelebrationView: View {
             Color.black.opacity(showContent ? 0.4 : 0)
                 .ignoresSafeArea()
                 .onTapGesture { onDismiss() }
+                .accessibilityElement()
+                .accessibilityLabel("أغلق تهنئة المستوى")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { onDismiss() }
 
             VStack(spacing: 16) {
                 // Level number

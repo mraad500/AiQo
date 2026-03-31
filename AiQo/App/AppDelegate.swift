@@ -8,6 +8,7 @@ import WatchConnectivity
 import AppIntents
 import HealthKit
 import WidgetKit
+import FirebaseCore
 
 @main
 struct AiQoApp: App {
@@ -96,6 +97,14 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // Crashlytics must be configured before any other Firebase call.
+        CrashReportingService.shared.configure()
+
+        // Bind user ID for returning users who are already signed in.
+        if let userID = SupabaseService.shared.currentUserID {
+            CrashReportingService.shared.setUser(id: userID)
+        }
+
         _ = PhoneConnectivityManager.shared
 
         let center = UNUserNotificationCenter.current()

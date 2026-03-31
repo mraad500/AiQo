@@ -288,5 +288,3 @@ private struct SetupPrivacyToggleCard: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isPublic)
     }
 }
-
-typealias DatingScreenView = ProfileSetupView

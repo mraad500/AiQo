@@ -166,6 +166,7 @@ private extension DJCaptainChatView {
                 .buttonStyle(.plain)
                 .disabled(trimmedDraft.isEmpty || captainBrain.isLoading)
                 .opacity(trimmedDraft.isEmpty || captainBrain.isLoading ? 0.56 : 1)
+                .accessibilityLabel("أرسل الرسالة")
             }
             .padding(.horizontal, 14)
             .padding(.top, 12)

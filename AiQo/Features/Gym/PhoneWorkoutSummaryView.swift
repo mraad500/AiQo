@@ -263,46 +263,9 @@ struct PhoneWorkoutSummaryView: View {
 
     // ✅ دالة جديدة: حفظ النقاط وحساب المستوى الجديد
     private func saveXPAndDismiss(xp: Int) {
-        // 1. جلب البيانات الحالية
-        let defaults = UserDefaults.standard
-        let currentLevel = max(defaults.integer(forKey: "aiqo.currentLevel"), 1)
-        let currentProgress = defaults.double(forKey: "aiqo.currentLevelProgress") // 0.0 to 1.0
-        let currentTotalScore = defaults.integer(forKey: "aiqo.legacyTotalPoints")
-
-        // 2. تحديث مجموع النقاط (Line Score)
-        let newTotalScore = currentTotalScore + xp
-        defaults.set(newTotalScore, forKey: "aiqo.legacyTotalPoints")
-
-        // 3. منطق حساب المستوى (Level Up Logic)
-        // لنفترض معادلة بسيطة: كل مستوى يحتاج (المستوى الحالي * 500) نقطة لملء البار
-        // يمكنك تعديل الرقم 500 ليصبح أصعب أو أسهل
-        var level = currentLevel
-        var xpRequiredForNextLevel = Double(level * 500)
-        
-        // حساب الـ XP الحالي المتراكم داخل هذا المستوى فقط
-        var currentXPInLevel = currentProgress * xpRequiredForNextLevel
-        
-        // إضافة الـ XP الجديد
-        currentXPInLevel += Double(xp)
-        
-        // حلقة تكرار: هل تجاوزنا الحد المطلوب للمستوى التالي؟
-        while currentXPInLevel >= xpRequiredForNextLevel {
-            currentXPInLevel -= xpRequiredForNextLevel // نخصم تكلفة الصعود
-            level += 1                                 // نرفع المستوى
-            xpRequiredForNextLevel = Double(level * 500) // التكلفة للمستوى الذي يليه
-        }
-        
-        // حساب النسبة المئوية الجديدة (0.0 - 1.0)
-        let newProgress = currentXPInLevel / xpRequiredForNextLevel
-        
-        // 4. حفظ البيانات الجديدة
-        defaults.set(level, forKey: "aiqo.currentLevel")
-        defaults.set(newProgress, forKey: "aiqo.currentLevelProgress")
-        
-        // 5. إرسال إشعار ليعلم LevelCardView بالتحديث
+        LevelStore.shared.addXP(xp)
         NotificationCenter.default.post(name: NSNotification.Name("XPUpdated"), object: nil)
         
-        // 6. إغلاق الشاشة
         onDismiss()
     }
 

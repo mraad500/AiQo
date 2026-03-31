@@ -7,6 +7,7 @@ import Foundation
 import WatchConnectivity
 import HealthKit
 import Combine
+import os
 
 @MainActor
 final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDelegate, HKWorkoutSessionDelegate, ConnectivityDebugProviding {
@@ -753,8 +754,9 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
             Task { @MainActor in
                 // Award XP: same formula as Watch summary
                 let xp = Int(cal * 0.8 + dur * 2)
-                // TODO: Integrate with LevelStore.shared.addXP(xp)
-                print("[AiQo] Watch workout received: \(type) — \(xp) XP")
+                guard xp > 0 else { return }
+                os_log("Watch XP received: %d", xp)
+                LevelStore.shared.addXP(xp)
             }
             logEvent("watch workout completed: \(type) cal=\(cal) dur=\(dur) dist=\(dist)")
             return

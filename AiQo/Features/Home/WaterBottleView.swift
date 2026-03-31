@@ -270,11 +270,13 @@ struct WaterBottleDemo: View {
                     waterLevel = max(0, waterLevel - 0.25)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel("أنقص ربع لتر")
                 
                 Button("+ 0.25L") {
                     waterLevel = min(3.0, waterLevel + 0.25)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("زد ربع لتر")
             }
         }
         .padding()

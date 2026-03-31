@@ -75,6 +75,7 @@ struct AlarmSetupCardView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(saveState.isBusy || saveState.isSaved)
+                .accessibilityLabel(buttonAccessibilityLabel)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -126,6 +127,23 @@ struct AlarmSetupCardView: View {
             return "checkmark.circle.fill"
         default:
             return "bell.badge.fill"
+        }
+    }
+
+    private var buttonAccessibilityLabel: String {
+        switch saveState {
+        case .idle:
+            return "احفظ المنبه الذكي"
+        case .requestingPermission:
+            return "جار طلب إذن المنبه"
+        case .saving:
+            return "جار حفظ المنبه"
+        case .saved:
+            return "تم حفظ المنبه"
+        case .denied:
+            return "افتح إعدادات المنبه"
+        case .failed:
+            return "أعد محاولة حفظ المنبه"
         }
     }
 

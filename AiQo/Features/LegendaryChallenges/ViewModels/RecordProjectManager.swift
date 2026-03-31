@@ -267,6 +267,12 @@ final class RecordProjectManager {
         return json
     }
 
+    /// تحديث حالة إنجاز المهام اليومية (legacy bridge للـ LegendaryProject)
+    func updateCompletedTasks(for project: RecordProject, completedTaskIDsJSON: String) {
+        project.completedTaskIDsJSON = completedTaskIDsJSON
+        saveContext()
+    }
+
     // MARK: - مساعدات
 
     /// استخراج خطة الأسبوع الحالي من JSON

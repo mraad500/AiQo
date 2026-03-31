@@ -60,6 +60,8 @@ final class TribeStore: ObservableObject {
 
         error = nil
 
+        // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+        // TODO before launch: connect to live SupabaseTribeRepository
         let tribe = Tribe(
             id: UUID().uuidString,
             name: trimmedName,
@@ -94,6 +96,8 @@ final class TribeStore: ObservableObject {
 
         error = nil
 
+        // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+        // TODO before launch: connect to live SupabaseTribeRepository
         currentTribe = Tribe(
             id: UUID().uuidString,
             name: String(

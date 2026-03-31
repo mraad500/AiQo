@@ -220,14 +220,16 @@ private struct LevelCardSnapshot: Equatable {
     }
 
     static func load() -> LevelCardSnapshot {
-        let storedLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
-        let storedProgress = UserDefaults.standard.double(forKey: LevelStorageKeys.currentLevelProgress)
-        let storedScore = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
+        let store = LevelStore.shared
+        let storedLevel = max(store.currentLevel, 1)
+        let xpForNextLevel = max(store.xpForNextLevel, 1)
+        let storedProgress = Double(max(store.currentXP, 0)) / Double(xpForNextLevel)
+        let storedScore = max(store.totalXP, 0)
 
         return LevelCardSnapshot(
-            level: storedLevel == 0 ? 1 : storedLevel,
+            level: storedLevel,
             progress: CGFloat(min(max(storedProgress, 0), 1)),
-            lineScore: max(storedScore, 0)
+            lineScore: storedScore
         )
     }
 }

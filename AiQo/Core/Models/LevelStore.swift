@@ -56,11 +56,28 @@ final class LevelStore: ObservableObject {
     @Published var currentXP: Int = 0
     @Published var totalXP: Int = 0
     
+    var currentLevel: Int {
+        level
+    }
+    
     // ثوابت الحسابات
     private let baseXP = 1000
     private let multiplier = 1.2
     
+    private enum StorageKeys {
+        static let currentLevel = "aiqo.user.level"
+        static let currentXP = "aiqo.user.currentXP"
+        static let totalXP = "aiqo.user.totalXP"
+        static let legacyCurrentLevel = "aiqo.currentLevel"
+        static let legacyCurrentXP = "aiqo.currentXP"
+        static let legacyUserXP = "aiqo.user.xp"
+        static let legacyCurrentLevelProgress = "aiqo.currentLevelProgress"
+        static let legacyTotalXP = "aiqo.legacyTotalPoints"
+        static let migrationDone = "aiqo.levelMigrationDone"
+    }
+    
     private init() {
+        migrateLegacyStorageIfNeeded()
         load()
     }
     
@@ -131,9 +148,9 @@ final class LevelStore: ObservableObject {
     // MARK: - Persistence
     
     private func save() {
-        UserDefaults.standard.set(level, forKey: "aiqo.user.level")
-        UserDefaults.standard.set(currentXP, forKey: "aiqo.user.currentXP")
-        UserDefaults.standard.set(totalXP, forKey: "aiqo.user.totalXP")
+        UserDefaults.standard.set(level, forKey: StorageKeys.currentLevel)
+        UserDefaults.standard.set(currentXP, forKey: StorageKeys.currentXP)
+        UserDefaults.standard.set(totalXP, forKey: StorageKeys.totalXP)
 
         Task { @MainActor in
             QuestPersistenceController.shared.syncPlayerStats(
@@ -147,10 +164,63 @@ final class LevelStore: ObservableObject {
     }
     
     private func load() {
-        level = UserDefaults.standard.integer(forKey: "aiqo.user.level")
+        level = UserDefaults.standard.integer(forKey: StorageKeys.currentLevel)
         if level == 0 { level = 1 }
-        currentXP = UserDefaults.standard.integer(forKey: "aiqo.user.currentXP")
-        totalXP = UserDefaults.standard.integer(forKey: "aiqo.user.totalXP")
+        currentXP = UserDefaults.standard.integer(forKey: StorageKeys.currentXP)
+        totalXP = UserDefaults.standard.integer(forKey: StorageKeys.totalXP)
+    }
+    
+    private func migrateLegacyStorageIfNeeded() {
+        let defaults = UserDefaults.standard
+        
+        guard !defaults.bool(forKey: StorageKeys.migrationDone) else { return }
+        
+        let modernLevel = defaults.integer(forKey: StorageKeys.currentLevel)
+        let legacyLevel = defaults.integer(forKey: StorageKeys.legacyCurrentLevel)
+        if legacyLevel != 0 && modernLevel == 0 {
+            defaults.set(legacyLevel, forKey: StorageKeys.currentLevel)
+        }
+        defaults.removeObject(forKey: StorageKeys.legacyCurrentLevel)
+        
+        let resolvedLevel = max(defaults.integer(forKey: StorageKeys.currentLevel), 1)
+        
+        let modernCurrentXP = defaults.integer(forKey: StorageKeys.currentXP)
+        let legacyCurrentXP = defaults.integer(forKey: StorageKeys.legacyCurrentXP)
+        if legacyCurrentXP != 0 && modernCurrentXP == 0 {
+            defaults.set(legacyCurrentXP, forKey: StorageKeys.currentXP)
+        }
+        defaults.removeObject(forKey: StorageKeys.legacyCurrentXP)
+        
+        let currentXPAfterLegacyMigration = defaults.integer(forKey: StorageKeys.currentXP)
+        let legacyUserXP = defaults.integer(forKey: StorageKeys.legacyUserXP)
+        if legacyUserXP != 0 && currentXPAfterLegacyMigration == 0 {
+            defaults.set(legacyUserXP, forKey: StorageKeys.currentXP)
+        }
+        defaults.removeObject(forKey: StorageKeys.legacyUserXP)
+        
+        let currentXPAfterUserXPMigration = defaults.integer(forKey: StorageKeys.currentXP)
+        let legacyProgress = defaults.double(forKey: StorageKeys.legacyCurrentLevelProgress)
+        if legacyProgress != 0 && currentXPAfterUserXPMigration == 0 {
+            let migratedXP = Int((legacyProgress * Double(xpRequired(for: resolvedLevel))).rounded())
+            if migratedXP != 0 {
+                defaults.set(migratedXP, forKey: StorageKeys.currentXP)
+            }
+        }
+        defaults.removeObject(forKey: StorageKeys.legacyCurrentLevelProgress)
+        
+        let modernTotalXP = defaults.integer(forKey: StorageKeys.totalXP)
+        let legacyTotalXP = defaults.integer(forKey: StorageKeys.legacyTotalXP)
+        if legacyTotalXP != 0 && modernTotalXP == 0 {
+            defaults.set(legacyTotalXP, forKey: StorageKeys.totalXP)
+        }
+        defaults.removeObject(forKey: StorageKeys.legacyTotalXP)
+        
+        defaults.set(true, forKey: StorageKeys.migrationDone)
+    }
+    
+    private func xpRequired(for level: Int) -> Int {
+        let safeLevel = max(level, 1)
+        return Int(Double(baseXP) * pow(multiplier, Double(safeLevel) - 1))
     }
     
     private func notifyUI(didLevelUp: Bool) {

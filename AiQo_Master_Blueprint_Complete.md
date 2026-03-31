@@ -1255,7 +1255,7 @@ heartRate, heartRateVariabilitySDNN, restingHeartRate, vo2Max, distanceWalkingRu
 - Kitchen tab navigation is indirect: navigates to Home + posts notification `openKitchenFromHome`
 - Two separate model containers could cause confusion; captain container uses custom path `captain_memory.store`
 - `PhoneConnectivityManager.swift` is 991 lines — candidate for decomposition
-- `DatingScreenViewController.swift` name is misleading — it's actually the profile setup view
+- `ProfileSetupView.swift` now matches the screen’s real purpose as the profile setup view
 
 ### Feature Flags
 
@@ -1281,7 +1281,7 @@ heartRate, heartRateVariabilitySDNN, restingHeartRate, vo2Max, distanceWalkingRu
 | `App/AppDelegate.swift` | Entry point, boot sequence, Siri intents | `AiQoApp`, `AppDelegate`, `SiriWorkoutType`, `StartWorkoutIntent`, `AiQoWorkoutShortcuts` |
 | `App/AppRootManager.swift` | Captain chat presentation state | `AppRootManager` |
 | `App/AuthFlowUI.swift` | Auth/onboarding UI components | Auth theme colors, glass card components |
-| `App/DatingScreenViewController.swift` | Profile setup (name, weight, height, gender) | `ProfileSetupView` |
+| `App/ProfileSetupView.swift` | Profile setup (name, weight, height, gender) | `ProfileSetupView` |
 | `App/LanguageSelectionView.swift` | First-launch language selection | `LanguageSelectionView` |
 | `App/LoginViewController.swift` | Sign in with Apple | `LoginScreenView` |
 | `App/MainTabRouter.swift` | 5-tab navigation | `MainTabRouter`, `Tab` enum |

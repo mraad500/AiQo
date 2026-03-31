@@ -3,3 +3,4 @@
 AiQo.xcodeproj/**/xcuserdata/
 build/
 Configuration/Secrets.xcconfig
+*.xcconfig.local

@@ -237,6 +237,7 @@ struct VibeControlSheet: View {
             Button("OK", role: .cancel) {
                 scheduleActiveAlertClear()
             }
+            .accessibilityLabel("حسنًا")
         } message: {
             Text(activeAlertMessage ?? "Something went wrong while starting audio.")
         }
@@ -302,6 +303,7 @@ struct VibeControlSheet: View {
                     .background(sectionBackground(cornerRadius: 26))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(vibeManager.isConnected ? "افتح سبوتيفاي" : "وصّل سبوتيفاي")
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -481,6 +483,7 @@ struct VibeControlSheet: View {
                 .frame(maxWidth: .infinity, minHeight: 52)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("افتح إعدادات الفايب")
 
             Button(action: handleCompactPlayPauseTapped) {
                 Image(systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill")
@@ -490,6 +493,7 @@ struct VibeControlSheet: View {
                     .background(controlOrbBackground)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(compactPlayPauseAccessibilityLabel)
 
             RoutePickerView().frame(width: 32, height: 32)
 
@@ -503,6 +507,7 @@ struct VibeControlSheet: View {
                     .background(controlOrbBackground)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("افتح دردشة الدي جي")
         }
         .padding(10)
         .background(sectionBackground(cornerRadius: 24))
@@ -527,6 +532,7 @@ struct VibeControlSheet: View {
                     }
                     .buttonStyle(.plain)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .accessibilityLabel("تم")
                 }
 
                 detailSheetContent
@@ -550,7 +556,8 @@ struct VibeControlSheet: View {
                 secondaryControlButton(
                     title: currentPlaybackState == .playing ? "Pause" : "Resume",
                     systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill",
-                    isEnabled: isPauseResumeAvailable
+                    isEnabled: isPauseResumeAvailable,
+                    accessibilityLabel: currentPlaybackState == .playing ? "أوقف التشغيل مؤقتًا" : "استأنف التشغيل"
                 ) {
                     handlePauseResumeTapped()
                 }
@@ -558,7 +565,8 @@ struct VibeControlSheet: View {
                 secondaryControlButton(
                     title: "Stop",
                     systemName: "stop.fill",
-                    isEnabled: currentPlaybackState != .stopped
+                    isEnabled: currentPlaybackState != .stopped,
+                    accessibilityLabel: "أوقف التشغيل"
                 ) {
                     handleStopTapped()
                 }
@@ -641,6 +649,7 @@ struct VibeControlSheet: View {
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color(red: 0.46, green: 0.90, blue: 0.78))
+                    .accessibilityLabel("اعرف سبب عدم توفر سبوتيفاي")
                 }
             }
 
@@ -741,6 +750,7 @@ struct VibeControlSheet: View {
         .disabled(!isPlayActionAvailable)
         .opacity(isPlayActionAvailable ? 1 : 0.58)
         .animation(.spring(), value: viewModel.selectedSource)
+        .accessibilityLabel(primaryAccessibilityLabel)
     }
 
     private func sectionBackground(cornerRadius: CGFloat) -> some View {
@@ -982,6 +992,26 @@ struct VibeControlSheet: View {
         }
     }
 
+    private var compactPlayPauseAccessibilityLabel: String {
+        switch currentPlaybackState {
+        case .playing:
+            return "أوقف الفايب مؤقتًا"
+        case .paused:
+            return "استأنف الفايب"
+        case .stopped:
+            return "شغّل الفايب"
+        }
+    }
+
+    private var primaryAccessibilityLabel: String {
+        switch viewModel.selectedSource {
+        case .aiqoSounds:
+            return aiqoAudioManager.playbackState == .paused ? "استأنف أصوات AiQo" : "شغّل أصوات AiQo"
+        case .spotify:
+            return vibeManager.isConnected ? "شغّل القائمة في سبوتيفاي" : "وصّل سبوتيفاي"
+        }
+    }
+
     private func handleSpotifyConnectTapped() {
         let previousSource = viewModel.selectedSource
         viewModel.selectedSource = .spotify
@@ -1075,6 +1105,7 @@ struct VibeControlSheet: View {
             .background(sectionBackground(cornerRadius: 22))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("شغّل قائمة \(playlist.title) في سبوتيفاي")
     }
 
     private func handlePauseResumeTapped() {
@@ -1144,6 +1175,7 @@ struct VibeControlSheet: View {
         title: String,
         systemName: String,
         isEnabled: Bool,
+        accessibilityLabel: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -1168,6 +1200,7 @@ struct VibeControlSheet: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.6)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 
@@ -1328,6 +1361,7 @@ private struct VibeModeCard: View {
             }
         }
         .animation(.spring(), value: isSelected)
+        .accessibilityLabel("اختر \(mode.accessibilityTitle)")
     }
 
     private var cardBackground: some View {
@@ -1364,6 +1398,23 @@ private struct VibeModeCard: View {
                 x: 0,
                 y: 2
             )
+    }
+}
+
+private extension VibeMode {
+    var accessibilityTitle: String {
+        switch self {
+        case .awakening:
+            return "وضع الاستيقاظ"
+        case .deepFocus:
+            return "وضع التركيز العميق"
+        case .egoDeath:
+            return "وضع الهدوء العميق"
+        case .energy:
+            return "وضع الطاقة"
+        case .recovery:
+            return "وضع التعافي"
+        }
     }
 }
 

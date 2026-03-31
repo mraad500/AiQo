@@ -48,6 +48,7 @@ struct AiQoCard: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(action != nil ? [.isButton] : [])
     }
 
     private var content: some View {

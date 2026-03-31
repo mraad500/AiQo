@@ -33,6 +33,7 @@ struct MainTabScreen: View {
                     NSLocalizedString("tab.home", comment: "Home tab title"),
                     systemImage: "house.fill"
                 )
+                .accessibilityLabel("الرئيسية")
             }
             .accessibilityHint(NSLocalizedString("tab.home.hint", value: "View daily health summary", comment: ""))
 
@@ -45,6 +46,7 @@ struct MainTabScreen: View {
                     NSLocalizedString("tab.gym", comment: "Gym tab title"),
                     systemImage: "figure.strengthtraining.traditional"
                 )
+                .accessibilityLabel("النادي الرياضي")
             }
             .accessibilityHint(NSLocalizedString("tab.gym.hint", value: "Workouts and fitness challenges", comment: ""))
 
@@ -60,12 +62,17 @@ struct MainTabScreen: View {
                     NSLocalizedString("tab.captain", comment: "Captain tab title"),
                     systemImage: "wand.and.stars"
                 )
+                .accessibilityLabel("الكابتن")
             }
             .accessibilityHint(NSLocalizedString("tab.captain.hint", value: "Chat with your AI health coach", comment: ""))
         }
         .environment(\.layoutDirection, .rightToLeft)
         .tint(appTint)
-        .onChange(of: tabRouter.selectedTab) {
+        .onAppear(perform: enforceTribeVisibilityGuard)
+        .onChange(of: tabRouter.selectedTab) { _, newTab in
+            enforceTribeVisibilityGuard()
+
+            guard TribeFeatureFlags.featureVisible || newTab != .tribe else { return }
             HapticEngine.selection()
         }
         .overlay {
@@ -119,6 +126,12 @@ struct MainTabScreen: View {
         UITabBar.appearance().isTranslucent = true
         UITabBar.appearance().tintColor = selectedColor
         UITabBar.appearance().unselectedItemTintColor = unselectedColor
+    }
+
+    private func enforceTribeVisibilityGuard() {
+        guard TribeFeatureFlags.featureVisible == false,
+              tabRouter.selectedTab == .tribe else { return }
+        tabRouter.selectedTab = .home
     }
 }
 

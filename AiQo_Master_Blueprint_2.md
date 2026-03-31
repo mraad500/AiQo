@@ -1,3069 +1,6789 @@
-# AiQo Master Blueprint v2.0
+# AiQo Master Blueprint 2
 
-> **Generated:** 2026-03-31
-> **Source:** Full source-code audit of 300+ Swift files across iOS, watchOS, and Widget targets
-> **Scope:** Architecture, data flow, AI brain, persona, gamification, monetization, design system, and roadmap
+Generated from the checked-in project at `/Users/mohammedraad/Desktop/untitled folder/AiQo`.
 
----
+Initial discovery command returned `719` candidate `.swift` / `.plist` / `.xcconfig` / `.json` files.
 
-## Table of Contents
+This blueprint excludes auxiliary `.git` / `.claude` directories and documents the live project tree across `482` scanned source/config files and `153` scanned directories.
 
-1. [App Identity & Philosophy](#section-1--app-identity--philosophy)
-2. [Tech Stack & Dependencies](#section-2--tech-stack--dependencies)
-3. [Project File Structure](#section-3--project-file-structure)
-4. [App Entry, Boot Sequence & Navigation](#section-4--app-entry-boot-sequence--navigation)
-5. [Hybrid AI Brain (BrainOrchestrator)](#section-5--hybrid-ai-brain-brainorchestrator)
-6. [Captain Hamoudi Persona System](#section-6--captain-hamoudi-persona-system)
-7. [Data Models & Persistence](#section-7--data-models--persistence)
-8. [HealthKit Integration](#section-8--healthkit-integration)
-9. [Onboarding Flow](#section-9--onboarding-flow)
-10. [Feature Modules](#section-10--feature-modules-all-7)
-11. [Gamification System](#section-11--gamification-system)
-12. [Monetization & StoreKit 2](#section-12--monetization--storekit-2)
-13. [Supabase Backend Schema](#section-13--supabase-backend-schema)
-14. [Notifications & Background Tasks](#section-14--notifications--background-tasks)
-15. [Design System](#section-15--design-system)
-16. [Apple Watch Companion](#section-16--apple-watch-companion)
-17. [Analytics & Crash Reporting](#section-17--analytics--crash-reporting)
-18. [Accessibility & Localization](#section-18--accessibility--localization)
-19. [Feature Flags & Configuration](#section-19--feature-flags--configuration)
-20. [Known Issues, Gaps & Roadmap](#section-20--known-issues-gaps--roadmap)
+Every section below is derived from the current codebase, project settings, resources, or configuration files.
 
----
+Where the requested path did not exist, the blueprint calls that out explicitly instead of inventing structure.
 
 ## SECTION 1 — App Identity & Philosophy
 
-### Product Identity
+### Code-Sourced Identity
 
-| Field | Value |
-|---|---|
-| **Product Name** | AiQo |
-| **Bundle ID** | `com.mraad500.aiqo` |
-| **Marketing Version** | 1.0 |
-| **Target Users** | Arabic-speaking wellness enthusiasts (primary: Iraqi Arabic speakers), English secondary |
-| **App Store Category** | Health & Fitness |
-| **Minimum Deployment** | iOS 26.1 (iPhone), watchOS 26.2 (Apple Watch) |
-| **Swift Version** | 5.0 |
+Product name: `AiQo`.
 
-### Core Principles
+Observed coach/persona name: `Captain Hamoudi` / `حمّودي`; spelling varies slightly across files, but the persona is consistent.
 
-1. **Zero Digital Pollution** — No ads, no trackers, no data selling. Every screen serves a purpose.
-2. **Privacy-First** — Raw health data (especially sleep stages) NEVER leaves the device. PII is redacted before cloud calls via `PrivacySanitizer`. Kitchen images are stripped of EXIF/GPS metadata.
-3. **Iraqi Arabic Persona** — Captain Hamoudi speaks exclusively in Baghdad-dialect Iraqi Arabic (or English when language is set). No formal Arabic (فصحى). Banned phrases list explicitly blocks generic AI filler.
-4. **Circadian-Aware** — The AI adapts its tone, energy, and coaching intensity based on time of day via bio-phase detection in `CaptainContextBuilder`.
-5. **Gamification-Driven** — XP, levels, shields, streaks, quests, and legendary challenges create intrinsic motivation loops.
+Observed target domain: wellness, workouts, kitchen/nutrition, sleep, habit formation, vibe/music, and tribe/community accountability.
 
-### Supported Languages
+Tagline: not found in the checked-in source; this still needs a product-marketing source of truth outside code.
 
-| Language | Code | Direction | Localization File |
-|---|---|---|---|
-| Arabic (Iraqi dialect) | `ar` | RTL | `AiQo/Resources/ar.lproj/Localizable.strings` (2,153 lines) |
-| English | `en` | LTR | `AiQo/Resources/en.lproj/Localizable.strings` (2,154 lines) |
+Bundle identifier: `com.mraad500.aiqo`.
 
-### RTL Strategy
+Inference from code, not explicit product copy: the app is aimed at Arabic-speaking users who want a coaching-led, privacy-aware lifestyle operating system rather than a single-purpose tracker.
 
-- `MainTabScreen` sets `.environment(\.layoutDirection, .rightToLeft)` globally
-- `LocalizationManager` in `Core/Localization/` handles runtime language switching
-- `Bundle+Language.swift` provides swizzled `Bundle.localizedString` for dynamic locale changes
-- Arabic number formatting via `ArabicNumberFormatter`
-- All UI components support both LTR and RTL through SwiftUI's built-in layout system
+### Product Principles Visible in Code
 
----
+`Zero Digital Pollution` is explicitly referenced in `MemoryStore` cleanup comments and `LegacyCalculationViewController` persistence comments.
+
+`Privacy-first` is visible in `PrivacySanitizer`, local HealthKit aggregation, on-device sleep analysis, and cloud-safe memory filtering.
+
+`Iraqi Arabic persona` is enforced in `CaptainPromptBuilder`, `CaptainOnDeviceChatEngine`, `LocalBrainService`, and multiple UI strings.
+
+`Circadian-aware` behavior is implemented by `CaptainContextBuilder` and consumed by `CaptainPromptBuilder` for tone shaping.
+
+### Languages and RTL
+
+Supported app languages found in code: `ar` and `en`.
+
+Arabic is the default language in `AppSettingsStore` and in the initial language-selection screen.
+
+RTL strategy is active at the app shell level through `AppRootView`, and many screens also force `.rightToLeft` explicitly.
+
+Some layout-heavy components intentionally switch specific subtrees back to `.leftToRight` for charts, rails, or control affordances.
+
+### Platform / Category
+
+App Store category: not found in project files; this is an App Store Connect concern, not a code setting in this repo.
+
+Configured iOS deployment target(s) found in project settings: `26.1, 26.2`.
+
+Configured watchOS deployment target(s) found in project settings: `26.2`.
+
+Project marketing version(s): `1.0`.
+
+Project build number(s): `1`.
+
+### Evidence Files
+
+- `AiQo/App/AppDelegate.swift`
+
+- `AiQo/App/SceneDelegate.swift`
+
+- `AiQo/Core/AppSettingsStore.swift`
+
+- `AiQo/Core/Localization/LocalizationManager.swift`
+
+- `AiQo/Features/Captain/CaptainPromptBuilder.swift`
+
+- `AiQo/Features/Captain/CaptainContextBuilder.swift`
+
+- `AiQo/Info.plist`
+
+- `AiQo.xcodeproj/project.pbxproj`
 
 ## SECTION 2 — Tech Stack & Dependencies
 
-### Apple Frameworks Used
+### Language / UI Stack
 
-| Framework | Usage |
-|---|---|
-| **SwiftUI** | All UI — views, navigation, animations |
-| **SwiftData** | Persistent models (`@Model` classes) — two separate `ModelContainer` instances |
-| **HealthKit** | Steps, heart rate, sleep, calories, water, VO2 max, workouts, stand hours |
-| **Foundation Models** | On-device Apple Intelligence for sleep analysis via `AppleIntelligenceSleepAgent` |
-| **StoreKit 2** | Non-renewing subscriptions, product loading, transaction observation |
-| **WatchConnectivity** | Phone↔Watch bidirectional sync for workouts |
-| **ActivityKit** | Live Activities for workout tracking (Dynamic Island + Lock Screen) |
-| **WidgetKit** | Home screen widgets (small/medium/large) + Watch complications |
-| **AppIntents** | Siri Shortcuts for starting workouts |
-| **CoreSpotlight** | Siri Shortcuts donation via `SiriShortcutsManager` |
-| **BackgroundTasks** | `BGTaskScheduler` for notification intelligence and inactivity checks |
-| **UserNotifications** | Local + remote notifications with rich category management |
-| **Vision** | Push-up counter via camera in `VisionCoachViewModel` |
-| **AVFoundation** | Audio coaching, voice playback, gratitude sessions |
-| **Security (Keychain)** | Free trial persistence across app reinstalls |
-| **FamilyControls** | Imported but usage TBD |
-| **CoreGraphics / ImageIO** | Kitchen image sanitization (EXIF stripping, resizing) |
+Swift version configured in the project: `5.0`.
 
-### SPM Dependencies (Package.resolved)
+UI framework: `SwiftUI` across the primary app, watch app, and widgets.
 
-| Package | Version | Purpose |
-|---|---|---|
-| **supabase-swift** | 2.36.0 | Backend: auth, database, real-time, storage |
-| **SDWebImage** | 5.21.6 | Async image loading and caching |
-| **SDWebImageSwiftUI** | 3.1.4 | SwiftUI wrappers for SDWebImage |
-| **swift-crypto** | 4.2.0 | Cryptographic operations (Supabase dependency) |
-| **swift-asn1** | 1.5.0 | ASN.1 parsing (Supabase dependency) |
-| **swift-http-types** | 1.4.0 | HTTP type definitions (Supabase dependency) |
-| **swift-system** | 1.6.4 | System call abstractions (Supabase dependency) |
-| **swift-clocks** | 1.0.6 | Clock abstractions for testing (Supabase dependency) |
-| **swift-concurrency-extras** | 1.3.2 | Concurrency utilities (Supabase dependency) |
-| **xctest-dynamic-overlay** | 1.7.0 | Test support (Supabase dependency) |
+Persistence stack: `SwiftData` plus targeted `UserDefaults`, Keychain-backed free-trial storage, and local file storage for analytics/crashes/progress photos.
 
-### External Frameworks (Vendored)
+Backend/auth stack: `supabase-swift` for auth, database access, and RPC usage.
 
-| Framework | Location |
-|---|---|
-| **SpotifyiOS.framework** | `AiQo/Frameworks/SpotifyiOS.framework` — Spotify SDK for music integration |
+Store stack: `StoreKit 2` with server-side receipt validation via a Supabase Edge Function.
 
-### External APIs
+Health stack: `HealthKit` with app-side aggregation and watch-side workout/metrics collection.
 
-| API | Model/Endpoint | Purpose |
-|---|---|---|
-| **Google Gemini** | `gemini-2.0-flash` via `generativelanguage.googleapis.com/v1beta` | Main cloud AI brain for Captain Hamoudi |
-| **Google Gemini** | `gemini-3-flash-preview` | Coach Brain middleware and spiritual whispers |
-| **ElevenLabs** | `eleven_multilingual_v2` via `api.elevenlabs.io/v1/text-to-speech` | Captain Hamoudi voice synthesis |
-| **Supabase** | `zidbsrepqpbucqzxnwgk.supabase.co` | Auth, profiles, tribes, arena, device tokens |
-| **Spotify** | Via SpotifyiOS SDK | Music playback and vibe recommendations |
+AI stack: `FoundationModels` / Apple Intelligence on-device, Google Gemini HTTP endpoints for cloud inference, and ElevenLabs for premium voice playback.
 
----
+### SPM Dependencies With Versions
+
+- `sdwebimage` -> `5.21.6`
+
+- `sdwebimageswiftui` -> `3.1.4`
+
+- `supabase-swift` -> `2.36.0`
+
+- `swift-asn1` -> `1.5.0`
+
+- `swift-clocks` -> `1.0.6`
+
+- `swift-concurrency-extras` -> `1.3.2`
+
+- `swift-crypto` -> `4.2.0`
+
+- `swift-http-types` -> `1.4.0`
+
+- `swift-system` -> `1.6.4`
+
+- `xctest-dynamic-overlay` -> `1.7.0`
+
+CocoaPods: no `Podfile` or `Pods/` dependency graph is present in the live project root used for this blueprint.
+
+Vendored framework: `AiQo/Frameworks/SpotifyiOS.framework`.
+
+### External APIs / Services Actually Referenced
+
+Google Gemini / Generative Language API is the active cloud LLM path for Captain, smart fridge image reasoning, weekly review text generation, and spiritual whispers.
+
+Supabase is used for authentication, profiles, tribe/arena data, device-token sync, account deletion RPC, and receipt-validation edge logic.
+
+ElevenLabs is used for Captain Hamoudi voice synthesis and cached playback assets.
+
+Spotify is used through `SpotifyiOS.framework`, app URL schemes, and vibe/workout playback helpers.
+
+OpenAI: no active OpenAI SDK or endpoint usage was found in the current codebase; the only explicit `OpenAI` string is an instruction telling the model never to mention it.
+
+### Apple / System Frameworks Imported In Source
+
+- `AVFoundation`
+
+- `AVKit`
+
+- `ActivityKit`
+
+- `AlarmKit`
+
+- `AppIntents`
+
+- `Auth`
+
+- `AuthenticationServices`
+
+- `BackgroundTasks`
+
+- `Charts`
+
+- `Combine`
+
+- `CoreGraphics`
+
+- `CoreMedia`
+
+- `CoreSpotlight`
+
+- `CryptoKit`
+
+- `DeviceActivity`
+
+- `FamilyControls`
+
+- `Foundation`
+
+- `FoundationModels`
+
+- `HealthKit`
+
+- `ImageIO`
+
+- `Intents`
+
+- `ManagedSettings`
+
+- `MediaPlayer`
+
+- `MessageUI`
+
+- `Network`
+
+- `ObjectiveC`
+
+- `Observation`
+
+- `PDFKit`
+
+- `PhotosUI`
+
+- `Security`
+
+- `Speech`
+
+- `SpotifyiOS`
+
+- `StoreKit`
+
+- `Supabase`
+
+- `SwiftData`
+
+- `SwiftUI`
+
+- `UIKit`
+
+- `UniformTypeIdentifiers`
+
+- `UserNotifications`
+
+- `Vision`
+
+- `WatchConnectivity`
+
+- `WebKit`
+
+- `WidgetKit`
+
+- `os`
+
+### Configuration Surfaces
+
+Secrets are injected through `Configuration/AiQo.xcconfig` + `Configuration/Secrets.xcconfig`.
+
+Runtime plist placeholders include `CAPTAIN_API_KEY`, `CAPTAIN_ARABIC_API_URL`, `CAPTAIN_VOICE_*`, `COACH_BRAIN_LLM_*`, `SUPABASE_*`, `SPOTIFY_CLIENT_ID`, and tribe feature flags.
+
+### Evidence Files
+
+- `AiQo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`
+
+- `AiQo.xcodeproj/project.pbxproj`
+
+- `AiQo/Info.plist`
+
+- `Configuration/AiQo.xcconfig`
+
+- `Configuration/Secrets.xcconfig`
+
+- `AiQo/Frameworks/SpotifyiOS.framework/Info.plist`
 
 ## SECTION 3 — Project File Structure
 
-```
-AiQo/
-├── AiQo.xcodeproj/
-├── Configuration/
-│   ├── AiQo.xcconfig              # Shared build settings
-│   ├── Secrets.xcconfig            # API keys (gitignored)
-│   └── ExternalSymbols/            # SpotifyiOS dSYM
-├── AiQo/
-│   ├── App/
-│   │   ├── AppDelegate.swift       # @main + UIApplicationDelegate + Siri intents
-│   │   ├── AppRootManager.swift    # Cross-tab state (Captain chat presentation)
-│   │   ├── MainTabRouter.swift     # Tab navigation singleton
-│   │   ├── MainTabScreen.swift     # TabView with 3 tabs (Home, Gym, Captain)
-│   │   ├── SceneDelegate.swift     # Scene lifecycle
-│   │   ├── AuthFlowUI.swift        # Sign in with Apple flow
-│   │   ├── LanguageSelectionView.swift
-│   │   ├── DatingScreenViewController.swift  # Profile setup ("dating" = onboarding profile)
-│   │   ├── LoginViewController.swift
-│   │   └── MealModels.swift
-│   ├── Core/
-│   │   ├── Constants.swift         # App-wide constants (K namespace)
-│   │   ├── Colors.swift            # UIColor + SwiftUI Color definitions
-│   │   ├── AppSettingsStore.swift   # User preferences singleton
-│   │   ├── UserProfileStore.swift   # User profile data
-│   │   ├── CaptainMemory.swift     # @Model for long-term memory
-│   │   ├── CaptainVoiceService.swift
-│   │   ├── CaptainVoiceAPI.swift   # ElevenLabs API client
-│   │   ├── CaptainVoiceCache.swift # Voice audio caching
-│   │   ├── MemoryStore.swift       # Memory CRUD operations
-│   │   ├── MemoryExtractor.swift   # Extracts memories from conversations
-│   │   ├── HealthKitMemoryBridge.swift  # Syncs HK data to Captain memory
-│   │   ├── DailyGoals.swift        # Daily step/calorie goals
-│   │   ├── StreakManager.swift     # Streak tracking
-│   │   ├── SmartNotificationScheduler.swift
-│   │   ├── SiriShortcutsManager.swift
-│   │   ├── HapticEngine.swift
-│   │   ├── ArabicNumberFormatter.swift
-│   │   ├── SpotifyVibeManager.swift
-│   │   ├── VibeAudioEngine.swift
-│   │   ├── AiQoAudioManager.swift
-│   │   ├── AiQoAccessibility.swift
-│   │   ├── DeveloperPanelView.swift
-│   │   ├── Models/
-│   │   │   ├── LevelStore.swift    # XP + Level + Shield system
-│   │   │   ├── NotificationPreferencesStore.swift
-│   │   │   └── ActivityNotification.swift
-│   │   ├── Purchases/
-│   │   │   ├── PurchaseManager.swift      # StoreKit 2 manager
-│   │   │   ├── EntitlementStore.swift     # Active subscription state
-│   │   │   ├── ReceiptValidator.swift     # Supabase receipt validation
-│   │   │   └── SubscriptionProductIDs.swift
-│   │   ├── Localization/
-│   │   │   ├── LocalizationManager.swift
-│   │   │   └── Bundle+Language.swift
-│   │   └── Utilities/
-│   │       └── ConnectivityDebugProviding.swift
-│   ├── Features/
-│   │   ├── Captain/               # 26 files — AI brain + chat UI
-│   │   ├── Home/                  # 23 files — dashboard + daily aura + water + sleep
-│   │   ├── Gym/                   # 60+ files — workouts, quests, vision coach, club
-│   │   ├── Kitchen/               # 25+ files — meal plans, fridge scanner, recipes
-│   │   ├── MyVibe/                # 5 files — mood/music/energy management
-│   │   ├── Onboarding/            # 3 files — walkthrough, feature intro, health sync
-│   │   ├── Profile/               # 3 files — profile screen, level card
-│   │   ├── Tribe/                 # 3 files — tribe view, design system, experience flow
-│   │   ├── LegendaryChallenges/   # 12 files — record-breaking projects
-│   │   ├── WeeklyReport/          # 4 files — weekly health summary
-│   │   ├── ProgressPhotos/        # 2 files — body transformation tracking
-│   │   └── DataExport/            # 1 file — health data export
-│   ├── Tribe/                     # 35+ files — Galaxy, Arena, Stores, Repositories
-│   │   ├── Galaxy/                # Arena, Galaxy views, leaderboards
-│   │   ├── Stores/                # ArenaStore, GalaxyStore, TribeLogStore
-│   │   ├── Models/                # TribeModels, TribeFeatureModels
-│   │   ├── Repositories/          # TribeRepositories (Supabase)
-│   │   └── Views/                 # Hub, Leaderboard, AtomRing, EnergyCore
-│   ├── Premium/
-│   │   ├── AccessManager.swift
-│   │   ├── EntitlementProvider.swift
-│   │   ├── FreeTrialManager.swift
-│   │   ├── PremiumPaywallView.swift
-│   │   └── PremiumStore.swift
-│   ├── Services/
-│   │   ├── Analytics/             # AnalyticsService + AnalyticsEvent
-│   │   ├── CrashReporting/        # CrashReporter
-│   │   ├── Notifications/         # 10 files — comprehensive notification system
-│   │   ├── Permissions/HealthKit/ # HealthKitService + TodaySummary
-│   │   ├── DeepLinkRouter.swift
-│   │   ├── NetworkMonitor.swift
-│   │   ├── SupabaseService.swift
-│   │   ├── SupabaseArenaService.swift
-│   │   ├── ReferralManager.swift
-│   │   ├── AiQoError.swift
-│   │   └── NotificationType.swift
-│   ├── Shared/
-│   │   ├── HealthKitManager.swift     # Legacy HK manager (watch workout mirroring)
-│   │   ├── HealthManager+Sleep.swift  # Sleep data queries
-│   │   ├── LevelSystem.swift
-│   │   ├── CoinManager.swift
-│   │   ├── WorkoutSyncCodec.swift     # Phone↔Watch sync encoding
-│   │   └── WorkoutSyncModels.swift
-│   ├── DesignSystem/
-│   │   ├── AiQoColors.swift       # Mint + Beige tokens
-│   │   ├── AiQoTheme.swift        # Light/dark theme with semantic tokens
-│   │   ├── AiQoTokens.swift       # Spacing, radius, metrics
-│   │   ├── Components/            # AiQoBottomCTA, AiQoCard, AiQoChoiceGrid, etc.
-│   │   └── Modifiers/             # AiQoPressEffect, AiQoShadow, AiQoSheetStyle
-│   ├── UI/
-│   │   ├── GlassCardView.swift
-│   │   ├── AiQoScreenHeader.swift
-│   │   ├── AiQoProfileButton.swift
-│   │   ├── ErrorToastView.swift
-│   │   ├── OfflineBannerView.swift
-│   │   ├── LegalView.swift
-│   │   ├── AccessibilityHelpers.swift
-│   │   ├── ReferralSettingsRow.swift
-│   │   └── Purchases/PaywallView.swift
-│   ├── Resources/
-│   │   ├── Assets.xcassets/       # App icons, images, color sets, audio datasets
-│   │   ├── Specs/achievements_spec.json
-│   │   ├── ar.lproj/Localizable.strings
-│   │   └── en.lproj/Localizable.strings
-│   └── watch/
-│       └── ConnectivityDiagnosticsView.swift
-├── AiQoWatch Watch App/           # watchOS companion
-│   ├── AiQoWatchApp.swift         # @main Watch entry
-│   ├── Design/WatchDesignSystem.swift
-│   ├── Models/WatchWorkoutType.swift
-│   ├── Services/
-│   │   ├── WatchConnectivityService.swift
-│   │   ├── WatchWorkoutManager.swift
-│   │   └── WatchHealthKitManager.swift
-│   ├── Views/
-│   │   ├── WatchHomeView.swift
-│   │   ├── WatchActiveWorkoutView.swift
-│   │   ├── WatchWorkoutListView.swift
-│   │   └── WatchWorkoutSummaryView.swift
-│   └── Shared/                    # WorkoutSyncCodec + WorkoutSyncModels (shared with iOS)
-├── AiQoWidget/                    # iOS Home Screen widgets
-│   ├── AiQoWidgetBundle.swift
-│   ├── AiQoWidget.swift           # Daily Progress widget
-│   ├── AiQoWatchFaceWidget.swift  # Watch Face complication
-│   ├── AiQoRingsFaceWidget.swift  # Activity Rings widget
-│   ├── AiQoWidgetLiveActivity.swift  # Workout Live Activity (Dynamic Island)
-│   └── AiQoSharedStore.swift
-├── AiQoWatchWidget/               # watchOS widget
-│   ├── AiQoWatchWidget.swift
-│   ├── AiQoWatchWidgetBundle.swift
-│   └── AiQoWatchWidgetProvider.swift
-├── AiQoTests/
-└── AiQoUITests/
-```
+### Structure Summary
 
-### Naming Conventions
+The checked-in app is organized by target first, then by feature/domain.
 
-- **Views:** `*View.swift`, `*Screen.swift`, `*CardView.swift`
-- **ViewModels:** `*ViewModel.swift`
-- **Services:** `*Service.swift`, `*Manager.swift`
-- **Models:** `*Models.swift`, `*Model.swift`
-- **Stores:** `*Store.swift` (persistent state managers)
-- **Engines:** `*Engine.swift` (computation/logic units)
+The main iPhone app lives under `AiQo/`.
 
----
+The watch companion lives under `AiQoWatch Watch App/`.
+
+Widgets live under `AiQoWidget/` and `AiQoWatchWidget/`.
+
+Tests live under `AiQoTests/`, `AiQoUITests/`, `AiQoWatch Watch AppTests/`, and `AiQoWatch Watch AppUITests/`.
+
+Configuration is centralized under `Configuration/`.
+
+Naming is mostly feature-oriented: `Features/Home`, `Features/Gym`, `Features/Kitchen`, `Features/Captain`, `Features/MyVibe`, `Features/Profile`, `Features/Tribe`, plus `Core`, `Services`, `Shared`, `UI`, and `DesignSystem`.
+
+### Naming / Organization Conventions
+
+App shell and boot code is colocated under `AiQo/App/`.
+
+Reusable state stores and utilities live under `AiQo/Core/`.
+
+Backend/network primitives mostly live under `AiQo/Services/`.
+
+Cross-target shared HealthKit/watch sync utilities live under `AiQo/Shared/`.
+
+There is no single `Models/` folder; model types are distributed by feature and subsystem.
+
+There is no single `Extensions/` folder; extensions are colocated near usage sites.
+
+### Requested Paths That Do Not Match The Real Tree
+
+- `AiQo/App/AiQoApp.swift` -> Real @main entry is `AiQo/App/AppDelegate.swift`.
+
+- `AiQo/App/AppFlowController.swift` -> Real `AppFlowController` is declared inside `AiQo/App/SceneDelegate.swift`.
+
+- `AiQo/Services/AI/BrainOrchestrator.swift` -> Real file is `AiQo/Features/Captain/BrainOrchestrator.swift`.
+
+- `AiQo/Services/AI/CloudBrainService.swift` -> Real file is `AiQo/Features/Captain/CloudBrainService.swift`.
+
+- `AiQo/Services/AI/LocalBrainService.swift` -> Real file is `AiQo/Features/Captain/LocalBrainService.swift`.
+
+- `AiQo/Services/AI/HybridBrainService.swift` -> Real file is `AiQo/Features/Captain/HybridBrainService.swift`.
+
+- `AiQo/Services/AI/PrivacySanitizer.swift` -> Real file is `AiQo/Features/Captain/PrivacySanitizer.swift`.
+
+- `AiQo/Services/AI/CaptainOnDeviceChatEngine.swift` -> Real file is `AiQo/Features/Captain/CaptainOnDeviceChatEngine.swift`.
+
+- `AiQo/Services/AI/AppleIntelligenceSleepAgent.swift` -> Real file is `AiQo/Features/Captain/AppleIntelligenceSleepAgent.swift`.
+
+- `AiQo/Features/Captain/CaptainVoiceService.swift` -> Real voice services live under `AiQo/Core/`.
+
+- `AiQo/Features/Captain/CaptainMemoryManager.swift` -> Equivalent memory logic is split across `AiQo/Core/MemoryStore.swift` and `AiQo/Core/CaptainMemory.swift`.
+
+- `AiQo/Models/*.swift` -> Folder not found — needs to be created if the team wants a dedicated models folder.
+
+- `AiQo/Data/*.swift` -> Folder not found — needs to be created if the team wants a dedicated data layer folder.
+
+- `AiQo/Services/Health/HealthKitManager.swift` -> Real files are `AiQo/Shared/HealthKitManager.swift` and `AiQo/Services/Permissions/HealthKit/HealthKitService.swift`.
+
+- `AiQo/Services/Health/HealthKitPermissionManager.swift` -> File not found — permission gating is embedded in `HealthKitService` and onboarding flow.
+
+- `AiQo/Services/Monetization/PurchaseManager.swift` -> Real file is `AiQo/Core/Purchases/PurchaseManager.swift`.
+
+- `AiQo/Services/Monetization/FreeTrialManager.swift` -> Real file is `AiQo/Premium/FreeTrialManager.swift`.
+
+- `AiQo/Features/Paywall/*.swift` -> Paywall views live in `AiQo/Premium/` and `AiQo/UI/Purchases/`.
+
+- `AiQo/Features/Sleep/*.swift` -> No standalone sleep feature folder — sleep code is distributed across Home, Captain, Shared, and Notifications.
+
+- `AiQo/Features/Arena/*.swift` -> Arena lives inside `AiQo/Tribe/Galaxy/` and `AiQo/Features/Tribe/`.
+
+- `AiQo/Features/Settings/*.swift` -> Settings UI lives in `AiQo/Core/AppSettingsScreen.swift`.
+
+- `AiQo/Services/Gamification/XPEngine.swift` -> File not found — XP is split across `LevelStore`, `XPCalculator`, onboarding sync, and quest systems.
+
+- `AiQo/Services/Gamification/BadgeEngine.swift` -> File not found — badge catalog currently ships as `AiQo/Resources/Specs/achievements_spec.json`.
+
+- `AiQo/Services/Background/*.swift` -> No standalone background folder — background logic lives under `AiQo/Services/Notifications/` plus app boot code.
+
+- `AiQo/Services/SmartNotificationScheduler.swift` -> Real file is `AiQo/Core/SmartNotificationScheduler.swift`.
+
+- `AiQo/Services/Backend/SupabaseManager.swift` -> Equivalent backend logic is in `AiQo/Services/SupabaseService.swift` and `AiQo/Services/SupabaseArenaService.swift`.
+
+- `AiQo/Services/Backend/SupabaseClient.swift` -> File not found — `SupabaseClient` is instantiated inside `SupabaseService`.
+
+- `AiQo/Components/*.swift` -> Component library lives under `AiQo/DesignSystem/Components/` and `AiQo/UI/`.
+
+- `AiQo/Extensions/*.swift` -> No dedicated extensions folder — extensions are colocated under module folders and `AiQo/Core/Localization`.
+
+- `AiQo/*.xcconfig` -> Root-level xcconfig files are not present; config files live under `Configuration/`.
+
+- `AiQoWatch/*.swift` -> Watch companion files live under `AiQoWatch Watch App/`.
+
+### Directory Tree (depth <= 4, live source tree only)
+
+- `.`
+
+- `.codex`
+
+- `.codex/environments`
+
+- `AiQo`
+
+- `AiQo/AiQoCore`
+
+- `AiQo/AiQoCore/AiQoCore.docc`
+
+- `AiQo/App`
+
+- `AiQo/Core`
+
+- `AiQo/Core/Localization`
+
+- `AiQo/Core/Models`
+
+- `AiQo/Core/Purchases`
+
+- `AiQo/Core/Utilities`
+
+- `AiQo/DesignSystem`
+
+- `AiQo/DesignSystem/Components`
+
+- `AiQo/DesignSystem/Modifiers`
+
+- `AiQo/Features`
+
+- `AiQo/Features/Captain`
+
+- `AiQo/Features/DataExport`
+
+- `AiQo/Features/First screen`
+
+- `AiQo/Features/Gym`
+
+- `AiQo/Features/Gym/Club`
+
+- `AiQo/Features/Gym/Models`
+
+- `AiQo/Features/Gym/QuestKit`
+
+- `AiQo/Features/Gym/Quests`
+
+- `AiQo/Features/Gym/T`
+
+- `AiQo/Features/Home`
+
+- `AiQo/Features/Kitchen`
+
+- `AiQo/Features/LegendaryChallenges`
+
+- `AiQo/Features/LegendaryChallenges/Components`
+
+- `AiQo/Features/LegendaryChallenges/Models`
+
+- `AiQo/Features/LegendaryChallenges/ViewModels`
+
+- `AiQo/Features/LegendaryChallenges/Views`
+
+- `AiQo/Features/MyVibe`
+
+- `AiQo/Features/Onboarding`
+
+- `AiQo/Features/Profile`
+
+- `AiQo/Features/ProgressPhotos`
+
+- `AiQo/Features/Tribe`
+
+- `AiQo/Features/WeeklyReport`
+
+- `AiQo/Frameworks`
+
+- `AiQo/Frameworks/SpotifyiOS.framework`
+
+- `AiQo/Frameworks/SpotifyiOS.framework/Headers`
+
+- `AiQo/Frameworks/SpotifyiOS.framework/Modules`
+
+- `AiQo/Premium`
+
+- `AiQo/Resources`
+
+- `AiQo/Resources/Assets.xcassets`
+
+- `AiQo/Resources/Assets.xcassets/1.1.imageset`
+
+- `AiQo/Resources/Assets.xcassets/1.2.imageset`
+
+- `AiQo/Resources/Assets.xcassets/1.3.imageset`
+
+- `AiQo/Resources/Assets.xcassets/1.4.imageset`
+
+- `AiQo/Resources/Assets.xcassets/1.5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/11.imageset`
+
+- `AiQo/Resources/Assets.xcassets/2.1.imageset`
+
+- `AiQo/Resources/Assets.xcassets/2.2.imageset`
+
+- `AiQo/Resources/Assets.xcassets/2.3.imageset`
+
+- `AiQo/Resources/Assets.xcassets/2.4.imageset`
+
+- `AiQo/Resources/Assets.xcassets/2.5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/22.imageset`
+
+- `AiQo/Resources/Assets.xcassets/3.1.imageset`
+
+- `AiQo/Resources/Assets.xcassets/3.2.imageset`
+
+- `AiQo/Resources/Assets.xcassets/3.3.imageset`
+
+- `AiQo/Resources/Assets.xcassets/3.4.imageset`
+
+- `AiQo/Resources/Assets.xcassets/3.5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/4.1.imageset`
+
+- `AiQo/Resources/Assets.xcassets/4.2.imageset`
+
+- `AiQo/Resources/Assets.xcassets/4.3.imageset`
+
+- `AiQo/Resources/Assets.xcassets/4.4.imageset`
+
+- `AiQo/Resources/Assets.xcassets/4.5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/5.1.imageset`
+
+- `AiQo/Resources/Assets.xcassets/5.2.imageset`
+
+- `AiQo/Resources/Assets.xcassets/5.3.imageset`
+
+- `AiQo/Resources/Assets.xcassets/5.4.imageset`
+
+- `AiQo/Resources/Assets.xcassets/5.5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/AccentColor.colorset`
+
+- `AiQo/Resources/Assets.xcassets/AppIcon.appiconset`
+
+- `AiQo/Resources/Assets.xcassets/Captain_Hamoudi_DJ.imageset`
+
+- `AiQo/Resources/Assets.xcassets/ChatUserBubble.colorset`
+
+- `AiQo/Resources/Assets.xcassets/GammaFlow.dataset`
+
+- `AiQo/Resources/Assets.xcassets/Hammoudi5.imageset`
+
+- `AiQo/Resources/Assets.xcassets/Hypnagogic_state.dataset`
+
+- `AiQo/Resources/Assets.xcassets/Kitchenـicon.imageset`
+
+- `AiQo/Resources/Assets.xcassets/Profile-icon.imageset`
+
+- `AiQo/Resources/Assets.xcassets/SerotoninFlow.dataset`
+
+- `AiQo/Resources/Assets.xcassets/SleepRing_Mint.imageset`
+
+- `AiQo/Resources/Assets.xcassets/SleepRing_Orange.imageset`
+
+- `AiQo/Resources/Assets.xcassets/SleepRing_Purple.imageset`
+
+- `AiQo/Resources/Assets.xcassets/SoundOfEnergy.dataset`
+
+- `AiQo/Resources/Assets.xcassets/The.refrigerator.imageset`
+
+- `AiQo/Resources/Assets.xcassets/ThetaTrance.dataset`
+
+- `AiQo/Resources/Assets.xcassets/TribeInviteBackground.imageset`
+
+- `AiQo/Resources/Assets.xcassets/Tribe_icon.imageset`
+
+- `AiQo/Resources/Assets.xcassets/WaterBottle.imageset`
+
+- `AiQo/Resources/Assets.xcassets/imageKitchenHamoudi.imageset`
+
+- `AiQo/Resources/Assets.xcassets/vibe_ icon.imageset`
+
+- `AiQo/Resources/Specs`
+
+- `AiQo/Resources/ar.lproj`
+
+- `AiQo/Resources/en.lproj`
+
+- `AiQo/Services`
+
+- `AiQo/Services/Analytics`
+
+- `AiQo/Services/CrashReporting`
+
+- `AiQo/Services/Notifications`
+
+- `AiQo/Services/Permissions`
+
+- `AiQo/Services/Permissions/HealthKit`
+
+- `AiQo/Shared`
+
+- `AiQo/Tribe`
+
+- `AiQo/Tribe/Arena`
+
+- `AiQo/Tribe/Galaxy`
+
+- `AiQo/Tribe/Log`
+
+- `AiQo/Tribe/Models`
+
+- `AiQo/Tribe/Preview`
+
+- `AiQo/Tribe/Repositories`
+
+- `AiQo/Tribe/Stores`
+
+- `AiQo/Tribe/Views`
+
+- `AiQo/UI`
+
+- `AiQo/UI/Purchases`
+
+- `AiQo/watch`
+
+- `AiQo.xcodeproj`
+
+- `AiQo.xcodeproj/project.xcworkspace`
+
+- `AiQo.xcodeproj/project.xcworkspace/xcshareddata`
+
+- `AiQo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm`
+
+- `AiQo.xcodeproj/project.xcworkspace/xcuserdata`
+
+- `AiQo.xcodeproj/project.xcworkspace/xcuserdata/mohammedraad.xcuserdatad`
+
+- `AiQo.xcodeproj/xcshareddata`
+
+- `AiQo.xcodeproj/xcshareddata/xcschemes`
+
+- `AiQo.xcodeproj/xcuserdata`
+
+- `AiQo.xcodeproj/xcuserdata/mohammedraad.xcuserdatad`
+
+- `AiQo.xcodeproj/xcuserdata/mohammedraad.xcuserdatad/xcdebugger`
+
+- `AiQo.xcodeproj/xcuserdata/mohammedraad.xcuserdatad/xcschemes`
+
+- `AiQoTests`
+
+- `AiQoUITests`
+
+- `AiQoWatch Watch App`
+
+- `AiQoWatch Watch App/Assets.xcassets`
+
+- `AiQoWatch Watch App/Assets.xcassets/AccentColor.colorset`
+
+- `AiQoWatch Watch App/Assets.xcassets/AiQoLogo.imageset`
+
+- `AiQoWatch Watch App/Assets.xcassets/AppIcon.appiconset`
+
+- `AiQoWatch Watch App/Design`
+
+- `AiQoWatch Watch App/Models`
+
+- `AiQoWatch Watch App/Services`
+
+- `AiQoWatch Watch App/Shared`
+
+- `AiQoWatch Watch App/Views`
+
+- `AiQoWatch Watch AppTests`
+
+- `AiQoWatch Watch AppUITests`
+
+- `AiQoWatchWidget`
+
+- `AiQoWatchWidget/Assets.xcassets`
+
+- `AiQoWatchWidget/Assets.xcassets/AiQoLogo.imageset`
+
+- `AiQoWidget`
+
+- `AiQoWidget/Assets.xcassets`
+
+- `AiQoWidget/Assets.xcassets/AccentColor.colorset`
+
+- `AiQoWidget/Assets.xcassets/AppIcon.appiconset`
+
+- `AiQoWidget/Assets.xcassets/WidgetBackground.colorset`
+
+- `Configuration`
+
+- `Configuration/ExternalSymbols`
+
+- `Configuration/ExternalSymbols/SpotifyiOS.framework.dSYM`
+
+- `Configuration/ExternalSymbols/SpotifyiOS.framework.dSYM/Contents`
+
+### Source / Config Ledger
+
+`AiQoWatch-Watch-App-Info.plist`
+
+kind: `plist`
+
+line_count: `16`
+
+logical_group: `AiQoWatch-Watch-App-Info.plist`
+
+`AiQo/AiQoActivityNames.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/AiQoActivityNames.swift`
+
+`AiQo/AppGroupKeys.swift`
+
+kind: `swift`
+
+line_count: `19`
+
+logical_group: `AiQo/AppGroupKeys.swift`
+
+`AiQo/Info.plist`
+
+kind: `plist`
+
+line_count: `87`
+
+logical_group: `AiQo/Info.plist`
+
+`AiQo/NeuralMemory.swift`
+
+kind: `swift`
+
+line_count: `60`
+
+logical_group: `AiQo/NeuralMemory.swift`
+
+`AiQo/PhoneConnectivityManager.swift`
+
+kind: `swift`
+
+line_count: `1007`
+
+logical_group: `AiQo/PhoneConnectivityManager.swift`
+
+`AiQo/ProtectionModel.swift`
+
+kind: `swift`
+
+line_count: `139`
+
+logical_group: `AiQo/ProtectionModel.swift`
+
+`AiQo/XPCalculator.swift`
+
+kind: `swift`
+
+line_count: `83`
+
+logical_group: `AiQo/XPCalculator.swift`
+
+`AiQo/App/AppDelegate.swift`
+
+kind: `swift`
+
+line_count: `454`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/AppRootManager.swift`
+
+kind: `swift`
+
+line_count: `22`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/AuthFlowUI.swift`
+
+kind: `swift`
+
+line_count: `464`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/ProfileSetupView.swift`
+
+kind: `swift`
+
+line_count: `292`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/LanguageSelectionView.swift`
+
+kind: `swift`
+
+line_count: `119`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/LoginViewController.swift`
+
+kind: `swift`
+
+line_count: `191`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/MainTabRouter.swift`
+
+kind: `swift`
+
+line_count: `53`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/MainTabScreen.swift`
+
+kind: `swift`
+
+line_count: `128`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/MealModels.swift`
+
+kind: `swift`
+
+line_count: `30`
+
+logical_group: `AiQo/App`
+
+`AiQo/App/SceneDelegate.swift`
+
+kind: `swift`
+
+line_count: `284`
+
+logical_group: `AiQo/App`
+
+`AiQo/Core/AiQoAccessibility.swift`
+
+kind: `swift`
+
+line_count: `106`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/AiQoAudioManager.swift`
+
+kind: `swift`
+
+line_count: `343`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/AppSettingsScreen.swift`
+
+kind: `swift`
+
+line_count: `453`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/AppSettingsStore.swift`
+
+kind: `swift`
+
+line_count: `45`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/ArabicNumberFormatter.swift`
+
+kind: `swift`
+
+line_count: `28`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/CaptainMemory.swift`
+
+kind: `swift`
+
+line_count: `42`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/CaptainMemorySettingsView.swift`
+
+kind: `swift`
+
+line_count: `209`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/CaptainVoiceAPI.swift`
+
+kind: `swift`
+
+line_count: `197`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/CaptainVoiceCache.swift`
+
+kind: `swift`
+
+line_count: `179`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/CaptainVoiceService.swift`
+
+kind: `swift`
+
+line_count: `359`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Colors.swift`
+
+kind: `swift`
+
+line_count: `68`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Constants.swift`
+
+kind: `swift`
+
+line_count: `66`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/DailyGoals.swift`
+
+kind: `swift`
+
+line_count: `42`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/DeveloperPanelView.swift`
+
+kind: `swift`
+
+line_count: `101`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/HapticEngine.swift`
+
+kind: `swift`
+
+line_count: `33`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/HealthKitMemoryBridge.swift`
+
+kind: `swift`
+
+line_count: `170`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/MemoryExtractor.swift`
+
+kind: `swift`
+
+line_count: `324`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/MemoryStore.swift`
+
+kind: `swift`
+
+line_count: `467`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/SiriShortcutsManager.swift`
+
+kind: `swift`
+
+line_count: `117`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/SmartNotificationScheduler.swift`
+
+kind: `swift`
+
+line_count: `210`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/SpotifyVibeManager.swift`
+
+kind: `swift`
+
+line_count: `721`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/StreakManager.swift`
+
+kind: `swift`
+
+line_count: `165`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/UserProfileStore.swift`
+
+kind: `swift`
+
+line_count: `132`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/VibeAudioEngine.swift`
+
+kind: `swift`
+
+line_count: `829`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Localization/Bundle+Language.swift`
+
+kind: `swift`
+
+line_count: `22`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Localization/LocalizationManager.swift`
+
+kind: `swift`
+
+line_count: `38`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Models/ActivityNotification.swift`
+
+kind: `swift`
+
+line_count: `26`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Models/LevelStore.swift`
+
+kind: `swift`
+
+line_count: `195`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Models/NotificationPreferencesStore.swift`
+
+kind: `swift`
+
+line_count: `36`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Purchases/EntitlementStore.swift`
+
+kind: `swift`
+
+line_count: `68`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Purchases/PurchaseManager.swift`
+
+kind: `swift`
+
+line_count: `400`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Purchases/ReceiptValidator.swift`
+
+kind: `swift`
+
+line_count: `102`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Purchases/SubscriptionProductIDs.swift`
+
+kind: `swift`
+
+line_count: `68`
+
+logical_group: `AiQo/Core`
+
+`AiQo/Core/Utilities/ConnectivityDebugProviding.swift`
+
+kind: `swift`
+
+line_count: `16`
+
+logical_group: `AiQo/Core`
+
+`AiQo/DesignSystem/AiQoColors.swift`
+
+kind: `swift`
+
+line_count: `6`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/AiQoTheme.swift`
+
+kind: `swift`
+
+line_count: `37`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/AiQoTokens.swift`
+
+kind: `swift`
+
+line_count: `18`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoBottomCTA.swift`
+
+kind: `swift`
+
+line_count: `62`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoCard.swift`
+
+kind: `swift`
+
+line_count: `174`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoChoiceGrid.swift`
+
+kind: `swift`
+
+line_count: `84`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoPillSegment.swift`
+
+kind: `swift`
+
+line_count: `88`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoPlatformPicker.swift`
+
+kind: `swift`
+
+line_count: `91`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/AiQoSkeletonView.swift`
+
+kind: `swift`
+
+line_count: `52`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Components/StatefulPreviewWrapper.swift`
+
+kind: `swift`
+
+line_count: `15`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Modifiers/AiQoPressEffect.swift`
+
+kind: `swift`
+
+line_count: `51`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Modifiers/AiQoShadow.swift`
+
+kind: `swift`
+
+line_count: `23`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/DesignSystem/Modifiers/AiQoSheetStyle.swift`
+
+kind: `swift`
+
+line_count: `17`
+
+logical_group: `AiQo/DesignSystem`
+
+`AiQo/Features/Captain/AiQoPromptManager.swift`
+
+kind: `swift`
+
+line_count: `132`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/AppleIntelligenceSleepAgent.swift`
+
+kind: `swift`
+
+line_count: `288`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/BrainOrchestrator.swift`
+
+kind: `swift`
+
+line_count: `479`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainChatView.swift`
+
+kind: `swift`
+
+line_count: `613`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainContextBuilder.swift`
+
+kind: `swift`
+
+line_count: `298`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainFallbackPolicy.swift`
+
+kind: `swift`
+
+line_count: `212`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainIntelligenceManager.swift`
+
+kind: `swift`
+
+line_count: `965`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainModels.swift`
+
+kind: `swift`
+
+line_count: `487`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainNotificationRouting.swift`
+
+kind: `swift`
+
+line_count: `77`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainOnDeviceChatEngine.swift`
+
+kind: `swift`
+
+line_count: `240`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainPersonaBuilder.swift`
+
+kind: `swift`
+
+line_count: `71`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainPromptBuilder.swift`
+
+kind: `swift`
+
+line_count: `361`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainScreen.swift`
+
+kind: `swift`
+
+line_count: `1147`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CaptainViewModel.swift`
+
+kind: `swift`
+
+line_count: `942`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/ChatHistoryView.swift`
+
+kind: `swift`
+
+line_count: `158`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CloudBrainService.swift`
+
+kind: `swift`
+
+line_count: `39`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CoachBrainMiddleware.swift`
+
+kind: `swift`
+
+line_count: `773`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/CoachBrainTranslationConfig.swift`
+
+kind: `swift`
+
+line_count: `91`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/HybridBrainService.swift`
+
+kind: `swift`
+
+line_count: `415`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/LLMJSONParser.swift`
+
+kind: `swift`
+
+line_count: `240`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/LocalBrainService.swift`
+
+kind: `swift`
+
+line_count: `846`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/LocalIntelligenceService.swift`
+
+kind: `swift`
+
+line_count: `160`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/MessageBubble.swift`
+
+kind: `swift`
+
+line_count: `108`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/PrivacySanitizer.swift`
+
+kind: `swift`
+
+line_count: `396`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/PromptRouter.swift`
+
+kind: `swift`
+
+line_count: `137`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Captain/ScreenContext.swift`
+
+kind: `swift`
+
+line_count: `52`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/DataExport/HealthDataExporter.swift`
+
+kind: `swift`
+
+line_count: `328`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/First screen/LegacyCalculationViewController.swift`
+
+kind: `swift`
+
+line_count: `749`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/ActiveRecoveryView.swift`
+
+kind: `swift`
+
+line_count: `182`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/AudioCoachManager.swift`
+
+kind: `swift`
+
+line_count: `94`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/CinematicGrindCardView.swift`
+
+kind: `swift`
+
+line_count: `226`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/CinematicGrindViews.swift`
+
+kind: `swift`
+
+line_count: `1204`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/ExercisesView.swift`
+
+kind: `swift`
+
+line_count: `39`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/GuinnessEncyclopediaView.swift`
+
+kind: `swift`
+
+line_count: `339`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/GymViewController.swift`
+
+kind: `swift`
+
+line_count: `25`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/HandsFreeZone2Manager.swift`
+
+kind: `swift`
+
+line_count: `549`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/HeartView.swift`
+
+kind: `swift`
+
+line_count: `20`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/L10n.swift`
+
+kind: `swift`
+
+line_count: `25`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/LiveMetricsHeader.swift`
+
+kind: `swift`
+
+line_count: `213`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/LiveWorkoutSession.swift`
+
+kind: `swift`
+
+line_count: `885`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/MyPlanViewController.swift`
+
+kind: `swift`
+
+line_count: `419`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/OriginalWorkoutCardView.swift`
+
+kind: `swift`
+
+line_count: `101`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/PhoneWorkoutSummaryView.swift`
+
+kind: `swift`
+
+line_count: `1459`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/RecapViewController.swift`
+
+kind: `swift`
+
+line_count: `874`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/RewardsViewController.swift`
+
+kind: `swift`
+
+line_count: `297`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/ShimmeringPlaceholder.swift`
+
+kind: `swift`
+
+line_count: `111`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/SoftGlassCardView.swift`
+
+kind: `swift`
+
+line_count: `106`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/SpotifyWebView.swift`
+
+kind: `swift`
+
+line_count: `72`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/SpotifyWorkoutPlayerView.swift`
+
+kind: `swift`
+
+line_count: `181`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WatchConnectionStatusButton.swift`
+
+kind: `swift`
+
+line_count: `100`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WatchConnectivityService.swift`
+
+kind: `swift`
+
+line_count: `77`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WinsViewController.swift`
+
+kind: `swift`
+
+line_count: `600`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WorkoutLiveActivityManager.swift`
+
+kind: `swift`
+
+line_count: `238`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WorkoutSessionScreen.swift.swift`
+
+kind: `swift`
+
+line_count: `719`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WorkoutSessionSheetView.swift`
+
+kind: `swift`
+
+line_count: `29`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/WorkoutSessionViewModel.swift`
+
+kind: `swift`
+
+line_count: `160`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/ClubRootView.swift`
+
+kind: `swift`
+
+line_count: `220`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Body/BodyView.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift`
+
+kind: `swift`
+
+line_count: `216`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift`
+
+kind: `swift`
+
+line_count: `454`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Body/WorkoutCategoriesView.swift`
+
+kind: `swift`
+
+line_count: `544`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Challenges/ChallengesView.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/ClubNavigationComponents.swift`
+
+kind: `swift`
+
+line_count: `219`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/RailScrollOffsetPreferenceKey.swift`
+
+kind: `swift`
+
+line_count: `24`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/RightSideRailView.swift`
+
+kind: `swift`
+
+line_count: `61`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/RightSideVerticalRail.swift`
+
+kind: `swift`
+
+line_count: `255`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/SegmentedTabs.swift`
+
+kind: `swift`
+
+line_count: `157`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Components/SlimRightSideRail.swift`
+
+kind: `swift`
+
+line_count: `451`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Impact/ImpactAchievementsView.swift`
+
+kind: `swift`
+
+line_count: `13`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Impact/ImpactContainerView.swift`
+
+kind: `swift`
+
+line_count: `117`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Impact/ImpactSummaryView.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Plan/PlanView.swift`
+
+kind: `swift`
+
+line_count: `250`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Club/Plan/WorkoutPlanFlowViews.swift`
+
+kind: `swift`
+
+line_count: `712`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Models/GymExercise.swift`
+
+kind: `swift`
+
+line_count: `238`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestDataSources.swift`
+
+kind: `swift`
+
+line_count: `547`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestDefinitions.swift`
+
+kind: `swift`
+
+line_count: `943`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestEngine.swift`
+
+kind: `swift`
+
+line_count: `691`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestEvaluator.swift`
+
+kind: `swift`
+
+line_count: `235`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestFormatting.swift`
+
+kind: `swift`
+
+line_count: `358`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestKitModels.swift`
+
+kind: `swift`
+
+line_count: `287`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestProgressStore.swift`
+
+kind: `swift`
+
+line_count: `74`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestSwiftDataModels.swift`
+
+kind: `swift`
+
+line_count: `244`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/QuestSwiftDataStore.swift`
+
+kind: `swift`
+
+line_count: `353`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/Views/QuestCameraPermissionGateView.swift`
+
+kind: `swift`
+
+line_count: `105`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/Views/QuestDebugView.swift`
+
+kind: `swift`
+
+line_count: `77`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/QuestKit/Views/QuestPushupChallengeView.swift`
+
+kind: `swift`
+
+line_count: `144`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Models/Challenge.swift`
+
+kind: `swift`
+
+line_count: `406`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Models/ChallengeStage.swift`
+
+kind: `swift`
+
+line_count: `11`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Models/HelpStrangersModels.swift`
+
+kind: `swift`
+
+line_count: `72`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Models/WinRecord.swift`
+
+kind: `swift`
+
+line_count: `77`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Store/QuestAchievementStore.swift`
+
+kind: `swift`
+
+line_count: `38`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Store/QuestDailyStore.swift`
+
+kind: `swift`
+
+line_count: `680`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Store/WinsStore.swift`
+
+kind: `swift`
+
+line_count: `100`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/ChallengeCard.swift`
+
+kind: `swift`
+
+line_count: `195`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/ChallengeDetailView.swift`
+
+kind: `swift`
+
+line_count: `180`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/ChallengeRewardSheet.swift`
+
+kind: `swift`
+
+line_count: `51`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/ChallengeRunView.swift`
+
+kind: `swift`
+
+line_count: `207`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/HelpStrangersBottomSheet.swift`
+
+kind: `swift`
+
+line_count: `361`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestCard.swift`
+
+kind: `swift`
+
+line_count: `101`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestCompletionCelebration.swift`
+
+kind: `swift`
+
+line_count: `95`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestDetailSheet.swift`
+
+kind: `swift`
+
+line_count: `1043`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestDetailView.swift`
+
+kind: `swift`
+
+line_count: `847`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestWinsGridView.swift`
+
+kind: `swift`
+
+line_count: `243`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/QuestsView.swift`
+
+kind: `swift`
+
+line_count: `429`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/Views/StageSelectorBar.swift`
+
+kind: `swift`
+
+line_count: `59`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/VisionCoach/VisionCoachAudioFeedback.swift`
+
+kind: `swift`
+
+line_count: `133`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/VisionCoach/VisionCoachView.swift`
+
+kind: `swift`
+
+line_count: `304`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/Quests/VisionCoach/VisionCoachViewModel.swift`
+
+kind: `swift`
+
+line_count: `381`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/T/SpinWheelView.swift`
+
+kind: `swift`
+
+line_count: `287`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/T/WheelTypes.swift`
+
+kind: `swift`
+
+line_count: `14`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/T/WorkoutTheme.swift`
+
+kind: `swift`
+
+line_count: `40`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Gym/T/WorkoutWheelSessionViewModel.swift`
+
+kind: `swift`
+
+line_count: `127`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/ActivityDataProviding.swift`
+
+kind: `swift`
+
+line_count: `29`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/AlarmSetupCardView.swift`
+
+kind: `swift`
+
+line_count: `550`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/DJCaptainChatView.swift`
+
+kind: `swift`
+
+line_count: `464`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/DailyAuraModels.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/DailyAuraPathData.swift`
+
+kind: `swift`
+
+line_count: `7`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/DailyAuraView.swift`
+
+kind: `swift`
+
+line_count: `427`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/DailyAuraViewModel.swift`
+
+kind: `swift`
+
+line_count: `132`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/HealthKitService+Water.swift`
+
+kind: `swift`
+
+line_count: `13`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/HomeStatCard.swift`
+
+kind: `swift`
+
+line_count: `454`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/HomeView.swift`
+
+kind: `swift`
+
+line_count: `606`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/HomeViewModel.swift`
+
+kind: `swift`
+
+line_count: `954`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/LevelUpCelebrationView.swift`
+
+kind: `swift`
+
+line_count: `54`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/MetricKind.swift`
+
+kind: `swift`
+
+line_count: `48`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SleepDetailCardView.swift`
+
+kind: `swift`
+
+line_count: `859`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SleepScoreRingView.swift`
+
+kind: `swift`
+
+line_count: `339`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SmartWakeCalculatorView.swift`
+
+kind: `swift`
+
+line_count: `518`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SmartWakeEngine.swift`
+
+kind: `swift`
+
+line_count: `407`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SmartWakeViewModel.swift`
+
+kind: `swift`
+
+line_count: `197`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/SpotifyVibeCard.swift`
+
+kind: `swift`
+
+line_count: `262`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/StreakBadgeView.swift`
+
+kind: `swift`
+
+line_count: `187`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/VibeControlSheet.swift`
+
+kind: `swift`
+
+line_count: `1444`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/WaterBottleView.swift`
+
+kind: `swift`
+
+line_count: `282`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Home/WaterDetailSheetView.swift`
+
+kind: `swift`
+
+line_count: `222`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/CameraView.swift`
+
+kind: `swift`
+
+line_count: `49`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/CompositePlateView.swift`
+
+kind: `swift`
+
+line_count: `145`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/FridgeInventoryView.swift`
+
+kind: `swift`
+
+line_count: `153`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/IngredientAssetCatalog.swift`
+
+kind: `swift`
+
+line_count: `48`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/IngredientAssetLibrary.swift`
+
+kind: `swift`
+
+line_count: `71`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/IngredientCatalog.swift`
+
+kind: `swift`
+
+line_count: `129`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/IngredientDisplayItem.swift`
+
+kind: `swift`
+
+line_count: `150`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/IngredientKey.swift`
+
+kind: `swift`
+
+line_count: `624`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/InteractiveFridgeView.swift`
+
+kind: `swift`
+
+line_count: `732`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenLanguageRouter.swift`
+
+kind: `swift`
+
+line_count: `23`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenModels.swift`
+
+kind: `swift`
+
+line_count: `243`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenPersistenceStore.swift`
+
+kind: `swift`
+
+line_count: `332`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenPlanGenerationService.swift`
+
+kind: `swift`
+
+line_count: `449`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenSceneView.swift`
+
+kind: `swift`
+
+line_count: `185`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenScreen.swift`
+
+kind: `swift`
+
+line_count: `419`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenView.swift`
+
+kind: `swift`
+
+line_count: `338`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/KitchenViewModel.swift`
+
+kind: `swift`
+
+line_count: `105`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/LocalMealsRepository.swift`
+
+kind: `swift`
+
+line_count: `46`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/Meal.swift`
+
+kind: `swift`
+
+line_count: `80`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealIllustrationView.swift`
+
+kind: `swift`
+
+line_count: `9`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealImageSpec.swift`
+
+kind: `swift`
+
+line_count: `231`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealPlanGenerator.swift`
+
+kind: `swift`
+
+line_count: `68`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealPlanView.swift`
+
+kind: `swift`
+
+line_count: `432`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealSectionView.swift`
+
+kind: `swift`
+
+line_count: `89`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/MealsRepository.swift`
+
+kind: `swift`
+
+line_count: `7`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/NutritionTrackerView.swift`
+
+kind: `swift`
+
+line_count: `653`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/PlateTemplate.swift`
+
+kind: `swift`
+
+line_count: `191`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/RecipeCardView.swift`
+
+kind: `swift`
+
+line_count: `56`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/SmartFridgeCameraPreviewController.swift`
+
+kind: `swift`
+
+line_count: `50`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/SmartFridgeCameraViewModel.swift`
+
+kind: `swift`
+
+line_count: `473`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/SmartFridgeScannedItemRecord.swift`
+
+kind: `swift`
+
+line_count: `38`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/SmartFridgeScannerView.swift`
+
+kind: `swift`
+
+line_count: `627`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Kitchen/meals_data.json`
+
+kind: `json`
+
+line_count: `44`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Components/RecordCard.swift`
+
+kind: `swift`
+
+line_count: `88`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Models/LegendaryProject.swift`
+
+kind: `swift`
+
+line_count: `45`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Models/LegendaryRecord.swift`
+
+kind: `swift`
+
+line_count: `185`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Models/RecordProject.swift`
+
+kind: `swift`
+
+line_count: `106`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Models/WeeklyLog.swift`
+
+kind: `swift`
+
+line_count: `39`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/ViewModels/HRRWorkoutManager.swift`
+
+kind: `swift`
+
+line_count: `268`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/ViewModels/LegendaryChallengesViewModel.swift`
+
+kind: `swift`
+
+line_count: `139`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/ViewModels/RecordProjectManager.swift`
+
+kind: `swift`
+
+line_count: `359`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/FitnessAssessmentView.swift`
+
+kind: `swift`
+
+line_count: `611`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/LegendaryChallengesSection.swift`
+
+kind: `swift`
+
+line_count: `46`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/ProjectView.swift`
+
+kind: `swift`
+
+line_count: `312`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/RecordDetailView.swift`
+
+kind: `swift`
+
+line_count: `212`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/RecordProjectView.swift`
+
+kind: `swift`
+
+line_count: `360`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/WeeklyReviewResultView.swift`
+
+kind: `swift`
+
+line_count: `100`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/LegendaryChallenges/Views/WeeklyReviewView.swift`
+
+kind: `swift`
+
+line_count: `418`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/MyVibe/DailyVibeState.swift`
+
+kind: `swift`
+
+line_count: `95`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/MyVibe/MyVibeScreen.swift`
+
+kind: `swift`
+
+line_count: `423`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/MyVibe/MyVibeSubviews.swift`
+
+kind: `swift`
+
+line_count: `199`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/MyVibe/MyVibeViewModel.swift`
+
+kind: `swift`
+
+line_count: `105`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/MyVibe/VibeOrchestrator.swift`
+
+kind: `swift`
+
+line_count: `153`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Onboarding/FeatureIntroView.swift`
+
+kind: `swift`
+
+line_count: `449`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Onboarding/HistoricalHealthSyncEngine.swift`
+
+kind: `swift`
+
+line_count: `272`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Onboarding/OnboardingWalkthroughView.swift`
+
+kind: `swift`
+
+line_count: `299`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Profile/LevelCardView.swift`
+
+kind: `swift`
+
+line_count: `244`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Profile/ProfileScreen.swift`
+
+kind: `swift`
+
+line_count: `2075`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Profile/String+Localized.swift`
+
+kind: `swift`
+
+line_count: `7`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/ProgressPhotos/ProgressPhotoStore.swift`
+
+kind: `swift`
+
+line_count: `154`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/ProgressPhotos/ProgressPhotosView.swift`
+
+kind: `swift`
+
+line_count: `904`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Tribe/TribeDesignSystem.swift`
+
+kind: `swift`
+
+line_count: `219`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Tribe/TribeExperienceFlow.swift`
+
+kind: `swift`
+
+line_count: `531`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/Tribe/TribeView.swift`
+
+kind: `swift`
+
+line_count: `1030`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/WeeklyReport/ShareCardRenderer.swift`
+
+kind: `swift`
+
+line_count: `398`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/WeeklyReport/WeeklyReportModel.swift`
+
+kind: `swift`
+
+line_count: `96`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/WeeklyReport/WeeklyReportView.swift`
+
+kind: `swift`
+
+line_count: `551`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Features/WeeklyReport/WeeklyReportViewModel.swift`
+
+kind: `swift`
+
+line_count: `265`
+
+logical_group: `AiQo/Features`
+
+`AiQo/Frameworks/SpotifyiOS.framework/Info.plist`
+
+kind: `plist`
+
+line_count: `10`
+
+logical_group: `AiQo/Frameworks`
+
+`AiQo/Premium/AccessManager.swift`
+
+kind: `swift`
+
+line_count: `211`
+
+logical_group: `AiQo/Premium`
+
+`AiQo/Premium/EntitlementProvider.swift`
+
+kind: `swift`
+
+line_count: `67`
+
+logical_group: `AiQo/Premium`
+
+`AiQo/Premium/FreeTrialManager.swift`
+
+kind: `swift`
+
+line_count: `159`
+
+logical_group: `AiQo/Premium`
+
+`AiQo/Premium/PremiumPaywallView.swift`
+
+kind: `swift`
+
+line_count: `232`
+
+logical_group: `AiQo/Premium`
+
+`AiQo/Premium/PremiumStore.swift`
+
+kind: `swift`
+
+line_count: `198`
+
+logical_group: `AiQo/Premium`
+
+`AiQo/Resources/Assets.xcassets/Contents.json`
+
+kind: `json`
+
+line_count: `6`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/1.1.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/1.2.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/1.3.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/1.4.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/1.5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/11.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/2.1.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/2.2.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/2.3.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/2.4.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/2.5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/22.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/3.1.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/3.2.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/3.3.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/3.4.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/3.5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/4.1.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/4.2.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/4.3.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/4.4.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/4.5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/5.1.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/5.2.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/5.3.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/5.4.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/5.5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/AccentColor.colorset/Contents.json`
+
+kind: `json`
+
+line_count: `20`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json`
+
+kind: `json`
+
+line_count: `14`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Captain_Hamoudi_DJ.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/ChatUserBubble.colorset/Contents.json`
+
+kind: `json`
+
+line_count: `20`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/GammaFlow.dataset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Hammoudi5.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Hypnagogic_state.dataset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Kitchenـicon.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Profile-icon.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/SerotoninFlow.dataset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/SleepRing_Mint.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/SleepRing_Orange.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/SleepRing_Purple.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/SoundOfEnergy.dataset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/The.refrigerator.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/ThetaTrance.dataset/Contents.json`
+
+kind: `json`
+
+line_count: `12`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/TribeInviteBackground.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/Tribe_icon.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/WaterBottle.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/imageKitchenHamoudi.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Assets.xcassets/vibe_ icon.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Resources/Specs/achievements_spec.json`
+
+kind: `json`
+
+line_count: `48`
+
+logical_group: `AiQo/Resources`
+
+`AiQo/Services/AiQoError.swift`
+
+kind: `swift`
+
+line_count: `116`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/DeepLinkRouter.swift`
+
+kind: `swift`
+
+line_count: `129`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/NetworkMonitor.swift`
+
+kind: `swift`
+
+line_count: `54`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/NotificationType.swift`
+
+kind: `swift`
+
+line_count: `11`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/ReferralManager.swift`
+
+kind: `swift`
+
+line_count: `120`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/SupabaseArenaService.swift`
+
+kind: `swift`
+
+line_count: `959`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/SupabaseService.swift`
+
+kind: `swift`
+
+line_count: `144`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Analytics/AnalyticsEvent.swift`
+
+kind: `swift`
+
+line_count: `157`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Analytics/AnalyticsService.swift`
+
+kind: `swift`
+
+line_count: `201`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/CrashReporting/CrashReporter.swift`
+
+kind: `swift`
+
+line_count: `243`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/ActivityNotificationEngine.swift`
+
+kind: `swift`
+
+line_count: `627`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/AlarmSchedulingService.swift`
+
+kind: `swift`
+
+line_count: `262`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/CaptainBackgroundNotificationComposer.swift`
+
+kind: `swift`
+
+line_count: `166`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/InactivityTracker.swift`
+
+kind: `swift`
+
+line_count: `21`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/MorningHabitOrchestrator.swift`
+
+kind: `swift`
+
+line_count: `382`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/NotificationCategoryManager.swift`
+
+kind: `swift`
+
+line_count: `22`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/NotificationIntelligenceManager.swift`
+
+kind: `swift`
+
+line_count: `551`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/NotificationRepository.swift`
+
+kind: `swift`
+
+line_count: `37`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/NotificationService.swift`
+
+kind: `swift`
+
+line_count: `986`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/PremiumExpiryNotifier.swift`
+
+kind: `swift`
+
+line_count: `98`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/SleepSessionObserver.swift`
+
+kind: `swift`
+
+line_count: `214`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Notifications/SmartNotificationManager.swift`
+
+kind: `swift`
+
+line_count: `78`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Permissions/HealthKit/HealthKitService.swift`
+
+kind: `swift`
+
+line_count: `990`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Services/Permissions/HealthKit/TodaySummary.swift`
+
+kind: `swift`
+
+line_count: `37`
+
+logical_group: `AiQo/Services`
+
+`AiQo/Shared/CoinManager.swift`
+
+kind: `swift`
+
+line_count: `39`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Shared/HealthKitManager.swift`
+
+kind: `swift`
+
+line_count: `428`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Shared/HealthManager+Sleep.swift`
+
+kind: `swift`
+
+line_count: `451`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Shared/LevelSystem.swift`
+
+kind: `swift`
+
+line_count: `56`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Shared/WorkoutSyncCodec.swift`
+
+kind: `swift`
+
+line_count: `31`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Shared/WorkoutSyncModels.swift`
+
+kind: `swift`
+
+line_count: `445`
+
+logical_group: `AiQo/Shared`
+
+`AiQo/Tribe/TribeModuleComponents.swift`
+
+kind: `swift`
+
+line_count: `1146`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/TribeModuleModels.swift`
+
+kind: `swift`
+
+line_count: `611`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/TribeModuleViewModel.swift`
+
+kind: `swift`
+
+line_count: `462`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/TribePulseScreenView.swift`
+
+kind: `swift`
+
+line_count: `728`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/TribeScreen.swift`
+
+kind: `swift`
+
+line_count: `17`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/TribeStore.swift`
+
+kind: `swift`
+
+line_count: `544`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Arena/TribeArenaView.swift`
+
+kind: `swift`
+
+line_count: `319`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaChallengeDetailView.swift`
+
+kind: `swift`
+
+line_count: `434`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaChallengeHistoryView.swift`
+
+kind: `swift`
+
+line_count: `248`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaModels.swift`
+
+kind: `swift`
+
+line_count: `177`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaQuickChallengesView.swift`
+
+kind: `swift`
+
+line_count: `162`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaScreen.swift`
+
+kind: `swift`
+
+line_count: `262`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaTabView.swift`
+
+kind: `swift`
+
+line_count: `149`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ArenaViewModel.swift`
+
+kind: `swift`
+
+line_count: `302`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/BattleLeaderboard.swift`
+
+kind: `swift`
+
+line_count: `91`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/BattleLeaderboardRow.swift`
+
+kind: `swift`
+
+line_count: `100`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/ConstellationCanvasView.swift`
+
+kind: `swift`
+
+line_count: `464`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/CountdownTimerView.swift`
+
+kind: `swift`
+
+line_count: `67`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/CreateTribeSheet.swift`
+
+kind: `swift`
+
+line_count: `217`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/EditTribeNameSheet.swift`
+
+kind: `swift`
+
+line_count: `71`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/EmaraArenaViewModel.swift`
+
+kind: `swift`
+
+line_count: `203`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/EmirateLeadersBanner.swift`
+
+kind: `swift`
+
+line_count: `141`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyCanvasView.swift`
+
+kind: `swift`
+
+line_count: `10`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyHUD.swift`
+
+kind: `swift`
+
+line_count: `260`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyLayout.swift`
+
+kind: `swift`
+
+line_count: `142`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyModels.swift`
+
+kind: `swift`
+
+line_count: `58`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyNodeCard.swift`
+
+kind: `swift`
+
+line_count: `204`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyScreen.swift`
+
+kind: `swift`
+
+line_count: `196`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyView.swift`
+
+kind: `swift`
+
+line_count: `626`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/GalaxyViewModel.swift`
+
+kind: `swift`
+
+line_count: `341`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/HallOfFameFullView.swift`
+
+kind: `swift`
+
+line_count: `80`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/HallOfFameSection.swift`
+
+kind: `swift`
+
+line_count: `104`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/InviteCardView.swift`
+
+kind: `swift`
+
+line_count: `246`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/JoinTribeSheet.swift`
+
+kind: `swift`
+
+line_count: `164`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/MockArenaData.swift`
+
+kind: `swift`
+
+line_count: `143`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeEmptyState.swift`
+
+kind: `swift`
+
+line_count: `104`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeHeroCard.swift`
+
+kind: `swift`
+
+line_count: `148`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeInviteView.swift`
+
+kind: `swift`
+
+line_count: `193`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeLogScreen.swift`
+
+kind: `swift`
+
+line_count: `83`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeMemberRow.swift`
+
+kind: `swift`
+
+line_count: `88`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeMembersList.swift`
+
+kind: `swift`
+
+line_count: `59`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeRingView.swift`
+
+kind: `swift`
+
+line_count: `57`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/TribeTabView.swift`
+
+kind: `swift`
+
+line_count: `111`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Galaxy/WeeklyChallengeCard.swift`
+
+kind: `swift`
+
+line_count: `150`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Log/TribeLogView.swift`
+
+kind: `swift`
+
+line_count: `68`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Models/TribeFeatureModels.swift`
+
+kind: `swift`
+
+line_count: `371`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Models/TribeModels.swift`
+
+kind: `swift`
+
+line_count: `154`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Preview/TribePreviewController.swift`
+
+kind: `swift`
+
+line_count: `286`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Preview/TribePreviewData.swift`
+
+kind: `swift`
+
+line_count: `209`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Repositories/TribeRepositories.swift`
+
+kind: `swift`
+
+line_count: `312`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Stores/ArenaStore.swift`
+
+kind: `swift`
+
+line_count: `225`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Stores/GalaxyStore.swift`
+
+kind: `swift`
+
+line_count: `100`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Stores/TribeLogStore.swift`
+
+kind: `swift`
+
+line_count: `25`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Views/GlobalTribeRadialView.swift`
+
+kind: `swift`
+
+line_count: `593`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Views/TribeAtomRingView.swift`
+
+kind: `swift`
+
+line_count: `150`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Views/TribeEnergyCoreCard.swift`
+
+kind: `swift`
+
+line_count: `123`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Views/TribeHubScreen.swift`
+
+kind: `swift`
+
+line_count: `1008`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/Tribe/Views/TribeLeaderboardView.swift`
+
+kind: `swift`
+
+line_count: `800`
+
+logical_group: `AiQo/Tribe`
+
+`AiQo/UI/AccessibilityHelpers.swift`
+
+kind: `swift`
+
+line_count: `96`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/AiQoProfileButton.swift`
+
+kind: `swift`
+
+line_count: `125`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/AiQoScreenHeader.swift`
+
+kind: `swift`
+
+line_count: `67`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/ErrorToastView.swift`
+
+kind: `swift`
+
+line_count: `101`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/GlassCardView.swift`
+
+kind: `swift`
+
+line_count: `69`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/LegalView.swift`
+
+kind: `swift`
+
+line_count: `92`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/OfflineBannerView.swift`
+
+kind: `swift`
+
+line_count: `43`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/ReferralSettingsRow.swift`
+
+kind: `swift`
+
+line_count: `64`
+
+logical_group: `AiQo/UI`
+
+`AiQo/UI/Purchases/PaywallView.swift`
+
+kind: `swift`
+
+line_count: `278`
+
+logical_group: `AiQo/UI`
+
+`AiQo/watch/ConnectivityDiagnosticsView.swift`
+
+kind: `swift`
+
+line_count: `87`
+
+logical_group: `AiQo/watch`
+
+`AiQo.xcodeproj/xcuserdata/mohammedraad.xcuserdatad/xcschemes/xcschememanagement.plist`
+
+kind: `plist`
+
+line_count: `72`
+
+logical_group: `AiQo.xcodeproj`
+
+`AiQoTests/IngredientAssetCatalogTests.swift`
+
+kind: `swift`
+
+line_count: `72`
+
+logical_group: `AiQoTests`
+
+`AiQoTests/IngredientAssetLibraryTests.swift`
+
+kind: `swift`
+
+line_count: `13`
+
+logical_group: `AiQoTests`
+
+`AiQoTests/PurchasesTests.swift`
+
+kind: `swift`
+
+line_count: `132`
+
+logical_group: `AiQoTests`
+
+`AiQoTests/QuestEvaluatorTests.swift`
+
+kind: `swift`
+
+line_count: `140`
+
+logical_group: `AiQoTests`
+
+`AiQoTests/SmartWakeManagerTests.swift`
+
+kind: `swift`
+
+line_count: `75`
+
+logical_group: `AiQoTests`
+
+`AiQoWatch Watch App/ActivityRingsView.swift`
+
+kind: `swift`
+
+line_count: `51`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/AiQoWatchApp.swift`
+
+kind: `swift`
+
+line_count: `151`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/ControlsView.swift`
+
+kind: `swift`
+
+line_count: `45`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/ElapsedTimeView.swift`
+
+kind: `swift`
+
+line_count: `56`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/MetricsView.swift`
+
+kind: `swift`
+
+line_count: `52`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/SessionPagingView.swift`
+
+kind: `swift`
+
+line_count: `79`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/StartView.swift`
+
+kind: `swift`
+
+line_count: `423`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/SummaryView.swift`
+
+kind: `swift`
+
+line_count: `129`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/WatchConnectivityManager.swift`
+
+kind: `swift`
+
+line_count: `235`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/WorkoutManager.swift`
+
+kind: `swift`
+
+line_count: `1344`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/WorkoutNotificationCenter.swift`
+
+kind: `swift`
+
+line_count: `109`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/WorkoutNotificationController.swift`
+
+kind: `swift`
+
+line_count: `104`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/WorkoutNotificationView.swift`
+
+kind: `swift`
+
+line_count: `217`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Assets.xcassets/Contents.json`
+
+kind: `json`
+
+line_count: `6`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Assets.xcassets/AccentColor.colorset/Contents.json`
+
+kind: `json`
+
+line_count: `11`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Assets.xcassets/AiQoLogo.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `21`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Assets.xcassets/AppIcon.appiconset/Contents.json`
+
+kind: `json`
+
+line_count: `214`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Design/WatchDesignSystem.swift`
+
+kind: `swift`
+
+line_count: `42`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Models/WatchWorkoutType.swift`
+
+kind: `swift`
+
+line_count: `72`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Services/WatchConnectivityService.swift`
+
+kind: `swift`
+
+line_count: `54`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Services/WatchHealthKitManager.swift`
+
+kind: `swift`
+
+line_count: `72`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Services/WatchWorkoutManager.swift`
+
+kind: `swift`
+
+line_count: `131`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Shared/WorkoutSyncCodec.swift`
+
+kind: `swift`
+
+line_count: `31`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Shared/WorkoutSyncModels.swift`
+
+kind: `swift`
+
+line_count: `445`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Views/WatchActiveWorkoutView.swift`
+
+kind: `swift`
+
+line_count: `156`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Views/WatchHomeView.swift`
+
+kind: `swift`
+
+line_count: `180`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Views/WatchWorkoutListView.swift`
+
+kind: `swift`
+
+line_count: `65`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch App/Views/WatchWorkoutSummaryView.swift`
+
+kind: `swift`
+
+line_count: `122`
+
+logical_group: `AiQoWatch Watch App`
+
+`AiQoWatch Watch AppTests/AiQoWatch_Watch_AppTests.swift`
+
+kind: `swift`
+
+line_count: `17`
+
+logical_group: `AiQoWatch Watch AppTests`
+
+`AiQoWatch Watch AppUITests/AiQoWatch_Watch_AppUITests.swift`
+
+kind: `swift`
+
+line_count: `41`
+
+logical_group: `AiQoWatch Watch AppUITests`
+
+`AiQoWatch Watch AppUITests/AiQoWatch_Watch_AppUITestsLaunchTests.swift`
+
+kind: `swift`
+
+line_count: `33`
+
+logical_group: `AiQoWatch Watch AppUITests`
+
+`AiQoWatchWidget/AiQoWatchWidget.swift`
+
+kind: `swift`
+
+line_count: `235`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWatchWidget/AiQoWatchWidgetBundle.swift`
+
+kind: `swift`
+
+line_count: `10`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWatchWidget/AiQoWatchWidgetProvider.swift`
+
+kind: `swift`
+
+line_count: `59`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWatchWidget/Info.plist`
+
+kind: `plist`
+
+line_count: `11`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWatchWidget/Assets.xcassets/Contents.json`
+
+kind: `json`
+
+line_count: `6`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWatchWidget/Assets.xcassets/AiQoLogo.imageset/Contents.json`
+
+kind: `json`
+
+line_count: `13`
+
+logical_group: `AiQoWatchWidget`
+
+`AiQoWidget/AiQoEntry.swift`
+
+kind: `swift`
+
+line_count: `69`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoProvider.swift`
+
+kind: `swift`
+
+line_count: `55`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoRingsFaceWidget.swift`
+
+kind: `swift`
+
+line_count: `106`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoSharedStore.swift`
+
+kind: `swift`
+
+line_count: `28`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoWatchFaceWidget.swift`
+
+kind: `swift`
+
+line_count: `79`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoWidget.swift`
+
+kind: `swift`
+
+line_count: `51`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoWidgetBundle.swift`
+
+kind: `swift`
+
+line_count: `16`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoWidgetLiveActivity.swift`
+
+kind: `swift`
+
+line_count: `718`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/AiQoWidgetView.swift`
+
+kind: `swift`
+
+line_count: `396`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/Info.plist`
+
+kind: `plist`
+
+line_count: `11`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/Assets.xcassets/Contents.json`
+
+kind: `json`
+
+line_count: `6`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/Assets.xcassets/AccentColor.colorset/Contents.json`
+
+kind: `json`
+
+line_count: `11`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/Assets.xcassets/AppIcon.appiconset/Contents.json`
+
+kind: `json`
+
+line_count: `14`
+
+logical_group: `AiQoWidget`
+
+`AiQoWidget/Assets.xcassets/WidgetBackground.colorset/Contents.json`
+
+kind: `json`
+
+line_count: `11`
+
+logical_group: `AiQoWidget`
+
+`Configuration/AiQo.xcconfig`
+
+kind: `xcconfig`
+
+line_count: `11`
+
+logical_group: `Configuration`
+
+`Configuration/Secrets.xcconfig`
+
+kind: `xcconfig`
+
+line_count: `16`
+
+logical_group: `Configuration`
+
+`Configuration/ExternalSymbols/SpotifyiOS.framework.dSYM/Contents/Info.plist`
+
+kind: `plist`
+
+line_count: `20`
+
+logical_group: `Configuration`
 
 ## SECTION 4 — App Entry, Boot Sequence & Navigation
 
-### @main Entry Point
+### App Entry
 
-**File:** `AiQo/App/AppDelegate.swift`
+The real `@main` entry point is `AiQoApp` inside `AiQo/App/AppDelegate.swift`.
 
-The app uses `@main struct AiQoApp: App` with `@UIApplicationDelegateAdaptor(AppDelegate.self)`.
+`AiQo/App/AiQoApp.swift` was requested but is not present; no separate entry file exists.
 
-```swift
-@main
-struct AiQoApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var globalBrain = CaptainViewModel()
-```
+`AiQoApp` constructs two explicit SwiftData containers before rendering UI: a dedicated Captain container and the default app container.
 
-### Boot Sequence (AppDelegate.didFinishLaunching)
+### Boot Sequence In `application(_:didFinishLaunchingWithOptions:)`
 
-Executed in this exact order:
+- Create / initialize `PhoneConnectivityManager.shared`.
 
-1. **PhoneConnectivityManager.shared** — Activates WatchConnectivity session
-2. **UNUserNotificationCenter.delegate = self** — Sets notification delegate
-3. **CrashReporter.shared** — Initializes crash reporting
-4. **NetworkMonitor.shared** — Starts network reachability monitoring
-5. **AnalyticsService.shared.track(.appLaunched)** — Tracks app launch
-6. **FreeTrialManager.shared.refreshState()** — Checks trial status
-7. **LocalizationManager.shared.applySavedLanguage()** — Applies saved language preference
-8. **NotificationCategoryManager.shared.registerAllCategories()** — Registers notification categories
-9. **NotificationIntelligenceManager.shared.registerBackgroundTasks()** — Registers BG task identifiers
-10. **PurchaseManager.shared.start()** — Starts StoreKit 2 transaction observation
+- Assign `UNUserNotificationCenter.current().delegate = self`.
 
-**Conditional (only if ALL onboarding flags are true):**
+- Initialize `CrashReporter.shared`.
 
-11. **HealthKitService.permissionFlowEnabled = true** — Enables HK permission requests
-12. **NotificationService.shared.requestPermissions()** — Requests notification permission
-13. **application.registerForRemoteNotifications()** — Registers for push
-14. **MorningHabitOrchestrator.shared.start()** — Starts morning habit monitoring
-15. **SleepSessionObserver.shared.start()** — Starts sleep session observation
-16. **AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()** — Monitors workout completions
-17. **Smart notification scheduling** (if notifications enabled)
+- Initialize `NetworkMonitor.shared`.
 
-**Always (post-conditional):**
+- Track `AnalyticsEvent.appLaunched`.
 
-18. **AiQoWorkoutShortcuts.updateAppShortcutParameters()** — Updates Siri shortcuts
-19. **SiriShortcutsManager.shared.donateAllShortcuts()** — Donates shortcuts
-20. **StreakManager.shared.checkStreakContinuity()** — Validates active streak
+- Refresh `FreeTrialManager.shared` state.
 
-### Onboarding Gate Flags
+- Apply saved language through `LocalizationManager.shared.loadSavedLanguageOnLaunch()`.
 
-All 5 must be `true` for post-onboarding services to activate:
+- Register notification categories via `NotificationCategoryManager.shared.registerCategories()`.
 
-| UserDefaults Key | Screen |
-|---|---|
-| `didSelectLanguage` | Language Selection |
-| `didShowFirstAuthScreen` | Sign in with Apple |
-| `didCompleteDatingProfile` | Profile Setup (age, height, weight, goals) |
-| `didCompleteLegacyCalculation` | HealthKit Sync + Level Calculation |
-| `didCompleteFeatureIntro` | Feature Introduction |
+- Register background tasks via `NotificationIntelligenceManager.shared.registerBackgroundTasks()`.
 
-### ModelContainer Initialization
+- Start in-app purchase infrastructure with `PurchaseManager.shared.start()`.
 
-**Two separate SwiftData containers** are created in `AiQoApp.init()`:
+- If onboarding is complete, enable HealthKit permission flow, request notification auth, register for remote notifications, start morning habit orchestration, start sleep session observation, start workout summary service, schedule angel notifications, schedule notification intelligence background work, schedule smart notifications, donate Siri shortcuts, and check streak continuity.
 
-**Container 1 — Captain Memory Store** (custom path: `captain_memory.store`):
-- `CaptainMemory`
-- `PersistentChatMessage`
-- `RecordProject`
-- `WeeklyLog`
+### Activation Sequence In `applicationDidBecomeActive`
 
-**Container 2 — Main App Store** (default SwiftData path):
-- `AiQoDailyRecord`
-- `WorkoutTask`
-- `ArenaTribe`
-- `ArenaTribeMember`
-- `ArenaWeeklyChallenge`
-- `ArenaTribeParticipation`
-- `ArenaEmirateLeaders`
-- `ArenaHallOfFameEntry`
+- Refresh watch context through `PhoneConnectivityManager.shared.refreshAppContext()`.
 
-### MainTabRouter
+- Trigger widget timeline reloads through `WidgetCenter.shared.reloadAllTimelines()`.
 
-**File:** `AiQo/App/MainTabRouter.swift`
+- Clear app badge number.
 
-Singleton `@MainActor` class managing tab navigation.
+- If onboarding is complete, restart morning habit orchestration, sleep observer, AI workout summaries, smart notification scheduler, and inactivity scheduling.
 
-```swift
-enum Tab: Int {
-    case home = 0
-    case gym = 1
-    case tribe = 2
-    case kitchen = 3      // Special: routes through Home with notification
-    case captain = 4
-}
-```
+### `AppFlowController` State Machine
 
-**Note:** The `TabView` in `MainTabScreen` only renders 3 visible tabs:
-- **Home** (`house.fill`)
-- **Gym** (`figure.strengthtraining.traditional`)
-- **Captain** (`wand.and.stars`)
+Requested file `AiQo/App/AppFlowController.swift` is not present; the real `AppFlowController` lives inside `AiQo/App/SceneDelegate.swift`.
 
-Kitchen is accessed via a notification from Home. Tribe is defined but not currently in the tab bar.
+- root state: `languageSelection`
 
-### AppRootManager
+- root state: `login`
 
-**File:** `AiQo/App/AppRootManager.swift`
+- root state: `profileSetup`
 
-Manages cross-tab state for Captain chat presentation:
-- `isCaptainChatPresented: Bool` — drives `navigationDestination` to `CaptainChatView`
-- `openCaptainChat()` — navigates to Captain tab and presents chat
-- `dismissCaptainChat()` — dismisses the chat view
+- root state: `legacy`
 
-### DeepLink Routes
+- root state: `featureIntro`
 
-**File:** `AiQo/Services/DeepLinkRouter.swift`
+- root state: `main`
 
-**URL Scheme:** `aiqo://`
-**Universal Links:** `https://aiqo.app/`
+Resolution logic uses `didSelectLanguage`, Supabase auth presence, `didCompleteDatingProfile`, `didCompleteLegacyCalculation`, and `didCompleteFeatureIntro`.
 
-| Route | Scheme | Universal Link |
-|---|---|---|
-| Home | `aiqo://home` | `aiqo.app/` |
-| Captain | `aiqo://captain` or `aiqo://chat` | `aiqo.app/captain` |
-| Gym | `aiqo://gym` or `aiqo://workout` | `aiqo.app/gym` |
-| Tribe | `aiqo://tribe?invite=CODE` | `aiqo.app/tribe/join/CODE` |
-| Kitchen | `aiqo://kitchen` | `aiqo.app/kitchen` |
-| Settings | `aiqo://settings` | `aiqo.app/settings` |
-| Referral | `aiqo://referral?code=CODE` | `aiqo.app/refer/CODE` |
-| Premium | `aiqo://premium` | `aiqo.app/premium` |
+`didShowFirstAuthScreen` is stored, but current root-screen resolution is driven by the actual auth/session check.
 
----
+`finishOnboardingRequestingPermissions()` requests HealthKit, notifications, and `ProtectionModel` authorization, starts the free trial, marks legacy done, then transitions into feature intro.
+
+### Main Tabs
+
+`MainTabRouter.Tab` defines five symbolic tabs: `home`, `gym`, `tribe`, `kitchen`, `captain`.
+
+`MainTabScreen` currently renders only three visible tabs: `home`, `gym`, and `captain`.
+
+Selecting `kitchen` through the router redirects to `home` and posts `Notification.Name.openKitchenFromHome`.
+
+Captain chat presentation is centralized in `AppRootManager.shared.isCaptainChatPresented`.
+
+The main tab shell is globally forced to `.rightToLeft`.
+
+### Deep Links
+
+- route: `home`
+
+- route: `captain`
+
+- route: `gym`
+
+- route: `tribe(inviteCode:)`
+
+- route: `kitchen`
+
+- route: `settings`
+
+- route: `referral(code:)`
+
+- route: `premium`
+
+Supported prefixes are `aiqo://` and `https://aiqo.app/`.
+
+`captain` routes to the Captain tab and opens chat via `AppRootManager`.
+
+`tribe` and `premium` are stored as pending deep links for later handling.
+
+### Cross-Tab Root State
+
+`AppRootManager` currently owns only one cross-tab flag: `isCaptainChatPresented`.
+
+### Evidence Files
+
+- `AiQo/App/AppDelegate.swift`
+
+- `AiQo/App/SceneDelegate.swift`
+
+- `AiQo/App/MainTabRouter.swift`
+
+- `AiQo/App/MainTabScreen.swift`
+
+- `AiQo/App/AppRootManager.swift`
+
+- `AiQo/Services/DeepLinkRouter.swift`
 
 ## SECTION 5 — Hybrid AI Brain (BrainOrchestrator)
 
-### Architecture Overview
+### Real Source Layout
 
-The AI brain uses a **3-tier architecture**:
+The requested `AiQo/Services/AI/*` folder does not exist in the live tree.
 
-```
-User Message
-    ↓
-BrainOrchestrator (Router)
-    ↓
-┌──────────────────────┬─────────────────────────┐
-│ LOCAL Route          │ CLOUD Route              │
-│ (Apple Intelligence) │ (Gemini via Google API)  │
-│ - Sleep analysis     │ - All other contexts     │
-│ - Never leaves device│ - Privacy-sanitized      │
-└──────────────────────┴─────────────────────────┘
-    ↓
-PrivacySanitizer (pre-cloud)
-    ↓
-CaptainPersonaBuilder (post-response)
-    ↓
-User Response
-```
+The real AI orchestration code lives under `AiQo/Features/Captain/`.
 
 ### Routing Table
 
-**File:** `AiQo/Features/Captain/BrainOrchestrator.swift`
+`ScreenContext.sleepAnalysis` -> local-first path through `LocalBrainService`.
 
-| ScreenContext | Route | Rationale |
-|---|---|---|
-| `.sleepAnalysis` | **LOCAL** | Raw sleep stages NEVER leave the device |
-| `.gym` | **CLOUD** (Gemini) | Needs structured workout plans |
-| `.kitchen` | **CLOUD** (Gemini) | Needs meal plans + image analysis |
-| `.peaks` | **CLOUD** (Gemini) | Challenge coaching |
-| `.mainChat` | **CLOUD** (Gemini) | General conversation |
-| `.myVibe` | **CLOUD** (Gemini) | Mood + Spotify recommendations |
+`ScreenContext.gym` -> cloud path.
 
-**Sleep Intent Interception:** If a user asks about sleep in ANY context, `interceptSleepIntent()` detects sleep-related keywords (Arabic + English) and forces the route to LOCAL.
+`ScreenContext.kitchen` -> cloud path.
 
-### PrivacySanitizer
+`ScreenContext.peaks` -> cloud path.
 
-**File:** `AiQo/Features/Captain/PrivacySanitizer.swift`
+`ScreenContext.myVibe` -> cloud path.
 
-Before any data reaches the Gemini API, the sanitizer applies these transformations:
+`ScreenContext.mainChat` -> cloud path.
 
-1. **Conversation truncation** — Only the LAST 4 messages are sent (prevents hallucination, saves tokens)
-2. **PII redaction** — Emails, phone numbers, UUIDs, IPs, URLs, long numeric sequences, base64 tokens → `[REDACTED]`
-3. **Name normalization** — Known user names → `"User"` in cloud payloads
-4. **Self-identifying phrase removal** — "my name is X" → "my name is User"
-5. **Profile field redaction** — Explicit fields like "email:", "phone:", etc. → `[REDACTED_PROFILE]`
-6. **Health data bucketing** — Steps bucketed by 50 (max 100K), Calories by 10 (max 10K), Level clamped 1-100
-7. **Kitchen image sanitization** — EXIF/GPS stripped via CGImage re-encoding, resized to max 1280px, JPEG compressed at 0.78 quality
-8. **Vibe field** — Always replaced with `"General"` in cloud payloads
+Sleep intent interception upgrades free-text into `sleepAnalysis` when keywords/patterns indicate sleep problems or sleep review requests.
 
-### LocalBrainService (Apple Intelligence)
+### Request / Reply Schema
 
-**File:** `AiQo/Features/Captain/LocalBrainService.swift`
+`HybridBrainRequest` fields: `conversation`, `screenContext`, `language`, `contextData`, `userProfileSummary`, `attachedImageData`.
 
-- Uses Apple's Foundation Models framework (`FoundationModels`)
-- Creates an `AdaptiveLanguageModelSession` for on-device inference
-- Primary use: Sleep analysis (raw sleep stages processed entirely on-device)
-- Fallback: Used when cloud API fails (but skipped if error implies local will also fail)
+`HybridBrainServiceReply` fields: `message`, `quickReplies`, `workoutPlan`, `mealPlan`, `spotifyRecommendation`, `rawText`.
 
-### CloudBrainService (Gemini API)
+### PrivacySanitizer Behavior
 
-**File:** `AiQo/Features/Captain/CloudBrainService.swift`
+- PII redaction for emails, phone numbers, UUIDs, URLs, long numeric sequences, IP addresses, long opaque tokens, and profile-style labels.
 
-Privacy wrapper that:
-1. Fetches cloud-safe memories from `MemoryStore.shared.buildCloudSafeContext(maxTokens: 400)`
-2. Sanitizes the request via `PrivacySanitizer.sanitizeForCloud()`
-3. Delegates to `HybridBrainService` for the actual API call
+- Normalize names to `User`.
 
-### HybridBrainService (Gemini Transport)
+- Trim outbound conversation to the last four messages.
 
-**File:** `AiQo/Features/Captain/HybridBrainService.swift`
+- Bucket steps to increments of 50.
 
-| Config | Value |
-|---|---|
-| **Model** | `gemini-2.0-flash` |
-| **Endpoint** | `generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent` |
-| **API Key Source** | `Info.plist` → `CAPTAIN_API_KEY` (from `Secrets.xcconfig`) |
-| **Timeout** | 35 seconds |
-| **Temperature** | 0.7 |
-| **Max Output Tokens** | 600 (mainChat, myVibe, sleepAnalysis) / 900 (gym, kitchen, peaks) |
+- Bucket calories to increments of 10.
 
-### HybridBrainRequest Schema
+- Clamp level into `1...100`.
 
-```swift
-struct HybridBrainRequest: Sendable {
-    let conversation: [CaptainConversationMessage]  // role + content
-    let screenContext: ScreenContext                 // .mainChat, .gym, etc.
-    let language: AppLanguage                       // .arabic or .english
-    let contextData: CaptainContextData             // steps, calories, level, etc.
-    let userProfileSummary: String                  // memories + profile
-    let attachedImageData: Data?                    // kitchen image (optional)
-}
-```
+- Replace vibe with `General` in cloud payloads.
 
-### HybridBrainServiceReply Schema
+- Re-encode outbound images as JPEG, strip EXIF/GPS, cap max dimension at 1280, use quality `0.78`.
 
-```swift
-struct HybridBrainServiceReply: Sendable {
-    let message: String                           // Captain's text response
-    let quickReplies: [String]?                   // 2-3 tappable suggestions
-    let workoutPlan: WorkoutPlan?                 // Structured workout (gym context)
-    let mealPlan: MealPlan?                       // Structured meal plan (kitchen)
-    let spotifyRecommendation: SpotifyRecommendation?  // Spotify URI (myVibe)
-    let rawText: String                           // Raw JSON for streaming
-}
-```
+### Local Brain Service
+
+Sleep analysis is delegated to `AppleIntelligenceSleepAgent` when `FoundationModels` is available.
+
+General on-device chat uses `CaptainOnDeviceChatEngine` with an 8-second timeout.
+
+Non-sleep local replies fall back to deterministic templates for workouts, meals, sleep, vibe, and challenge scaffolding.
+
+Background notification text generation uses special prompt keys `background.sleep_notification` and `background.inactivity_notification`.
+
+### Cloud Brain Service
+
+Despite the original product brief, the current cloud endpoint is Google Gemini, not OpenAI.
+
+Configured model constant: `gemini-flash-latest`.
+
+Configured base endpoint: `https://generativelanguage.googleapis.com/v1beta/models`.
+
+Default request timeout: `35` seconds.
+
+Token budget: `600` output tokens for `mainChat`, `myVibe`, and `sleepAnalysis`; `900` for `gym`, `kitchen`, and `peaks`.
+
+Kitchen image context is attached as inline JPEG to the final user turn only.
+
+`CloudBrainService` builds cloud-safe memory context with `MemoryStore.buildCloudSafeContext(maxTokens: 400)` before delegating into `HybridBrainService`.
 
 ### Fallback Chain
 
-1. **Cloud (Gemini)** — Primary for all non-sleep contexts
-2. **Apple Intelligence (Local)** — Fallback when cloud fails (skipped for network errors)
-3. **Computed Sleep Reply** — For sleep: uses `AppleIntelligenceSleepAgent.availabilityFallback()` if both cloud and local fail
-4. **Localized Error Message** — Final safety net: warm human-readable offline message via `CaptainFallbackPolicy`
+Sleep path fallback order: local Apple Intelligence -> cloud sleep reply -> computed local summary.
 
-### Error Types
+General cloud path fallback order: cloud reply -> immediate network error reply for skip/network conditions -> local fallback -> localized network error reply.
 
-```swift
-enum HybridBrainServiceError {
-    case emptyConversation
-    case missingUserMessage
-    case invalidStructuredResponse
-    case invalidResponse
-    case emptyResponse
-    case badStatusCode(Int)
-    case networkUnavailable
-    case requestFailed
-    case missingAPIKey
-    case invalidEndpoint
-}
-```
+### Evidence Files
 
----
+- `AiQo/Features/Captain/BrainOrchestrator.swift`
+
+- `AiQo/Features/Captain/CloudBrainService.swift`
+
+- `AiQo/Features/Captain/LocalBrainService.swift`
+
+- `AiQo/Features/Captain/HybridBrainService.swift`
+
+- `AiQo/Features/Captain/PrivacySanitizer.swift`
+
+- `AiQo/Features/Captain/CaptainOnDeviceChatEngine.swift`
+
+- `AiQo/Features/Captain/AppleIntelligenceSleepAgent.swift`
 
 ## SECTION 6 — Captain Hamoudi Persona System
 
-### Identity
-
-- **Name:** Captain Hamoudi (الكابتن حمودي)
-- **Role:** Elite AI mentor, older brother figure, Iraqi coach
-- **Dialect:** Baghdad-dialect Iraqi Arabic (primary), English (secondary)
-- **Tone:** Sharp, warm, emotionally intelligent. Uses Iraqi sarcasm naturally. No corporate wellness language.
-- **Personality:** Direct, concise, actionable. Empathizes before coaching. Says "I don't know" when unsure.
-
-### CaptainPromptBuilder — 6-Layer Architecture
-
-**File:** `AiQo/Features/Captain/CaptainPromptBuilder.swift`
-
-| Layer | Name | Description |
-|---|---|---|
-| **Layer 1** | Identity | Elite AI mentor identity. Language lock (Arabic-only or English-only). Behavioral code (respond to intent first, be concise, use humor naturally). Banned phrases. Response length rules. Name usage rules. |
-| **Layer 2** | Memory | Long-term memory context from prior sessions via `MemoryStore`. Injected as background knowledge. Instruction: "Do NOT recite these facts back unless directly relevant." |
-| **Layer 3** | Bio-State | Current HealthKit metrics — steps, calories, level, sleep hours, heart rate, time of day. Marked as "INTERNAL CALIBRATION ONLY — NEVER output to user." Health data is masked. |
-| **Layer 4** | Circadian Tone | Tone adapts to time of day via `bioPhase.toneDirective`. Captain never mentions "phase", "bio-phase", or "circadian." |
-| **Layer 5** | Screen Context | Where the user is in the app. Controls which fields to populate (workoutPlan, mealPlan, spotifyRecommendation). Kitchen context notes if an image is attached. |
-| **Layer 6** | Output Contract | STRICT JSON output requirement. No markdown, no text outside JSON. Fields: message, quickReplies (2-3, max 25 chars), workoutPlan, mealPlan, spotifyRecommendation. Language lock enforced in final reminder. |
-
-### Circadian Tone Phases (BioTimePhase)
-
-**File:** `AiQo/Features/Captain/CaptainContextBuilder.swift`
-
-The `BioTimePhase` enum integrates clock time + sleep quality + activity level to determine true energy state:
-
-```swift
-enum BioTimePhase: String, Sendable {
-    case awakening  // 5:00–9:59
-    case energy     // 10:00–13:59
-    case focus      // 14:00–17:59
-    case recovery   // 18:00–20:59
-    case zen        // 21:00–4:59
-}
-```
-
-| Time Window | Phase | English Tone Directive | Arabic Tone Directive |
-|---|---|---|---|
-| 05:00–09:59 | `awakening` | "Gentle, clear, optimistic. The user just woke up — ease them in, don't overwhelm." | "النبرة: هادئة وواضحة. المستخدم لسه صاحي — خفف عليه، لا تثقل." |
-| 10:00–13:59 | `energy` | "Sharp, direct, high-output. Peak biological energy — match their drive." | "النبرة: حادة ومباشرة. ذروة الطاقة — جاريه بنفس السرعة." |
-| 14:00–17:59 | `focus` | "Steady, precise, minimal. Deep work hours — be efficient, don't break flow." | "النبرة: ثابتة ودقيقة. ساعات التركيز — كن مختصر ولا تقطع التدفق." |
-| 18:00–20:59 | `recovery` | "Warm, calm, encouraging. The body is winding down — be supportive, not pushy." | "النبرة: دافئة وهادئة. الجسم يرتاح — ادعمه بدون ضغط." |
-| 21:00–04:59 | `zen` | "Soft, philosophical, minimal. Late night — speak gently, encourage rest and reflection." | "النبرة: ناعمة وتأملية. وقت متأخر — تكلم بهدوء وشجّع الراحة." |
-
-**Adaptive Overrides:**
-- **Sleep deprived** (< 5.5h sleep) + morning (5-10am) → Forces `recovery` instead of `awakening`
-- **High activity at night** (> 8,000 steps after 9pm) → Forces `recovery` instead of `zen`
-
-```swift
-static func current(hour: Int, sleepHours: Double, steps: Int) -> BioTimePhase {
-    let sleepDeprived = sleepHours > 0 && sleepHours < 5.5
-    if sleepDeprived && (5..<10).contains(hour) { return .recovery }
-    if hour >= 21 && steps > 8_000 { return .recovery }
-    // ... standard time-based mapping
-}
-```
-
-### CaptainContextData Schema
-
-**File:** `AiQo/Features/Captain/CaptainContextBuilder.swift`
-
-```swift
-struct CaptainContextData: Sendable {
-    let steps: Int              // Today's step count
-    let calories: Int           // Today's active calories
-    let vibe: String            // Current vibe label
-    let level: Int              // User's current level
-    let sleepHours: Double      // Last night's sleep (hours)
-    let heartRate: Int?         // Current heart rate (optional)
-    let timeOfDay: String       // Formatted time string
-    let toneHint: String        // Tone guidance string
-    let stageTitle: String      // Growth stage title
-    let bioPhase: BioTimePhase  // Circadian phase
-}
-```
-
-**Context Builder:** `CaptainContextBuilder.shared` aggregates data from:
-- `HealthKitService` (steps, calories, sleep, heart rate)
-- `LevelStore` (level, stage)
-- `VibeAudioEngine` / `SpotifyVibeManager` (current vibe)
-- System clock (time of day, bio-phase calculation)
-
-### Banned Phrases
-
-```swift
-static let bannedPhrases = [
-    "بالتأكيد", "بكل سرور", "كمساعد ذكاء اصطناعي",
-    "لا أستطيع", "يسعدني مساعدتك", "هل يمكنني مساعدتك",
-    "كيف يمكنني مساعدتك اليوم", "بصفتي نموذج لغوي",
-    "As an AI", "I'm happy to help", "How can I assist you",
-    "Certainly!", "Of course!", "I'd be happy to"
-]
-```
-
-All responses are post-processed by `CaptainPersonaBuilder.sanitizeResponse()` which strips these phrases.
-
-### Custom Tone Options
-
-Via `CaptainCustomization` in `CaptainViewModel`:
-- User can select calling (e.g., custom nickname)
-- User can select tone preference
-- Persisted in `UserDefaults` under `captain_*` keys
-
-### Long-Term Memory System
-
-#### CaptainMemory Model
-
-**File:** `AiQo/Core/CaptainMemory.swift` (SwiftData `@Model`)
-
-```swift
-@Model
-final class CaptainMemory {
-    #Index<CaptainMemory>([\.category], [\.key])
-
-    var id: UUID
-    var category: String        // Memory classification
-    @Attribute(.unique) var key: String  // Unique identifier
-    var value: String           // The stored information
-    var confidence: Double      // 0.0–1.0 trust score
-    var source: String          // How this memory was created
-    var createdAt: Date
-    var updatedAt: Date
-    var accessCount: Int        // Times used in prompts
-}
-```
-
-**Memory Categories:**
-| Category | Description | Example Key |
-|---|---|---|
-| `identity` | User's name, age, background | `user_name`, `user_age` |
-| `goal` | Fitness/health goals | `primary_goal`, `target_weight` |
-| `body` | Physical measurements | `height_cm`, `weight_kg` |
-| `preference` | Workout/food preferences | `preferred_workout`, `food_allergies` |
-| `mood` | Emotional patterns | `morning_mood_trend` |
-| `injury` | Physical limitations | `knee_injury`, `back_pain` |
-| `nutrition` | Dietary habits | `daily_protein_target` |
-| `workout_history` | Training patterns | `favorite_exercises` |
-| `sleep` | Sleep patterns | `avg_sleep_hours` |
-| `insight` | AI-derived observations | `stress_pattern_detected` |
-| `active_record_project` | Legendary challenge data | `pushup_record_project` |
-
-**Memory Sources:**
-| Source | Description |
-|---|---|
-| `user_explicit` | User directly stated information |
-| `extracted` | Extracted from conversation by MemoryExtractor |
-| `healthkit` | Synced from HealthKit data |
-| `inferred` | AI-inferred from patterns |
-| `llm_extracted` | Extracted by LLM during analysis |
-
-#### MemoryStore Manager
-
-**File:** `AiQo/Core/MemoryStore.swift`
-
-`@MainActor @Observable final class MemoryStore`
-
-| Method | Description |
-|---|---|
-| `configure(container:)` | Binds the SwiftData ModelContainer |
-| `set(key:value:category:source:confidence:)` | Create or update a memory |
-| `get(key:) -> String?` | Retrieve by key |
-| `getByCategory(category:) -> [CaptainMemory]` | Retrieve all memories in a category |
-| `buildCloudSafeContext(maxTokens:) -> String` | Build a cloud-safe prompt fragment (max 400 tokens) |
-| `removeStale()` | Delete old/low-confidence memories |
-| `removeLowestConfidence()` | Delete least-confident memory when at capacity |
-| `isEnabled: Bool` | Toggle memory on/off (UserDefaults: `captain_memory_enabled`) |
-
-**Capacity:** Maximum 200 memories. When full, lowest-confidence memory is evicted.
-
-**Confidence mechanics:**
-- New memories start at confidence 0.7
-- Each update adds 0.05 (capped at 1.0)
-- `user_explicit` source never gets overwritten by lower-priority sources
-- Stale memories with low access count are cleaned up at launch
-
-#### Memory Pipeline
-
-```
-User Conversation
-    ↓
-MemoryExtractor.extract()         ← Analyzes conversation for persistent facts
-    ↓
-MemoryStore.set()                 ← Stores with category + source + confidence
-    ↓
-MemoryStore.buildCloudSafeContext() ← Retrieves top memories for cloud prompt
-    ↓
-CaptainPromptBuilder.layerMemory() ← Injects as "BACKGROUND KNOWLEDGE"
-```
-
-#### HealthKit Memory Bridge
-
-**File:** `AiQo/Core/HealthKitMemoryBridge.swift`
-
-`HealthKitMemoryBridge.syncHealthDataToMemory()` runs at app launch (after onboarding) and syncs aggregated health data into Captain memory:
-- Average daily steps
-- Average sleep duration
-- Resting heart rate
-- Activity patterns
-
-This allows Captain to reference health trends without re-querying HealthKit during conversations.
-
-#### Memory Settings UI
-
-**File:** `AiQo/Core/CaptainMemorySettingsView.swift`
-
-Provides a settings screen where users can:
-- Enable/disable Captain memory
-- View stored memories
-- Delete individual memories
-- Clear all memories
-
-### ElevenLabs Voice Settings
-
-**File:** `AiQo/Core/CaptainVoiceAPI.swift`
-
-| Setting | Value |
-|---|---|
-| **Model** | `eleven_multilingual_v2` |
-| **Voice ID** | `9FHjCdVXgA4tYxIYHTcZ` |
-| **API URL** | `api.elevenlabs.io/v1/text-to-speech` |
-| **API Key** | Via `Secrets.xcconfig` → `CAPTAIN_VOICE_API_KEY` |
-| **Output Format** | `mp3_44100_128` (44.1 kHz, 128 kbps MP3) |
-| **Request Timeout** | 30 seconds |
-
-#### Voice Parameters (VoiceSettings)
-
-```swift
-VoiceSettings(
-    stability: 0.34,          // Low stability = more expressive
-    similarityBoost: 0.88,    // High similarity = close to reference voice
-    style: 0.18,              // Subtle style transfer
-    useSpeakerBoost: true     // Enhanced speaker clarity
-)
-```
-
-#### Voice Architecture Files
-
-| File | Purpose |
-|---|---|
-| `CaptainVoiceAPI.swift` | HTTP client for ElevenLabs API. Handles configuration resolution, request building, and audio data response. |
-| `CaptainVoiceCache.swift` | Local cache for synthesized audio files. Prevents redundant API calls for repeated phrases. |
-| `CaptainVoiceService.swift` | Orchestrates the full voice pipeline: text → synthesis → caching → playback. |
-
-#### Configuration Resolution Order
-
-1. **ProcessInfo.environment** (CI / TestFlight builds)
-2. **Bundle.main.infoDictionary** (from `Secrets.xcconfig` → `Info.plist`)
-3. Falls back to default URL/model if partially configured
-
-### CaptainFallbackPolicy
-
-**File:** `AiQo/Features/Captain/CaptainFallbackPolicy.swift`
-
-When ALL AI services (cloud + local) fail, the fallback policy provides context-aware, intent-based responses:
-
-#### Intent Detection Categories
-
-| Detected Intent | Arabic Keywords | English Keywords |
-|---|---|---|
-| Hungry/Food | جوع, جوعان, أكل, وجبة | hungry, food, meal, diet |
-| Tired/Exhausted | تعبان, مرهق, نعسان | tired, exhausted, sleepy |
-| Stressed | توتر, مضغوط, قلق | stress, stressed, overwhelmed |
-| Workout | تمرين, جيم, كارديو | workout, cardio, run, gym |
-
-#### Response Strategy
-
-Each fallback response includes:
-1. **Acknowledgment** — Warm human-readable explanation that AI is temporarily unavailable
-2. **Triage question** — Context-specific question to guide the user
-3. **3 quick options** — Actionable choices the user can tap
-
-#### Network Error Messages (Randomized)
-
-Arabic examples:
-- "عذراً! الشبكة عندي بيها مشكلة هسه..."
-- "أووف! يبدو الاتصال انقطع هسه..."
-- "ما وصلت للسيرفر هسه..."
-
-English examples:
-- "Looks like I can't reach my cloud brain right now..."
-- "Network seems down — I couldn't connect..."
-- "Connection lost. Check your internet..."
-
-#### Generic Fallbacks (Final Safety Net)
-
-Arabic: 5 randomized warm greetings in Iraqi dialect
-English: 5 randomized casual coaching openers
-
-### Fallback TTS Chain
-
-1. **ElevenLabs API** — Primary (Iraqi Arabic voice with custom voice settings)
-2. **AVSpeechSynthesizer** — Fallback (system TTS, less natural)
-3. **Silent** — If both fail, message displayed without voice
-
-### PromptRouter (Local Route System Prompt)
-
-**File:** `AiQo/Features/Captain/PromptRouter.swift`
-
-Used by `LocalBrainService` for on-device Apple Intelligence prompts. Generates context-specific system prompts that include:
-
-1. **Captain Hamoudi identity** — Iraqi fitness and life coach
-2. **Timestamp** — Formatted in user's locale
-3. **Screen context** — Which screen the user is on
-4. **Conversational awareness rules** — Respond to intent first, don't force stats
-5. **Live context data** — Steps, calories, vibe, level (only when relevant)
-6. **Privacy rules** — Never mention APIs, servers, cloud inference
-7. **Screen-specific behavior** — Detailed instructions per screen context
-8. **Output contract** — JSON-only output with message, workoutPlan, mealPlan, spotifyRecommendation
-
-#### Screen-Specific Instructions (PromptRouter)
-
-| Screen | Key Instruction |
-|---|---|
-| `.kitchen` | "Stay inside food, cooking, meal timing. Default to meal-first coaching." |
-| `.gym` | "Lead with execution, exercise selection, sets, reps, progression." |
-| `.sleepAnalysis` | "Bias toward recovery, parasympathetic downshift, realistic sleep hygiene." |
-| `.peaks` | "Speak to momentum, discipline, measurable next actions." |
-| `.mainChat` | "General chat. Respond naturally. Only generate plans when explicitly asked." |
-| `.myVibe` | "Focus on mood, music energy, focus state. Generate spotify:search: URIs dynamically." |
-
-### AppleIntelligenceSleepAgent
-
-**File:** `AiQo/Features/Captain/AppleIntelligenceSleepAgent.swift`
-
-Uses Apple's `FoundationModels` framework for on-device sleep analysis.
-
-#### SleepSession Model
-
-```swift
-struct SleepSession: Sendable {
-    let totalSleep: TimeInterval    // Total sleep duration
-    let deepSleep: TimeInterval     // Deep sleep stage
-    let remSleep: TimeInterval      // REM sleep stage
-    let coreSleep: TimeInterval     // Core/light sleep stage
-    let awake: TimeInterval         // Time awake during night
-}
-```
-
-Computed properties: `totalMinutes`, `deepMinutes`, `remMinutes`, `coreMinutes`, `awakeMinutes`, `deepPercentage`, `remPercentage`
-
-#### On-Device Analysis Flow
-
-1. `analyze(session:)` checks `SystemLanguageModel.default.availability`
-2. If `.available` → Creates `LanguageModelSession` with Iraqi Arabic system prompt
-3. Temperature: 0.5, Max tokens: 160
-4. Trigger prompt: `"شلون نوم المستخدم؟ حلله هسه بالعراقي."`
-5. If `.unavailable` → Throws `modelUnavailable` with aggregated Arabic summary
-
-#### System Prompt Structure
-
-The sleep agent's system prompt includes:
-- Captain Hamoudi identity (Iraqi dialect enforced)
-- Sleep data with ratings:
-  - Duration rating: "قليل هواية" (< 5h), "قليل" (5-6h), "يمشي بس مو مثالي" (6-7h), "خوش نوم" (7-9h), "هواية نوم" (> 9h)
-  - Stage ratings: percentage vs ideal ranges (deep: 15-25%, REM: 20-25%)
-- Output format: Exactly 3 sentences in Iraqi Arabic
-- Restrictions: No emojis, no headers, no formal Arabic
-
-#### Error Handling
-
-```swift
-enum AppleIntelligenceSleepAgentError {
-    case emptyResponse(session: SleepSession)
-    case modelUnavailable(sleepSummary: String, session: SleepSession)
-}
-```
-
-On `modelUnavailable`: BrainOrchestrator falls back to cloud with aggregated text summary (no raw stages), then to computed fallback.
-
----
+### Identity / Tone / Dialect
+
+Captain is always framed as a practical Iraqi Arabic coach rooted in Baghdad dialect.
+
+Prompting explicitly forbids generic AI disclaimers and non-Iraqi dialect drift.
+
+Allowed custom tone options in the UI are `عملي`, `حنون`, and `صارم`.
+
+Captain cognitive-state UI text emphasizes on-device reasoning when available.
+
+### Prompt Builder 6-Layer Architecture
+
+- Layer 1 `Identity`: persona rules, Iraqi dialect, voice, and relationship framing.
+
+- Layer 2 `Memory`: long-term memory snippets and user-specific context.
+
+- Layer 3 `Bio-state`: health, level, vibe, and current physiological context.
+
+- Layer 4 `Circadian tone`: time-of-day and sleep-adjusted tone shaping.
+
+- Layer 5 `Screen context`: gym/kitchen/sleep/vibe/chat-specific behavior rules.
+
+- Layer 6 `Output contract`: strict JSON output keys and response-shape enforcement.
+
+### Circadian Tone Phases
+
+- `awakening` -> 05:00 to 09:59.
+
+- `energy` -> 10:00 to 13:59.
+
+- `focus` -> 14:00 to 17:59.
+
+- `recovery` -> 18:00 to 20:59.
+
+- `zen` -> 21:00 to 04:59.
+
+- If sleep is below `5.5` hours during the morning window, the phase is forced toward `recovery`.
+
+- If the hour is `>= 21` and steps exceed `8000`, tone also shifts toward `recovery`.
+
+### Long-Term Memory
+
+Persistent memory entities are `CaptainMemory` and `PersistentChatMessage`.
+
+Memory categories retained in cloud-safe form include `goal`, `preference`, `mood`, `injury`, `nutrition`, and `insight`.
+
+`MemoryStore` caps stored memories at `200` and persisted messages at `200`.
+
+Prompt context prioritizes `active_record_project` plus the top memories ranked by confidence and recency.
+
+Captain profile customization is stored in `UserDefaults` keys: `captain_user_name`, `captain_user_age`, `captain_user_height`, `captain_user_weight`, `captain_calling`, `captain_tone`.
+
+### Voice Stack
+
+Voice API defaults: model `eleven_multilingual_v2`, bitrate/output `mp3_44100_128`.
+
+Voice tuning defaults: `stability=0.34`, `similarityBoost=0.88`, `style=0.18`, `speakerBoost=true`.
+
+Voice API configuration keys come from plist/xcconfig placeholders: `CAPTAIN_VOICE_API_KEY`, `CAPTAIN_VOICE_VOICE_ID`, `CAPTAIN_VOICE_API_URL`, `CAPTAIN_VOICE_MODEL_ID`.
+
+Local fallback TTS uses `AVSpeechSynthesizer` with Arabic preference order `ar-SA`, `ar-AE`, then generic `ar`.
+
+Fallback speech rates: Arabic `0.44`, English `0.48`; pitch `0.96`.
+
+### Voice Cache Strategy
+
+- preloaded phrase: `getUp`
+
+- preloaded phrase: `greatWorkout`
+
+- preloaded phrase: `keepGoing`
+
+- preloaded phrase: `almostThere`
+
+- preloaded phrase: `drinkWater`
+
+- preloaded phrase: `waterGoalDone`
+
+- preloaded phrase: `mealTimeBreakfast`
+
+- preloaded phrase: `mealTimeLunch`
+
+- preloaded phrase: `mealTimeDinner`
+
+- preloaded phrase: `sleepTime`
+
+- preloaded phrase: `goodMorning`
+
+- preloaded phrase: `dailyMotivation`
+
+- preloaded phrase: `streakCongrats`
+
+Cached voice files are named as `hamoudi_<sha256>.mp3`.
+
+Captain voice pre-cache is intended to make common coaching phrases available instantly and offline-like after first retrieval.
+
+### Evidence Files
+
+- `AiQo/Features/Captain/CaptainViewModel.swift`
+
+- `AiQo/Features/Captain/CaptainPersonaBuilder.swift`
+
+- `AiQo/Features/Captain/CaptainPromptBuilder.swift`
+
+- `AiQo/Features/Captain/CaptainScreen.swift`
+
+- `AiQo/Core/CaptainVoiceAPI.swift`
+
+- `AiQo/Core/CaptainVoiceCache.swift`
+
+- `AiQo/Core/CaptainVoiceService.swift`
+
+- `AiQo/Core/MemoryStore.swift`
+
+- `AiQo/Core/CaptainMemory.swift`
 
 ## SECTION 7 — Data Models & Persistence
 
-### SwiftData ModelContainer 1 — Captain Memory Store
+### SwiftData Containers
 
-**Path:** `ApplicationSupport/captain_memory.store`
+The user requested two containers, but the checked-in code actually uses three distinct container contexts.
 
-| @Model Class | Purpose |
-|---|---|
-| `CaptainMemory` | Long-term memories (goals, preferences, habits) |
-| `PersistentChatMessage` | Chat history persistence across sessions |
-| `RecordProject` | Legendary challenge projects |
-| `WeeklyLog` | Weekly review logs for legendary challenges |
+Default app model container in `AiQoApp`: `AiQoDailyRecord`, `WorkoutTask`, `ArenaTribe`, `ArenaTribeMember`, `ArenaWeeklyChallenge`, `ArenaTribeParticipation`, `ArenaEmirateLeaders`, `ArenaHallOfFameEntry`.
 
-### SwiftData ModelContainer 2 — Main App Store
+Dedicated Captain container in `AiQoApp`: `CaptainMemory`, `PersistentChatMessage`, `RecordProject`, `WeeklyLog`.
 
-**Path:** Default SwiftData location
+Quest container from `QuestPersistenceController.shared.container`: `PlayerStats`, `QuestStage`, `QuestRecord`, `Reward`.
 
-| @Model Class | Purpose |
-|---|---|
-| `AiQoDailyRecord` | Daily health metrics snapshot |
-| `WorkoutTask` | Workout session records |
-| `ArenaTribe` | Tribe (group) data |
-| `ArenaTribeMember` | Tribe member profiles |
-| `ArenaWeeklyChallenge` | Weekly tribe challenges |
-| `ArenaTribeParticipation` | Challenge participation records |
-| `ArenaEmirateLeaders` | Leaderboard data |
-| `ArenaHallOfFameEntry` | Hall of fame records |
+### Key `@Model` Classes And Stored Fields
 
-### Key @Model: PersistentChatMessage
+- `AiQoDailyRecord`: `id`, `date`, `currentSteps`, `targetSteps`, `burnedCalories`, `targetCalories`, `waterCups`, `targetWaterCups`, `captainDailySuggestion`, `workouts`.
 
-```swift
-@Model
-final class PersistentChatMessage {
-    var messageID: UUID
-    var text: String
-    var isUser: Bool
-    var timestamp: Date
-    var spotifyRecommendationData: Data?  // JSON-encoded SpotifyRecommendation
-    var sessionID: UUID                   // Groups messages by session
-}
-```
+- `WorkoutTask`: `id`, `title`, `isCompleted`, `dailyRecord`.
 
-**Indexes:** `[\.sessionID]`, `[\.timestamp]`
+- `CaptainMemory`: `id`, `category`, unique `key`, `value`, `confidence`, `source`, `createdAt`, `updatedAt`, `accessCount`.
 
-### Key Singleton Managers & Persisted State
+- `PersistentChatMessage`: `messageID`, `text`, `isUser`, `timestamp`, `spotifyRecommendationData`, `sessionID` with indexes on `sessionID` and `timestamp`.
 
-| Manager | Storage | Key Prefix |
-|---|---|---|
-| `LevelStore.shared` | UserDefaults | `aiqo.user.level`, `aiqo.user.currentXP`, `aiqo.user.totalXP` |
-| `StreakManager.shared` | UserDefaults | `aiqo.streak.current`, `aiqo.streak.longest`, `aiqo.streak.lastActive`, `aiqo.streak.history` |
-| `FreeTrialManager.shared` | UserDefaults + Keychain | `aiqo.freeTrial.startDate` |
-| `AppSettingsStore.shared` | UserDefaults | `appLanguage`, `notificationsEnabled`, etc. |
-| `UserProfileStore.shared` | UserDefaults | User profile fields |
-| `EntitlementStore.shared` | UserDefaults | Subscription state |
-| `MemoryStore.shared` | SwiftData (captain container) | Captain memories |
-| `CoinManager.shared` | UserDefaults | Coin balance |
-| `DailyGoals` | UserDefaults | `aiqo.dailyGoals` |
+- `ArenaTribe`: unique `id`, `name`, `creatorUserID`, `inviteCode`, `members`, `createdAt`, `isActive`, `isFrozen`, `frozenAt`.
 
-### UserDefaults Key Inventory (Partial)
+- `ArenaTribeMember`: unique `id`, `userID`, `displayName`, `initials`, `joinedAt`, `isCreator`, `tribe`.
 
-| Key | Type | Purpose |
-|---|---|---|
-| `didSelectLanguage` | Bool | Onboarding: language chosen |
-| `didShowFirstAuthScreen` | Bool | Onboarding: auth screen shown |
-| `didCompleteDatingProfile` | Bool | Onboarding: profile setup done |
-| `didCompleteLegacyCalculation` | Bool | Onboarding: HK sync + level calc |
-| `didCompleteFeatureIntro` | Bool | Onboarding: feature intro seen |
-| `captain_user_name` | String | Captain customization: user name |
-| `captain_calling` | String | Captain customization: calling |
-| `captain_tone` | String | Captain customization: tone |
-| `user_gender` | String | User gender (for notification language) |
-| `lastCelebratedLevel` | Int | Last level-up celebration shown |
-| `aiqo.dailyGoals` | Data | JSON-encoded daily step/calorie goals |
+- `ArenaWeeklyChallenge`: unique `id`, `title`, `descriptionText`, `metric`, `startDate`, `endDate`, `isActive`, `participations`.
 
----
+- `ArenaTribeParticipation`: unique `id`, `tribe`, `challenge`, `currentScore`, `rank`, `joinedAt`.
+
+- `ArenaEmirateLeaders`: unique `id`, `tribe`, `challenge`, `weekNumber`, `startDate`, `endDate`, `isDefending`.
+
+- `ArenaHallOfFameEntry`: unique `id`, `weekNumber`, `tribeName`, `challengeTitle`, `date`.
+
+- `PlayerStats`: unique `profileID`, `currentLevel`, `currentLevelXP`, `totalXP`, `totalAura`, `createdAt`, `updatedAt`.
+
+- `QuestStage`: unique `stageID`, `stageIndex`, `titleKey`, `tabTitleKey`, `sortOrder`, `createdAt`, `updatedAt`, `records`.
+
+- `QuestRecord`: unique `questID`, `stageIndex`, `questIndex`, `titleKey`, `fallbackTitle`, `questType`, `questSource`, `metricAKey`, `metricBKey`, `deepLinkAction`, `currentTier`, `metricAValue`, `metricBValue`, `lastUpdated`, `isStarted`, `startedAt`, `streakCount`, `lastCompletionDate`, `lastStreakDate`, `resetKeyDaily`, `resetKeyWeekly`, `isCompleted`, `completedAt`, `stage`.
+
+- `Reward`: unique `rewardID`, `title`, `subtitle`, `iconSystemName`, `tintHex`, `kind`, `currentValue`, `targetValue`, `isUnlocked`, `unlockedAt`, `sourceQuestID`, `stageIndex`, `isFeatured`, `displayOrder`, `createdAt`, `updatedAt`.
+
+- `SmartFridgeScannedItemRecord`: `id`, `name`, `quantity`, `unit`, `alchemyNoteKey`, `capturedAt`.
+
+- `RecordProject`: `id`, `recordID`, `recordTitle`, `recordCategory`, `targetValue`, `unit`, `currentRecordHolder`, `holderCountryFlag`, `userWeightAtStart`, `userFitnessLevelAtStart`, `userBestAtStart`, `totalWeeks`, `currentWeek`, `planJSON`, `difficulty`, `bestPerformance`, `weeklyLogs`, `status`, `startDate`, `endDate`, `lastReviewDate`, `lastReviewNotes`, `isPinnedToPlan`, `hrrPeakHR`, `hrrRecoveryHR`, `hrrLevel`.
+
+- `WeeklyLog`: `id`, `weekNumber`, `date`, `currentWeight`, `performanceThisWeek`, `userFeedback`, `captainNotes`, `adjustments`, `weekRating`, `isOnTrack`, `obstacles`, `project`.
+
+### Singleton Managers / Persistent State Stores
+
+- `AppSettingsStore` -> `aiqo.app.language`, `aiqo.notifications.enabled`.
+
+- `UserProfileStore` -> `aiqo.userProfile`, `aiqo.userAvatar`, `aiqo.user.tribePrivacyMode`.
+
+- `NotificationPreferencesStore` -> `user_gender`, `aiqo.notification.language`.
+
+- `DailyGoalsStore` pattern in `DailyGoals` -> `aiqo.dailyGoals` plus widget goal mirrors.
+
+- `MemoryStore` -> `captain_memory_enabled` and Captain SwiftData persistence.
+
+- `LevelStore` -> `aiqo.user.level`, `aiqo.user.currentXP`, `aiqo.user.totalXP`.
+
+- `StreakManager` -> `aiqo.streak.current`, `aiqo.streak.longest`, `aiqo.streak.lastActive`, `aiqo.streak.history`.
+
+- `FreeTrialManager` -> `aiqo.freeTrial.startDate` plus Keychain mirror `com.aiqo.trial/trialStartDate`.
+
+- `EntitlementStore` -> `aiqo.purchases.activeProductId`, `aiqo.purchases.expiresAt`.
+
+- `ProgressPhotoStore` -> `aiqo.progressPhotos.entries`.
+
+- `KitchenPersistenceStore` -> fridge/shopping/needs/pinned-plan keys under `aiqo.kitchen.*`.
+
+### Additional UserDefaults Keys Explicitly Visible In Code
+
+- `didSelectLanguage`
+
+- `didShowFirstAuthScreen`
+
+- `didCompleteDatingProfile`
+
+- `didCompleteLegacyCalculation`
+
+- `didCompleteFeatureIntro`
+
+- `lastCelebratedLevel`
+
+- `notificationLanguage`
+
+- `coach_language`
+
+- `push_device_token`
+
+- `aiqo.currentLevel`
+
+- `aiqo.currentLevelProgress`
+
+- `aiqo.legacyTotalPoints`
+
+- `aiqo.nutrition.calorieGoal`
+
+- `aiqo.nutrition.proteinGoal`
+
+- `aiqo.nutrition.carbGoal`
+
+- `aiqo.nutrition.fatGoal`
+
+- `aiqo.nutrition.fiberGoal`
+
+- `aiqo.quest.kitchen.hasMealPlan`
+
+- `aiqo.quest.kitchen.savedAt`
+
+- `aiqo.mining.lastDate`
+
+- `aiqo.mining.lastAwardedCoins`
+
+- `aiqo.watch.session-id`
+
+- `aiqo.watch.workout-type`
+
+- `aiqo.watch.location-type`
+
+- `aiqo.activity.lastProgress`
+
+- `aiqo.activity.lastGoalCompletedDate`
+
+- `aiqo.activity.lastAlmostThereDate`
+
+- `aiqo.activity.lastAlmostThereMilestone`
+
+- `aiqo.activity.selectedAngelTimes`
+
+- `aiqo.activity.lastScheduleDate`
+
+- `aiqo.activity.yesterdayTimes`
+
+- `aiqo.captain.lastInactivitySentAt`
+
+- `aiqo.captain.lastWaterReminderSentAt`
+
+- `aiqo.captain.lastSleepReminderSentAt`
+
+- `aiqo.ai.workout.anchor`
+
+- `aiqo.ai.workout.processed.ids`
+
+- `aiqo.morningHabit.scheduledWakeTimestamp`
+
+- `aiqo.morningHabit.notificationWakeTimestamp`
+
+- `aiqo.morningHabit.cachedInsight`
+
+- `aiqo.sleepObserver.anchorData`
+
+- `aiqo.sleepObserver.lastNotifiedSleepEnd`
+
+- `aiqo.inactivity.lastActiveDate`
+
+- `aiqo.dailyAura.history.v1`
+
+- `aiqo.legendary.activeProject`
+
+- `aiqo.tribe.preview.enabled`
+
+- `aiqo.tribe.preview.useMockData`
+
+- `aiqo.tribe.preview.plan`
+
+- `AppleLanguages`
+
+### Context Usage Patterns
+
+App shell data uses `.modelContainer(for:)` at the root plus `QuestPersistenceController.shared.container` injection in `AppRootView`.
+
+Captain-specific persistence is isolated into a separate `ModelContainer` stored in `AiQoApp` and passed into `MemoryStore.bootstrap(with:)`.
+
+Quest persistence syncs `LevelStore` defaults into SwiftData `PlayerStats`.
+
+The codebase mixes SwiftData, `UserDefaults`, local JSONL logs, local file storage, and network-backed Supabase records.
+
+### Evidence Files
+
+- `AiQo/App/AppDelegate.swift`
+
+- `AiQo/App/SceneDelegate.swift`
+
+- `AiQo/NeuralMemory.swift`
+
+- `AiQo/Core/CaptainMemory.swift`
+
+- `AiQo/Core/MemoryStore.swift`
+
+- `AiQo/Features/Captain/CaptainModels.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestSwiftDataModels.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestSwiftDataStore.swift`
+
+- `AiQo/Features/Kitchen/SmartFridgeScannedItemRecord.swift`
+
+- `AiQo/Features/LegendaryChallenges/Models/RecordProject.swift`
+
+- `AiQo/Features/LegendaryChallenges/Models/WeeklyLog.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaModels.swift`
 
 ## SECTION 8 — HealthKit Integration
 
-### Read Types (Quantity)
+### Read Types
 
-| HKQuantityTypeIdentifier | Purpose |
-|---|---|
-| `.stepCount` | Daily steps tracking |
-| `.heartRate` | Real-time heart rate |
-| `.restingHeartRate` | Resting HR baseline |
-| `.heartRateVariabilitySDNN` | HRV for recovery |
-| `.walkingHeartRateAverage` | Walking HR average |
-| `.activeEnergyBurned` | Active calories |
-| `.distanceWalkingRunning` | Distance tracking |
-| `.dietaryWater` | Water intake |
-| `.vo2Max` | Cardio fitness |
+- `stepCount`
 
-### Read Types (Category)
+- `heartRate`
 
-| HKCategoryTypeIdentifier | Purpose |
-|---|---|
-| `.sleepAnalysis` | Sleep stages (awake, core, deep, REM) |
-| `.appleStandHour` | Stand hours |
+- `restingHeartRate`
 
-### Read Types (Other)
+- `heartRateVariabilitySDNN`
 
-- `HKObjectType.workoutType()` — Workout sessions
+- `walkingHeartRateAverage`
 
-### Write Types
+- `activeEnergyBurned`
 
-| Type | Purpose |
-|---|---|
-| `.dietaryWater` | Water logging from app |
-| `.heartRate` | Watch workout HR data sync |
-| `.restingHeartRate` | Watch data sync |
-| `.heartRateVariabilitySDNN` | Watch data sync |
-| `.vo2Max` | Watch data sync |
-| `.distanceWalkingRunning` | Watch workout distance sync |
-| `workoutType()` | Workout session recording |
+- `distanceWalkingRunning`
 
-### Permission Request Strategy
+- `distanceCycling`
 
-1. `HealthKitService.permissionFlowEnabled` is set to `false` by default
-2. Enabled ONLY after ALL 5 onboarding flags are `true`
-3. Authorization requested via `store.requestAuthorization(toShare:read:)`
-4. Checks if at least one read type has `.sharingAuthorized` status
-5. Falls back gracefully if HealthKit is unavailable
+- `dietaryWater`
+
+- `vo2Max`
+
+- `sleepAnalysis`
+
+- `appleStandHour`
+
+- `workoutType`
+
+- `bodyMass`
+
+- `bodyFatPercentage`
+
+- `leanBodyMass`
+
+- `activitySummaryType`
+
+### Write Types Declared / Used
+
+- `dietaryWater`
+
+- `heartRate`
+
+- `restingHeartRate`
+
+- `heartRateVariabilitySDNN`
+
+- `vo2Max`
+
+- `distanceWalkingRunning`
+
+- `workoutType`
+
+### Permission Strategy
+
+HealthKit prompts are gated by `HealthKitService.permissionFlowEnabled` so the app does not request permission too early.
+
+The main onboarding permission moment is during legacy calculation completion and the onboarding finish routine.
+
+After onboarding, app boot re-enables HealthKit-related services, observers, summaries, and widgets.
 
 ### Privacy Rule
 
-**Raw health data (especially sleep stages) NEVER leaves the device.**
+Raw HealthKit samples stay on device in the current app architecture.
 
-- Sleep analysis is routed to LOCAL (Apple Intelligence) exclusively
-- If cloud fallback is needed for sleep, only an **aggregated text summary** is sent (not raw stage data)
-- Health metrics sent to cloud are **bucketed** (steps by 50, calories by 10)
-- The `PrivacySanitizer` enforces this at the API transport layer
+Cloud prompts use bucketed or summarized health values after `PrivacySanitizer` and `MemoryStore.buildCloudSafeContext` filtering.
 
-### HealthKit → AI Prompt Flow
+`LegacyCalculationViewController` explicitly comments that only aggregate values and computed XP/level should be saved, not raw samples.
 
-1. `CaptainContextBuilder` aggregates today's HealthKit data
-2. Data is formatted into `CaptainContextData` (steps, calories, sleepHours, heartRate, timeOfDay, bioPhase, level)
-3. `CaptainPromptBuilder.layerBioState()` injects this as "INTERNAL BIO-STATE" in the system prompt
-4. The AI uses this data for **tone calibration only** — never outputs it directly
+### Health Data Flow Into AI
 
----
+`HealthKitService.fetchTodaySummary()` produces aggregated steps, calories, stand percentage, water, sleep, and distance values.
+
+`HealthKitManager.fetchSleepStagesForLastNight()` produces structured sleep-stage sessions for Apple Intelligence sleep analysis.
+
+`HealthKitMemoryBridge` syncs weight, resting HR, average steps, active calories average, and sleep average into `MemoryStore` categories.
+
+`HistoricalHealthSyncEngine` computes legacy points from steps, calories, distance, and sleep totals, then pushes that aggregate into `LevelStore.shared.addXP(...)`.
+
+### Evidence Files
+
+- `AiQo/Services/Permissions/HealthKit/HealthKitService.swift`
+
+- `AiQo/Shared/HealthKitManager.swift`
+
+- `AiQo/Shared/HealthManager+Sleep.swift`
+
+- `AiQo/Core/HealthKitMemoryBridge.swift`
+
+- `AiQo/Features/Onboarding/HistoricalHealthSyncEngine.swift`
 
 ## SECTION 9 — Onboarding Flow
 
-### Full Screen Order
+### Current Screen Order
 
-| # | Screen | File | What It Does |
-|---|---|---|---|
-| 1 | Language Selection | `App/LanguageSelectionView.swift` | Choose Arabic or English. Sets `didSelectLanguage` |
-| 2 | Onboarding Walkthrough | `Features/Onboarding/OnboardingWalkthroughView.swift` | Explains XP/level system. Shows how levels are calculated from health history |
-| 3 | Sign in with Apple | `App/AuthFlowUI.swift` | Apple authentication via Supabase. Sets `didShowFirstAuthScreen` |
-| 4 | Profile Setup | `App/DatingScreenViewController.swift` | Collects: name, age, height, weight, goals. Sets `didCompleteDatingProfile` |
-| 5 | Health History Sync | `Features/Onboarding/HistoricalHealthSyncEngine.swift` | Reads historical HealthKit data to calculate initial level. Sets `didCompleteLegacyCalculation` |
-| 6 | Feature Introduction | `Features/Onboarding/FeatureIntroView.swift` | Showcases app features (4 pages). Sets `didCompleteFeatureIntro` |
-| 7 | Main App | `App/MainTabScreen.swift` | Lands on Home tab |
+- `LanguageSelectionView` (`AiQo/App/LanguageSelectionView.swift`).
 
-### Subscription Paywall Position
+- `LoginScreenView` / Sign in with Apple (`AiQo/App/LoginViewController.swift`).
 
-The paywall (`PremiumPaywallView`) is NOT part of the forced onboarding flow. The free trial starts automatically when the user opens the app. The paywall appears:
-- When trial expires
-- When accessing premium features
-- Via deep link `aiqo://premium`
+- `ProfileSetupView` (`AiQo/App/ProfileSetupView.swift`).
 
-### HealthKit Permission Request Position
+- `LegacyCalculationScreenView` (`AiQo/Features/First screen/LegacyCalculationViewController.swift`).
 
-HealthKit permissions are requested during Step 5 (Health History Sync) via `HistoricalHealthSyncEngine`. The `HealthKitService.permissionFlowEnabled` flag ensures no accidental permission dialogs appear before this step.
+- `FeatureIntroView` (`AiQo/Features/Onboarding/FeatureIntroView.swift`).
 
----
+- `MainTabScreen` (`AiQo/App/MainTabScreen.swift`).
 
-## SECTION 10 — Feature Modules (All 7)
+### What Each Step Collects Or Explains
 
-### 10.1 Home (القاعدة)
+Language selection collects `AppLanguage` and sets the initial layout direction baseline.
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Daily health dashboard — steps, calories, sleep, water, streak, level |
-| **Key Files** | `HomeView.swift`, `HomeViewModel.swift`, `DailyAuraView.swift`, `WaterBottleView.swift`, `SleepDetailCardView.swift`, `SmartWakeEngine.swift`, `StreakBadgeView.swift`, `SpotifyVibeCard.swift`, `AlarmSetupCardView.swift` |
-| **AI Routing** | None (data display only) |
-| **Data Models** | `AiQoDailyRecord`, `DailyAuraModels`, `MetricKind` |
-| **HealthKit Types** | Steps, calories, sleep, heart rate, water |
-| **Sub-features** | Daily Aura (animated health visualization), Water tracking (bottle fill animation), Sleep detail card, Smart Wake Calculator (optimal wake time), Streak badge, Level-up celebration, Spotify Vibe Card, DJ Captain Chat quick access |
-| **Status** | Complete |
+Login uses Sign in with Apple and Supabase token exchange.
 
-### 10.2 Gym / Peaks (الجيم)
+Profile setup collects name, username, birth date, gender, weight, height, and privacy preference.
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Workout management, exercise tracking, fitness challenges, quests |
-| **Key Files** | `GymViewController.swift`, `WorkoutSessionViewModel.swift`, `LiveWorkoutSession.swift`, `ClubRootView.swift`, `QuestEngine.swift`, `VisionCoachViewModel.swift`, `HandsFreeZone2Manager.swift` |
-| **AI Routing** | CLOUD (Gemini) — generates workoutPlan |
-| **Data Models** | `GymExercise`, `WorkoutTask`, `QuestKitModels`, `QuestSwiftDataModels`, `Challenge`, `WinRecord` |
-| **HealthKit Types** | Heart rate, active calories, distance, workout type |
-| **Status** | Complete (most advanced module) |
+Legacy calculation explains the app mission, requests HealthKit + notifications if the user taps permission CTA, performs historical sync, and computes initial level/XP.
 
-#### Gym Sub-Modules
+Feature intro presents three pages: Captain Hamoudi, workouts/challenges/Peaks, and Alchemy Kitchen.
 
-**1. Live Workout Session**
-- `WorkoutSessionViewModel.swift` — Main workout session state management
-- `LiveWorkoutSession.swift` — Real-time workout tracking
-- `WorkoutSessionScreen.swift` — Workout session UI
-- `WorkoutSessionSheetView.swift` — Workout controls sheet
-- `WorkoutLiveActivityManager.swift` — Dynamic Island + Lock Screen Live Activity
-- `LiveMetricsHeader.swift` — Real-time heart rate, calories, distance display
+### Subscription / Paywall Placement
 
-**2. Zone 2 Heart Rate Tracking**
-- `HandsFreeZone2Manager.swift` — Monitors heart rate zones during workout
-- Heart rate states: neutral, warmingUp, zone2, belowZone2, aboveZone2
-- Visual feedback via Dynamic Island color changes
-- Audio coaching cues for zone transitions
+The current onboarding state machine does not include a mandatory paywall screen.
 
-**3. Club (Training Hub)**
-- `ClubRootView.swift` — Main club navigation with segmented tabs
-- `BodyView.swift` — Body tracking and gratitude sessions
-- `PlanView.swift` — Workout plan management and creation flow
-- `ImpactContainerView.swift` — Training impact visualization
-- `ChallengesView.swift` — Challenge cards and progress
-- `GratitudeSessionView.swift` — Audio-guided gratitude meditation
-- Components: `RightSideRailView`, `SegmentedTabs`, `ClubNavigationComponents`
+Free trial start is triggered from onboarding completion logic, but the dedicated paywall UI is presented from premium/community access surfaces rather than the onboarding root sequence.
 
-**4. Quest System (QuestKit)**
-- `QuestEngine.swift` — Quest evaluation and progression engine
-- `QuestDefinitions.swift` — All quest definitions and requirements
-- `QuestKitModels.swift` — Quest data structures
-- `QuestSwiftDataModels.swift` — SwiftData persistence for quest progress
-- `QuestDataSources.swift` — Data providers for quest evaluation
-- `QuestEvaluator.swift` — Logic for checking quest completion
-- `QuestProgressStore.swift` — Progress tracking storage
-- `QuestSwiftDataStore.swift` — SwiftData store for quest state
-- Views: `QuestsView`, `QuestCard`, `QuestDetailView`, `QuestCompletionCelebration`
-- Stores: `QuestAchievementStore`, `QuestDailyStore`, `WinsStore`
+### Sign In With Apple Placement
 
-**5. Vision Coach (AI Push-up Counter)**
-- `VisionCoachViewModel.swift` — Camera-based exercise detection
-- `VisionCoachView.swift` — Camera preview with rep counter overlay
-- `VisionCoachAudioFeedback.swift` — Voice counting and encouragement
-- Uses Apple Vision framework for pose detection
-- Camera permission gate: `QuestCameraPermissionGateView`
+Sign in with Apple comes immediately after language selection whenever no active Supabase session is available.
 
-**6. Challenge System**
-- `Challenge.swift` — Challenge model with stages
-- `ChallengeStage.swift` — Progressive difficulty stages
-- `ChallengeCard.swift` — Challenge selection UI
-- `ChallengeDetailView.swift` — Full challenge details
-- `ChallengeRunView.swift` — Active challenge execution
-- `ChallengeRewardSheet.swift` — Completion rewards
+### HealthKit Permission Placement
 
-**7. Audio Coach**
-- `AudioCoachManager.swift` — Voice coaching during workouts
-- Provides real-time verbal cues for: set completion, rest periods, zone transitions
+HealthKit is requested during the legacy-calculation path and again through onboarding-finish permission orchestration if needed.
 
-**8. Watch Connectivity**
-- `WatchConnectivityService.swift` — Phone↔Watch workout sync
-- `WatchConnectionStatusButton.swift` — Connection status indicator
-- Shared codec: `WorkoutSyncCodec.swift` + `WorkoutSyncModels.swift`
+### Feature Flags / Completion Flags
 
-**9. Spin Wheel**
-- `SpinWheelView.swift` — Randomized workout selection wheel
-- `WheelTypes.swift` — Wheel segment types
-- `WorkoutTheme.swift` — Visual themes for workout types
-- `WorkoutWheelSessionViewModel.swift` — Session management
+Onboarding progression is controlled by persisted booleans rather than plist feature flags.
 
-**10. Additional**
-- `SpotifyWorkoutPlayerView.swift` — In-workout Spotify player
-- `SpotifyWebView.swift` — Spotify web fallback
-- `GuinnessEncyclopediaView.swift` — Exercise encyclopedia
-- `ExercisesView.swift` — Exercise library browser
-- `ActiveRecoveryView.swift` — Recovery session guidance
-- `PhoneWorkoutSummaryView.swift` — Post-workout summary on phone
-- `CinematicGrindCardView.swift` — Visual workout cards with cinematic effects
+- `didSelectLanguage`
 
-### 10.3 Alchemy Kitchen (مطبخ الكيمياء)
+- `didShowFirstAuthScreen`
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | AI-powered meal planning, nutrition tracking, smart fridge scanning |
-| **Key Files** | `KitchenScreen.swift`, `KitchenViewModel.swift`, `KitchenPlanGenerationService.swift`, `SmartFridgeCameraViewModel.swift`, `MealsRepository.swift`, `IngredientCatalog.swift`, `FridgeInventoryView.swift` |
-| **AI Routing** | CLOUD (Gemini) — generates mealPlan, analyzes fridge photos |
-| **Data Models** | `KitchenModels`, `Meal`, `KitchenPersistenceStore`, `MealModels` |
-| **HealthKit Types** | Calories for nutrition balance |
-| **Status** | Complete |
+- `didCompleteDatingProfile`
 
-#### Kitchen Sub-Modules
+- `didCompleteLegacyCalculation`
 
-**1. Smart Fridge Scanner**
-- `SmartFridgeScannerView.swift` — Camera UI for scanning fridge contents
-- `SmartFridgeCameraViewModel.swift` — Camera session management and image capture
-- `SmartFridgeCameraPreviewController.swift` — UIKit camera preview controller
-- `SmartFridgeScannedItemRecord.swift` — Scanned item data model
-- Photos are processed through `PrivacySanitizer.sanitizeKitchenImageData()` (strips EXIF/GPS, resizes to 1280px max, JPEG 0.78 quality) before being sent to Gemini
+- `didCompleteFeatureIntro`
 
-**2. Interactive Fridge**
-- `InteractiveFridgeView.swift` — Visual fridge with ingredient placement
-- `FridgeInventoryView.swift` — Inventory list management
-- `IngredientCatalog.swift` — Master ingredient database
-- `IngredientAssetCatalog.swift` — Image assets for ingredients
-- `IngredientAssetLibrary.swift` — Asset library management
-- `IngredientDisplayItem.swift` — Display model for ingredients
-- `IngredientKey.swift` — Unique ingredient identifiers
+### Unwired / Legacy Onboarding Code
 
-**3. Meal Planning**
-- `MealPlanView.swift` — Meal plan display and editing
-- `MealPlanGenerator.swift` — Local meal plan generation logic
-- `KitchenPlanGenerationService.swift` — AI-powered plan generation via Gemini
-- `MealSectionView.swift` — Meal type sections (breakfast, lunch, dinner)
-- `RecipeCardView.swift` — Individual recipe display cards
-- `MealIllustrationView.swift` — Visual meal illustrations
-- `MealImageSpec.swift` — Image specifications for meals
+`OnboardingWalkthroughView` exists but is not referenced by the current app flow.
 
-**4. Nutrition Tracking**
-- `NutritionTrackerView.swift` — Daily nutrition overview
-- `CompositePlateView.swift` — Visual plate composition
-- `PlateTemplate.swift` — Plate layout templates
+### Evidence Files
 
-**5. Data & Persistence**
-- `KitchenPersistenceStore.swift` — Local storage for kitchen data
-- `MealsRepository.swift` — Meal data repository pattern
-- `LocalMealsRepository.swift` — Local meal database
-- `meals_data.json` — Static meal database (6 entries with Arabic/English names, calories, meal types)
-- `KitchenLanguageRouter.swift` — Language-specific kitchen content routing
+- `AiQo/App/SceneDelegate.swift`
 
-**6. Scene & Navigation**
-- `KitchenScreen.swift` — Main kitchen screen container
-- `KitchenView.swift` — Kitchen feature layout
-- `KitchenSceneView.swift` — Kitchen scene rendering
-- `CameraView.swift` — Camera utility view
+- `AiQo/App/LanguageSelectionView.swift`
 
-### 10.4 Sleep & Spirit (النوم والروح)
+- `AiQo/App/LoginViewController.swift`
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Sleep analysis using on-device AI, spiritual whispers |
-| **Key Files** | `AppleIntelligenceSleepAgent.swift`, `SleepDetailCardView.swift`, `SleepScoreRingView.swift`, `HealthManager+Sleep.swift` |
-| **AI Routing** | LOCAL (Apple Intelligence) — raw sleep data never leaves device |
-| **Data Models** | `SleepSession`, `TodaySummary` |
-| **HealthKit Types** | `.sleepAnalysis` (all stages) |
-| **Sub-features** | Sleep score ring visualization, Sleep detail breakdown, Smart Wake Calculator, Spiritual whispers (Gemini 3 Flash Preview) |
-| **Status** | Complete |
+- `AiQo/App/ProfileSetupView.swift`
 
-### 10.5 My Vibe (ذبذباتي)
+- `AiQo/Features/First screen/LegacyCalculationViewController.swift`
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Mood tracking, energy management, music/vibe recommendations |
-| **Key Files** | `MyVibeScreen.swift`, `MyVibeViewModel.swift`, `VibeOrchestrator.swift`, `DailyVibeState.swift`, `SpotifyVibeManager.swift`, `VibeAudioEngine.swift` |
-| **AI Routing** | CLOUD (Gemini) — generates spotifyRecommendation |
-| **Data Models** | `DailyVibeState`, `SpotifyRecommendation` |
-| **HealthKit Types** | Heart rate (energy calibration) |
-| **Sub-features** | Vibe state tracking, Spotify playlist recommendations, Audio engine for ambient sounds (binaural beats: GammaFlow, SerotoninFlow, ThetaTrance, Hypnagogic state, SoundOfEnergy), Vibe control sheet |
-| **Status** | Complete |
+- `AiQo/Features/Onboarding/FeatureIntroView.swift`
 
-### 10.6 Tribe / Emara (القبيلة / الإمارة)
+- `AiQo/Features/Onboarding/OnboardingWalkthroughView.swift`
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Social fitness — create tribes, compete, leaderboards |
-| **Key Files** | `TribeScreen.swift`, `TribeStore.swift`, `TribeModuleViewModel.swift`, `GalaxyScreen.swift`, `ArenaScreen.swift`, `ArenaViewModel.swift` |
-| **AI Routing** | None (social features) |
-| **Data Models** | `TribeModels`, `TribeFeatureModels`, `ArenaModels`, `GalaxyModels`, `ArenaTribe`, `ArenaTribeMember` |
-| **HealthKit Types** | Steps, calories (for tribe challenges) |
-| **Feature Flags** | `TRIBE_FEATURE_VISIBLE: true`, `TRIBE_BACKEND_ENABLED: true`, `TRIBE_SUBSCRIPTION_GATE_ENABLED: true` |
-| **Status** | In progress (backend enabled, UI mostly complete) |
+## SECTION 10 — Feature Modules (all 7)
 
-#### Tribe Sub-Modules
+### Home
 
-**1. Core Tribe Management**
-- `TribeScreen.swift` — Main tribe navigation container
-- `TribeStore.swift` — Tribe state management (Supabase-backed)
-- `TribeModuleViewModel.swift` — Module-level view model
-- `TribeModuleModels.swift` + `TribeModuleComponents.swift` — Shared models and components
-- `TribeRepositories.swift` — Supabase data access layer
+Purpose: daily dashboard for aura, steps, calories, stand, water, sleep, distance, profile entry points, kitchen shortcut, and vibe controls.
 
-**2. Galaxy View (Visual Tribe Network)**
-- `GalaxyScreen.swift` — Galaxy view entry point
-- `GalaxyViewModel.swift` — Galaxy state and data management
-- `GalaxyStore.swift` — Galaxy state persistence
-- `GalaxyModels.swift` — Galaxy data models
-- `GalaxyCanvasView.swift` — Interactive constellation rendering
-- `ConstellationCanvasView.swift` — Star constellation visualization
-- `GalaxyHUD.swift` — Heads-up display overlay
-- `GalaxyLayout.swift` — Node positioning algorithms
-- `GalaxyNodeCard.swift` — Individual node cards
-- `GalaxyView.swift` — Galaxy container view
+AI routing: mostly none in the shell itself; Home launches Captain chat and DJ/Vibe flows rather than owning a separate model route.
 
-**3. Tribe Views**
-- `TribeHeroCard.swift` — Hero member highlight card
-- `TribeMemberRow.swift` — Member list row
-- `TribeMembersList.swift` — Full member list
-- `TribeRingView.swift` — Circular tribe visualization
-- `TribeInviteView.swift` — Invite sharing UI
-- `InviteCardView.swift` — Shareable invite card
-- `TribeEmptyState.swift` — Empty tribe state
-- `TribeTabView.swift` — Tab navigation within tribe
-- `TribeHubScreen.swift` — Central hub screen
-- `TribeLeaderboardView.swift` — Tribe leaderboard
-- `TribeAtomRingView.swift` — Atomic ring visualization
-- `TribeEnergyCoreCard.swift` — Energy core display
-- `GlobalTribeRadialView.swift` — Global tribe radial layout
-- `TribePulseScreenView.swift` — Pulse activity screen
+Key data models: `AiQoDailyRecord`, `WorkoutTask`, daily aura history in `UserDefaults`, `TodaySummary`, level/streak stores.
 
-**4. Tribe Creation & Joining**
-- `CreateTribeSheet.swift` — New tribe creation flow
-- `JoinTribeSheet.swift` — Join via invite code
-- `EditTribeNameSheet.swift` — Rename tribe
-- Max 5 members per tribe
+HealthKit use: steps, active calories, stand percent, water, sleep, distance.
 
-**5. Tribe Log**
-- `TribeLogScreen.swift` — Activity log within galaxy
-- `TribeLogView.swift` — Log display
-- `TribeLogStore.swift` — Log data persistence
+Feature flags: none specific to Home were found in plist.
 
-**6. Tribe Design**
-- `TribeDesignSystem.swift` — Tribe-specific design tokens
-- `TribeExperienceFlow.swift` — Tribe onboarding/experience flow
+Status: implemented in the current build; several cards are polished and connected to live data.
 
-### 10.7 Arena (الحلبة)
+- `AiQo/Features/Home/ActivityDataProviding.swift`
 
-| Aspect | Detail |
-|---|---|
-| **Purpose** | Competitive challenges between tribe members |
-| **Key Files** | `ArenaScreen.swift`, `ArenaViewModel.swift`, `EmaraArenaViewModel.swift`, `ArenaStore.swift`, `SupabaseArenaService.swift` |
-| **AI Routing** | None |
-| **Data Models** | `ArenaModels`, `ArenaWeeklyChallenge`, `ArenaTribeParticipation` |
-| **Status** | In progress |
+- `AiQo/Features/Home/AlarmSetupCardView.swift`
 
-#### Arena Sub-Modules
+- `AiQo/Features/Home/DJCaptainChatView.swift`
 
-**1. Arena Core**
-- `ArenaScreen.swift` — Main arena view
-- `ArenaViewModel.swift` — Arena state management
-- `EmaraArenaViewModel.swift` — Emirate-level arena logic
-- `ArenaStore.swift` — Arena data persistence
-- `ArenaModels.swift` — Arena data structures
-- `ArenaTabView.swift` — Tab navigation within arena
+- `AiQo/Features/Home/DailyAuraModels.swift`
 
-**2. Challenge System**
-- `ArenaQuickChallengesView.swift` — Quick challenge selection
-- `ArenaChallengeDetailView.swift` — Full challenge detail
-- `ArenaChallengeHistoryView.swift` — Past challenges
-- `WeeklyChallengeCard.swift` — Weekly challenge display
-- `CountdownTimerView.swift` — Challenge countdown
+- `AiQo/Features/Home/DailyAuraPathData.swift`
 
-**3. Leaderboards**
-- `BattleLeaderboard.swift` — Main leaderboard view
-- `BattleLeaderboardRow.swift` — Individual leaderboard entry
-- `EmirateLeadersBanner.swift` — Top leaders banner
+- `AiQo/Features/Home/DailyAuraView.swift`
 
-**4. Hall of Fame**
-- `HallOfFameSection.swift` — Hall of fame section
-- `HallOfFameFullView.swift` — Full hall of fame view
+- `AiQo/Features/Home/DailyAuraViewModel.swift`
 
-**5. Arena Backend**
-- `SupabaseArenaService.swift` — Supabase operations for arena
-- `TribeArenaView.swift` — Tribe-specific arena view
-- `MockArenaData.swift` — Preview/test data
+- `AiQo/Features/Home/HealthKitService+Water.swift`
 
----
+- `AiQo/Features/Home/HomeStatCard.swift`
+
+- `AiQo/Features/Home/HomeView.swift`
+
+- `AiQo/Features/Home/HomeViewModel.swift`
+
+- `AiQo/Features/Home/LevelUpCelebrationView.swift`
+
+- `AiQo/Features/Home/MetricKind.swift`
+
+- `AiQo/Features/Home/SleepDetailCardView.swift`
+
+- `AiQo/Features/Home/SleepScoreRingView.swift`
+
+- `AiQo/Features/Home/SmartWakeCalculatorView.swift`
+
+- `AiQo/Features/Home/SmartWakeEngine.swift`
+
+- `AiQo/Features/Home/SmartWakeViewModel.swift`
+
+- `AiQo/Features/Home/SpotifyVibeCard.swift`
+
+- `AiQo/Features/Home/StreakBadgeView.swift`
+
+- `AiQo/Features/Home/VibeControlSheet.swift`
+
+- `AiQo/Features/Home/WaterBottleView.swift`
+
+- `AiQo/Features/Home/WaterDetailSheetView.swift`
+
+### Gym / Peaks
+
+Purpose: workouts, QuestKit progression, Club flows, watch-connected live sessions, recovery, rewards, cinematic grind, and workout summaries.
+
+AI routing: cloud for `gym` / `peaks`, with local voice/on-device helpers in some workout contexts.
+
+Key data models: Quest SwiftData models, workout session models, reward catalogs, legacy XP, live activity state.
+
+HealthKit use: workouts, HR, calories, distance, sleep-linked quests, activity percent, zone minutes.
+
+Feature flags: no dedicated plist flags; several comments mark V2/post-launch hooks.
+
+Status: broadest module in the repo; core features are implemented, but some subfeatures remain mixed between shipping and post-launch placeholders.
+
+Quest inventory from `QuestDefinitions.swift`:
+
+- stage `1` quest `1` id `s1q1` title `شرارة الخير (مكافأة)` type `oneTime` source `manual`
+
+- stage `1` quest `2` id `s1q2` title `نبع الماء (يومي)` type `daily` source `water`
+
+- stage `1` quest `3` id `s1q3` title `عرش التعافي (يومي)` type `daily` source `healthkit`
+
+- stage `1` quest `4` id `s1q4` title `نبض زون 2 (تراكمي)` type `cumulative` source `workout`
+
+- stage `1` quest `5` id `s1q5` title `تأسيس المطبخ` type `oneTime` source `kitchen`
+
+- stage `2` quest `1` id `s2q1` title `دقة آلة الرؤية (كاميرا)` type `oneTime` source `camera`
+
+- stage `2` quest `2` id `s2q2` title `الحركة في يوم واحد` type `daily` source `healthkit`
+
+- stage `2` quest `3` id `s2q3` title `سلم البلانك` type `cumulative` source `timer`
+
+- stage `2` quest `4` id `s2q4` title `جلسة امتنان` type `daily` source `timer`
+
+- stage `2` quest `5` id `s2q5` title `سلسلة الوقود` type `streak` source `water`
+
+- stage `3` quest `1` id `s3q1` title `نسبة هدف الحركة` type `daily` source `healthkit`
+
+- stage `3` quest `2` id `s3q2` title `بناء الضغط` type `cumulative` source `manual`
+
+- stage `3` quest `3` id `s3q3` title `حارس زون 2` type `cumulative` source `workout`
+
+- stage `3` quest `4` id `s3q4` title `سلسلة التعافي` type `streak` source `healthkit`
+
+- stage `3` quest `5` id `s3q5` title `ساعد شخصين (مكافأة)` type `weekly` source `manual`
+
+- stage `4` quest `1` id `s4q1` title `الخطوات` type `daily` source `healthkit`
+
+- stage `4` quest `2` id `s4q2` title `سلم البلانك` type `cumulative` source `timer`
+
+- stage `4` quest `3` id `s4q3` title `ضغط بالرؤية (كاميرا)` type `oneTime` source `camera`
+
+- stage `4` quest `4` id `s4q4` title `نسبة هدف الحركة` type `daily` source `healthkit`
+
+- stage `4` quest `5` id `s4q5` title `سلسلة الماء` type `streak` source `water`
+
+- stage `5` quest `1` id `s5q1` title `سلسلة زون 2` type `streak` source `workout`
+
+- stage `5` quest `2` id `s5q2` title `بناء الضغط` type `cumulative` source `manual`
+
+- stage `5` quest `3` id `s5q3` title `سلسلة الخطوات` type `streak` source `healthkit`
+
+- stage `5` quest `4` id `s5q4` title `جلسة صفاء` type `daily` source `timer`
+
+- stage `5` quest `5` id `s5q5` title `ساعد 3 غرباء (مكافأة)` type `weekly` source `manual`
+
+- stage `6` quest `1` id `s6q1` title `دقة الرؤية المطلقة (كاميرا)` type `oneTime` source `camera`
+
+- stage `6` quest `2` id `s6q2` title `مسافة ممتدة` type `daily` source `healthkit`
+
+- stage `6` quest `3` id `s6q3` title `سلسلة الحركة` type `streak` source `healthkit`
+
+- stage `6` quest `4` id `s6q4` title `بلانك` type `cumulative` source `timer`
+
+- stage `6` quest `5` id `s6q5` title `سلسلة النوم` type `streak` source `healthkit`
+
+- stage `7` quest `1` id `s7q1` title `نبض القبيلة (الساحة)` type `cumulative` source `social`
+
+- stage `7` quest `2` id `s7q2` title `زون 2 العظيم` type `cumulative` source `workout`
+
+- stage `7` quest `3` id `s7q3` title `الخطوات` type `daily` source `healthkit`
+
+- stage `7` quest `4` id `s7q4` title `سلسلة الماء` type `streak` source `water`
+
+- stage `7` quest `5` id `s7q5` title `مشاركة إنجاز داخل التطبيق (مكافأة)` type `oneTime` source `share`
+
+- stage `8` quest `1` id `s8q1` title `الخطوات` type `daily` source `healthkit`
+
+- stage `8` quest `2` id `s8q2` title `بناء الضغط` type `cumulative` source `manual`
+
+- stage `8` quest `3` id `s8q3` title `الرؤية المثالية (كاميرا)` type `oneTime` source `camera`
+
+- stage `8` quest `4` id `s8q4` title `سلسلة الحركة` type `streak` source `healthkit`
+
+- stage `8` quest `5` id `s8q5` title `سلسلة الامتنان` type `streak` source `timer`
+
+- stage `9` quest `1` id `s9q1` title `الحركة في يوم واحد` type `daily` source `healthkit`
+
+- stage `9` quest `2` id `s9q2` title `بلانك` type `cumulative` source `timer`
+
+- stage `9` quest `3` id `s9q3` title `الساحة المتقدمة` type `cumulative` source `social`
+
+- stage `9` quest `4` id `s9q4` title `سلسلة الخطوات` type `streak` source `healthkit`
+
+- stage `9` quest `5` id `s9q5` title `أثر حقيقي: ساعد 5 غرباء (مكافأة)` type `oneTime` source `manual`
+
+- stage `10` quest `1` id `s10q1` title `أسبوع المحارب` type `weekly` source `healthkit`
+
+- stage `10` quest `2` id `s10q2` title `دقة الرؤية الأسطورية (كاميرا)` type `oneTime` source `camera`
+
+- stage `10` quest `3` id `s10q3` title `سلسلة التعافي المركبة` type `combo` source `healthkit`
+
+- stage `10` quest `4` id `s10q4` title `قلب الأسد (كارديو)` type `cumulative` source `workout`
+
+- stage `10` quest `5` id `s10q5` title `مشاركة \` type `oneTime` source `share`
+
+Key Gym/Peaks files:
+
+- `AiQo/Features/Gym/ActiveRecoveryView.swift`
+
+- `AiQo/Features/Gym/AudioCoachManager.swift`
+
+- `AiQo/Features/Gym/CinematicGrindCardView.swift`
+
+- `AiQo/Features/Gym/CinematicGrindViews.swift`
+
+- `AiQo/Features/Gym/Club/Body/BodyView.swift`
+
+- `AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift`
+
+- `AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift`
+
+- `AiQo/Features/Gym/Club/Body/WorkoutCategoriesView.swift`
+
+- `AiQo/Features/Gym/Club/Challenges/ChallengesView.swift`
+
+- `AiQo/Features/Gym/Club/ClubRootView.swift`
+
+- `AiQo/Features/Gym/Club/Components/ClubNavigationComponents.swift`
+
+- `AiQo/Features/Gym/Club/Components/RailScrollOffsetPreferenceKey.swift`
+
+- `AiQo/Features/Gym/Club/Components/RightSideRailView.swift`
+
+- `AiQo/Features/Gym/Club/Components/RightSideVerticalRail.swift`
+
+- `AiQo/Features/Gym/Club/Components/SegmentedTabs.swift`
+
+- `AiQo/Features/Gym/Club/Components/SlimRightSideRail.swift`
+
+- `AiQo/Features/Gym/Club/Impact/ImpactAchievementsView.swift`
+
+- `AiQo/Features/Gym/Club/Impact/ImpactContainerView.swift`
+
+- `AiQo/Features/Gym/Club/Impact/ImpactSummaryView.swift`
+
+- `AiQo/Features/Gym/Club/Plan/PlanView.swift`
+
+- `AiQo/Features/Gym/Club/Plan/WorkoutPlanFlowViews.swift`
+
+- `AiQo/Features/Gym/ExercisesView.swift`
+
+- `AiQo/Features/Gym/GuinnessEncyclopediaView.swift`
+
+- `AiQo/Features/Gym/GymViewController.swift`
+
+- `AiQo/Features/Gym/HandsFreeZone2Manager.swift`
+
+- `AiQo/Features/Gym/HeartView.swift`
+
+- `AiQo/Features/Gym/L10n.swift`
+
+- `AiQo/Features/Gym/LiveMetricsHeader.swift`
+
+- `AiQo/Features/Gym/LiveWorkoutSession.swift`
+
+- `AiQo/Features/Gym/Models/GymExercise.swift`
+
+- `AiQo/Features/Gym/MyPlanViewController.swift`
+
+- `AiQo/Features/Gym/OriginalWorkoutCardView.swift`
+
+- `AiQo/Features/Gym/PhoneWorkoutSummaryView.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestDataSources.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestDefinitions.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestEngine.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestEvaluator.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestFormatting.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestKitModels.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestProgressStore.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestSwiftDataModels.swift`
+
+- `AiQo/Features/Gym/QuestKit/QuestSwiftDataStore.swift`
+
+- `AiQo/Features/Gym/QuestKit/Views/QuestCameraPermissionGateView.swift`
+
+- `AiQo/Features/Gym/QuestKit/Views/QuestDebugView.swift`
+
+- `AiQo/Features/Gym/QuestKit/Views/QuestPushupChallengeView.swift`
+
+- `AiQo/Features/Gym/Quests/Models/Challenge.swift`
+
+- `AiQo/Features/Gym/Quests/Models/ChallengeStage.swift`
+
+- `AiQo/Features/Gym/Quests/Models/HelpStrangersModels.swift`
+
+- `AiQo/Features/Gym/Quests/Models/WinRecord.swift`
+
+- `AiQo/Features/Gym/Quests/Store/QuestAchievementStore.swift`
+
+- `AiQo/Features/Gym/Quests/Store/QuestDailyStore.swift`
+
+- `AiQo/Features/Gym/Quests/Store/WinsStore.swift`
+
+- `AiQo/Features/Gym/Quests/Views/ChallengeCard.swift`
+
+- `AiQo/Features/Gym/Quests/Views/ChallengeDetailView.swift`
+
+- `AiQo/Features/Gym/Quests/Views/ChallengeRewardSheet.swift`
+
+- `AiQo/Features/Gym/Quests/Views/ChallengeRunView.swift`
+
+- `AiQo/Features/Gym/Quests/Views/HelpStrangersBottomSheet.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestCard.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestCompletionCelebration.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestDetailSheet.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestDetailView.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestWinsGridView.swift`
+
+- `AiQo/Features/Gym/Quests/Views/QuestsView.swift`
+
+- `AiQo/Features/Gym/Quests/Views/StageSelectorBar.swift`
+
+- `AiQo/Features/Gym/Quests/VisionCoach/VisionCoachAudioFeedback.swift`
+
+- `AiQo/Features/Gym/Quests/VisionCoach/VisionCoachView.swift`
+
+- `AiQo/Features/Gym/Quests/VisionCoach/VisionCoachViewModel.swift`
+
+- `AiQo/Features/Gym/RecapViewController.swift`
+
+- `AiQo/Features/Gym/RewardsViewController.swift`
+
+- `AiQo/Features/Gym/ShimmeringPlaceholder.swift`
+
+- `AiQo/Features/Gym/SoftGlassCardView.swift`
+
+- `AiQo/Features/Gym/SpotifyWebView.swift`
+
+- `AiQo/Features/Gym/SpotifyWorkoutPlayerView.swift`
+
+- `AiQo/Features/Gym/T/SpinWheelView.swift`
+
+- `AiQo/Features/Gym/T/WheelTypes.swift`
+
+- `AiQo/Features/Gym/T/WorkoutTheme.swift`
+
+- `AiQo/Features/Gym/T/WorkoutWheelSessionViewModel.swift`
+
+- `AiQo/Features/Gym/WatchConnectionStatusButton.swift`
+
+- `AiQo/Features/Gym/WatchConnectivityService.swift`
+
+- `AiQo/Features/Gym/WinsViewController.swift`
+
+- `AiQo/Features/Gym/WorkoutLiveActivityManager.swift`
+
+- `AiQo/Features/Gym/WorkoutSessionScreen.swift.swift`
+
+- `AiQo/Features/Gym/WorkoutSessionSheetView.swift`
+
+- `AiQo/Features/Gym/WorkoutSessionViewModel.swift`
+
+### Alchemy Kitchen
+
+Purpose: fridge scan, ingredient inventory, meal planning, nutrition tracking, and Captain-guided “what can I cook?” flows.
+
+AI routing: cloud for Arabic kitchen reasoning; mixed cloud/on-device routing in `KitchenPlanGenerationService` depending on language and code path.
+
+Key data models: `SmartFridgeScannedItemRecord`, `Meal`, `KitchenModels`, `KitchenPersistenceStore` values, `meals_data.json`.
+
+HealthKit use: indirect; nutrition/water tie-ins exist, but kitchen is not a primary HealthKit writer beyond shared wellness loops.
+
+Feature flags: none found specific to kitchen.
+
+Status: implemented with working views and persistence; some V2 comments remain.
+
+- `AiQo/Features/Kitchen/CameraView.swift`
+
+- `AiQo/Features/Kitchen/CompositePlateView.swift`
+
+- `AiQo/Features/Kitchen/FridgeInventoryView.swift`
+
+- `AiQo/Features/Kitchen/IngredientAssetCatalog.swift`
+
+- `AiQo/Features/Kitchen/IngredientAssetLibrary.swift`
+
+- `AiQo/Features/Kitchen/IngredientCatalog.swift`
+
+- `AiQo/Features/Kitchen/IngredientDisplayItem.swift`
+
+- `AiQo/Features/Kitchen/IngredientKey.swift`
+
+- `AiQo/Features/Kitchen/InteractiveFridgeView.swift`
+
+- `AiQo/Features/Kitchen/KitchenLanguageRouter.swift`
+
+- `AiQo/Features/Kitchen/KitchenModels.swift`
+
+- `AiQo/Features/Kitchen/KitchenPersistenceStore.swift`
+
+- `AiQo/Features/Kitchen/KitchenPlanGenerationService.swift`
+
+- `AiQo/Features/Kitchen/KitchenSceneView.swift`
+
+- `AiQo/Features/Kitchen/KitchenScreen.swift`
+
+- `AiQo/Features/Kitchen/KitchenView.swift`
+
+- `AiQo/Features/Kitchen/KitchenViewModel.swift`
+
+- `AiQo/Features/Kitchen/LocalMealsRepository.swift`
+
+- `AiQo/Features/Kitchen/Meal.swift`
+
+- `AiQo/Features/Kitchen/MealIllustrationView.swift`
+
+- `AiQo/Features/Kitchen/MealImageSpec.swift`
+
+- `AiQo/Features/Kitchen/MealPlanGenerator.swift`
+
+- `AiQo/Features/Kitchen/MealPlanView.swift`
+
+- `AiQo/Features/Kitchen/MealSectionView.swift`
+
+- `AiQo/Features/Kitchen/MealsRepository.swift`
+
+- `AiQo/Features/Kitchen/NutritionTrackerView.swift`
+
+- `AiQo/Features/Kitchen/PlateTemplate.swift`
+
+- `AiQo/Features/Kitchen/RecipeCardView.swift`
+
+- `AiQo/Features/Kitchen/SmartFridgeCameraPreviewController.swift`
+
+- `AiQo/Features/Kitchen/SmartFridgeCameraViewModel.swift`
+
+- `AiQo/Features/Kitchen/SmartFridgeScannedItemRecord.swift`
+
+- `AiQo/Features/Kitchen/SmartFridgeScannerView.swift`
+
+- `AiQo/Features/Kitchen/meals_data.json`
+
+### Sleep & Spirit
+
+Purpose: sleep review, smart wake, sleep-stage interpretation, spiritual whispers, morning wake/habit nudges, and sleep session observations.
+
+AI routing: local-first for `sleepAnalysis`; cloud fallback exists; notification intelligence also uses Gemini-backed text generation.
+
+Key files:
+
+- `AiQo/Features/Captain/AppleIntelligenceSleepAgent.swift`
+
+- `AiQo/Features/Captain/LocalBrainService.swift`
+
+- `AiQo/Features/Home/SleepDetailCardView.swift`
+
+- `AiQo/Features/Home/SleepScoreRingView.swift`
+
+- `AiQo/Features/Home/SmartWakeCalculatorView.swift`
+
+- `AiQo/Features/Home/SmartWakeEngine.swift`
+
+- `AiQo/Features/Home/SmartWakeViewModel.swift`
+
+- `AiQo/Shared/HealthManager+Sleep.swift`
+
+- `AiQo/Services/Notifications/MorningHabitOrchestrator.swift`
+
+- `AiQo/Services/Notifications/SleepSessionObserver.swift`
+
+- `AiQo/Services/Notifications/NotificationIntelligenceManager.swift`
+
+Key data models: `SleepSession`, `TodaySummary`, sleep history aggregates, notification cached-insight values.
+
+HealthKit use: `sleepAnalysis`, plus bedtime history and last-night stages.
+
+Feature flags: none found; the feature is distributed rather than gated.
+
+Status: implemented as a distributed subsystem rather than a standalone folder.
+
+### My Vibe
+
+Purpose: DJ Hamoudi mood state, audio frequencies, Spotify vibe playback, and vibe timeline control.
+
+AI routing: cloud for `myVibe` in Captain context; local audio/state orchestration for actual playback experience.
+
+Key data models: `DailyVibeState`, `SpotifyRecommendation`, `VibeOrchestrator` state.
+
+HealthKit use: indirect; vibe state follows day part and wellness context but is not a direct HealthKit module.
+
+Feature flags: none found specific to My Vibe.
+
+Status: implemented in the current build with both local audio and Spotify integration paths.
+
+- `AiQo/Features/MyVibe/DailyVibeState.swift`
+
+- `AiQo/Features/MyVibe/MyVibeScreen.swift`
+
+- `AiQo/Features/MyVibe/MyVibeSubviews.swift`
+
+- `AiQo/Features/MyVibe/MyVibeViewModel.swift`
+
+- `AiQo/Features/MyVibe/VibeOrchestrator.swift`
+
+### Tribe / Emara
+
+Purpose: social accountability, leaderboard overlays, tribe creation/joining, previews, premium community positioning, and global `Emara` leaderboards.
+
+AI routing: none primary; social surfaces are backend/data driven.
+
+Key data models: `ArenaTribe*` models, tribe preview/store models, profile visibility overlays.
+
+HealthKit use: indirect through synced level/points and challenge metrics, not raw health samples.
+
+Feature flags: `TRIBE_BACKEND_ENABLED`, `TRIBE_FEATURE_VISIBLE`, `TRIBE_SUBSCRIPTION_GATE_ENABLED`.
+
+Status: mixed. Live leaderboard/profile sync exists, but multiple screens still describe themselves as preview/local-only placeholders.
+
+- `AiQo/Features/Tribe/TribeDesignSystem.swift`
+
+- `AiQo/Features/Tribe/TribeExperienceFlow.swift`
+
+- `AiQo/Features/Tribe/TribeView.swift`
+
+### Arena
+
+Purpose: challenge graph, hall of fame, tribe participation, weekly challenge lifecycle, and global ranking visuals.
+
+AI routing: none direct in Arena views; backend and persistence driven.
+
+Key data models: `ArenaTribe`, `ArenaTribeMember`, `ArenaWeeklyChallenge`, `ArenaTribeParticipation`, `ArenaEmirateLeaders`, `ArenaHallOfFameEntry`.
+
+HealthKit use: challenge metrics are derived from synced points/progress rather than direct raw samples.
+
+Feature flags: inherits the tribe feature flags.
+
+Status: partially live, partially preview. The service and models are real, but several Galaxy/Arena views still carry “Supabase hook” or placeholder comments.
+
+- `AiQo/Tribe/Galaxy/ArenaChallengeDetailView.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaChallengeHistoryView.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaModels.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaQuickChallengesView.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaScreen.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaTabView.swift`
+
+- `AiQo/Tribe/Galaxy/ArenaViewModel.swift`
+
+- `AiQo/Tribe/Galaxy/BattleLeaderboard.swift`
+
+- `AiQo/Tribe/Galaxy/BattleLeaderboardRow.swift`
+
+- `AiQo/Tribe/Galaxy/ConstellationCanvasView.swift`
+
+- `AiQo/Tribe/Galaxy/CountdownTimerView.swift`
+
+- `AiQo/Tribe/Galaxy/CreateTribeSheet.swift`
+
+- `AiQo/Tribe/Galaxy/EditTribeNameSheet.swift`
+
+- `AiQo/Tribe/Galaxy/EmaraArenaViewModel.swift`
+
+- `AiQo/Tribe/Galaxy/EmirateLeadersBanner.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyCanvasView.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyHUD.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyLayout.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyModels.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyNodeCard.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyScreen.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyView.swift`
+
+- `AiQo/Tribe/Galaxy/GalaxyViewModel.swift`
+
+- `AiQo/Tribe/Galaxy/HallOfFameFullView.swift`
+
+- `AiQo/Tribe/Galaxy/HallOfFameSection.swift`
+
+- `AiQo/Tribe/Galaxy/InviteCardView.swift`
+
+- `AiQo/Tribe/Galaxy/JoinTribeSheet.swift`
+
+- `AiQo/Tribe/Galaxy/MockArenaData.swift`
+
+- `AiQo/Tribe/Galaxy/TribeEmptyState.swift`
+
+- `AiQo/Tribe/Galaxy/TribeHeroCard.swift`
+
+- `AiQo/Tribe/Galaxy/TribeInviteView.swift`
+
+- `AiQo/Tribe/Galaxy/TribeLogScreen.swift`
+
+- `AiQo/Tribe/Galaxy/TribeMemberRow.swift`
+
+- `AiQo/Tribe/Galaxy/TribeMembersList.swift`
+
+- `AiQo/Tribe/Galaxy/TribeRingView.swift`
+
+- `AiQo/Tribe/Galaxy/TribeTabView.swift`
+
+- `AiQo/Tribe/Galaxy/WeeklyChallengeCard.swift`
 
 ## SECTION 11 — Gamification System
 
-### XP Engine
+### XP / Score Sources
 
-**Files:** `XPCalculator.swift`, `LevelStore.swift`
+There is no single `XPEngine.swift` file in the live tree.
 
-#### XP Earning Triggers
+XP and score logic is currently split across multiple systems.
 
-| Trigger | XP Formula |
-|---|---|
-| **Workout completion** | `truthNumber (calories + minutes) + luckyNumber (heartbeat digit sum)` |
-| **Coin mining** | `steps/100 + calories/50 + (intensity bonus: minutes*2 if avgHR > 115)` |
-| **Quest completion** | Defined per quest in `QuestDefinitions` |
-| **Legendary project milestones** | Defined per project |
-| **Streak days** | Via `StreakManager` triggering XP additions |
+Workout-session XP comes from `XPCalculator.calculateSessionStats(...)`, which computes `truthNumber = calories + durationMinutes`, `luckyNumber = sum(heartbeatDigits)`, then `totalXP = truthNumber + luckyNumber`.
 
-#### XP Calculation (Workout)
+Coin mining comes from `XPCalculator.calculateCoins(...)`: `steps / 100`, plus `activeCalories / 50`, plus `durationMinutes * 2` turbo bonus when average HR is above `115` BPM.
 
-```swift
-static func calculateSessionStats(samples:duration:averageHeartRate:activeCalories:) -> XPResult {
-    let truthNumber = calories + minutes
-    let totalHeartbeats = sum(bpm * segmentDuration for each HR sample)
-    let luckyNumber = sum(digits of totalHeartbeats)
-    let totalXP = truthNumber + luckyNumber
-}
-```
+Historical onboarding XP comes from `steps / 200 + calories / 25 + distance * 10 + sleep * 5`.
+
+`LevelStore.addXP(_:)` is the central modern level accumulator and syncs total points/level to Supabase profiles.
+
+QuestKit uses its own progress/reward tracks alongside the shared `LevelStore` stats mirror.
 
 ### Level System
 
-**File:** `AiQo/Core/Models/LevelStore.swift`
+Modern level curve formula in `LevelStore`: `baseXP = 1000`, `multiplier = 1.2`.
 
-| Setting | Value |
-|---|---|
-| **Base XP** | 1,000 |
-| **Multiplier** | 1.2x per level |
-| **XP for level N** | `1000 * 1.2^(N-1)` |
-| **Max level** | No hard cap (shields go to Legendary at 35+) |
+- level `1` requires `1000` XP for the next-level threshold calculation
 
-**Persistence:** UserDefaults keys `aiqo.user.level`, `aiqo.user.currentXP`, `aiqo.user.totalXP`
+- level `2` requires `1200` XP for the next-level threshold calculation
 
-**Sync:** Level and totalXP are synced to Supabase via `SupabaseArenaService.shared.syncUserStats()`
+- level `3` requires `1440` XP for the next-level threshold calculation
 
-### Shield Tiers (Visual Level Indicators)
+- level `4` requires `1727` XP for the next-level threshold calculation
 
-| Level Range | Shield Tier | Color |
-|---|---|---|
-| 1–4 | Wood | `#8B4513` |
-| 5–9 | Bronze | `#CD7F32` |
-| 10–14 | Silver | `#C0C0C0` |
-| 15–19 | Gold | `#FFD700` |
-| 20–24 | Platinum | `#E5E4E2` |
-| 25–29 | Diamond | `#B9F2FF` |
-| 30–34 | Obsidian | `#3D3D3D` |
-| 35+ | Legendary | `#FF6B6B` |
+- level `5` requires `2073` XP for the next-level threshold calculation
+
+- level `6` requires `2488` XP for the next-level threshold calculation
+
+- level `7` requires `2985` XP for the next-level threshold calculation
+
+- level `8` requires `3583` XP for the next-level threshold calculation
+
+- level `9` requires `4299` XP for the next-level threshold calculation
+
+- level `10` requires `5159` XP for the next-level threshold calculation
+
+- level `11` requires `6191` XP for the next-level threshold calculation
+
+- level `12` requires `7430` XP for the next-level threshold calculation
+
+- level `13` requires `8916` XP for the next-level threshold calculation
+
+- level `14` requires `10699` XP for the next-level threshold calculation
+
+- level `15` requires `12839` XP for the next-level threshold calculation
+
+Shield tiers: `wood` (levels 1-4), `bronze` (5-9), `silver` (10-14), `gold` (15-19), `platinum` (20-24), `diamond` (25-29), `obsidian` (30-34), `legendary` (35+).
+
+Legacy Arabic level titles still exist in onboarding/legacy calculation UI:
+
+- `البداية`
+
+- `المتحرّك`
+
+- `النشيط`
+
+- `المنضبط`
+
+- `القوي`
+
+- `المحارب`
+
+- `البطل`
+
+- `الأسطورة الرياضية`
+
+- `الخارق`
+
+- `الأسطورة الحيّة`
 
 ### Streak System
 
-**File:** `AiQo/Core/StreakManager.swift`
+`StreakManager` tracks `currentStreak`, `longestStreak`, `lastActiveDate`, and date history.
 
-**Trigger Conditions:** User achieves daily goal (5000+ steps OR 1 workout OR 30+ minutes activity)
+The streak only increments when app code explicitly marks today as active; it is not a passive automatic HealthKit streak engine.
 
-| Property | Description |
-|---|---|
-| `currentStreak` | Consecutive days meeting goal |
-| `longestStreak` | All-time record |
-| `lastActiveDate` | Last day goal was met |
-| `todayCompleted` | Whether today's goal is met |
-| `recentHistory` | Last 30 active days |
-| `weeklyConsistency` | 7-day completion percentage |
+Color tiers in `StreakBadgeView`: sand for small streaks, orange for `>= 7`, purple for `>= 30`.
 
-**Persistence:** UserDefaults with prefix `aiqo.streak.*`
+Motivation messages change over these brackets: `0`, `1`, `2...3`, `4...6`, `7...13`, `14...29`, `30...59`, `60...89`, `90...364`, `365+`.
 
-**Continuity Check:** Runs on app launch. If `lastActiveDate` is not yesterday, streak resets to 0.
+### Badge / Achievement System
 
-### Badge System
+Current shipped achievement catalog is JSON-driven in `AiQo/Resources/Specs/achievements_spec.json`.
 
-**File:** `AiQo/Resources/Specs/achievements_spec.json`
+- `badge_first_steps` -> `FIRST_HEALTH_SYNC` -> 10 points.
 
-Three achievement tiers:
+- `badge_steps_10k` -> `STEPS_DAY_10000` -> 15 points.
 
-| Type | Points | Examples |
-|---|---|---|
-| **Badge** | 10 | `badge_first_steps` (First HealthKit sync), `badge_steps_10k` (10K steps in a day) |
-| **Shield** | 40-60 | `shield_streak_7_steps` (7-day streak) |
-| **Belt** | 120-200 | `belt_month_champion` (Top scorer in tribe for a month) |
+- `shield_streak_7_steps` -> `STEPS_STREAK_7` -> 60 points.
 
-Badge unlock rules are keyed by `rule_key` values like `FIRST_HEALTH_SYNC`, `STEPS_DAY_10000`, `STEPS_STREAK_7`, `TRIBE_MONTH_CHAMPION`.
+- `belt_month_champion` -> `TRIBE_MONTH_CHAMPION` -> 200 points.
+
+Quest reward seeds in SwiftData include IDs such as `reward.streak.7day`, `reward.heart.hero`, `reward.step.master`, `reward.gratitude.mode`, and `reward.weekly.chest`.
 
 ### Legendary Projects
 
-**Files:** `Features/LegendaryChallenges/Models/LegendaryProject.swift`, `RecordProject.swift`, `WeeklyLog.swift`
+Long-horizon challenge persistence is represented by `RecordProject` + `WeeklyLog`.
 
-- Long-duration personal record challenges (e.g., push-up records)
-- `RecordProject` is a SwiftData `@Model` stored in the Captain Memory container
-- `WeeklyLog` tracks weekly progress entries
-- `LegendaryChallengesViewModel` manages the challenge lifecycle
-- `RecordProjectManager` handles persistence via SwiftData
-- UI includes: `ProjectView`, `RecordDetailView`, `WeeklyReviewView`, `FitnessAssessmentView`
+A project stores target value, unit, difficulty, baseline stats, current/best performance, total weeks, current week, HRR markers, plan JSON, and weekly review notes.
 
----
+Weekly logs store weekly weight, performance, feedback, Captain notes, adjustments, rating, on-track status, and obstacles.
+
+A separate older `LegendaryChallengesViewModel` still uses `UserDefaults` (`aiqo.legendary.activeProject`), which signals an in-progress migration toward the SwiftData manager.
+
+### Evidence Files
+
+- `AiQo/Core/Models/LevelStore.swift`
+
+- `AiQo/Core/StreakManager.swift`
+
+- `AiQo/XPCalculator.swift`
+
+- `AiQo/Features/Home/StreakBadgeView.swift`
+
+- `AiQo/Features/Onboarding/HistoricalHealthSyncEngine.swift`
+
+- `AiQo/Resources/Specs/achievements_spec.json`
+
+- `AiQo/Features/LegendaryChallenges/Models/RecordProject.swift`
+
+- `AiQo/Features/LegendaryChallenges/Models/WeeklyLog.swift`
 
 ## SECTION 12 — Monetization & StoreKit 2
 
 ### Free Trial
 
-**File:** `AiQo/Premium/FreeTrialManager.swift`
+Free trial duration is `7` days.
 
-| Setting | Value |
-|---|---|
-| **Duration** | 7 days |
-| **Start trigger** | First app open (automatic) |
-| **Persistence** | UserDefaults + Keychain (survives reinstall) |
-| **What unlocks** | All premium features during trial |
-| **After expiry** | Paywall shown for premium features |
+Trial state is persisted to both `UserDefaults` and Keychain so reinstalls do not reset the trial.
 
-**States:** `.notStarted` → `.active(daysRemaining: Int)` → `.expired`
+The onboarding finish flow starts the trial automatically; premium paywall can also explicitly start it if unused.
 
-#### Trial Persistence Strategy
-
-The trial start date is stored in TWO locations for anti-abuse:
-
-1. **UserDefaults** (`aiqo.freeTrial.startDate`) — Fast access, lost on reinstall
-2. **Keychain** (`com.aiqo.trial / trialStartDate`) — Persists across reinstalls
-
-Reading logic:
-```
-1. Check Keychain first (source of truth, survives reinstall)
-2. If Keychain has date but UserDefaults doesn't → sync to UserDefaults
-3. If UserDefaults has date but Keychain doesn't → sync to Keychain
-4. If neither has date → trial not started
-```
-
-This prevents users from getting a new trial by reinstalling the app.
-
-#### Trial State Machine
-
-```
-                 ┌─────────────┐
-                 │ .notStarted │
-                 └──────┬──────┘
-                        │ startTrialIfNeeded()
-                        ▼
-           ┌────────────────────────┐
-           │ .active(daysRemaining) │ ← refreshState() on every launch
-           └────────────┬───────────┘
-                        │ 7 days elapsed
-                        ▼
-                 ┌──────────┐
-                 │ .expired │
-                 └──────────┘
-```
-
-### Premium Architecture
-
-#### AccessManager
-
-**File:** `AiQo/Premium/AccessManager.swift`
-
-Central access control that checks:
-1. Is trial active? → Grant access
-2. Is subscription active? → Grant access
-3. Neither? → Show paywall
-
-#### EntitlementProvider
-
-**File:** `AiQo/Premium/EntitlementProvider.swift`
-
-Protocol-based entitlement checking that abstracts the trial + subscription logic.
-
-#### PremiumStore
-
-**File:** `AiQo/Premium/PremiumStore.swift`
-
-Observable store that publishes premium state changes for UI reactivity.
+Community/Tribe access and creation are granted by either active premium entitlement or active free trial depending on the gate check (`AccessManager`).
 
 ### Product IDs
 
-**File:** `AiQo/Core/Purchases/SubscriptionProductIDs.swift`
+- `aiqo_nr_30d_individual_5_99`
 
-| Product ID | Type | Price |
-|---|---|---|
-| `aiqo_nr_30d_individual_5_99` | Non-renewing, 30-day, Individual | $5.99/month |
-| `aiqo_nr_30d_family_10_00` | Non-renewing, 30-day, Family (up to 5) | $10.00/month |
-| `aiqo_30d_individual_5_99` | Legacy variant | $5.99/month |
-| `aiqo_30d_family_10_00` | Legacy variant | $10.00/month |
+- `aiqo_nr_30d_family_10_00`
 
-**Note:** Subscriptions are **non-renewing** (`_nr_` prefix). Each cycle is exactly 30 days. Users must manually repurchase.
+- `aiqo_30d_individual_5_99` (legacy lookup only)
 
-### Paywall Design
+- `aiqo_30d_family_10_00` (legacy lookup only)
 
-**Files:** `Premium/PremiumPaywallView.swift`, `UI/Purchases/PaywallView.swift`
+### Tiers / Pricing Signals
 
-- Shows individual and family plan options
-- Displays localized prices from StoreKit
-- Includes trial countdown if active
-- Legal links (Privacy Policy, Terms of Service)
-- Retry mechanism for product loading (2 attempts)
+Displayed tier names are `فردي` and `عائلي`.
 
-### Receipt Validation
+Fallback display prices are `$5.99` for individual and `$10.00` for family.
 
-**File:** `AiQo/Core/Purchases/ReceiptValidator.swift`
+`EntitlementStore` exposes `isActive`, `isFamily`, and `canCreateTribe`.
 
-- Validates purchases via Supabase backend
-- `EntitlementStore` tracks active subscription state
-- `PremiumExpiryNotifier` schedules notifications before expiry
+### Paywall Design / Copy Rules Visible In UI
 
-### StoreKit 2 Compliance
+`PremiumPaywallView` uses the Tribe glass-card visual language, large rounded typography, and Arabic-localized title/subtitle strings.
 
-- Uses `Product.products(for:)` for loading
-- `Transaction.updates` async sequence for real-time transaction observation
-- Non-renewing subscriptions checked via `Transaction.currentEntitlements`
-- `PurchaseManager` handles purchase flow with outcomes: `.success`, `.pending`, `.cancelled`, `.failed`
+Free-trial CTAs are surfaced before paid plan cards when the user has not used the trial.
 
----
+Restore purchases is always present.
+
+Status UI shows active/expired state and formatted expiry date when available.
+
+`PaywallView` includes legal links, restore, retry, debug test setup in DEBUG, and a community/Tribe entry point.
+
+### Receipt Validation Flow
+
+After verified purchase completion, the app posts transaction metadata to `https://zidbsrepqpbucqzxnwgk.supabase.co/functions/v1/validate-receipt`.
+
+Payload fields: `transactionId`, `productId`, `originalPurchaseDate`, `purchaseDate`, `appAccountToken` (optional).
+
+Expected response shape: `valid`, `expiresAt`, `reason`.
+
+Network errors fall back to local entitlement interpretation rather than hard-failing the app.
+
+### StoreKit 2 Compliance Notes Visible In Code
+
+The app supports purchase, restore, entitlement refresh, and transaction finishing.
+
+The paywall includes restore and legal surfaces.
+
+DEBUG mode can use a local StoreKit configuration (`AiQo_Test.storekit`).
+
+### Evidence Files
+
+- `AiQo/Premium/FreeTrialManager.swift`
+
+- `AiQo/Core/Purchases/PurchaseManager.swift`
+
+- `AiQo/Core/Purchases/SubscriptionProductIDs.swift`
+
+- `AiQo/Core/Purchases/ReceiptValidator.swift`
+
+- `AiQo/Core/Purchases/EntitlementStore.swift`
+
+- `AiQo/Premium/PremiumPaywallView.swift`
+
+- `AiQo/UI/Purchases/PaywallView.swift`
 
 ## SECTION 13 — Supabase Backend Schema
 
-### Connection
+### Tables Explicitly Referenced In Code
 
-| Setting | Value |
-|---|---|
-| **URL** | `https://zidbsrepqpbucqzxnwgk.supabase.co` |
-| **Client** | `supabase-swift` v2.36.0 |
-| **Auth** | Sign in with Apple → Supabase Auth |
+- `profiles` -> app auth/profile/device-token/visibility/leaderboard profile data.
 
-### Known Tables
+- `arena_tribes` -> tribe records.
 
-| Table | Key Columns | Purpose |
-|---|---|---|
-| `profiles` | `id`, `name`, `age`, `height_cm`, `weight_kg`, `goal_text`, `is_private`, `device_token`, `total_points`, `level` | User profiles |
-| `tribes` | Tribe data | Tribe/group management |
-| `tribe_members` | Member associations | Tribe membership |
-| `arena_challenges` | Challenge definitions | Weekly challenges |
-| `arena_participations` | Participation records | Challenge entries |
-| `arena_leaders` | Leaderboard data | Emirate leaders |
-| `hall_of_fame` | Fame entries | Historical achievements |
+- `arena_tribe_members` -> tribe membership rows.
+
+- `arena_tribe_participations` -> challenge participation rows.
+
+- `arena_weekly_challenges` -> challenge definitions and lifecycle.
+
+- `arena_hall_of_fame_entries` -> historical winners / hall of fame.
+
+- `quest_wins` -> only referenced in commented-out future upload code, not active.
+
+### Key Columns Visible In DTOs / Queries
+
+- `profiles`: `id`, `user_id`, `name`, `age`, `height_cm`, `weight_kg`, `goal_text`, `is_private`, `device_token`, `display_name`, `username`, `level`, `total_points`, `is_profile_public`.
+
+- `arena_tribes`: `id`, `name`, `owner_id`, `invite_code`, `created_at`, `is_active`, `is_frozen`, `frozen_at`.
+
+- `arena_tribe_members`: `id`, `tribe_id`, `user_id`, `role`, `contribution_points`, `joined_at`.
+
+- `arena_weekly_challenges`: DTOs in service code imply title/description/metric/time window / active-state fields.
+
+- `arena_hall_of_fame_entries`: hall-of-fame winner metadata with week number and titles.
 
 ### Auth Strategy
 
-1. User taps "Sign in with Apple" in `AuthFlowUI`
-2. Apple returns identity token
-3. Token is passed to Supabase Auth
-4. Supabase creates/links user account
-5. Device token registered for push notifications
+Sign in with Apple produces an ID token and nonce.
 
-### Services
+`LoginViewController` exchanges that token with `SupabaseService.shared.client.auth.signInWithIdToken(provider: .apple, ...)`.
 
-- `SupabaseService.shared` — Main client, profile queries, user search
-- `SupabaseArenaService.shared` — Arena-specific operations (sync stats, challenges)
-- `TribeRepositories` — Tribe CRUD operations
+`AppFlowController` treats an existing Supabase session as sufficient to skip the login screen.
 
 ### Real-Time Subscriptions
 
-Used in Tribe/Arena features for live leaderboard updates and challenge status.
+No active `.channel(...)` realtime subscription usage was found in the live source tree.
 
----
+### Edge Functions / RPC
+
+Supabase Edge Function: `validate-receipt` for StoreKit receipt validation.
+
+Supabase RPC: `delete_user_account` is called from Settings to remove user data / mark account for deletion.
+
+### RLS Strategy
+
+No SQL migrations or explicit RLS policy files are present in this repo.
+
+The client code assumes per-user row security behavior for profile and tribe actions, but the actual policies are not source-controlled here.
+
+### Backend Toggle Strategy
+
+`TribeRepositories` switches between Supabase repositories and local/mock repositories based on `TRIBE_BACKEND_ENABLED`.
+
+### Evidence Files
+
+- `AiQo/Services/SupabaseService.swift`
+
+- `AiQo/Services/SupabaseArenaService.swift`
+
+- `AiQo/App/LoginViewController.swift`
+
+- `AiQo/Core/AppSettingsScreen.swift`
+
+- `AiQo/Tribe/Repositories/TribeRepositories.swift`
+
+- `AiQo/Tribe/Models/TribeFeatureModels.swift`
 
 ## SECTION 14 — Notifications & Background Tasks
 
-### Notification Files
-
-| File | Purpose |
-|---|---|
-| `NotificationService.swift` | Core notification management, permission requests, remote handling |
-| `NotificationCategoryManager.swift` | Registers all notification categories and actions |
-| `NotificationIntelligenceManager.swift` | AI-driven notification scheduling, background task management |
-| `SmartNotificationManager.swift` | Smart scheduling based on user patterns |
-| `SmartNotificationScheduler.swift` (Core) | Coordinates smart notification timing |
-| `MorningHabitOrchestrator.swift` | Morning routine notifications |
-| `SleepSessionObserver.swift` | Sleep session monitoring and notifications |
-| `ActivityNotificationEngine.swift` | Angel number notifications (motivational) |
-| `AlarmSchedulingService.swift` | Smart wake alarm scheduling |
-| `CaptainBackgroundNotificationComposer.swift` | Composes Captain-style notifications in background |
-| `InactivityTracker.swift` | Detects user inactivity for re-engagement |
-| `PremiumExpiryNotifier.swift` | Subscription expiry warnings |
-| `NotificationRepository.swift` | Notification history storage |
-
-### Background Task Identifiers
-
-Registered in `Info.plist` under `BGTaskSchedulerPermittedIdentifiers`:
-
-| Identifier | Purpose |
-|---|---|
-| `aiqo.captain.spiritual-whispers.refresh` | Background refresh for spiritual whispers |
-| `aiqo.captain.inactivity-check` | Check for user inactivity and send re-engagement |
-
-### UIBackgroundModes
-
-- `audio` — Voice playback, audio coaching
-- `remote-notification` — Push notification processing
-- `fetch` — Background data fetching
-
 ### Notification Categories
 
-Managed by `NotificationCategoryManager.shared.registerAllCategories()`:
-- Captain Hamoudi messages (with reply actions)
-- Morning habit reminders
-- Sleep session reminders
-- Activity encouragement
-- Premium expiry warnings
-- Angel number motivational messages
+Registered categories are `ActivityNotificationEngine.notificationCategory` and `CaptainSmartNotificationService.notificationCategory` via `NotificationCategoryManager`.
+
+### SmartNotificationScheduler Schedule
+
+- Water reminders at `10:00`, `12:00`, `14:00`, `16:00`, `18:00`, `20:00`.
+
+- Workout motivation at `17:00`.
+
+- Sleep reminder at `22:30`.
+
+- Streak protection at `20:00`.
+
+- Weekly report every Friday at `10:00`.
+
+### Notification Intelligence Manager
+
+Background task identifiers: `aiqo.captain.spiritual-whispers.refresh`, `aiqo.captain.inactivity-check`.
+
+Preferred whisper windows are around `06:15` and `17:30`.
+
+Inactivity background checks run every two hours after `14:05` if steps are below `3000`.
+
+Notification language is configurable via `notificationLanguage` / app language surfaces.
 
 ### MorningHabitOrchestrator
 
-**File:** `AiQo/Services/Notifications/MorningHabitOrchestrator.swift`
+Tracks scheduled wake timestamp, notification wake timestamp, and cached insight.
 
-- Monitors whether user completed morning routine
-- Sends Captain-style encouragement if habits not logged
-- Integrates with sleep data for contextual morning messages
-- Source identifier: `"morning_habit_orchestrator"` for notification routing
+Uses a “first 25 steps within 6 hours of wake” style morning success condition.
+
+Primary notification identifier: `aiqo.morningHabit.notification`.
 
 ### SleepSessionObserver
 
-**File:** `AiQo/Services/Notifications/SleepSessionObserver.swift`
+Tracks HealthKit anchor data and last notified sleep-end time.
 
-- Monitors HealthKit sleep sessions
-- Triggers sleep analysis when session ends
-- Coordinates with Smart Wake Calculator
+Notification identifiers are generated as `aiqo.sleepObserver.<uuid>`.
 
----
+### ActivityNotificationEngine
+
+Schedules angel-number times such as `01:11`, `02:22`, `03:33`, `04:44`, `05:55`, `10:10`, `11:11`, `12:12`, `12:21`.
+
+Tracks goal progress and “almost there” cooldown state in multiple `aiqo.activity.*` keys.
+
+### Other Background / Notification Services
+
+`NotificationService` handles permission prompting, deep-link tap routing, cooldown timestamps, and workout-summary processing anchors.
+
+`AlarmSchedulingService` uses `AlarmKit` on iOS `26.1+`.
+
+`CaptainBackgroundNotificationComposer` uses `LocalBrainService` to phrase sleep/inactivity notifications in Captain voice.
+
+### Background Modes / Identifiers From Info.plist
+
+- BGTask permitted identifier: `aiqo.captain.spiritual-whispers.refresh`
+
+- BGTask permitted identifier: `aiqo.captain.inactivity-check`
+
+- UIBackgroundModes entry: `audio`
+
+- UIBackgroundModes entry: `remote-notification`
+
+- UIBackgroundModes entry: `fetch`
+
+### Evidence Files
+
+- `AiQo/Core/SmartNotificationScheduler.swift`
+
+- `AiQo/Services/Notifications/NotificationCategoryManager.swift`
+
+- `AiQo/Services/Notifications/NotificationService.swift`
+
+- `AiQo/Services/Notifications/NotificationIntelligenceManager.swift`
+
+- `AiQo/Services/Notifications/MorningHabitOrchestrator.swift`
+
+- `AiQo/Services/Notifications/SleepSessionObserver.swift`
+
+- `AiQo/Services/Notifications/ActivityNotificationEngine.swift`
+
+- `AiQo/App/AppDelegate.swift`
+
+- `AiQo/Info.plist`
 
 ## SECTION 15 — Design System
 
 ### Color Tokens
 
-#### Brand Colors (Colors.swift)
+- `AiQoColors.mint` -> `#CDF4E4`.
 
-| Token | UIColor | Hex | SwiftUI |
-|---|---|---|---|
-| `mint` | `(0.77, 0.94, 0.86)` | `#C4F0DB` | `.brandMint` |
-| `sand` | `(0.97, 0.84, 0.64)` | `#F8D6A3` | `.brandSand` |
-| `accent` | `(1.00, 0.90, 0.55)` | `#FFE68C` | `.aiqoAccent` |
-| `aiqoBeige` | `(0.98, 0.87, 0.70)` | `#FADEB3` | `.aiqoBeige` |
-| `lemon` | `(1.00, 0.93, 0.72)` | `#FFECB8` | `.aiqoLemon` |
-| `lav` | `(0.96, 0.88, 1.00)` | `#F5E0FF` | `.aiqoLav` |
+- `AiQoColors.beige` -> `#F5D5A6`.
 
-#### Semantic Theme (AiQoTheme.swift)
+- `AiQoTheme.primaryBackground` -> light `#F5F7FB`, dark `#0B1016`.
 
-| Token | Light | Dark |
-|---|---|---|
-| `primaryBackground` | `#F5F7FB` | `#0B1016` |
-| `surface` | `#FFFFFF` | `#121922` |
-| `surfaceSecondary` | `#EEF2F7` | `#18212B` |
-| `textPrimary` | `#0F1721` | `#F6F8FB` |
-| `textSecondary` | `#5F6F80` | `#A3AFBC` |
-| `accent` | `#5ECDB7` | `#8AE3D1` |
-| `border` | `black/0.08` | `white/0.08` |
-| `borderStrong` | `black/0.12` | `white/0.12` |
-| `iconBackground` | `#F2F6FA` | `#1A2430` |
-| `ctaGradientLeading` | `#7CE0D2` | `#90E6D6` |
-| `ctaGradientTrailing` | `#A4C8FF` | `#C4D9FF` |
+- `AiQoTheme.surface` -> light `#FFFFFF`, dark `#121922`.
 
-#### Additional Colors (AiQoColors.swift)
+- `AiQoTheme.surfaceSecondary` -> light `#EEF2F7`, dark `#18212B`.
 
-| Token | Hex |
-|---|---|
-| `AiQoColors.mint` | `#CDF4E4` |
-| `AiQoColors.beige` | `#F5D5A6` |
+- `AiQoTheme.textPrimary` -> light `#0F1721`, dark `#F6F8FB`.
 
-### Typography Scale (AiQoTheme.Typography)
+- `AiQoTheme.textSecondary` -> light `#5F6F80`, dark `#A3AFBC`.
 
-| Token | Style |
-|---|---|
-| `screenTitle` | `.title2, .rounded, .bold` |
-| `sectionTitle` | `.headline, .rounded, .semibold` |
-| `cardTitle` | `.headline, .rounded, .semibold` |
-| `body` | `.subheadline, .rounded` |
-| `caption` | `.caption, .rounded` |
-| `cta` | `.headline, .rounded, .semibold` |
+- `AiQoTheme.accent` -> light `#5ECDB7`, dark `#8AE3D1`.
 
-Custom fonts are available via `.aiqoDisplay()` and `.aiqoHeading()` extensions.
+- `AiQoTheme.iconBackground` -> light `#F2F6FA`, dark `#1A2430`.
 
-### Spacing Tokens (AiQoTokens.swift)
+- `AiQoTheme.ctaGradientLeading` -> light `#7CE0D2`, dark `#90E6D6`.
 
-| Token | Value |
-|---|---|
-| `AiQoSpacing.xs` | 8pt |
-| `AiQoSpacing.sm` | 12pt |
-| `AiQoSpacing.md` | 16pt |
-| `AiQoSpacing.lg` | 24pt |
+- `AiQoTheme.ctaGradientTrailing` -> light `#A4C8FF`, dark `#C4D9FF`.
 
-### Corner Radius Tokens
+- `Colors.mint` -> `#C4F0DB`.
 
-| Token | Value |
-|---|---|
-| `AiQoRadius.control` | 12pt |
-| `AiQoRadius.card` | 16pt |
-| `AiQoRadius.ctaContainer` | 24pt |
+- `Colors.sand` -> `#F8D6A3`.
 
-### Metrics
+- `Colors.accent` -> `#FFE68C`.
 
-| Token | Value |
-|---|---|
-| `AiQoMetrics.minimumTapTarget` | 44pt |
+- `Colors.aiqoBeige` -> `#FADEB3`.
+
+- `Colors.lemon` -> `#FFECB8`.
+
+- `Colors.lav` -> `#F5E0FF`.
+
+### Typography
+
+- `screenTitle` -> rounded `.title2.bold()`.
+
+- `sectionTitle` -> rounded `.headline.semibold()`.
+
+- `cardTitle` -> rounded `.headline.semibold()`.
+
+- `body` -> rounded `.subheadline`.
+
+- `caption` -> rounded `.caption`.
+
+- `cta` -> rounded `.headline.semibold()`.
+
+### Spacing / Radius Tokens
+
+- `spacing.xs = 8`.
+
+- `spacing.sm = 12`.
+
+- `spacing.md = 16`.
+
+- `spacing.lg = 24`.
+
+- `radius.control = 12`.
+
+- `radius.card = 16`.
+
+- `radius.ctaContainer = 24`.
+
+- `minimumTapTarget = 44`.
 
 ### Core UI Components
 
-| Component | File | Purpose |
-|---|---|---|
-| `AiQoBottomCTA` | `DesignSystem/Components/AiQoBottomCTA.swift` | Primary action button (gradient, full-width) |
-| `AiQoCard` | `DesignSystem/Components/AiQoCard.swift` | Standard card container with glassmorphism |
-| `AiQoChoiceGrid` | `DesignSystem/Components/AiQoChoiceGrid.swift` | Grid selection component |
-| `AiQoPillSegment` | `DesignSystem/Components/AiQoPillSegment.swift` | Segmented pill control |
-| `AiQoPlatformPicker` | `DesignSystem/Components/AiQoPlatformPicker.swift` | Platform-specific picker |
-| `AiQoSkeletonView` | `DesignSystem/Components/AiQoSkeletonView.swift` | Loading skeleton animation |
-| `GlassCardView` | `UI/GlassCardView.swift` | Frosted glass card effect |
-| `AiQoScreenHeader` | `UI/AiQoScreenHeader.swift` | Standard screen header |
-| `AiQoProfileButton` | `UI/AiQoProfileButton.swift` | Profile avatar button |
-| `ErrorToastView` | `UI/ErrorToastView.swift` | Error notification toast |
-| `OfflineBannerView` | `UI/OfflineBannerView.swift` | No internet banner |
+- `AiQoBottomCTA`.
 
-### View Modifiers
+- `AiQoCard`.
 
-| Modifier | File | Purpose |
-|---|---|---|
-| `AiQoPressEffect` | `Modifiers/AiQoPressEffect.swift` | Scale-down press animation |
-| `AiQoShadow` | `Modifiers/AiQoShadow.swift` | Standard shadow |
-| `AiQoSheetStyle` | `Modifiers/AiQoSheetStyle.swift` | Bottom sheet styling |
+- `AiQoChoiceGrid`.
 
-### Animation Presets
+- `AiQoPillSegment`.
 
-The app uses SwiftUI's built-in spring animations throughout, with common patterns:
-- Level-up celebrations use `.opacity` transitions
-- Tab changes trigger `HapticEngine.selection()`
-- Cards use scale-based press effects
-- Workout Live Activity uses `.symbolEffect(.pulse.byLayer)` for heart rate
+- `AiQoPlatformPicker`.
 
-### RTL Layout Rules
+- `AiQoSkeletonView`.
 
-- Global `.environment(\.layoutDirection, .rightToLeft)` set on `MainTabScreen`
-- All SwiftUI layouts automatically respect RTL
-- Arabic text alignment handled by system
-- Tab bar order respects RTL direction
+- `AiQoProfileButton`.
 
----
+- `AiQoScreenHeader`.
+
+- `GlassCardView`.
+
+- `OfflineBannerView`.
+
+- `LegalView`.
+
+### Animation Presets / Motion Patterns
+
+- `AiQoPressButtonStyle` pressed spring -> `response 0.10`, `dampingFraction 0.5`; release spring -> `response 1.2`, `dampingFraction 0.85`.
+
+- `AiQoPressEffect` -> `response 0.12`, `dampingFraction 0.5`.
+
+- `AiQoChoiceGrid`, `AiQoPlatformPicker`, `AiQoPillSegment` selection spring -> `response 0.28`, `dampingFraction 0.86`.
+
+- `OfflineBannerView` -> spring `response 0.35`.
+
+- `SmartWake` controls -> spring `response 0.34`, `dampingFraction 0.86`.
+
+- `Home` metric expansion -> spring `response 0.3`, `dampingFraction 0.8`.
+
+- `AiQoSkeletonView` shimmer -> linear duration `1.2`.
+
+### Shadow / Sheet / Glass Rules
+
+`AiQoShadow` uses adaptive black opacity, radius `16`, and vertical offset `7`.
+
+`AiQoSheetStyle` uses `.ultraThinMaterial`, radius `28`, and a visible drag indicator.
+
+Glassmorphism is common in premium/community surfaces and Captain-adjacent cards through glass cards, material fills, and soft translucent strokes.
+
+### RTL Rules
+
+Arabic root screens frequently force `.rightToLeft` at the screen boundary.
+
+Selective `.leftToRight` overrides are used for rails, segmented controls, charts, or directional affordances where the visual language benefits from LTR orientation.
+
+### Evidence Files
+
+- `AiQo/DesignSystem/AiQoColors.swift`
+
+- `AiQo/DesignSystem/AiQoTheme.swift`
+
+- `AiQo/DesignSystem/AiQoTokens.swift`
+
+- `AiQo/DesignSystem/Components/AiQoBottomCTA.swift`
+
+- `AiQo/DesignSystem/Components/AiQoCard.swift`
+
+- `AiQo/DesignSystem/Components/AiQoPillSegment.swift`
+
+- `AiQo/DesignSystem/Modifiers/AiQoPressEffect.swift`
+
+- `AiQo/DesignSystem/Modifiers/AiQoShadow.swift`
+
+- `AiQo/DesignSystem/Modifiers/AiQoSheetStyle.swift`
+
+- `AiQo/UI/GlassCardView.swift`
+
+- `AiQo/UI/AccessibilityHelpers.swift`
+
+- `AiQo/Core/Colors.swift`
 
 ## SECTION 16 — Apple Watch Companion
 
-### Current Status: EXISTS and ACTIVE
+### Current Status
 
-**Target:** `AiQoWatch Watch App`
-**Deployment Target:** watchOS 26.2
-**Bundle ID:** `com.mraad500.aiqo.watchkitapp`
+The watch companion exists and is actively implemented.
 
-### Watch App Structure
+The requested `AiQoWatch/*.swift` layout does not exist; the real target folder is `AiQoWatch Watch App/`.
 
-| File | Purpose |
-|---|---|
-| `AiQoWatchApp.swift` | @main entry point |
-| `WatchHomeView.swift` | Home screen with health summary |
-| `WatchActiveWorkoutView.swift` | Live workout tracking UI |
-| `WatchWorkoutListView.swift` | Workout type selection |
-| `WatchWorkoutSummaryView.swift` | Post-workout summary |
-| `WatchWorkoutManager.swift` | HKWorkoutSession management |
-| `WatchHealthKitManager.swift` | Watch-side HealthKit queries |
-| `WatchConnectivityService.swift` | Watch→Phone communication |
-| `WatchDesignSystem.swift` | Watch-specific design tokens |
-| `WatchWorkoutType.swift` | Workout type definitions |
+### WatchConnectivity Integration Points
 
-### WatchConnectivity Integration
+- `AiQoWatch Watch App/WatchConnectivityManager.swift` on the watch side.
 
-**Phone-side:** `PhoneConnectivityManager.swift`, `WatchConnectivityService.swift` (in Gym)
-**Watch-side:** `WatchConnectivityService.swift`, `WatchConnectivityManager.swift`
+- `AiQoWatch Watch App/Services/WatchConnectivityService.swift` on the watch side.
 
-**Shared codec:** `WorkoutSyncCodec.swift` + `WorkoutSyncModels.swift` (duplicated in both targets)
+- `AiQo/PhoneConnectivityManager.swift` on the phone side.
 
-Data sync includes:
-- Workout start/stop commands
-- Heart rate data
-- Active calories
-- Distance
-- Workout session state
+- `AiQo/Features/Gym/WatchConnectivityService.swift` and live session screens on the phone side.
 
-### Watch Widget
+### Implemented Watch Features
 
-**Target:** `AiQoWatchWidget`
-- `AiQoWatchWidget.swift` — Watch complication
-- `AiQoWatchWidgetProvider.swift` — Timeline provider
-- Supports: `accessoryInline`, `accessoryCircular`, `accessoryRectangular`
+Watch home stats view.
 
----
+Watch workout list and live active workout views.
+
+Mirrored workout session state, snapshots, and workout summary handoff.
+
+HealthKit reading on watch for steps, calories, distance, heart rate, sleep, and workouts.
+
+### Data Sync Strategy
+
+The app uses `WCSession` messaging plus codable sync payloads in `WorkoutSyncCodec` / `WorkoutSyncModels`.
+
+Phone-side widgets also rely on app-group/shared storage for certain metrics/goal mirrors.
+
+### Planned / Implied Next Steps From Code
+
+A TODO remains in `AiQo/PhoneConnectivityManager.swift:756` to integrate watch-earned XP directly into `LevelStore.shared.addXP(xp)`.
+
+### Evidence Files
+
+- `AiQoWatch Watch App/AiQoWatchApp.swift`
+
+- `AiQoWatch Watch App/WatchConnectivityManager.swift`
+
+- `AiQoWatch Watch App/Services/WatchConnectivityService.swift`
+
+- `AiQoWatch Watch App/Services/WatchHealthKitManager.swift`
+
+- `AiQoWatch Watch App/Services/WatchWorkoutManager.swift`
+
+- `AiQoWatch Watch App/WorkoutManager.swift`
+
+- `AiQo/PhoneConnectivityManager.swift`
 
 ## SECTION 17 — Analytics & Crash Reporting
 
-### AnalyticsService
+### Analytics Service API
 
-**File:** `AiQo/Services/Analytics/AnalyticsService.swift`
+`AnalyticsService.shared.track(_:)` records events with enriched super properties.
 
-Singleton: `AnalyticsService.shared`
+`AnalyticsService.shared.identify(userId:traits:)` stores user identity and forwards it to providers.
 
-API: `track(_ event: AnalyticsEvent)`
+`AnalyticsService.shared.reset()` clears the current identity and local provider state.
 
-### Analytics Events
+`AnalyticsService.shared.setSuperProperty(_:value:)` adds enriched properties to future events.
 
-**File:** `AiQo/Services/Analytics/AnalyticsEvent.swift`
+### Active Providers
 
-| Event | Trigger |
-|---|---|
-| `.appLaunched` | App launch |
-| `.appBecameActive` | App foregrounded |
-| `.appEnteredBackground` | App backgrounded |
-| `.tabSelected(String)` | Tab navigation |
-| `.notificationTapped(type:)` | Notification interaction |
-| `.freeTrialStarted` | Trial begins |
-| `.deepLinkOpened` | Deep link handled (with URL and destination) |
+DEBUG builds register `ConsoleAnalyticsProvider`.
 
-Additional events tracked via `AnalyticsEvent("eventName", properties: [...])` constructor.
+All builds register `LocalAnalyticsProvider`, which writes JSONL to `Application Support/Analytics/events.jsonl` and trims to `5000` events.
 
-### CrashReporter
+No third-party analytics SDK is currently wired into the live tree.
 
-**File:** `AiQo/Services/CrashReporting/CrashReporter.swift`
+### Events Defined In Source
 
-Singleton: `CrashReporter.shared`
+- `app_launched`
 
-Initialized at app launch. Current implementation is a placeholder/lightweight wrapper — no third-party crash reporting SDK (like Firebase Crashlytics) is integrated.
+- `app_became_active`
+
+- `app_entered_background`
+
+- `onboarding_step_viewed`
+
+- `onboarding_completed`
+
+- `onboarding_skipped`
+
+- `login_started`
+
+- `login_completed`
+
+- `logout_completed`
+
+- `tab_selected`
+
+- `screen_viewed`
+
+- `captain_chat_opened`
+
+- `captain_message_sent`
+
+- `captain_response_received`
+
+- `captain_response_failed`
+
+- `captain_voice_played`
+
+- `captain_history_viewed`
+
+- `workout_started`
+
+- `workout_completed`
+
+- `workout_cancelled`
+
+- `vision_coach_started`
+
+- `vision_coach_completed`
+
+- `quest_started`
+
+- `quest_completed`
+
+- `kitchen_opened`
+
+- `meal_plan_generated`
+
+- `fridge_item_added`
+
+- `tribe_created`
+
+- `tribe_joined`
+
+- `tribe_left`
+
+- `tribe_leaderboard_viewed`
+
+- `tribe_arena_viewed`
+
+- `spotify_connected`
+
+- `spotify_track_played`
+
+- `health_permission_granted`
+
+- `health_permission_denied`
+
+- `daily_summary_generated`
+
+- `paywall_viewed`
+
+- `subscription_started`
+
+- `subscription_failed`
+
+- `subscription_restored`
+
+- `subscription_cancelled`
+
+- `free_trial_started`
+
+- `notification_permission_granted`
+
+- `notification_permission_denied`
+
+- `notification_tapped`
+
+- `language_changed`
+
+- `memory_cleared`
+
+- `error_occurred`
+
+### Crash Reporting
+
+`CrashReporter` is a local crash/non-fatal logger with exception handler, signal handler, and previous-crash detection.
+
+Crash logs are stored at `Application Support/CrashReports/crash_log.jsonl` and trimmed to `50` records.
+
+`aiqo.crash.didTerminateCleanly` is used to detect likely previous-session crashes.
+
+Non-fatal recordings also emit analytics `error_occurred` events.
 
 ### Current Gaps
 
-- No third-party analytics SDK (Firebase, Mixpanel, etc.) is integrated
-- CrashReporter is a lightweight wrapper — no production crash reporting
-- No screen view tracking events
-- No funnel analytics for onboarding flow
-- No retention/engagement metrics
-- No A/B testing framework
-- No revenue analytics
-- No Captain conversation quality metrics
-- No HealthKit data completeness tracking
-- No crash-free rate monitoring
+There is no remote crash backend (Sentry, Crashlytics, etc.) wired in the checked-in project.
 
-### Recommended Additions
+There is no remote analytics vendor wired in the checked-in project.
 
-1. **Production crash reporting** — Integrate Firebase Crashlytics or Sentry
-2. **Production analytics** — Integrate Firebase Analytics, Mixpanel, or Amplitude
-3. **Screen view tracking** — Add `.onAppear` tracking for all major screens
-4. **Onboarding funnel** — Track per-step completion/drop-off rates
-5. **Workout analytics** — Track completion, duration, type, XP earned per session
-6. **Subscription funnel** — Track paywall views → purchase attempts → conversions
-7. **Captain analytics** — Track message count, response quality, context usage, fallback rates
-8. **Retention metrics** — DAU, WAU, MAU, session duration, streak continuation rate
-9. **A/B testing** — Framework for testing paywall designs, onboarding flows, notification timing
-10. **Performance monitoring** — Track app launch time, API response times, memory usage
+### Evidence Files
 
-### Event Taxonomy (Recommended)
+- `AiQo/Services/Analytics/AnalyticsEvent.swift`
 
-| Category | Event Name | Properties |
-|---|---|---|
-| App | `app_launched` | launch_count, is_trial_active |
-| App | `app_became_active` | source (notification, deep_link, organic) |
-| App | `app_entered_background` | session_duration |
-| Onboarding | `onboarding_step_completed` | step_name, step_index |
-| Onboarding | `onboarding_completed` | total_duration, initial_level |
-| Captain | `captain_message_sent` | screen_context, language, message_length |
-| Captain | `captain_response_received` | route (local/cloud), latency_ms, has_plan |
-| Captain | `captain_fallback_triggered` | error_type, screen_context |
-| Captain | `captain_voice_played` | duration_ms |
-| Workout | `workout_started` | type, location (indoor/outdoor), source (siri/app/watch) |
-| Workout | `workout_completed` | type, duration_min, calories, xp_earned |
-| Workout | `workout_cancelled` | type, duration_at_cancel |
-| Kitchen | `meal_plan_generated` | meal_count, source (ai/local) |
-| Kitchen | `fridge_scanned` | items_detected |
-| Vibe | `vibe_session_started` | vibe_type, audio_asset |
-| Vibe | `spotify_recommendation_opened` | vibe_name, spotify_uri |
-| Gamification | `level_up` | new_level, shield_tier, total_xp |
-| Gamification | `streak_milestone` | streak_days |
-| Gamification | `quest_completed` | quest_id, xp_awarded |
-| Monetization | `paywall_viewed` | source (trial_expired, feature_gate, deep_link) |
-| Monetization | `purchase_attempted` | product_id |
-| Monetization | `purchase_completed` | product_id, is_family |
-| Monetization | `trial_started` | — |
-| Monetization | `trial_expired` | — |
-| Tribe | `tribe_created` | — |
-| Tribe | `tribe_joined` | source (invite_code, deep_link) |
-| Tribe | `arena_challenge_entered` | challenge_type |
-| Notification | `notification_tapped` | type, source |
-| Notification | `notification_permission_granted` | — |
-| Deep Link | `deep_link_opened` | url, destination |
+- `AiQo/Services/Analytics/AnalyticsService.swift`
 
----
+- `AiQo/Services/CrashReporting/CrashReporter.swift`
 
 ## SECTION 18 — Accessibility & Localization
 
-### VoiceOver Support
+### VoiceOver Support Status
 
-**File:** `AiQo/Core/AiQoAccessibility.swift`, `UI/AccessibilityHelpers.swift`
+Accessibility helper modifiers exist: `accessibleButton`, `accessibleInfo`, `accessibleHeader`, `accessibleCard`, `accessibilityDecorative`.
 
-- `AiQoAccessibility` provides accessibility labels and hints
-- Tab items have `.accessibilityHint()` modifiers
-- `MainTabScreen` adds hints like "View daily health summary", "Workouts and fitness challenges"
-- `AiQoMetrics.minimumTapTarget = 44pt` ensures touch targets meet Apple guidelines
+Confirmed usage in scanned code is limited rather than universal; for example, `PremiumPaywallView` applies `accessibleButton`, but most large screens still use raw SwiftUI controls.
+
+Status assessment: partial / framework-ready, not comprehensively audited.
 
 ### Dynamic Type Support
 
-- Uses system font with `.rounded` design throughout (`Font.system(.*, design: .rounded)`)
-- SwiftUI's automatic Dynamic Type scaling is inherited
-- No explicit Dynamic Type overrides or fixed font sizes in most components
+Dynamic type helpers exist in `UI/AccessibilityHelpers.swift` and `Core/AiQoAccessibility.swift`.
 
-### Reduce Motion Handling
+Support is mixed: some shared helpers are ready, but many views still hard-code font sizes.
 
-- No explicit `@Environment(\.accessibilityReduceMotion)` handling detected
-- SwiftUI's built-in animation reduction is relied upon
+### Reduce Motion
+
+A `respectsReduceMotion()` helper exists and disables animation transactions when `UIAccessibility.isReduceMotionEnabled` is true.
+
+No code-wide enforcement pass is visible; usage is opt-in.
 
 ### Localization Strategy
 
-- Two languages: Arabic (`ar.lproj`) and English (`en.lproj`)
-- 2,153+ localized strings per language
-- `NSLocalizedString()` used across 35+ screens
-- `LocalizationManager` handles runtime language switching
-- `Bundle+Language.swift` provides method swizzling for dynamic locale changes
-- `ArabicNumberFormatter` converts Latin digits to Arabic numerals
+The app ships Arabic and English `Localizable.strings` and `InfoPlist.strings` files.
 
-### RTL-Specific Layout Patterns
+Arabic localized-string entries counted from file: `1854`.
 
-- Global RTL direction set via `.environment(\.layoutDirection, .rightToLeft)`
-- All SwiftUI layouts respect RTL automatically
-- `HStack` content is automatically reversed in RTL
-- Text alignment follows semantic direction
+English localized-string entries counted from file: `1855`.
 
----
+`LocalizationManager` writes `AppleLanguages` and reloads saved language on launch.
+
+### RTL Patterns
+
+`AppRootView` sets layout direction from `AppSettingsStore.shared.appLanguage`.
+
+Many screens force `.rightToLeft` explicitly, including main tabs, login/profile onboarding, tribe views, captain screens, legendary challenge views, and watch views.
+
+Some components intentionally force `.leftToRight` to stabilize visual structure, especially rails and some impact/club subviews.
+
+### Evidence Files
+
+- `AiQo/UI/AccessibilityHelpers.swift`
+
+- `AiQo/Core/AiQoAccessibility.swift`
+
+- `AiQo/Core/AppSettingsStore.swift`
+
+- `AiQo/Core/Localization/LocalizationManager.swift`
+
+- `AiQo/Resources/ar.lproj/Localizable.strings`
+
+- `AiQo/Resources/en.lproj/Localizable.strings`
 
 ## SECTION 19 — Feature Flags & Configuration
 
-### Info.plist Feature Flags
+### Info.plist Feature / Service Keys
 
-| Key | Current Value | Controls |
-|---|---|---|
-| `TRIBE_FEATURE_VISIBLE` | `true` | Whether Tribe tab/features are visible |
-| `TRIBE_BACKEND_ENABLED` | `true` | Whether Supabase Tribe backend is active |
-| `TRIBE_SUBSCRIPTION_GATE_ENABLED` | `true` | Whether premium subscription is required for Tribe |
+- `CAPTAIN_API_KEY` -> `$(CAPTAIN_API_KEY)`
 
-### API Configuration (Info.plist)
+- `CAPTAIN_ARABIC_API_URL` -> `$(CAPTAIN_ARABIC_API_URL)`
 
-| Key | Source | Purpose |
-|---|---|---|
-| `CAPTAIN_API_KEY` | `Secrets.xcconfig` | Gemini API key for Captain brain |
-| `CAPTAIN_ARABIC_API_URL` | `Secrets.xcconfig` | Arabic API endpoint |
-| `CAPTAIN_VOICE_API_KEY` | `Secrets.xcconfig` | ElevenLabs voice API key |
-| `CAPTAIN_VOICE_API_URL` | `Secrets.xcconfig` | ElevenLabs endpoint |
-| `CAPTAIN_VOICE_MODEL_ID` | `Secrets.xcconfig` | ElevenLabs model (`eleven_multilingual_v2`) |
-| `CAPTAIN_VOICE_VOICE_ID` | `Secrets.xcconfig` | ElevenLabs voice ID |
-| `COACH_BRAIN_LLM_API_KEY` | `Secrets.xcconfig` | Coach Brain middleware API key |
-| `COACH_BRAIN_LLM_API_URL` | `Info.plist` | `generativelanguage.googleapis.com/.../gemini-3-flash-preview` |
-| `SPIRITUAL_WHISPERS_LLM_API_URL` | `Info.plist` | Same Gemini 3 Flash Preview endpoint |
-| `SPOTIFY_CLIENT_ID` | `Secrets.xcconfig` | Spotify SDK client ID |
-| `SUPABASE_URL` | `AiQo.xcconfig` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | `AiQo.xcconfig` | Supabase anonymous key |
+- `CAPTAIN_VOICE_API_KEY` -> `$(CAPTAIN_VOICE_API_KEY)`
 
-### Background Task Identifiers
+- `CAPTAIN_VOICE_API_URL` -> `$(CAPTAIN_VOICE_API_URL)`
 
-| Identifier | Purpose |
-|---|---|
-| `aiqo.captain.spiritual-whispers.refresh` | Background spiritual whisper generation |
-| `aiqo.captain.inactivity-check` | User inactivity detection |
+- `CAPTAIN_VOICE_MODEL_ID` -> `$(CAPTAIN_VOICE_MODEL_ID)`
 
-### URL Schemes
+- `CAPTAIN_VOICE_VOICE_ID` -> `$(CAPTAIN_VOICE_VOICE_ID)`
 
-| Scheme | Purpose |
-|---|---|
-| `aiqo` | App deep links |
-| `aiqo-spotify` | Spotify auth callback |
+- `COACH_BRAIN_LLM_API_KEY` -> `$(COACH_BRAIN_LLM_API_KEY)`
 
-### Queried URL Schemes (LSApplicationQueriesSchemes)
+- `COACH_BRAIN_LLM_API_URL` -> `$(COACH_BRAIN_LLM_API_URL)`
 
-| Scheme | Purpose |
-|---|---|
-| `spotify` | Check if Spotify is installed |
-| `instagram-stories` | Instagram Stories sharing |
-| `instagram` | Instagram sharing |
+- `SPIRITUAL_WHISPERS_LLM_API_KEY` -> ``
 
-### Siri Activity Types (NSUserActivityTypes)
+- `SPIRITUAL_WHISPERS_LLM_API_URL` -> `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`
 
-| Activity | Purpose |
-|---|---|
-| `com.aiqo.startWalk` | Start walking workout |
-| `com.aiqo.startRun` | Start running workout |
-| `com.aiqo.startHIIT` | Start HIIT workout |
-| `com.aiqo.openCaptain` | Open Captain chat |
-| `com.aiqo.todaySummary` | View today's summary |
-| `com.aiqo.logWater` | Log water intake |
-| `com.aiqo.openKitchen` | Open Kitchen |
-| `com.aiqo.weeklyReport` | View weekly report |
+- `SPOTIFY_CLIENT_ID` -> `$(SPOTIFY_CLIENT_ID)`
 
-### How to Enable/Disable Features
+- `SUPABASE_URL` -> `$(SUPABASE_URL)`
 
-1. **Tribe:** Set `TRIBE_FEATURE_VISIBLE` to `false` in `Info.plist` to hide
-2. **Tribe Backend:** Set `TRIBE_BACKEND_ENABLED` to `false` to disable Supabase calls
-3. **Tribe Paywall:** Set `TRIBE_SUBSCRIPTION_GATE_ENABLED` to `false` for free access
-4. **Captain Voice:** Remove `CAPTAIN_VOICE_API_KEY` from `Secrets.xcconfig` to disable voice
-5. **Spotify:** Remove `SPOTIFY_CLIENT_ID` to disable music features
+- `SUPABASE_ANON_KEY` -> `$(SUPABASE_ANON_KEY)`
 
----
+- `TRIBE_BACKEND_ENABLED` -> `true`
+
+- `TRIBE_FEATURE_VISIBLE` -> `true`
+
+- `TRIBE_SUBSCRIPTION_GATE_ENABLED` -> `true`
+
+### What The Main Flags Control
+
+`TRIBE_BACKEND_ENABLED` controls repository selection between live Supabase-backed repositories and local/mock repositories.
+
+`TRIBE_FEATURE_VISIBLE` controls whether Tribe surfaces should be presented as available in the app shell.
+
+`TRIBE_SUBSCRIPTION_GATE_ENABLED` controls premium gating for Tribe/community flows.
+
+Captain/Gemini/voice keys wire cloud AI, coach translation, and voice services.
+
+Supabase keys wire auth and backend tables.
+
+Spotify client ID wires vibe/workout music integration.
+
+### Other Runtime Configuration
+
+URL schemes found in plist:
+
+- `aiqo`
+
+- `aiqo-spotify`
+
+Queried external schemes found in plist:
+
+- `spotify`
+
+- `instagram-stories`
+
+- `instagram`
+
+NSUserActivity types found in plist:
+
+- `com.aiqo.startWalk`
+
+- `com.aiqo.startRun`
+
+- `com.aiqo.startHIIT`
+
+- `com.aiqo.openCaptain`
+
+- `com.aiqo.todaySummary`
+
+- `com.aiqo.logWater`
+
+- `com.aiqo.openKitchen`
+
+- `com.aiqo.weeklyReport`
+
+`Configuration/AiQo.xcconfig` includes `Secrets.xcconfig` and contains build-time placeholders and module settings.
+
+`Configuration/Secrets.xcconfig` contains actual secret material and should be treated as sensitive configuration.
+
+DEBUG StoreKit setting in `PurchaseManager`: `useLocalStoreKitConfig = true` with config name `AiQo_Test.storekit`.
+
+### Launch Control Guidance From Current Code
+
+To hide Tribe while keeping code intact, switch the tribe plist flags and/or point repositories to mock mode.
+
+To disable premium network dependencies in DEBUG, the local StoreKit configuration path is already available.
+
+To disable Captain cloud calls, removing/blanking Captain/Gemini keys would force more fallback behavior but is not exposed as a first-class feature flag.
+
+### Evidence Files
+
+- `AiQo/Info.plist`
+
+- `Configuration/AiQo.xcconfig`
+
+- `Configuration/Secrets.xcconfig`
+
+- `AiQo/Tribe/Models/TribeFeatureModels.swift`
+
+- `AiQo/Core/Purchases/PurchaseManager.swift`
 
 ## SECTION 20 — Known Issues, Gaps & Roadmap
 
-### Known Issues
+### Confirmed Issues / Risks With File References
 
-1. **Duplicate WorkoutSyncCodec/Models** — `Shared/WorkoutSyncCodec.swift` and `Shared/WorkoutSyncModels.swift` are duplicated between the iOS and watchOS targets (in `AiQoWatch Watch App/Shared/`). These should be in a shared Swift Package or framework.
+- `AiQo/App/MainTabRouter.swift:9-14` defines five tabs, but `AiQo/App/MainTabScreen.swift` only renders three visible tabs. Kitchen and Tribe are indirect/hidden routes rather than first-class tabs.
 
-2. **Kitchen tab not in TabView** — `MainTabRouter.Tab.kitchen` exists as case `.kitchen = 3` but is not rendered as a tab in `MainTabScreen`. It's accessed via a notification (`openKitchenFromHome`) from the Home screen. This is confusing navigation.
+- `AiQo/Features/Onboarding/OnboardingWalkthroughView.swift` exists but `rg` shows no live references outside its own preview; the current onboarding flow bypasses it entirely.
 
-3. **Tribe tab not in TabView** — `MainTabRouter.Tab.tribe` exists as case `.tribe = 2` but is not currently rendered in `MainTabScreen`'s TabView. Only 3 tabs are visible (Home, Gym, Captain).
+- `AiQo/App/ProfileSetupView.swift:195` defines `SetupPrivacyToggleCard`, and `rg` shows no usages anywhere else in the repo.
 
-4. **CrashReporter is a stub** — `CrashReporter.shared` is initialized but no real crash reporting SDK is integrated.
+- `AiQo/PhoneConnectivityManager.swift:756` contains a TODO to integrate watch-earned XP into `LevelStore.shared.addXP(xp)`.
 
-5. **AnalyticsService has no backend** — Events are tracked but there's no indication they're sent anywhere (no Firebase, Mixpanel, etc.).
+- `AiQo/Features/Profile/LevelCardView.swift:236-238`, `AiQo/Features/Gym/PhoneWorkoutSummaryView.swift:268-300`, and `AiQo/Core/Models/LevelStore.swift:134-152` show two parallel leveling systems: legacy `aiqo.currentLevel` keys and modern `aiqo.user.level` keys.
 
-6. **API keys in xcconfig** — `Secrets.xcconfig` contains real API keys and is tracked in git. This file should be gitignored and not committed.
+- `AiQo/Tribe/TribeStore.swift:77` and `:115` explicitly log that creation/join flows still use local stub data until Supabase tribe tables are ready.
 
-7. **Supabase credentials in AiQo.xcconfig** — The anon key is hardcoded in the non-gitignored config file. While anon keys are designed to be public with RLS, this is still a best-practice concern.
+- `AiQo/Features/Tribe/TribeExperienceFlow.swift:202-221` labels community feed, challenges, and invites as placeholders.
 
-8. **Legacy ViewControllers** — `DatingScreenViewController`, `LoginViewController`, `GymViewController`, `LegacyCalculationViewController`, `RecapViewController`, `RewardsViewController`, `WinsViewController`, `MyPlanViewController` — These UIKit ViewControllers exist alongside SwiftUI views. Migration to pure SwiftUI would be cleaner.
+- `AiQo/Features/Gym/HeartView.swift:3` is marked as a future-release / post-launch feature.
 
-9. **No `AppFlowController`** — The onboarding flow is controlled by checking 5 separate UserDefaults flags. A proper state machine (`AppFlowController`) would be more maintainable.
+- `AiQo/Features/Gym/QuestKit/QuestDataSources.swift:248` and `:418` still contain V2/post-launch hooks for real camera execution and real Arena event integration.
 
-10. **Sleep Agent language mismatch** — Comments in `BrainOrchestrator` note that Apple Intelligence may fail due to "language mismatch (ar-SA vs en)" — the local model may not support Arabic well.
+- `Configuration/Secrets.xcconfig` stores live-looking secrets in the repo, which is a security risk and release-process issue.
 
-### UI/UX Gaps
+### UI / UX Gaps Visible From Code Comments And Structure
 
-1. **No Settings screen in tab bar** — Settings accessible only from profile
-2. **No pull-to-refresh on Home** — Health data refreshes on appear but no manual refresh
-3. **No empty states** — Several screens lack empty state designs
-4. **No dark mode toggle** — Relies entirely on system setting
-5. **No skeleton loading in all screens** — `AiQoSkeletonView` exists but isn't used everywhere
+Tribe/community still mixes premium marketing shell, preview mode, local stubs, and live Supabase-backed leaderboard/service code.
 
-### Missing Features Before TestFlight
+The leveling system has not fully converged on one canonical source of truth.
 
-1. **Production crash reporting** — Integrate Firebase Crashlytics
-2. **Production analytics** — Integrate analytics backend
-3. **Proper error handling** — Many `print()` statements instead of user-facing error messages
-4. **App Store screenshots** — Need marketing assets
-5. **Privacy nutrition labels** — Need accurate App Store privacy declarations
-6. **Remove hardcoded API keys** — Move all secrets to secure storage or CI environment
-7. **App Review compliance** — Ensure subscription display meets Apple guidelines
+Some accessibility helpers exist but have not been applied consistently across the app.
 
-### Missing Features Before App Store Launch
+Onboarding contains at least one unused screen path and one unused setup component, which increases maintenance cost.
 
-1. **Notification permission optimization** — Currently requests all at once
-2. **Widget data sharing** — App Group setup for widget↔app data sharing
-3. **Proper app icon** — Need final app icon (current has placeholder considerations)
-4. **Localization QA** — Full RTL testing pass
-5. **Performance profiling** — Memory and battery optimization
-6. **Accessibility audit** — VoiceOver full testing pass
-7. **Sign in with Apple compliance** — Account deletion support
+### Missing Before TestFlight (inference from current code/comments)
 
-### Missing Features Before App Store Launch (Expanded)
+Converge legacy XP keys into the modern `LevelStore` or fully retire one path.
 
-1. **Notification permission optimization** — Currently requests all permissions at once. Should use progressive permission requests.
-2. **Widget data sharing** — App Group setup needed for widget ↔ app real-time data sharing. Currently widgets may show stale data.
-3. **App icon finalization** — Current icon has had alpha channel issues (fixed in commit `69ed456`). Need final marketing icon.
-4. **Full RTL testing pass** — Every screen needs RTL validation with Arabic content.
-5. **Performance profiling** — Memory leaks, battery drain during workout sessions, background task efficiency.
-6. **Full accessibility audit** — VoiceOver navigation, Dynamic Type overflow, Reduce Motion compliance.
-7. **Sign in with Apple compliance** — Apple requires account deletion support. Need Settings → Delete Account flow.
-8. **App Store review guidelines** — Subscription display must follow App Store guidelines precisely (pricing clarity, cancellation instructions).
-9. **Privacy nutrition labels** — Must accurately declare all data types collected/tracked.
-10. **GDPR/privacy compliance** — Data export and deletion capabilities required for certain markets.
-11. **Rate limiting** — Captain API calls need client-side rate limiting to prevent abuse.
-12. **Offline mode** — Some features should gracefully degrade when offline (currently shows error messages).
-13. **Data migration** — Strategy for future SwiftData schema changes.
-14. **iPad support** — Currently iPhone-only. iPad layout may need attention.
-15. **Landscape mode** — Lock to portrait or add landscape support.
+Finish live Tribe create/join/member flows so the preview/local-stub split is removed.
 
-### Post-Launch Roadmap
+Resolve the watch XP TODO if workout rewards must feel consistent across phone/watch sessions.
 
-#### Phase 1 — Polish & Analytics (Month 1-2)
-1. **Production analytics** — Firebase Analytics + Crashlytics integration
-2. **Onboarding optimization** — A/B test onboarding flow with funnel analytics
-3. **Performance optimization** — Battery, memory, network usage improvements
-4. **Bug fixes** — Address TestFlight feedback
+Audit committed secrets and move them out of source control.
 
-#### Phase 2 — Feature Enhancement (Month 3-4)
-5. **Food recognition AI** — Enhanced kitchen camera with on-device food recognition using CoreML
-6. **Health trends** — Weekly/monthly health trend analysis with charts
-7. **Custom workout builder** — User-created workout plans saved to library
-8. **AI voice conversations** — Real-time voice chat with Captain Hamoudi (streaming ElevenLabs)
+Run a navigation review for kitchen/tribe discoverability because the symbolic router and visible tabs diverge.
 
-#### Phase 3 — Social & Community (Month 5-6)
-9. **Social features** — Direct messaging within tribes
-10. **Community challenges** — Global challenges beyond individual tribes
-11. **Profile sharing** — Public profile cards for social media
-12. **Referral program expansion** — Viral growth mechanics
+### Missing Before App Store Launch (inference from current code/comments)
 
-#### Phase 4 — Platform Expansion (Month 7+)
-13. **Arabic dialect expansion** — Gulf (خليجي), Levantine (شامي), Egyptian (مصري) dialects
-14. **Wearable expansion** — Support for additional health devices beyond Apple Watch
-15. **Integration with medical providers** — Share health reports with healthcare professionals
-16. **Mindfulness module** — Guided meditation, breathing exercises, body scan
-17. **iPad optimization** — Full iPad layout support with Split View
-18. **macOS Catalyst** — Desktop companion app
+Replace preview/placeholder Tribe copy with production community functionality or explicitly gate/hide those surfaces.
 
-### Known Technical Debt
+Decide whether Heart / V2 Quest camera / future Arena hooks are launch-scope or must remain hidden.
 
-1. **UIKit ↔ SwiftUI bridge** — Several legacy UIKit ViewControllers (`DatingScreenViewController`, `GymViewController`, `LoginViewController`, etc.) coexist with SwiftUI. These should be migrated to pure SwiftUI for consistency.
+Add a production remote crash/analytics backend if operations visibility is required at scale.
 
-2. **Shared code duplication** — `WorkoutSyncCodec.swift` and `WorkoutSyncModels.swift` are copy-pasted between iOS and watchOS targets. Should be extracted to a Swift Package.
+Lock the backend policy/migration story because RLS and schema migrations are not versioned in this repo.
 
-3. **Missing state machine** — Onboarding flow is controlled by 5 separate UserDefaults booleans. A proper `AppFlowController` state machine would be more maintainable and testable.
+### Post-Launch / Ongoing Roadmap Signals Found In Code
 
-4. **Test coverage** — Only 5 test files exist:
-   - `IngredientAssetCatalogTests.swift`
-   - `IngredientAssetLibraryTests.swift`
-   - `PurchasesTests.swift`
-   - `QuestEvaluatorTests.swift`
-   - `SmartWakeManagerTests.swift`
+Expand Tribe/Arena into fully live graph/event streams.
 
-   Critical paths lacking tests: BrainOrchestrator routing, PrivacySanitizer PII redaction, CaptainPromptBuilder prompt generation, StreakManager continuity logic, FreeTrialManager state transitions.
+Complete the LegendaryChallenges migration from `UserDefaults` to `RecordProjectManager` SwiftData persistence.
 
-5. **Hardcoded strings** — Some screens still have hardcoded strings despite the localization effort. The `L10n.swift` file in Gym suggests an attempted but incomplete type-safe localization approach.
+Expand on-device coaching and structured output flows wherever `FoundationModels` is available.
 
-6. **Missing error boundaries** — Many `print()` statements for errors instead of user-facing error handling. The `AiQoError.swift` error types exist but aren't consistently used.
+Continue building watch-connected workout and reward loops.
 
-7. **Singleton proliferation** — 15+ singletons (`.shared`) create hidden dependencies. Consider dependency injection for testability.
+### Evidence Files
 
-8. **API key security** — `Secrets.xcconfig` is committed to git with real API keys. Should be gitignored with a template file committed instead.
+- `AiQo/App/MainTabRouter.swift`
 
----
+- `AiQo/App/MainTabScreen.swift`
 
-## Appendix A — Siri Shortcuts
+- `AiQo/Features/Onboarding/OnboardingWalkthroughView.swift`
 
-### Available Shortcuts (via AppIntents)
+- `AiQo/App/ProfileSetupView.swift`
 
-| Shortcut | Intent | Phrases |
-|---|---|---|
-| Start Workout | `StartWorkoutIntent(workout: .running)` | "Start workout with AiQo", "ابدأ تمرين في AiQo" |
-| Start Walk | `StartWorkoutIntent(workout: .walking)` | "Start walking workout with AiQo", "ابدأ تمرين مشي في AiQo" |
+- `AiQo/PhoneConnectivityManager.swift`
 
-### Supported Workout Types (Siri)
+- `AiQo/Tribe/TribeStore.swift`
 
-- Running, Walking, Cycling, Strength, HIIT, Swimming, Yoga
+- `AiQo/Features/Tribe/TribeExperienceFlow.swift`
 
-### Donated Activities (SiriShortcutsManager)
+- `AiQo/Features/Gym/HeartView.swift`
 
-- `com.aiqo.startWalk`, `com.aiqo.startRun`, `com.aiqo.startHIIT`
-- `com.aiqo.openCaptain`, `com.aiqo.todaySummary`, `com.aiqo.logWater`
-- `com.aiqo.openKitchen`, `com.aiqo.weeklyReport`
+- `AiQo/Features/Gym/QuestKit/QuestDataSources.swift`
 
----
+- `AiQo/Core/Models/LevelStore.swift`
 
-## Appendix B — Live Activity (Dynamic Island)
+- `AiQo/Features/Profile/LevelCardView.swift`
 
-### WorkoutActivityAttributes
+- `AiQo/Features/Gym/PhoneWorkoutSummaryView.swift`
 
-**File:** `AiQoWidget/AiQoWidgetLiveActivity.swift`
+- `Configuration/Secrets.xcconfig`
 
-**ContentState properties:**
-- `title: String`
-- `elapsedSeconds: Int`
-- `elapsedAnchorDate: Date?`
-- `heartRate: Int`
-- `activeCalories: Int`
-- `distanceMeters: Double`
-- `phase: WorkoutPhase` (`.running`, `.paused`, `.ending`)
-- `heartRateState: HeartRateState` (`.neutral`, `.warmingUp`, `.zone2`, `.belowZone2`, `.aboveZone2`)
-- `activeBuffs: [Buff]` (with tones: `.mint`, `.amber`, `.sky`, `.rose`, `.lavender`)
+## Verification Footer
 
-**Dynamic Island Regions:**
-- **Expanded Leading:** Heart rate with pulse animation
-- **Expanded Center:** Workout title + active buffs
-- **Expanded Trailing:** Timer + phase label
-- **Expanded Bottom:** Calorie/distance chips + buff summary
-- **Compact Leading:** Heart icon + BPM
-- **Compact Trailing:** Elapsed time
-- **Minimal:** Pulsing heart glyph with buff indicator
-
-**Lock Screen:** Full workout dashboard with gradient background, heart rate zones, timer, calories, distance, Zone 2 badge.
-
----
-
-## Appendix C — Weekly Report & Data Export
-
-### Weekly Report
-
-**Files:** `Features/WeeklyReport/WeeklyReportModel.swift`, `WeeklyReportViewModel.swift`, `WeeklyReportView.swift`, `ShareCardRenderer.swift`
-
-- Aggregates 7-day health data
-- Generates shareable card image via `ShareCardRenderer`
-- Available via Siri shortcut: `com.aiqo.weeklyReport`
-
-### Health Data Export
-
-**File:** `Features/DataExport/HealthDataExporter.swift`
-
-- Exports user health data for personal backup
-- Privacy-compliant data portability
-
-### Progress Photos
-
-**Files:** `Features/ProgressPhotos/ProgressPhotoStore.swift`, `ProgressPhotosView.swift`
-
-- Body transformation photo tracking
-- Before/after comparison views
-- Photo storage and management
-
----
-
----
-
-## Appendix D — Complete File Inventory
-
-### App/ Directory (11 files)
-
-```
-AiQo/App/
-├── AppDelegate.swift                    # @main + UIApplicationDelegate + Siri intents (455 lines)
-├── AppRootManager.swift                 # Cross-tab state management
-├── AuthFlowUI.swift                     # Sign in with Apple flow
-├── DatingScreenViewController.swift     # Profile setup (onboarding)
-├── LanguageSelectionView.swift          # Language picker (Arabic/English)
-├── LoginViewController.swift            # Legacy login controller
-├── MainTabRouter.swift                  # Tab navigation singleton
-├── MainTabScreen.swift                  # TabView with 3 visible tabs
-├── MealModels.swift                     # Meal data models
-└── SceneDelegate.swift                  # Scene lifecycle
-```
-
-### Core/ Directory (29 files)
-
-```
-AiQo/Core/
-├── AiQoAccessibility.swift              # Accessibility labels and hints
-├── AiQoAudioManager.swift               # Central audio session management
-├── AppSettingsScreen.swift              # Settings UI
-├── AppSettingsStore.swift               # User preferences singleton
-├── ArabicNumberFormatter.swift          # Latin → Arabic numeral conversion
-├── CaptainMemory.swift                  # SwiftData @Model for memories
-├── CaptainMemorySettingsView.swift      # Memory management UI
-├── CaptainVoiceAPI.swift                # ElevenLabs API client
-├── CaptainVoiceCache.swift              # Voice audio local cache
-├── CaptainVoiceService.swift            # Voice synthesis orchestrator
-├── Colors.swift                         # UIColor + SwiftUI Color definitions
-├── Constants.swift                      # App-wide constants namespace (K)
-├── DailyGoals.swift                     # Daily step/calorie goal tracking
-├── DeveloperPanelView.swift             # Debug panel (DEBUG only)
-├── HapticEngine.swift                   # Haptic feedback utilities
-├── HealthKitMemoryBridge.swift          # HK → Captain memory sync
-├── MemoryExtractor.swift                # Conversation → memory extraction
-├── MemoryStore.swift                    # Memory CRUD manager
-├── SiriShortcutsManager.swift           # Siri shortcut donation
-├── SmartNotificationScheduler.swift     # Smart notification timing
-├── SpotifyVibeManager.swift             # Spotify SDK integration
-├── StreakManager.swift                  # Streak tracking
-├── UserProfileStore.swift              # User profile data store
-├── VibeAudioEngine.swift               # Binaural beats + ambient audio
-├── Localization/
-│   ├── Bundle+Language.swift            # Dynamic locale switching
-│   └── LocalizationManager.swift        # Language management
-├── Models/
-│   ├── ActivityNotification.swift       # Notification models
-│   ├── LevelStore.swift                 # XP + Level + Shield system
-│   └── NotificationPreferencesStore.swift
-├── Purchases/
-│   ├── EntitlementStore.swift           # Active subscription state
-│   ├── PurchaseManager.swift            # StoreKit 2 manager
-│   ├── ReceiptValidator.swift           # Supabase receipt validation
-│   └── SubscriptionProductIDs.swift     # Product ID registry
-└── Utilities/
-    └── ConnectivityDebugProviding.swift
-```
-
-### Features/Captain/ Directory (26 files)
-
-```
-AiQo/Features/Captain/
-├── AiQoPromptManager.swift              # Prompt management utilities
-├── AppleIntelligenceSleepAgent.swift     # On-device sleep analysis
-├── BrainOrchestrator.swift              # AI routing engine (480 lines)
-├── CaptainChatView.swift                # Main chat UI
-├── CaptainContextBuilder.swift          # HealthKit → context aggregation
-├── CaptainFallbackPolicy.swift          # Offline/error fallback responses
-├── CaptainIntelligenceManager.swift     # Intelligence feature management
-├── CaptainModels.swift                  # Chat message + structured response models (488 lines)
-├── CaptainNotificationRouting.swift     # Notification → Captain chat routing
-├── CaptainOnDeviceChatEngine.swift      # On-device chat fallback
-├── CaptainPersonaBuilder.swift          # Banned phrases + response rules
-├── CaptainPromptBuilder.swift           # 6-layer system prompt generator (362 lines)
-├── CaptainScreen.swift                  # Captain tab main screen
-├── CaptainViewModel.swift               # Main Captain ViewModel (400+ lines)
-├── ChatHistoryView.swift                # Chat session history browser
-├── CloudBrainService.swift              # Privacy wrapper for cloud API
-├── CoachBrainMiddleware.swift           # Coach brain translation layer
-├── CoachBrainTranslationConfig.swift    # Translation configuration
-├── HybridBrainService.swift             # Gemini API transport (415 lines)
-├── LLMJSONParser.swift                  # Robust JSON extraction from LLM output
-├── LocalBrainService.swift              # Apple Intelligence service
-├── LocalIntelligenceService.swift       # Local intelligence utilities
-├── MessageBubble.swift                  # Chat bubble UI component
-├── PrivacySanitizer.swift               # Privacy-first data sanitization (397 lines)
-├── PromptRouter.swift                   # Local route prompt generation
-└── ScreenContext.swift                  # Screen context enum (6 cases)
-```
-
-### Features/Home/ Directory (23 files)
-
-```
-AiQo/Features/Home/
-├── ActivityDataProviding.swift          # Activity data protocol
-├── AlarmSetupCardView.swift             # Smart wake alarm card
-├── DJCaptainChatView.swift              # Quick Captain chat from home
-├── DailyAuraModels.swift                # Daily aura data models
-├── DailyAuraPathData.swift              # Aura animation path data
-├── DailyAuraView.swift                  # Animated health visualization
-├── DailyAuraViewModel.swift             # Aura state management
-├── HealthKitService+Water.swift         # Water tracking extension
-├── HomeStatCard.swift                   # Health stat display cards
-├── HomeView.swift                       # Main home screen
-├── HomeViewModel.swift                  # Home data aggregation
-├── LevelUpCelebrationView.swift         # Level-up animation overlay
-├── MetricKind.swift                     # Metric type enum
-├── SleepDetailCardView.swift            # Sleep data card
-├── SleepScoreRingView.swift             # Sleep quality ring
-├── SmartWakeCalculatorView.swift        # Optimal wake time UI
-├── SmartWakeEngine.swift                # Sleep cycle calculation engine
-├── SmartWakeViewModel.swift             # Smart wake state management
-├── SpotifyVibeCard.swift                # Spotify widget on home
-├── StreakBadgeView.swift                # Streak display badge
-├── VibeControlSheet.swift               # Vibe/music control sheet
-├── WaterBottleView.swift                # Water bottle animation
-└── WaterDetailSheetView.swift           # Water tracking detail
-```
-
-### Features/Gym/ Directory (60+ files)
-
-```
-AiQo/Features/Gym/
-├── ActiveRecoveryView.swift
-├── AudioCoachManager.swift
-├── CinematicGrindCardView.swift
-├── CinematicGrindViews.swift
-├── ExercisesView.swift
-├── GuinnessEncyclopediaView.swift
-├── GymViewController.swift
-├── HandsFreeZone2Manager.swift
-├── HeartView.swift
-├── L10n.swift
-├── LiveMetricsHeader.swift
-├── LiveWorkoutSession.swift
-├── MyPlanViewController.swift
-├── OriginalWorkoutCardView.swift
-├── PhoneWorkoutSummaryView.swift
-├── RecapViewController.swift
-├── RewardsViewController.swift
-├── ShimmeringPlaceholder.swift
-├── SoftGlassCardView.swift
-├── SpotifyWebView.swift
-├── SpotifyWorkoutPlayerView.swift
-├── WatchConnectionStatusButton.swift
-├── WatchConnectivityService.swift
-├── WinsViewController.swift
-├── WorkoutLiveActivityManager.swift
-├── WorkoutSessionScreen.swift.swift
-├── WorkoutSessionSheetView.swift
-├── WorkoutSessionViewModel.swift
-├── Club/
-│   ├── ClubRootView.swift
-│   ├── Body/BodyView.swift
-│   ├── Body/GratitudeAudioManager.swift
-│   ├── Body/GratitudeSessionView.swift
-│   ├── Body/WorkoutCategoriesView.swift
-│   ├── Challenges/ChallengesView.swift
-│   ├── Components/ClubNavigationComponents.swift
-│   ├── Components/RailScrollOffsetPreferenceKey.swift
-│   ├── Components/RightSideRailView.swift
-│   ├── Components/RightSideVerticalRail.swift
-│   ├── Components/SegmentedTabs.swift
-│   ├── Components/SlimRightSideRail.swift
-│   ├── Impact/ImpactAchievementsView.swift
-│   ├── Impact/ImpactContainerView.swift
-│   ├── Impact/ImpactSummaryView.swift
-│   └── Plan/PlanView.swift
-│       └── WorkoutPlanFlowViews.swift
-├── Models/GymExercise.swift
-├── QuestKit/                            # 10 files
-├── Quests/                              # 20+ files (Models, Store, Views, VisionCoach)
-└── T/                                   # Spin Wheel (4 files)
-```
-
-### Features/Kitchen/ Directory (25+ files)
-
-```
-AiQo/Features/Kitchen/
-├── CameraView.swift
-├── CompositePlateView.swift
-├── FridgeInventoryView.swift
-├── IngredientAssetCatalog.swift
-├── IngredientAssetLibrary.swift
-├── IngredientCatalog.swift
-├── IngredientDisplayItem.swift
-├── IngredientKey.swift
-├── InteractiveFridgeView.swift
-├── KitchenLanguageRouter.swift
-├── KitchenModels.swift
-├── KitchenPersistenceStore.swift
-├── KitchenPlanGenerationService.swift
-├── KitchenSceneView.swift
-├── KitchenScreen.swift
-├── KitchenView.swift
-├── KitchenViewModel.swift
-├── LocalMealsRepository.swift
-├── Meal.swift
-├── MealIllustrationView.swift
-├── MealImageSpec.swift
-├── MealPlanGenerator.swift
-├── MealPlanView.swift
-├── MealSectionView.swift
-├── MealsRepository.swift
-├── NutritionTrackerView.swift
-├── PlateTemplate.swift
-├── RecipeCardView.swift
-├── SmartFridgeCameraPreviewController.swift
-├── SmartFridgeCameraViewModel.swift
-├── SmartFridgeScannedItemRecord.swift
-├── SmartFridgeScannerView.swift
-└── meals_data.json
-```
-
-### Services/ Directory (20 files)
-
-```
-AiQo/Services/
-├── AiQoError.swift                      # Centralized error types
-├── DeepLinkRouter.swift                 # URL scheme + Universal Link handler
-├── NetworkMonitor.swift                 # NWPathMonitor wrapper
-├── NotificationType.swift               # Notification type enum
-├── ReferralManager.swift                # Referral code management
-├── SupabaseArenaService.swift           # Arena-specific Supabase ops
-├── SupabaseService.swift                # Main Supabase client
-├── Analytics/
-│   ├── AnalyticsEvent.swift             # Event definitions
-│   └── AnalyticsService.swift           # Tracking service
-├── CrashReporting/
-│   └── CrashReporter.swift              # Crash reporting (stub)
-├── Notifications/
-│   ├── ActivityNotificationEngine.swift # Angel number notifications
-│   ├── AlarmSchedulingService.swift     # Smart alarm scheduling
-│   ├── CaptainBackgroundNotificationComposer.swift
-│   ├── InactivityTracker.swift          # User inactivity detection
-│   ├── MorningHabitOrchestrator.swift   # Morning routine monitoring
-│   ├── NotificationCategoryManager.swift # Category registration
-│   ├── NotificationIntelligenceManager.swift # AI-driven scheduling
-│   ├── NotificationRepository.swift     # Notification history
-│   ├── NotificationService.swift        # Core notification service
-│   ├── PremiumExpiryNotifier.swift      # Subscription warnings
-│   ├── SleepSessionObserver.swift       # Sleep session monitoring
-│   └── SmartNotificationManager.swift   # Smart scheduling
-└── Permissions/HealthKit/
-    ├── HealthKitService.swift           # Unified HK service (actor)
-    └── TodaySummary.swift               # Today's health summary
-```
-
-### Tribe/ Directory (35+ files)
-
-```
-AiQo/Tribe/
-├── Arena/TribeArenaView.swift
-├── Galaxy/                              # 30+ views
-│   ├── ArenaScreen.swift
-│   ├── ArenaViewModel.swift
-│   ├── ArenaModels.swift
-│   ├── GalaxyScreen.swift
-│   ├── GalaxyViewModel.swift
-│   ├── GalaxyModels.swift
-│   ├── ... (25+ more files)
-├── Log/TribeLogView.swift
-├── Models/
-│   ├── TribeFeatureModels.swift
-│   └── TribeModels.swift
-├── Preview/
-│   ├── TribePreviewController.swift
-│   └── TribePreviewData.swift
-├── Repositories/TribeRepositories.swift
-├── Stores/
-│   ├── ArenaStore.swift
-│   ├── GalaxyStore.swift
-│   └── TribeLogStore.swift
-├── Views/
-│   ├── GlobalTribeRadialView.swift
-│   ├── TribeAtomRingView.swift
-│   ├── TribeEnergyCoreCard.swift
-│   ├── TribeHubScreen.swift
-│   └── TribeLeaderboardView.swift
-├── TribeModuleComponents.swift
-├── TribeModuleModels.swift
-├── TribeModuleViewModel.swift
-├── TribePulseScreenView.swift
-├── TribeScreen.swift
-└── TribeStore.swift
-```
-
-### DesignSystem/ Directory (12 files)
-
-```
-AiQo/DesignSystem/
-├── AiQoColors.swift                     # Brand color tokens
-├── AiQoTheme.swift                      # Semantic theme (light/dark)
-├── AiQoTokens.swift                     # Spacing, radius, metrics
-├── Components/
-│   ├── AiQoBottomCTA.swift              # Primary action button
-│   ├── AiQoCard.swift                   # Standard card container
-│   ├── AiQoChoiceGrid.swift             # Grid selection
-│   ├── AiQoPillSegment.swift            # Segmented pill control
-│   ├── AiQoPlatformPicker.swift         # Platform-aware picker
-│   ├── AiQoSkeletonView.swift           # Loading skeleton
-│   └── StatefulPreviewWrapper.swift     # Preview utility
-└── Modifiers/
-    ├── AiQoPressEffect.swift            # Scale-down press animation
-    ├── AiQoShadow.swift                 # Standard shadow
-    └── AiQoSheetStyle.swift             # Bottom sheet styling
-```
-
-### Widget Targets
-
-```
-AiQoWidget/                              # iOS Home Screen + Live Activity
-├── AiQoEntry.swift
-├── AiQoProvider.swift
-├── AiQoRingsFaceWidget.swift
-├── AiQoSharedStore.swift
-├── AiQoWatchFaceWidget.swift
-├── AiQoWidget.swift
-├── AiQoWidgetBundle.swift
-├── AiQoWidgetLiveActivity.swift         # Dynamic Island + Lock Screen (719 lines)
-└── AiQoWidgetView.swift
-
-AiQoWatchWidget/                         # watchOS Complication
-├── AiQoWatchWidget.swift
-├── AiQoWatchWidgetBundle.swift
-└── AiQoWatchWidgetProvider.swift
-```
-
-### Test Targets
-
-```
-AiQoTests/
-├── IngredientAssetCatalogTests.swift
-├── IngredientAssetLibraryTests.swift
-├── PurchasesTests.swift
-├── QuestEvaluatorTests.swift
-└── SmartWakeManagerTests.swift
-
-AiQoUITests/                             # (empty/minimal)
-
-AiQoWatch Watch AppTests/
-└── AiQoWatch_Watch_AppTests.swift
-
-AiQoWatch Watch AppUITests/
-├── AiQoWatch_Watch_AppUITests.swift
-└── AiQoWatch_Watch_AppUITestsLaunchTests.swift
-```
-
----
-
-## Appendix E — Complete UserDefaults Key Reference
-
-### Onboarding Flags
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `didSelectLanguage` | Bool | false | Language selection completed |
-| `didShowFirstAuthScreen` | Bool | false | Auth screen shown |
-| `didCompleteDatingProfile` | Bool | false | Profile setup completed |
-| `didCompleteLegacyCalculation` | Bool | false | HealthKit sync + level calc done |
-| `didCompleteFeatureIntro` | Bool | false | Feature intro viewed |
-
-### Captain Customization
-
-| Key | Type | Description |
-|---|---|---|
-| `captain_user_name` | String | User's display name for Captain |
-| `captain_user_age` | String | User's age |
-| `captain_user_height` | String | User's height |
-| `captain_user_weight` | String | User's weight |
-| `captain_calling` | String | How Captain addresses user |
-| `captain_tone` | String | Preferred conversation tone |
-| `captain_memory_enabled` | Bool | Captain memory toggle (default: true) |
-
-### Gamification
-
-| Key | Type | Description |
-|---|---|---|
-| `aiqo.user.level` | Int | Current level (starts at 1) |
-| `aiqo.user.currentXP` | Int | XP within current level |
-| `aiqo.user.totalXP` | Int | Total lifetime XP |
-| `aiqo.streak.current` | Int | Current consecutive days |
-| `aiqo.streak.longest` | Int | All-time longest streak |
-| `aiqo.streak.lastActive` | Date | Last active day |
-| `aiqo.streak.history` | Data | JSON-encoded [Date] array (last 30 days) |
-| `lastCelebratedLevel` | Int | Last level-up celebration shown |
-
-### App Settings
-
-| Key | Type | Description |
-|---|---|---|
-| `appLanguage` | String | Current language (`arabic` / `english`) |
-| `notificationsEnabled` | Bool | Global notification toggle |
-| `user_gender` | String | User gender for notification personalization |
-
-### Health & Goals
-
-| Key | Type | Description |
-|---|---|---|
-| `aiqo.dailyGoals` | Data | JSON-encoded daily step/calorie goals |
-
-### Monetization
-
-| Key | Type | Description |
-|---|---|---|
-| `aiqo.freeTrial.startDate` | Date | Trial start (also in Keychain) |
-
----
-
-## Appendix F — API Endpoint Reference
-
-### Gemini API (Captain Brain)
-
-```
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}
-
-Headers:
-  Content-Type: application/json
-  Accept: application/json
-
-Body: {
-  "systemInstruction": { "parts": [{ "text": "<6-layer system prompt>" }] },
-  "contents": [<Gemini format messages>],
-  "generationConfig": {
-    "maxOutputTokens": 600-900,
-    "temperature": 0.7
-  }
-}
-
-Response: {
-  "candidates": [{ "content": { "parts": [{ "text": "<JSON response>" }] } }]
-}
-```
-
-### Gemini API (Coach Brain Middleware)
-
-```
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={API_KEY}
-```
-
-Used by `CoachBrainMiddleware.swift` for translation and coaching enhancement.
-
-### Gemini API (Spiritual Whispers)
-
-```
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={API_KEY}
-```
-
-Used for background spiritual whisper generation.
-
-### ElevenLabs Voice API
-
-```
-POST https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}?output_format=mp3_44100_128
-
-Headers:
-  Content-Type: application/json
-  Accept: audio/mpeg
-  xi-api-key: {API_KEY}
-
-Body: {
-  "text": "<Captain's message>",
-  "model_id": "eleven_multilingual_v2",
-  "voice_settings": {
-    "stability": 0.34,
-    "similarity_boost": 0.88,
-    "style": 0.18,
-    "use_speaker_boost": true
-  }
-}
-
-Response: Binary MP3 audio data
-```
-
-### Supabase API
-
-```
-Base URL: https://zidbsrepqpbucqzxnwgk.supabase.co
-
-Tables accessed:
-- GET/POST /rest/v1/profiles
-- GET/POST /rest/v1/tribes
-- GET/POST /rest/v1/tribe_members
-- GET/POST /rest/v1/arena_challenges
-- GET/POST /rest/v1/arena_participations
-
-Auth: Bearer token from Sign in with Apple → Supabase Auth flow
-```
-
----
-
-## Appendix G — Complete ScreenContext Reference
-
-**File:** `AiQo/Features/Captain/ScreenContext.swift`
-
-```swift
-enum ScreenContext: String, CaseIterable, Sendable {
-    case kitchen        // Kitchen (المطبخ)
-    case gym            // Gym (الجيم)
-    case sleepAnalysis  // Sleep Analysis (تحليل النوم)
-    case peaks          // Peaks (قِمَم)
-    case mainChat       // Main Chat (الدردشة الرئيسية)
-    case myVibe         // My Vibe (ذبذباتي)
-}
-```
-
-### Context → AI Behavior Matrix
-
-| Context | Route | Output Tokens | workoutPlan | mealPlan | spotifyRec | Tone Bias |
-|---|---|---|---|---|---|---|
-| `mainChat` | Cloud | 600 | Only if asked | Only if asked | null | Conversational |
-| `gym` | Cloud | 900 | Auto-generate | Only if asked | null | Action-oriented |
-| `kitchen` | Cloud | 900 | Only if asked | Auto-generate | null | Food-focused |
-| `sleepAnalysis` | **Local** | 160 | null | null | null | Gentle, recovery |
-| `peaks` | Cloud | 900 | Only if asked | Only if asked | null | Challenge-driven |
-| `myVibe` | Cloud | 600 | null | null | MUST when asked | Emotionally intelligent |
-
-### Context Focus Summaries
-
-| Context | focusSummary |
-|---|---|
-| `kitchen` | "Food, fridge logic, meal suggestions, and practical nutrition choices." |
-| `gym` | "Training guidance, structured workouts, and action-first fitness coaching." |
-| `sleepAnalysis` | "Sleep quality, recovery, wind-down guidance, and low-stimulus coaching." |
-| `peaks` | "Momentum, discipline, measurable challenges, and level-based progression." |
-| `mainChat` | "General captain coaching across health, habits, and daily execution." |
-| `myVibe` | "Mood, music, focus, emotional regulation, and energy pacing." |
-
----
-
-## Appendix H — Structured Response Schema
-
-### CaptainStructuredResponse
-
-The JSON response from Gemini must match this exact schema:
-
-```json
-{
-  "message": "Captain's reply text (required, non-empty)",
-  "quickReplies": ["Option 1", "Option 2", "Option 3"],
-  "workoutPlan": {
-    "title": "Plan title",
-    "exercises": [
-      {
-        "name": "Exercise name",
-        "sets": 3,
-        "repsOrDuration": "12 reps"
-      }
-    ]
-  },
-  "mealPlan": {
-    "meals": [
-      {
-        "type": "breakfast",
-        "description": "Egg whites with veggies",
-        "calories": 250
-      }
-    ]
-  },
-  "spotifyRecommendation": {
-    "vibeName": "Energy Lift",
-    "description": "A clean energy ramp...",
-    "spotifyURI": "spotify:search:Arabic+Workout+Motivation"
-  }
-}
-```
-
-### Field Rules
-
-| Field | Required | Max Length | Rules |
-|---|---|---|---|
-| `message` | Yes | Unlimited | Natural text. No JSON/API references. Language must match setting. |
-| `quickReplies` | No | 3 items, 25 chars each | Short tappable suggestions. Same language as message. |
-| `workoutPlan` | No | — | Only when user asks for training. Must have title + exercises. |
-| `mealPlan` | No | — | Only when user asks for food. Must have non-empty meals array. |
-| `spotifyRecommendation` | No | — | Only for music requests. Must have vibeName + description + spotifyURI. |
-
-### Spotify URI Format
-
-Supported formats:
-- `spotify:search:<query>` — Dynamic search (preferred for personalization)
-- `spotify:playlist:<id>` — Direct playlist link
-
-Fallback recommendations (from `SpotifyRecommendation.myVibeFallback()`):
-| Vibe | Playlist ID |
-|---|---|
-| Energy Lift | `37i9dQZF1DX76Wlfdnj7AP` |
-| Deep Focus | `37i9dQZF1DWZeKCadgRdKQ` |
-| Zen Mode | `37i9dQZF1DWZqd5JICZI0u` |
-
----
-
-## Appendix I — LLMJSONParser
-
-**File:** `AiQo/Features/Captain/LLMJSONParser.swift`
-
-Robust JSON extraction from LLM output that handles common LLM quirks:
-
-1. **Strips markdown fences** — Removes ` ```json ` and ` ``` ` wrappers
-2. **Extracts JSON object** — Finds first `{` to last `}` in output
-3. **Handles trailing commas** — Common LLM error
-4. **Handles unescaped quotes** — Within string values
-5. **Falls back to message-only** — If JSON parsing fails, uses raw text as message
-
----
-
-## Appendix J — Audio Assets
-
-### Binaural Beat / Ambient Sound Assets
-
-Stored in `Assets.xcassets` as `.dataset` types:
-
-| Asset Name | Purpose |
-|---|---|
-| `GammaFlow` | High-frequency gamma wave stimulation (40 Hz) |
-| `SerotoninFlow` | Serotonin-boosting ambient (10 Hz alpha) |
-| `ThetaTrance` | Deep meditation theta waves (4-8 Hz) |
-| `Hypnagogic_state` | Sleep onset / hypnagogic state induction |
-| `SoundOfEnergy` | Energy and alertness boost |
-
-Managed by `VibeAudioEngine` in `Core/VibeAudioEngine.swift`.
-
----
-
-## Appendix K — Watch App Detailed Architecture
-
-### WatchWorkoutManager
-
-**File:** `AiQoWatch Watch App/Services/WatchWorkoutManager.swift`
-
-Manages `HKWorkoutSession` on watchOS:
-- Start/stop/pause/resume workout sessions
-- Real-time heart rate monitoring
-- Active calorie tracking
-- Distance measurement
-- Workout session delegation
-
-### WatchHealthKitManager
-
-**File:** `AiQoWatch Watch App/Services/WatchHealthKitManager.swift`
-
-Watch-specific HealthKit queries:
-- Current heart rate
-- Today's step count
-- Today's active calories
-- Stand hours
-
-### WatchConnectivityService
-
-**File:** `AiQoWatch Watch App/Services/WatchConnectivityService.swift`
-
-Handles Watch → Phone communication:
-- Workout session updates (start, pause, resume, end)
-- Heart rate sample forwarding
-- Workout summary data transfer
-- Application context sharing
-
-### WatchDesignSystem
-
-**File:** `AiQoWatch Watch App/Design/WatchDesignSystem.swift`
-
-Watch-specific design tokens adapted for small screens:
-- Compact spacing values
-- Watch-optimized typography
-- Reduced color palette
-
-### WatchWorkoutType
-
-**File:** `AiQoWatch Watch App/Models/WatchWorkoutType.swift`
-
-Supported workout types on Watch:
-- Running (indoor/outdoor)
-- Walking (indoor/outdoor)
-- Cycling
-- HIIT
-- Strength Training
-- Yoga
-- Swimming
-
-### Watch Views
-
-| View | Purpose |
-|---|---|
-| `WatchHomeView` | Health summary dashboard (steps, calories, heart rate) |
-| `WatchWorkoutListView` | Workout type selection grid |
-| `WatchActiveWorkoutView` | Live workout metrics display |
-| `WatchWorkoutSummaryView` | Post-workout summary with XP earned |
-
-### Phone ↔ Watch Sync Protocol
-
-**Shared files:** `WorkoutSyncCodec.swift`, `WorkoutSyncModels.swift`
-
-The codec handles:
-1. **Workout command encoding** — Start/stop/pause messages
-2. **Heart rate sample batching** — Batched HR data transfer
-3. **Summary packaging** — Workout completion data
-4. **Application context** — Background state sync
-
----
-
-## Appendix L — Notification System Deep Dive
-
-### NotificationCategoryManager
-
-Registers all notification categories with UNNotificationCenter:
-
-| Category | Actions | Description |
-|---|---|---|
-| Captain Message | Reply, Dismiss | Captain Hamoudi sends a message |
-| Morning Habit | Start, Snooze | Morning routine reminder |
-| Sleep Reminder | Set Alarm, Dismiss | Bedtime reminder |
-| Activity Nudge | Open App, Later | Inactivity re-engagement |
-| Premium Expiry | Subscribe, Dismiss | Subscription about to expire |
-| Angel Number | Open, Dismiss | Motivational angel number |
-
-### NotificationIntelligenceManager
-
-AI-driven notification scheduling:
-1. Registers background tasks with BGTaskScheduler
-2. Evaluates user patterns to determine optimal notification timing
-3. Composes context-aware messages via `CaptainBackgroundNotificationComposer`
-4. Schedules/cancels based on `AppSettingsStore.shared.notificationsEnabled`
-
-Background task identifiers:
-- `aiqo.captain.spiritual-whispers.refresh`
-- `aiqo.captain.inactivity-check`
-
-### InactivityTracker
-
-Detects when the user hasn't opened the app:
-- Tracks last active timestamp
-- Triggers re-engagement notifications after threshold
-- Evaluates via `CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()`
-
-### MorningHabitOrchestrator
-
-Morning routine monitoring and notification:
-- Starts on app become active (post-onboarding)
-- Monitors morning health metrics
-- Sends Captain-style morning encouragement
-- Routes notification taps to Captain chat
-
-### SleepSessionObserver
-
-Sleep session monitoring:
-- Observes HealthKit sleep analysis samples
-- Detects sleep session boundaries
-- Triggers morning sleep summary
-- Coordinates with Smart Wake Calculator
-
-### ActivityNotificationEngine
-
-Angel number motivational notifications:
-- Generates localized notifications based on user gender and language
-- Schedules at appropriate times
-- Debug mode: prints pending notifications
-
----
-
-*End of AiQo Master Blueprint v2.0*
-
----
-
-**Document Statistics:**
-- Total Swift files in project: 300+
-- Total localized strings: 4,307 (2,153 Arabic + 2,154 English)
-- External dependencies: 10 SPM packages + 1 vendored framework (SpotifyiOS)
-- Build targets: 7 (iOS app, watchOS app, iOS widget, watchOS widget, 3 test targets)
-- SwiftData @Model classes: 10+
-- ScreenContext values: 6
-- AI models used: 3 (Gemini 2.0 Flash, Gemini 3 Flash Preview, Apple Intelligence Foundation Models)
-- Notification categories: 6+
-- Deep link routes: 8
-- Siri shortcut activities: 8
-- Background task identifiers: 2
-- Feature flags: 3
-- API integrations: 4 (Gemini, ElevenLabs, Supabase, Spotify)
+Total filtered scanned files documented in the Section 3 ledger: `482`.
+
+Total filtered scanned directories documented in the Section 3 tree: `153`.
+
+The blueprint intentionally reports missing requested files instead of creating fictional architecture layers.

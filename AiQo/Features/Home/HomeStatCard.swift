@@ -272,6 +272,7 @@ struct ExpandedStatCard: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("أغلق التفاصيل")
             }
             
             // Value
@@ -442,11 +443,13 @@ struct StatCardDemo: View {
                     steps = max(0, steps - 100)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel("أنقص مئة")
                 
                 Button("+100") {
                     steps += 100
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("زد مئة")
             }
         }
         .padding()

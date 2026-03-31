@@ -185,6 +185,8 @@ private struct TribeLandingScreen: View {
                         }
                     }
 
+                    // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+                    // TODO before launch: connect to live SupabaseTribeRepository
                     futurePlaceholders
 
                     Button("Join the Tribe", action: onJoin)
@@ -197,6 +199,8 @@ private struct TribeLandingScreen: View {
                         .foregroundStyle(TribePremiumPalette.textSecondary)
                         .frame(maxWidth: .infinity)
 
+                    // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+                    // TODO before launch: connect to live SupabaseTribeRepository
                     TribeDebugFootnote(
                         screenshotModeEnabled: screenshotModeEnabled,
                         text: "Preview layer only. Community feed, challenges, and invites are placeholders for now."
@@ -288,6 +292,8 @@ private struct TribeJoinScreen: View {
                         .buttonStyle(PrimaryCTAButtonStyle())
                         .padding(.top, 4)
 
+                    // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+                    // TODO before launch: connect to live SupabaseTribeRepository
                     TribeDebugFootnote(
                         screenshotModeEnabled: screenshotModeEnabled,
                         text: "Selections are local only for now. Backend enrollment is intentionally not wired yet."
@@ -334,6 +340,8 @@ private struct TribeSuccessScreen: View {
                     .foregroundStyle(TribePremiumPalette.textSecondary)
                     .padding(.horizontal, 12)
 
+                // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+                // TODO before launch: connect to live SupabaseTribeRepository
                 PremiumGlassCard(tint: UIColor(red: 0.22, green: 0.27, blue: 0.41, alpha: 1)) {
                     HStack(spacing: 10) {
                         statusPill(title: "Feed")
@@ -352,6 +360,8 @@ private struct TribeSuccessScreen: View {
                     .font(.system(.body, design: .rounded, weight: .semibold))
                     .foregroundStyle(TribePremiumPalette.textSecondary)
 
+                // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
+                // TODO before launch: connect to live SupabaseTribeRepository
                 TribeDebugFootnote(
                     screenshotModeEnabled: screenshotModeEnabled,
                     text: "This is a premium community shell for now. Live networking and invites arrive in a later phase."

@@ -10,31 +10,97 @@ final class LegendaryChallengesViewModel: ObservableObject {
     @Published var records: [LegendaryRecord] = LegendaryRecord.seedRecords
     @Published var activeProject: LegendaryProject?
 
-    // MARK: - Persistence Key
-    // NOTE: This ViewModel uses UserDefaults for simple seed-record projects.
-    // RecordProjectManager uses SwiftData for AI-generated weekly plan projects.
-    // These are separate systems — RecordProjectManager is the long-term target.
-    // Migration: When RecordProjectManager is fully adopted, deprecate this class.
+    // MARK: - Persistence Keys
 
-    private static let projectKey = "aiqo.legendary.activeProject"
+    /// One-time migration flag — set to true after old UserDefaults data is moved to SwiftData.
+    private static let migrationFlagKey = "aiqo.legendaryChallengesMigrated"
+
+    /// Legacy UserDefaults key — read ONLY during one-time migration, never written again.
+    private static let legacyProjectKey = "aiqo.legendary.activeProject"
 
     // MARK: - Init
 
     init() {
+        migrateIfNeeded()
         loadProject()
+    }
+
+    // MARK: - One-Time Migration (UserDefaults → SwiftData)
+
+    /// Runs once on first launch after this code ships.
+    /// Reads any existing LegendaryProject from UserDefaults, inserts it as a
+    /// RecordProject into SwiftData via RecordProjectManager, then deletes the old key.
+    private func migrateIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: Self.migrationFlagKey) else { return }
+        // Mark migration complete immediately so it never runs again, even if it fails.
+        UserDefaults.standard.set(true, forKey: Self.migrationFlagKey)
+
+        // Read legacy blob.
+        guard let data = UserDefaults.standard.data(forKey: Self.legacyProjectKey),
+              let old = try? JSONDecoder().decode(LegendaryProject.self, from: data) else {
+            // Nothing to migrate.
+            UserDefaults.standard.removeObject(forKey: Self.legacyProjectKey)
+            return
+        }
+
+        // Don't overwrite a project already present in SwiftData.
+        guard RecordProjectManager.shared.canStartNewProject() else {
+            UserDefaults.standard.removeObject(forKey: Self.legacyProjectKey)
+            return
+        }
+
+        // Find the matching seed record.
+        guard let record = LegendaryRecord.seedRecords.first(where: { $0.id == old.recordId }) else {
+            UserDefaults.standard.removeObject(forKey: Self.legacyProjectKey)
+            return
+        }
+
+        // Carry over the best performance recorded across all weekly checkpoints.
+        let personalBest = old.weeklyCheckpoints.compactMap(\.recordedValue).max() ?? old.personalBest
+
+        // Generate a default plan covering the full project duration.
+        let planJSON = RecordProjectManager.generateDefaultPlan(
+            for: record,
+            totalWeeks: old.targetWeeks
+        )
+
+        // Insert into SwiftData.
+        _ = RecordProjectManager.shared.createProject(
+            record: record,
+            userBestAtStart: personalBest,
+            totalWeeks: old.targetWeeks,
+            planJSON: planJSON,
+            difficulty: record.difficulty.labelAr
+        )
+
+        // Retire the UserDefaults key.
+        UserDefaults.standard.removeObject(forKey: Self.legacyProjectKey)
     }
 
     // MARK: - Project Lifecycle
 
+    /// Creates an in-memory LegendaryProject bridge for the legacy ProjectView.
+    ///
+    /// Note: this method intentionally does NOT write to SwiftData.
+    /// The canonical SwiftData RecordProject is created by FitnessAssessmentView →
+    /// RecordProjectManager.createProject(), which runs immediately after this call.
+    /// Writing here would conflict with that creation (canStartNewProject() would return false).
     func startProject(for record: LegendaryRecord) {
         let weeklyCheckpoints = (1...record.estimatedWeeks).map { week in
             WeeklyCheckpoint(id: UUID().uuidString, weekNumber: week)
         }
-
-        // DESIGN: Generate a realistic first-week plan based on difficulty
-        let dailyTasks = generateWeeklyTasks(for: record, week: 1)
-
-        let project = LegendaryProject(
+        // Use deterministic IDs (w<week>d<day>) so completion state survives if this
+        // bridge is ever reconciled against an existing SwiftData project.
+        let dailyTasks = generateWeeklyTasks(for: record, week: 1).map { task in
+            DailyTask(
+                id: "w1d\(task.dayNumber)",
+                dayNumber: task.dayNumber,
+                titleAr: task.titleAr,
+                targetValue: task.targetValue,
+                isCompleted: false
+            )
+        }
+        activeProject = LegendaryProject(
             id: UUID().uuidString,
             recordId: record.id,
             startDate: Date(),
@@ -44,55 +110,119 @@ final class LegendaryChallengesViewModel: ObservableObject {
             personalBest: 0,
             isCompleted: false
         )
-
-        activeProject = project
-        saveProject()
+        // No UserDefaults write — SwiftData is now the persistence layer.
     }
 
+    /// Toggles task completion. Persists completed-task IDs to SwiftData when a matching
+    /// active RecordProject exists (i.e. after FitnessAssessmentView creates it).
     func toggleTask(_ taskId: String) {
         guard let index = activeProject?.dailyTasks.firstIndex(where: { $0.id == taskId }) else { return }
         activeProject?.dailyTasks[index].isCompleted.toggle()
-        saveProject()
+        persistCompletedTasks()
     }
 
+    /// Records a weekly checkpoint value.
+    /// Updates bestPerformance in SwiftData when a matching RecordProject exists.
     func logCheckpoint(weekNumber: Int, value: Double) {
         guard let index = activeProject?.weeklyCheckpoints.firstIndex(where: { $0.weekNumber == weekNumber }) else { return }
         activeProject?.weeklyCheckpoints[index].recordedValue = value
         activeProject?.weeklyCheckpoints[index].date = Date()
 
-        // Update personal best
         if let current = activeProject?.personalBest, value > current {
             activeProject?.personalBest = value
         }
 
-        saveProject()
+        // Persist to SwiftData if a matching project exists.
+        if let rp = RecordProjectManager.shared.activeProject(),
+           rp.recordID == activeProject?.recordId {
+            RecordProjectManager.shared.logPerformance(value, for: rp)
+        }
     }
 
     func record(for project: LegendaryProject) -> LegendaryRecord? {
         records.first(where: { $0.id == project.recordId })
     }
 
-    // MARK: - Persistence
+    // MARK: - Persistence (SwiftData-backed via RecordProjectManager)
 
-    private func saveProject() {
-        guard let project = activeProject,
-              let data = try? JSONEncoder().encode(project) else {
-            UserDefaults.standard.removeObject(forKey: Self.projectKey)
+    /// Loads the active project from SwiftData and converts it to the legacy bridge type.
+    /// ModelContext access is delegated to RecordProjectManager (which holds the container
+    /// reference configured at app launch) — no direct @Environment(\.modelContext) needed here.
+    private func loadProject() {
+        guard let rp = RecordProjectManager.shared.activeProject() else {
+            activeProject = nil
             return
         }
-        UserDefaults.standard.set(data, forKey: Self.projectKey)
+        activeProject = legacyProject(from: rp)
     }
 
-    private func loadProject() {
-        guard let data = UserDefaults.standard.data(forKey: Self.projectKey),
-              let project = try? JSONDecoder().decode(LegendaryProject.self, from: data) else { return }
-        activeProject = project
+    /// Saves the current set of completed task IDs to the corresponding RecordProject in SwiftData.
+    private func persistCompletedTasks() {
+        guard let project = activeProject,
+              let rp = RecordProjectManager.shared.activeProject(),
+              rp.recordID == project.recordId else { return }
+
+        let completedIDs = project.dailyTasks.filter(\.isCompleted).map(\.id)
+        guard let jsonData = try? JSONEncoder().encode(completedIDs),
+              let json = String(data: jsonData, encoding: .utf8) else { return }
+
+        RecordProjectManager.shared.updateCompletedTasks(for: rp, completedTaskIDsJSON: json)
     }
 
-    // MARK: - Task Generation
+    // MARK: - Bridge: RecordProject → LegendaryProject
+
+    /// Converts a SwiftData RecordProject into the legacy LegendaryProject struct consumed
+    /// by ProjectView. Task IDs are deterministic ("w<week>d<day>") so completion state
+    /// persisted in completedTaskIDsJSON survives app relaunch.
+    private func legacyProject(from rp: RecordProject) -> LegendaryProject {
+        let completedIDs: Set<String> = {
+            guard let data = rp.completedTaskIDsJSON.data(using: .utf8),
+                  let ids = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+            return Set(ids)
+        }()
+
+        let currentWeek = rp.currentWeek
+
+        let bridgeTasks: [DailyTask]
+        if let record = LegendaryRecord.seedRecords.first(where: { $0.id == rp.recordID }) {
+            bridgeTasks = generateWeeklyTasks(for: record, week: currentWeek).map { task in
+                let deterministicID = "w\(currentWeek)d\(task.dayNumber)"
+                return DailyTask(
+                    id: deterministicID,
+                    dayNumber: task.dayNumber,
+                    titleAr: task.titleAr,
+                    targetValue: task.targetValue,
+                    isCompleted: completedIDs.contains(deterministicID)
+                )
+            }
+        } else {
+            bridgeTasks = []
+        }
+
+        let checkpoints = rp.weeklyLogs.map { log in
+            WeeklyCheckpoint(
+                id: log.id.uuidString,
+                weekNumber: log.weekNumber,
+                recordedValue: log.performanceThisWeek,
+                date: log.date
+            )
+        }
+
+        return LegendaryProject(
+            id: rp.id.uuidString,
+            recordId: rp.recordID,
+            startDate: rp.startDate,
+            targetWeeks: rp.totalWeeks,
+            weeklyCheckpoints: checkpoints,
+            dailyTasks: bridgeTasks,
+            personalBest: rp.bestPerformance,
+            isCompleted: rp.status == "completed"
+        )
+    }
+
+    // MARK: - Task Generation (unchanged)
 
     private func generateWeeklyTasks(for record: LegendaryRecord, week: Int) -> [DailyTask] {
-        // DESIGN: Simple progressive plan for week 1, scales per category
         switch record.category {
         case .strength:
             return [

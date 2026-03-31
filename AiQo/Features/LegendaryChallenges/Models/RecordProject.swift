@@ -53,6 +53,10 @@ final class RecordProject {
     /// هل الخطة مثبتة في تبويب "الخطة"
     var isPinnedToPlan: Bool
 
+    /// حالة إنجاز المهام اليومية للـ legacy ProjectView — مخزنة كـ JSON array من Task IDs
+    /// الصيغة: ["w1d1", "w1d3", "w2d2"] — week:day deterministic keys
+    var completedTaskIDsJSON: String
+
     // NEW: HRR Assessment Data
     /// أعلى نبض خلال اختبار الجهد
     var hrrPeakHR: Double?
@@ -96,6 +100,7 @@ final class RecordProject {
         self.status = "active"
         self.startDate = Date()
         self.isPinnedToPlan = true
+        self.completedTaskIDsJSON = "[]"
     }
 
     /// نسبة التقدم (0...1)

@@ -43,6 +43,9 @@ final class AppFlowController: ObservableObject {
 
     func didLoginSuccessfully() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didShowFirstAuthScreen)
+        if let userID = SupabaseService.shared.currentUserID {
+            CrashReportingService.shared.setUser(id: userID)
+        }
         transition(to: Self.nextScreenAfterLogin())
     }
 

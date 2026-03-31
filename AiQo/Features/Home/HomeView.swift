@@ -159,8 +159,12 @@ struct HomeView: View {
                                 tintColorName: cardData.tintColorName,
                                 selectedScope: $viewModel.selectedScope,
                                 onClose: {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    if UIAccessibility.isReduceMotionEnabled {
                                         viewModel.collapseExpandedCard()
+                                    } else {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                            viewModel.collapseExpandedCard()
+                                        }
                                     }
                                 }
                             )
@@ -252,6 +256,7 @@ struct HomeView: View {
             }
         }
         .buttonStyle(AiQoPressButtonStyle())
+        .accessibilityLabel("افتح شاشة الإمارة")
     }
 
     // MARK: - Destination Views
@@ -368,6 +373,7 @@ struct KitchenShortcutButton: View {
         .buttonStyle(.plain)
         .scaleEffect(isPressed ? 0.9 : 1.0)
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
+        .accessibilityLabel("افتح المطبخ")
         .onAppear {
             // Subtle floating animation
             withAnimation(
@@ -466,6 +472,7 @@ struct MetricDetailSheet: View {
                             .symbolRenderingMode(.hierarchical)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("أغلق تفاصيل المؤشر")
                 }
             }
         }
@@ -491,6 +498,7 @@ private struct ProfileSheetView: View {
                                 .symbolRenderingMode(.hierarchical)
                                 .foregroundStyle(.secondary)
                         }
+                        .accessibilityLabel("أغلق الملف الشخصي")
                     }
                 }
         }
@@ -516,6 +524,7 @@ private struct TribeRankingSheetView: View {
                                 .symbolRenderingMode(.hierarchical)
                                 .foregroundStyle(.secondary)
                         }
+                        .accessibilityLabel("أغلق شاشة القبيلة")
                     }
                 }
         }
@@ -551,6 +560,7 @@ struct ErrorBanner: View {
                 Image(systemName: "xmark")
                     .foregroundStyle(.white)
             }
+            .accessibilityLabel("إخفاء رسالة الخطأ")
         }
         .padding()
         .background(Color.red.opacity(0.9))

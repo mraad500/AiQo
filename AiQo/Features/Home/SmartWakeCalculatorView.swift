@@ -322,6 +322,11 @@ private struct SmartWakeFeaturedRecommendationCard: View {
             .background(background)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(featuredRecommendationAccessibilityLabel)
+    }
+
+    private var featuredRecommendationAccessibilityLabel: String {
+        "اختر اقتراح الاستيقاظ الأفضل عند \(SmartWakeFormatters.time(recommendation.wakeDate))"
     }
 
     private var background: some View {
@@ -413,6 +418,11 @@ private struct SmartWakeAlternateRecommendationCard: View {
             .opacity(recommendation.cycleCount < 4 ? 0.84 : 1)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(alternateRecommendationAccessibilityLabel)
+    }
+
+    private var alternateRecommendationAccessibilityLabel: String {
+        "اختر وقت الاستيقاظ \(SmartWakeFormatters.time(recommendation.wakeDate))"
     }
 
     private var background: some View {
