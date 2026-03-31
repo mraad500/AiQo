@@ -1,8 +1,13 @@
 import Foundation
+import os.log
 import Supabase
 
 public final class SupabaseService {
     public static let shared = SupabaseService()
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "SupabaseService"
+    )
 
     public let client: SupabaseClient
 
@@ -13,8 +18,7 @@ public final class SupabaseService {
         guard !urlString.isEmpty,
               let url = URL(string: urlString),
               url.host != nil else {
-            assertionFailure("SUPABASE_URL is missing or invalid — check Secrets.xcconfig")
-            // Release: create a non-functional client so the app doesn't crash.
+            Self.logger.fault("supabase_client_placeholder_url_missing")
             client = SupabaseClient(
                 supabaseURL: URL(string: "https://placeholder.invalid")!,
                 supabaseKey: "missing"
@@ -23,7 +27,7 @@ public final class SupabaseService {
         }
 
         guard !anonKey.isEmpty else {
-            assertionFailure("SUPABASE_ANON_KEY is missing — check Secrets.xcconfig")
+            Self.logger.fault("supabase_client_placeholder_anon_key_missing")
             client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: "missing"
