@@ -9,9 +9,7 @@ final class MainTabRouter: ObservableObject {
     enum Tab: Int {
         case home = 0
         case gym = 1
-        case tribe = 2
-        case kitchen = 3
-        case captain = 4
+        case captain = 2
     }
 
     @Published var selectedTab: Tab = .home
@@ -19,20 +17,21 @@ final class MainTabRouter: ObservableObject {
     private init() {}
 
     func navigate(to tab: Tab) {
-        if tab == .kitchen {
-            AnalyticsService.shared.track(.tabSelected("kitchen"))
-            if selectedTab != .home {
-                selectedTab = .home
-            }
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .openKitchenFromHome, object: nil)
-            }
-            return
-        }
-
         guard selectedTab != tab else { return }
         AnalyticsService.shared.track(.tabSelected(tab.analyticsName))
         selectedTab = tab
+    }
+
+    func openKitchen() {
+        AnalyticsService.shared.track(.kitchenOpened)
+
+        if selectedTab != .home {
+            selectedTab = .home
+        }
+
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .openKitchenFromHome, object: nil)
+        }
     }
 }
 
@@ -41,8 +40,6 @@ extension MainTabRouter.Tab {
         switch self {
         case .home: return "home"
         case .gym: return "gym"
-        case .tribe: return "tribe"
-        case .kitchen: return "kitchen"
         case .captain: return "captain"
         }
     }

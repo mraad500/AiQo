@@ -2,5 +2,7 @@
 **/.DS_Store
 AiQo.xcodeproj/**/xcuserdata/
 build/
+
+# Local build secrets
 Configuration/Secrets.xcconfig
 *.xcconfig.local

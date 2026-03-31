@@ -71,7 +71,7 @@ final class SiriShortcutsManager {
             return true
 
         case .openKitchen:
-            MainTabRouter.shared.navigate(to: .kitchen)
+            MainTabRouter.shared.openKitchen()
             return true
 
         case .weeklyReport:

@@ -12,7 +12,6 @@ final class DeepLinkRouter: ObservableObject {
         case home
         case captain
         case gym
-        case tribe(inviteCode: String?)
         case kitchen
         case settings
         case referral(code: String)
@@ -47,13 +46,8 @@ final class DeepLinkRouter: ObservableObject {
             AppRootManager.shared.openCaptainChat()
         case .gym:
             MainTabRouter.shared.navigate(to: .gym)
-        case .tribe(let inviteCode):
-            MainTabRouter.shared.navigate(to: .tribe)
-            if let code = inviteCode {
-                pendingDeepLink = .tribe(inviteCode: code)
-            }
         case .kitchen:
-            MainTabRouter.shared.navigate(to: .kitchen)
+            MainTabRouter.shared.openKitchen()
         case .settings:
             MainTabRouter.shared.navigate(to: .home)
         case .referral(let code):
@@ -66,12 +60,12 @@ final class DeepLinkRouter: ObservableObject {
     // MARK: - URL Parsing
 
     private func parse(url: URL) -> DeepLink? {
-        // URL Scheme: aiqo://captain, aiqo://tribe?invite=ABC123
+        // URL Scheme: aiqo://captain, aiqo://kitchen
         if url.scheme == "aiqo" {
             return parseSchemeURL(url)
         }
 
-        // Universal Links: https://aiqo.app/tribe/join/ABC123
+        // Universal Links: https://aiqo.app/kitchen
         if url.host == "aiqo.app" || url.host == "www.aiqo.app" {
             return parseUniversalLink(url)
         }
@@ -87,9 +81,6 @@ final class DeepLinkRouter: ObservableObject {
         case "home": return .home
         case "captain", "chat": return .captain
         case "gym", "workout": return .gym
-        case "tribe":
-            let inviteCode = queryItems.first(where: { $0.name == "invite" })?.value
-            return .tribe(inviteCode: inviteCode)
         case "kitchen": return .kitchen
         case "settings": return .settings
         case "referral":
@@ -110,11 +101,6 @@ final class DeepLinkRouter: ObservableObject {
         switch first {
         case "captain", "chat": return .captain
         case "gym": return .gym
-        case "tribe":
-            if pathComponents.count >= 3, pathComponents[1] == "join" {
-                return .tribe(inviteCode: pathComponents[2])
-            }
-            return .tribe(inviteCode: nil)
         case "kitchen": return .kitchen
         case "settings": return .settings
         case "refer", "referral":

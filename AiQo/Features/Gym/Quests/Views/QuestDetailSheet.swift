@@ -525,7 +525,7 @@ struct QuestDetailSheet: View {
 
     private func handleKitchenCTA(progress: QuestProgressRecord) {
         guard !(quest.isStageOneBooleanQuest && progress.isCompleted) else { return }
-        MainTabRouter.shared.navigate(to: .kitchen)
+        MainTabRouter.shared.openKitchen()
         dismiss()
     }
 

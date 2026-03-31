@@ -98,7 +98,7 @@ final class NotificationService {
             case .dailyStepsReminder, .workoutReminder, .stepGoalProgress:
                 MainTabRouter.shared.navigate(to: .gym)
             case .waterReminder, .mealTimeReminder:
-                MainTabRouter.shared.navigate(to: .kitchen)
+                MainTabRouter.shared.openKitchen()
             case .checkInReminder, .sleepReminder:
                 MainTabRouter.shared.navigate(to: .home)
             }

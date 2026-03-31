@@ -72,11 +72,11 @@
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
-	<string>true</string>
+	<false/>
 	<key>TRIBE_FEATURE_VISIBLE</key>
-	<string>true</string>
+	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
-	<string>true</string>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

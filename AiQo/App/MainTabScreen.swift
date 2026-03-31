@@ -68,11 +68,7 @@ struct MainTabScreen: View {
         }
         .environment(\.layoutDirection, .rightToLeft)
         .tint(appTint)
-        .onAppear(perform: enforceTribeVisibilityGuard)
-        .onChange(of: tabRouter.selectedTab) { _, newTab in
-            enforceTribeVisibilityGuard()
-
-            guard TribeFeatureFlags.featureVisible || newTab != .tribe else { return }
+        .onChange(of: tabRouter.selectedTab) { _, _ in
             HapticEngine.selection()
         }
         .overlay {
@@ -128,11 +124,6 @@ struct MainTabScreen: View {
         UITabBar.appearance().unselectedItemTintColor = unselectedColor
     }
 
-    private func enforceTribeVisibilityGuard() {
-        guard TribeFeatureFlags.featureVisible == false,
-              tabRouter.selectedTab == .tribe else { return }
-        tabRouter.selectedTab = .home
-    }
 }
 
 #Preview {

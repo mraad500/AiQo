@@ -5,13 +5,11 @@ import Supabase
 struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
-    @State private var showTribeFlow = false
     @State private var showDeveloperPanel = false
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
-    @AppStorage(TribeScreenshotMode.key) private var screenshotModeEnabled = false
     #if DEBUG
     @State private var isPreparingTestWhisper = false
     @State private var testWhisperStatus: String?
@@ -151,36 +149,6 @@ struct AppSettingsScreen: View {
                     }
                     .padding(.vertical, 4)
                 }
-            }
-
-            Section(
-                NSLocalizedString("settings.section.community", value: "Community", comment: "Community section")
-            ) {
-                Button {
-                    showTribeFlow = true
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(NSLocalizedString("settings.tribe", value: "AiQo Tribe", comment: "Tribe title"))
-                                .foregroundStyle(.primary)
-
-                            Text(NSLocalizedString("settings.tribe.subtitle", value: "VIP community previews, rituals, and future member spaces.", comment: "Tribe subtitle"))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "sparkles")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(.plain)
-
-                #if DEBUG
-                Toggle("Screenshot Mode", isOn: $screenshotModeEnabled)
-                #endif
             }
 
             Section("referral.section".localized) {
@@ -385,9 +353,6 @@ struct AppSettingsScreen: View {
                     comment: ""
                 )
             )
-        }
-        .sheet(isPresented: $showTribeFlow) {
-            TribeExperienceFlowView(source: .settings)
         }
         .sheet(isPresented: $showDeveloperPanel) {
             DeveloperPanelView()

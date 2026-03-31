@@ -312,7 +312,7 @@ struct QuestDetailView: View {
             }
 
         case .kitchen:
-            MainTabRouter.shared.navigate(to: .kitchen)
+            MainTabRouter.shared.openKitchen()
             dismiss()
 
         case .share:
@@ -654,7 +654,7 @@ struct StageOneQuestSheet: View {
         case "s1q4":
             showWorkoutEntry = true
         case "s1q5":
-            MainTabRouter.shared.navigate(to: .kitchen)
+            MainTabRouter.shared.openKitchen()
             dismiss()
         default:
             break

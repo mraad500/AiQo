@@ -1,17 +1,38 @@
 import Foundation
 
 struct TribeFeatureFlags {
+    private static func flag(named key: String, default defaultValue: Bool) -> Bool {
+        let rawValue = Bundle.main.object(forInfoDictionaryKey: key)
+
+        if let boolValue = rawValue as? Bool {
+            return boolValue
+        }
+
+        if let stringValue = rawValue as? String {
+            switch stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "true", "yes", "1":
+                return true
+            case "false", "no", "0":
+                return false
+            default:
+                break
+            }
+        }
+
+        return defaultValue
+    }
+
     /// Read from Info.plist so backend can be enabled via a new build without code changes
     static var backendEnabled: Bool {
-        (Bundle.main.infoDictionary?["TRIBE_BACKEND_ENABLED"] as? String)?.lowercased() == "true"
+        flag(named: "TRIBE_BACKEND_ENABLED", default: false)
     }
     /// Read from Info.plist — when true, Tribe requires active subscription
     static var subscriptionGateEnabled: Bool {
-        (Bundle.main.infoDictionary?["TRIBE_SUBSCRIPTION_GATE_ENABLED"] as? String)?.lowercased() == "true"
+        flag(named: "TRIBE_SUBSCRIPTION_GATE_ENABLED", default: false)
     }
     /// Whether the Tribe tab is visible at all — hide if not ready for launch
     static var featureVisible: Bool {
-        (Bundle.main.infoDictionary?["TRIBE_FEATURE_VISIBLE"] as? String)?.lowercased() != "false"
+        flag(named: "TRIBE_FEATURE_VISIBLE", default: true)
     }
 }
 

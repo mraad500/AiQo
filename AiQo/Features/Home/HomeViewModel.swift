@@ -108,7 +108,6 @@ struct DemoConfiguration: Sendable {
 /// Navigation destinations from Home screen
 enum HomeDestination: Identifiable, Equatable, Sendable {
     case profile
-    case tribe
     case kitchen
     case waterDetail
     case metricDetail(MetricKind)
@@ -116,7 +115,6 @@ enum HomeDestination: Identifiable, Equatable, Sendable {
     var id: String {
         switch self {
         case .profile: return "profile"
-        case .tribe: return "tribe"
         case .kitchen: return "kitchen"
         case .waterDetail: return "waterDetail"
         case .metricDetail(let kind): return "metricDetail_\(kind.id)"
@@ -434,10 +432,6 @@ final class HomeViewModel: ObservableObject {
     
     func openProfile() {
         activeDestination = .profile
-    }
-    
-    func openTribe() {
-        activeDestination = .tribe
     }
 
     func openKitchen() {

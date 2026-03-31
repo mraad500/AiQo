@@ -24,10 +24,9 @@ struct HomeView: View {
     @State private var waterSheetLiters: Double = 0.0
     
     // MARK: - Sheet Presentation States
-    
+
     @State private var isProfileSheetPresented: Bool = false
     @State private var showVibeSheet: Bool = false
-    @State private var showTribeScreen: Bool = false
     @State private var appeared: Bool = false
     // MARK: - Body
     
@@ -107,11 +106,6 @@ struct HomeView: View {
                 .aiQoSheetStyle()
         }
         .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
-        .fullScreenCover(isPresented: $showTribeScreen) {
-            NavigationStack {
-                TribeView()
-            }
-        }
     }
     
     // MARK: - Header View
@@ -208,67 +202,12 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Emirate Card
-
-    private var emirateCard: some View {
-        let level = LevelStore.shared.level
-        let points = LevelStore.shared.totalXP
-
-        return Button {
-            showTribeScreen = true
-        } label: {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(NSLocalizedString("home.emirate.title", value: "إمارة 🏆", comment: ""))
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color(hex: "162026"))
-
-                    Text(String(format: NSLocalizedString("home.emirate.subtitle", value: "المستوى %@ · %@ نقطة", comment: ""), level.arabicFormatted, points.arabicFormatted))
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color(hex: "56636D"))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(hex: "75808A"))
-            }
-            .padding(16)
-            .background {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(hex: "FFFDF8"))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "6FD7B4").opacity(0.2), Color(hex: "EDB45D").opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                    }
-                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
-            }
-        }
-        .buttonStyle(AiQoPressButtonStyle())
-        .accessibilityLabel("افتح شاشة الإمارة")
-    }
-
     // MARK: - Destination Views
     
     @ViewBuilder
     private func destinationView(for destination: HomeDestination) -> some View {
         switch destination {
         case .profile:
-            // Handled by separate sheet binding now
-            EmptyView()
-            
-        case .tribe:
             // Handled by separate sheet binding now
             EmptyView()
 
@@ -499,32 +438,6 @@ private struct ProfileSheetView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .accessibilityLabel("أغلق الملف الشخصي")
-                    }
-                }
-        }
-    }
-}
-
-// MARK: - Tribe Ranking Sheet View
-
-private struct TribeRankingSheetView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            TribeView()
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 22))
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(.secondary)
-                        }
-                        .accessibilityLabel("أغلق شاشة القبيلة")
                     }
                 }
         }
