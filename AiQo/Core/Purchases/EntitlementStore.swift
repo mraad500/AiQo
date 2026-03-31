@@ -8,6 +8,7 @@ final class EntitlementStore: ObservableObject {
     @Published var activeProductId: String? {
         didSet {
             persist(activeProductId, key: Keys.activeProductId)
+            updateCurrentTier()
         }
     }
 
@@ -16,6 +17,8 @@ final class EntitlementStore: ObservableObject {
             persist(expiresAt, key: Keys.expiresAt)
         }
     }
+
+    @Published var currentTier: SubscriptionTier = .none
 
     var isActive: Bool {
         guard let expiresAt else { return false }
@@ -41,6 +44,13 @@ final class EntitlementStore: ObservableObject {
         self.nowProvider = nowProvider
         self.activeProductId = defaults.string(forKey: Keys.activeProductId)
         self.expiresAt = defaults.object(forKey: Keys.expiresAt) as? Date
+
+        // Restore currentTier from UserDefaults
+        let savedTierRaw = defaults.integer(forKey: Keys.currentTier)
+        self.currentTier = SubscriptionTier(rawValue: savedTierRaw) ?? .none
+
+        // Reconcile tier from active product if available
+        updateCurrentTier()
     }
 
     func setEntitlement(productId: String?, expiresAt: Date?) {
@@ -51,6 +61,22 @@ final class EntitlementStore: ObservableObject {
 
     func clear() {
         setEntitlement(productId: nil, expiresAt: nil)
+        currentTier = .none
+        defaults.removeObject(forKey: Keys.currentTier)
+    }
+
+    private func updateCurrentTier() {
+        let newTier: SubscriptionTier
+        if isActive, let productId = activeProductId {
+            newTier = SubscriptionTier.from(productID: productId)
+        } else {
+            newTier = .none
+        }
+
+        if currentTier != newTier {
+            currentTier = newTier
+            defaults.set(newTier.rawValue, forKey: Keys.currentTier)
+        }
     }
 
     private func persist(_ value: Any?, key: String) {
@@ -64,5 +90,6 @@ final class EntitlementStore: ObservableObject {
     private enum Keys {
         static let activeProductId = "aiqo.purchases.activeProductId"
         static let expiresAt = "aiqo.purchases.expiresAt"
+        static let currentTier = "aiqo.purchases.currentTier"
     }
 }

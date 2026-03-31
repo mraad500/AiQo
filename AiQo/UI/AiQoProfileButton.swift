@@ -81,7 +81,7 @@ struct AiQoProfileButton: View {
         }
         .buttonStyle(AiQoProfileButtonPressStyle())
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
-        .accessibilityLabel("Profile")
+        .accessibilityLabel("الملف الشخصي")
     }
 }
 

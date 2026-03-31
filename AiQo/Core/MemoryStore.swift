@@ -11,7 +11,9 @@ final class MemoryStore {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "MemoryStore")
     private var container: ModelContainer?
     private var context: ModelContext?
-    private static let maxMemories = 200
+    private var maxMemories: Int {
+        AccessManager.shared.captainMemoryLimit
+    }
 
     /// هل ذاكرة الكابتن مفعّلة
     var isEnabled: Bool {
@@ -55,7 +57,7 @@ final class MemoryStore {
                 // تحقق من الحد الأقصى
                 let countDescriptor = FetchDescriptor<CaptainMemory>()
                 let count = (try? context.fetchCount(countDescriptor)) ?? 0
-                if count >= Self.maxMemories {
+                if count >= maxMemories {
                     removeLowestConfidence()
                 }
 

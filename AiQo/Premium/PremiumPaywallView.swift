@@ -2,231 +2,296 @@ import StoreKit
 import SwiftUI
 
 struct PremiumPaywallView: View {
-    @StateObject private var premiumStore = PremiumStore.shared
     @ObservedObject private var trialManager = FreeTrialManager.shared
+    @Environment(\.dismiss) private var dismiss
 
     var onUnlocked: (() -> Void)? = nil
 
+    @State private var selectedTier: SubscriptionTier = .pro
+    @State private var isLoading = false
+    @State private var products: [Product] = []
+    @State private var statusMessage: String?
+
+    private let mint = Color(hex: "5ECDB7")
+    private let sand = Color(hex: "EBCF97")
+
     var body: some View {
-        TribeGlassCard(cornerRadius: 30, padding: 18, tint: Color.white.opacity(0.03)) {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("premium.title".localized)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                headerSection
 
-                    Text("premium.subtitle".localized)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.70))
-                        .fixedSize(horizontal: false, vertical: true)
+                // Plan cards
+                VStack(spacing: 14) {
+                    planCard(tier: .core, features: [
+                        "الكابتن حمودي — مدربك الشخصي",
+                        "التمارين والمطبخ كاملة",
+                        "My Vibe — موسيقى تناسب طاقتك",
+                        "تحديات يومية وإشعارات ذكية"
+                    ])
+
+                    planCard(tier: .pro, features: [
+                        "كل ميزات Core",
+                        "قمم — اكسر أرقام قياسية عالمية",
+                        "خطة تمرين أسبوعية بالذكاء الاصطناعي",
+                        "تقييم HRR لقلبك"
+                    ], isMostPopular: true)
+
+                    planCard(tier: .intelligence, features: [
+                        "كل ميزات Pro",
+                        "ذاكرة الكابتن الممتدة — 500 ذكرى",
+                        "نموذج Gemini Pro أقوى وأذكى",
+                        "تحليل متقدم لأدائك"
+                    ])
                 }
 
-                // Free Trial Banner
-                if !trialManager.hasUsedTrial {
-                    freeTrialBanner
-                } else if trialManager.isTrialActive {
-                    trialActiveBanner
-                }
+                ctaButton
 
-                ForEach(PremiumPlan.allCases) { plan in
-                    paywallCard(for: plan)
-                }
+                footerSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
+        }
+        .background(AiQoTheme.Colors.primaryBackground.ignoresSafeArea())
+        .environment(\.layoutDirection, .rightToLeft)
+        .task {
+            AnalyticsService.shared.track(.paywallViewed)
+            await loadProducts()
+        }
+        .onChange(of: EntitlementStore.shared.currentTier) {
+            guard EntitlementStore.shared.currentTier != .none else { return }
+            onUnlocked?()
+            dismiss()
+        }
+    }
 
-                Button {
-                    Task {
-                        await premiumStore.restore()
+    // MARK: - Header
+
+    private var headerSection: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 36, weight: .medium))
+                .foregroundStyle(mint)
+
+            Text("اختر خطتك")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(AiQoTheme.Colors.textPrimary)
+
+            Text("أسبوع مجاني — بدون رسوم")
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(AiQoTheme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    // MARK: - Plan Card
+
+    private func planCard(tier: SubscriptionTier, features: [String], isMostPopular: Bool = false) -> some View {
+        let isSelected = selectedTier == tier
+        let storePrice = products.first(where: { $0.id == tier.productID })?.displayPrice ?? tier.monthlyPrice
+
+        return Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                selectedTier = tier
+            }
+        } label: {
+            VStack(alignment: .trailing, spacing: 12) {
+                // Header row
+                HStack {
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(mint)
                     }
-                } label: {
-                    Text("premium.restore".localized)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
 
-                if let expiresAt = EntitlementStore.shared.expiresAt {
-                    TribeGlassCard(cornerRadius: 18, padding: 12, tint: Color.white.opacity(0.04)) {
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
                         HStack(spacing: 8) {
-                            Image(systemName: EntitlementStore.shared.isActive ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                                .foregroundStyle(EntitlementStore.shared.isActive ? .green.opacity(0.8) : .orange.opacity(0.8))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(EntitlementStore.shared.isActive ? "premium.active".localized : "premium.expired".localized)
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                            if isMostPopular {
+                                Text("الأكثر شعبية")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
                                     .foregroundStyle(.white)
-                                Text(String(format: "premium.expires.date".localized, Self.expiryFormatter.string(from: expiresAt)))
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.white.opacity(0.6))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule().fill(mint)
+                                    )
                             }
-                            Spacer()
+
+                            Text(tier.arabicDisplayName)
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                        }
+
+                        HStack(spacing: 4) {
+                            Text("بالشهر")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(AiQoTheme.Colors.textSecondary)
+
+                            Text(storePrice)
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundStyle(AiQoTheme.Colors.textPrimary)
                         }
                     }
                 }
 
-                if let statusMessage = premiumStore.statusMessage {
-                    Text(statusMessage)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.68))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-        .task {
-            premiumStore.start()
-            AnalyticsService.shared.track(.paywallViewed)
-        }
-        .onChange(of: premiumStore.hasAnyPremiumAccess) {
-            guard premiumStore.hasAnyPremiumAccess else { return }
-            onUnlocked?()
-        }
-    }
+                // Features
+                VStack(alignment: .trailing, spacing: 6) {
+                    ForEach(features, id: \.self) { feature in
+                        HStack(spacing: 6) {
+                            Text(feature)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                                .multilineTextAlignment(.trailing)
 
-    // MARK: - Free Trial Banner
-
-    private var freeTrialBanner: some View {
-        Button {
-            trialManager.startTrialIfNeeded()
-            onUnlocked?()
-        } label: {
-            TribeGlassCard(cornerRadius: 24, padding: 16, tint: Color.green.opacity(0.08)) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("premium.trial.title".localized)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-
-                        Text("premium.trial.subtitle".localized)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.68))
-                            .fixedSize(horizontal: false, vertical: true)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(mint.opacity(0.8))
+                        }
                     }
-
-                    Spacer(minLength: 8)
-
-                    Text("premium.trial.start".localized)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.green.opacity(0.85))
-                        )
                 }
             }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(
+                                isSelected ? mint : AiQoTheme.Colors.border,
+                                lineWidth: isSelected ? 2 : 1
+                            )
+                    )
+            )
         }
         .buttonStyle(.plain)
-        .accessibleButton(
-            label: "premium.trial.title".localized,
-            hint: "premium.trial.subtitle".localized
-        )
+        .accessibilityLabel("\(tier.arabicDisplayName) — \(storePrice) بالشهر")
+        .accessibilityAddTraits(.isButton)
     }
 
-    private var trialActiveBanner: some View {
-        TribeGlassCard(cornerRadius: 24, padding: 16, tint: Color.blue.opacity(0.08)) {
-            HStack(spacing: 12) {
-                Image(systemName: "clock.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.blue.opacity(0.8))
+    // MARK: - CTA
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("premium.trial.active.title".localized)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+    private var ctaButton: some View {
+        Button {
+            guard !isLoading else { return }
+            purchaseSelectedPlan()
+        } label: {
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Text("ابدأ أسبوعك المجاني")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-
-                    Text(String(format: "premium.trial.active.days".localized, trialManager.daysRemaining))
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.68))
                 }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [mint, mint.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading || selectedTier == .none)
+        .opacity(selectedTier == .none ? 0.5 : 1)
+        .accessibilityLabel("ابدأ التجربة المجانية")
+        .accessibilityAddTraits(.isButton)
 
-                Spacer()
+        .overlay(alignment: .bottom) {
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                    .padding(.top, 8)
+                    .offset(y: 24)
             }
         }
     }
 
-    // MARK: - Paywall Card
+    // MARK: - Footer
 
-    private func paywallCard(for plan: PremiumPlan) -> some View {
-        let product = premiumStore.product(for: plan)
+    private var footerSection: some View {
+        VStack(spacing: 12) {
+            Button {
+                restorePurchases()
+            } label: {
+                Text("استعادة المشتريات")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading)
+            .accessibilityAddTraits(.isButton)
 
-        return TribeGlassCard(cornerRadius: 24, padding: 16, tint: Color.white.opacity(0.025)) {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(plan.title)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
+            Text("يتجدد تلقائياً — يمكن الإلغاء في أي وقت")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(AiQoTheme.Colors.textSecondary.opacity(0.7))
+                .multilineTextAlignment(.center)
 
-                    Text(plan.description)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.64))
-                        .fixedSize(horizontal: false, vertical: true)
+            LegalLinksView()
+        }
+        .padding(.top, 8)
+    }
 
-                    HStack(spacing: 4) {
-                        Text(product?.displayPrice ?? fallbackPrice(for: plan))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.82))
+    // MARK: - Actions
 
-                        Text("premium.perMonth".localized)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.50))
-                    }
-                }
+    private func loadProducts() async {
+        let loaded = await PurchaseManager.shared.loadProducts()
+        products = loaded
+    }
 
-                Spacer(minLength: 12)
+    private func purchaseSelectedPlan() {
+        guard let product = products.first(where: { $0.id == selectedTier.productID }) else {
+            statusMessage = "تعذر تحميل الباقة. حاول مرة ثانية."
+            return
+        }
 
-                Button {
-                    Task {
-                        await premiumStore.purchase(plan)
-                    }
-                } label: {
-                    if premiumStore.isLoading {
-                        ProgressView()
-                            .tint(.black)
-                            .frame(width: 88, height: 42)
-                    } else {
-                        Text("premium.buy".localized)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(.black)
-                            .frame(width: 88, height: 42)
-                    }
-                }
-                .buttonStyle(.plain)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(0.92))
-                )
-                .disabled(premiumStore.isLoading)
+        isLoading = true
+        Task {
+            let outcome = await PurchaseManager.shared.purchase(product: product)
+            isLoading = false
+
+            switch outcome {
+            case .success:
+                statusMessage = nil
+            case .pending:
+                statusMessage = "الطلب قيد المعالجة"
+            case .cancelled:
+                statusMessage = nil
+            case .failed(let message):
+                statusMessage = message
             }
         }
     }
 
-    private func fallbackPrice(for plan: PremiumPlan) -> String {
-        SubscriptionProductIDs.fallbackDisplayPrice(for: plan.canonicalProductID)
-    }
+    private func restorePurchases() {
+        isLoading = true
+        Task {
+            let outcome = await PurchaseManager.shared.restorePurchases()
+            isLoading = false
 
-    private static let expiryFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }()
+            switch outcome {
+            case .success:
+                statusMessage = "تم استعادة المشتريات"
+            case .failed(let message):
+                statusMessage = message
+            default:
+                break
+            }
+        }
+    }
 }
 
 #Preview {
-    ZStack {
-        TribeGalaxyBackground()
-            .ignoresSafeArea()
-
-        PremiumPaywallView()
-            .padding(16)
-    }
-    .environment(\.layoutDirection, .rightToLeft)
+    PremiumPaywallView()
+        .environment(\.layoutDirection, .rightToLeft)
 }

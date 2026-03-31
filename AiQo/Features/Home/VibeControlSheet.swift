@@ -1296,7 +1296,7 @@ struct VibeDashboardTriggerButton: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Open My Vibe")
+        .accessibilityLabel("افتح ماي فايب")
     }
 }
 

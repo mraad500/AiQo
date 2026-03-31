@@ -48,7 +48,7 @@ struct DailyAuraView: View {
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: viewModel.auraProgress) { oldValue, newValue in
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .easeInOut(duration: 1.2)) {
                 displayedProgress = newValue
             }
 
@@ -61,23 +61,25 @@ struct DailyAuraView: View {
             }
         }
         .onChange(of: viewModel.stepsProgress) { _, newValue in
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .easeInOut(duration: 1.2)) {
                 displayedStepsProgress = newValue
             }
         }
         .onChange(of: viewModel.caloriesProgress) { _, newValue in
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .easeInOut(duration: 1.2)) {
                 displayedCaloriesProgress = newValue
             }
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                centerBreath.toggle()
+            if !AiQoAccessibility.prefersReducedMotion {
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                    centerBreath.toggle()
+                }
             }
             displayedProgress = 0
             displayedStepsProgress = 0
             displayedCaloriesProgress = 0
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .easeInOut(duration: 1.2)) {
                 displayedProgress = viewModel.auraProgress
                 displayedStepsProgress = viewModel.stepsProgress
                 displayedCaloriesProgress = viewModel.caloriesProgress

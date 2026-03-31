@@ -1,33 +1,114 @@
 {
   "identifier" : "A4B04B3F-3D14-4F6B-8B10-2E45F8D8D501",
   "nonRenewingSubscriptions" : [
+
+  ],
+  "subscriptionGroups" : [
     {
-      "displayPrice" : "5.99",
-      "internalID" : "6C7C88F4-0275-4F15-BA55-BA358D9A57DF",
+      "id" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
       "localizations" : [
         {
-          "description" : "Individual premium access for 30 days.",
-          "displayName" : "AiQo Premium Individual 30 Days",
+          "description" : "AiQo Premium subscription tiers",
+          "displayName" : "AiQo Premium",
           "locale" : "en_US"
         }
       ],
-      "productID" : "aiqo_30d_individual_5_99",
-      "referenceName" : "AiQo 30 Day Individual",
-      "type" : "NonRenewingSubscription"
-    },
-    {
-      "displayPrice" : "10.00",
-      "internalID" : "A50C0643-4C0F-48FA-B2C4-97FAF047276C",
-      "localizations" : [
+      "name" : "AiQo Premium",
+      "subscriptions" : [
         {
-          "description" : "Family premium access for 30 days.",
-          "displayName" : "AiQo Premium Family 30 Days",
-          "locale" : "en_US"
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "D1E2F3A4-B5C6-7890-1234-567890ABCDEF",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "E2F3A4B5-C6D7-8901-2345-6789ABCDEF01",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Captain Hammoudi, Gym, Kitchen, My Vibe, Challenges, Smart Notifications",
+              "displayName" : "AiQo Core",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "aiqo_core_monthly_9_99",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AiQo Core Monthly",
+          "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "A2B3C4D5-E6F7-8901-2345-678901ABCDEF",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "F3A4B5C6-D7E8-9012-3456-789ABCDEF012",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "All Core features plus Peaks, Weekly AI Workout Plan, HRR Assessment",
+              "displayName" : "AiQo Pro",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "aiqo_pro_monthly_19_99",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AiQo Pro Monthly",
+          "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "C3D4E5F6-A7B8-9012-3456-789012ABCDEF",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "A4B5C6D7-E8F9-0123-4567-89ABCDEF0123",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "All Pro features plus Extended Memory (500), Gemini Pro Model, Advanced Analytics",
+              "displayName" : "AiQo Intelligence",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "aiqo_intelligence_monthly_39_99",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AiQo Intelligence Monthly",
+          "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
+          "type" : "RecurringSubscription"
         }
-      ],
-      "productID" : "aiqo_30d_family_10_00",
-      "referenceName" : "AiQo 30 Day Family",
-      "type" : "NonRenewingSubscription"
+      ]
     }
   ],
   "settings" : {

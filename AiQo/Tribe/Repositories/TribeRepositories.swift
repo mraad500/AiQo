@@ -282,12 +282,14 @@ struct MockChallengeRepository: ChallengeRepositoryProtocol {
     }
 }
 
+// TODO: Remove mock delegation when backend is ready.
 struct SupabaseTribeRepository: TribeRepositoryProtocol {
     func loadSnapshot() async -> TribeRepositorySnapshot {
         await MockTribeRepository().loadSnapshot()
     }
 }
 
+// TODO: Remove mock delegation when backend is ready.
 struct SupabaseChallengeRepository: ChallengeRepositoryProtocol {
     func loadChallenges() async -> [TribeChallenge] {
         await MockChallengeRepository().loadChallenges()

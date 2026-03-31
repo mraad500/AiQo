@@ -172,8 +172,10 @@ struct HomeView: View {
                             .opacity(appeared ? 1 : 0)
                             .offset(y: appeared ? 0 : 12)
                             .animation(
-                                .spring(response: 0.4, dampingFraction: 0.8)
-                                .delay(Double(flatIndex) * 0.06),
+                                AiQoAccessibility.prefersReducedMotion
+                                    ? .none
+                                    : .spring(response: 0.4, dampingFraction: 0.8)
+                                        .delay(Double(flatIndex) * 0.06),
                                 value: appeared
                             )
                             .transition(.scale.combined(with: .opacity))
@@ -183,7 +185,7 @@ struct HomeView: View {
             }
         }
         .padding(.horizontal, 14)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.expandedMetric)
+        .animation(AiQoAccessibility.prefersReducedMotion ? .none : .spring(response: 0.3, dampingFraction: 0.8), value: viewModel.expandedMetric)
         .onAppear { appeared = true }
     }
     
@@ -314,7 +316,8 @@ struct KitchenShortcutButton: View {
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
         .accessibilityLabel("افتح المطبخ")
         .onAppear {
-            // Subtle floating animation
+            // Subtle floating animation (disabled when Reduce Motion is on)
+            guard !AiQoAccessibility.prefersReducedMotion else { return }
             withAnimation(
                 Animation
                     .easeInOut(duration: 2.0)

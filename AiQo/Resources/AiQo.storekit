@@ -11,7 +11,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "aiqo_30d_individual_5_99",
+      "productID" : "aiqo_nr_30d_individual_5_99",
       "referenceName" : "AiQo 30 Day Individual",
       "type" : "NonRenewingSubscription"
     },
@@ -25,7 +25,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "aiqo_30d_family_10_00",
+      "productID" : "aiqo_nr_30d_family_10_00",
       "referenceName" : "AiQo 30 Day Family",
       "type" : "NonRenewingSubscription"
     }

@@ -72,7 +72,7 @@ final class PurchaseManager: ObservableObject {
     func loadProducts() async -> [Product] {
         prepareLocalStoreKitTestingIfNeeded()
 
-        let requestedProductIDs = SubscriptionProductIDs.storeKitLookupIDs
+        let requestedProductIDs = Array(SubscriptionProductIDs.allCurrentIDs)
         let bundleIdentifier = Bundle.main.bundleIdentifier ?? "nil"
 
         isLoadingProducts = true
@@ -326,7 +326,7 @@ final class PurchaseManager: ObservableObject {
         for await verification in Transaction.all {
             do {
                 let transaction = try Self.verifiedTransaction(from: verification)
-                guard SubscriptionProductIDs.all.contains(transaction.productID) else { continue }
+                guard SubscriptionProductIDs.isAnyPremium(productID: transaction.productID) else { continue }
                 guard transaction.revocationDate == nil else { continue }
                 transactions.append(transaction)
             } catch {

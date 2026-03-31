@@ -23,6 +23,46 @@ final class AccessManager: ObservableObject {
         allowsDeveloperOverrides && previewEnabled
     }
 
+    // MARK: — Tier helpers
+
+    var activeTier: SubscriptionTier {
+        if FreeTrialManager.shared.isTrialActive { return .pro }
+        return EntitlementStore.shared.currentTier
+    }
+
+    // MARK: — Core tier features ($9.99)
+
+    var canAccessCaptain: Bool { activeTier >= .core }
+    var canAccessGym: Bool { activeTier >= .core }
+    var canAccessKitchen: Bool { activeTier >= .core }
+    var canAccessMyVibe: Bool { activeTier >= .core }
+    var canAccessChallenges: Bool { activeTier >= .core }
+    var canAccessDataTracking: Bool { activeTier >= .core }
+    var canReceiveCaptainNotifications: Bool { activeTier >= .core }
+
+    // MARK: — Pro tier features ($19.99)
+
+    var canAccessPeaks: Bool { activeTier >= .pro }
+    var canAccessHRRAssessment: Bool { activeTier >= .pro }
+    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .pro }
+    var canAccessRecordProjects: Bool { activeTier >= .pro }
+
+    // MARK: — Intelligence tier features ($39.99)
+
+    var canAccessExtendedMemory: Bool { activeTier >= .intelligence }
+    var canAccessIntelligenceModel: Bool { activeTier >= .intelligence }
+
+    // MARK: — Memory limit based on tier
+
+    var captainMemoryLimit: Int {
+        switch activeTier {
+        case .intelligence: return 500
+        default:            return 200
+        }
+    }
+
+    // MARK: — Tribe (existing logic, kept as-is)
+
     var canAccessTribe: Bool {
         entitlementSnapshot.hasTribeAccess || FreeTrialManager.shared.isTrialActive
     }

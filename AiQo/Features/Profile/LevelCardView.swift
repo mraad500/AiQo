@@ -234,12 +234,6 @@ private struct LevelCardSnapshot: Equatable {
     }
 }
 
-enum LevelStorageKeys {
-    static let currentLevel = "aiqo.currentLevel"
-    static let currentLevelProgress = "aiqo.currentLevelProgress"
-    static let legacyTotalPoints = "aiqo.legacyTotalPoints"
-}
-
 #Preview {
     LevelCardView()
         .padding()

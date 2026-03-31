@@ -1,5 +1,11 @@
 # Firebase Crashlytics Setup
 
+## Status
+- CrashReportingService.swift: READY (canImport guards in place)
+- AppDelegate wiring: READY
+- Firebase package: NOT YET ADDED — follow steps below
+- GoogleService-Info.plist: NOT YET ADDED — follow steps below
+
 ## 1. Add Firebase via Swift Package Manager
 
 In Xcode: **File → Add Package Dependencies**

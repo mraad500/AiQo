@@ -60,8 +60,9 @@ final class TribeStore: ObservableObject {
 
         error = nil
 
-        // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
-        // TODO before launch: connect to live SupabaseTribeRepository
+        // STUB: Live Supabase backend not yet connected.
+        // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
+        // TODO before launch: replace with live SupabaseTribeRepository call.
         let tribe = Tribe(
             id: UUID().uuidString,
             name: trimmedName,
@@ -96,8 +97,9 @@ final class TribeStore: ObservableObject {
 
         error = nil
 
-        // STUB: Real Supabase flow not yet connected. Hidden via TRIBE_FEATURE_VISIBLE=false.
-        // TODO before launch: connect to live SupabaseTribeRepository
+        // STUB: Live Supabase backend not yet connected.
+        // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
+        // TODO before launch: replace with live SupabaseTribeRepository call.
         currentTribe = Tribe(
             id: UUID().uuidString,
             name: String(
@@ -133,6 +135,9 @@ final class TribeStore: ObservableObject {
         print("🪶 Left tribe and cleared local tribe state.")
     }
 
+    // STUB: Live Supabase backend not yet connected.
+    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
+    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchTribe() {
         loading = true
         defer { loading = false }
@@ -157,6 +162,9 @@ final class TribeStore: ObservableObject {
         print("🪶 Refreshed tribe state using local store. Current Supabase user: \(currentUserId)")
     }
 
+    // STUB: Live Supabase backend not yet connected.
+    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
+    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchMembers() {
         guard currentTribe != nil else {
             members = []
@@ -171,6 +179,9 @@ final class TribeStore: ObservableObject {
         persistLocalState()
     }
 
+    // STUB: Live Supabase backend not yet connected.
+    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
+    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchMissions() {
         guard currentTribe != nil else {
             missions = []
