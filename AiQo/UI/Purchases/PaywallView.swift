@@ -13,7 +13,7 @@ struct PaywallView: View {
 
     let dismissOnFamilyUnlock: Bool
 
-    private let productIDs = SubscriptionProductIDs.all
+    private let productIDs = Array(SubscriptionProductIDs.allCurrentIDs)
 
     init(dismissOnFamilyUnlock: Bool = false) {
         self.dismissOnFamilyUnlock = dismissOnFamilyUnlock
@@ -147,9 +147,7 @@ struct PaywallView: View {
 
     @ViewBuilder
     private func productRow(for productID: String) -> some View {
-        let product = purchaseManager.products.first(where: {
-            SubscriptionProductIDs.matches($0.id, canonical: productID)
-        })
+        let product = purchaseManager.products.first(where: { $0.id == productID })
         let isProcessing = processingProductID == productID
 
         VStack(alignment: .leading, spacing: 12) {
@@ -259,7 +257,7 @@ struct PaywallView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
 
-        let plan = SubscriptionProductIDs.displayName(for: entitlementStore.activeProductId ?? SubscriptionProductIDs.aiqo_nr_30d_individual_5_99)
+        let plan = SubscriptionProductIDs.displayName(for: entitlementStore.activeProductId ?? SubscriptionProductIDs.coreMonthly)
         let tribeNote = entitlementStore.canCreateTribe ? " " + "paywall.status.canCreateTribe".localized : ""
         return String(format: "paywall.status.currentPlan".localized, plan, formatter.string(from: expiresAt)) + tribeNote
     }

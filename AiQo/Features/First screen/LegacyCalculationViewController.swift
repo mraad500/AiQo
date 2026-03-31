@@ -439,10 +439,12 @@ final class LegacyCalculationViewModel: ObservableObject {
         let levelResult = buildLevelResult(from: syncResult)
 
         // ZDP: Only save the 4 aggregate numbers + computed XP & Level — no raw samples
-        UserDefaults.standard.set(levelResult.level, forKey: LevelStorageKeys.currentLevel)
+        // LevelStore is now the single source of truth; write legacy keys for any
+        // code that still reads them directly from UserDefaults.
+        UserDefaults.standard.set(levelResult.level, forKey: "aiqo.currentLevel")
         let progress = min(Double(levelResult.level) / 50.0, 1.0)
-        UserDefaults.standard.set(progress, forKey: LevelStorageKeys.currentLevelProgress)
-        UserDefaults.standard.set(levelResult.totalPoints, forKey: LevelStorageKeys.legacyTotalPoints)
+        UserDefaults.standard.set(progress, forKey: "aiqo.currentLevelProgress")
+        UserDefaults.standard.set(levelResult.totalPoints, forKey: "aiqo.legacyTotalPoints")
 
         // Apply XP to the central LevelStore
         if syncResult.aiqoPoints > 0 {

@@ -11,9 +11,9 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
     var canonicalProductID: String {
         switch self {
         case .individual:
-            return SubscriptionProductIDs.aiqo_nr_30d_individual_5_99
+            return SubscriptionProductIDs.legacyIndividual
         case .family:
-            return SubscriptionProductIDs.aiqo_nr_30d_family_10_00
+            return SubscriptionProductIDs.legacyFamily
         }
     }
 
@@ -133,9 +133,7 @@ final class PremiumStore: ObservableObject {
     }
 
     func product(for plan: PremiumPlan) -> Product? {
-        products.first(where: {
-            SubscriptionProductIDs.matches($0.id, canonical: plan.canonicalProductID)
-        })
+        products.first(where: { $0.id == plan.canonicalProductID })
     }
 
     private func bind() {

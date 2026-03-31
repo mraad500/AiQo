@@ -90,14 +90,11 @@ private struct ProfileLevelSummary {
     }
 
     static func load() -> ProfileLevelSummary {
-        let storedLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
-        let storedProgress = UserDefaults.standard.double(forKey: LevelStorageKeys.currentLevelProgress)
-        let storedScore = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
-
+        let store = LevelStore.shared
         return ProfileLevelSummary(
-            level: storedLevel == 0 ? 1 : storedLevel,
-            progress: CGFloat(min(max(storedProgress, 0), 1)),
-            lineScore: max(storedScore, 0)
+            level: max(store.currentLevel, 1),
+            progress: CGFloat(min(max(store.progress, 0), 1)),
+            lineScore: max(store.totalXP, 0)
         )
     }
 }

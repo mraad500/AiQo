@@ -947,11 +947,9 @@ private final class TribeViewModel: ObservableObject {
         : profile.name
         let rawUsername = profile.username?.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Read from the SAME UserDefaults keys the profile screen uses
-        let profileLevel = UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel)
-        let profilePoints = UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints)
-        let currentLevel = max(profileLevel, 1)
-        let currentPoints = max(profilePoints, 0)
+        // Read from the central LevelStore
+        let currentLevel = max(LevelStore.shared.currentLevel, 1)
+        let currentPoints = max(LevelStore.shared.totalXP, 0)
 
         // Use the real Supabase user ID so deduplication filter works correctly
         let userID = SupabaseService.shared.currentUserID ?? "tribe-current-user"

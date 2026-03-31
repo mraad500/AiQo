@@ -25,8 +25,8 @@ struct TribeMembersList: View {
                     TribeMemberRow(
                         member: member,
                         memberIndex: index,
-                        points: isCurrentUser ? max(UserDefaults.standard.integer(forKey: LevelStorageKeys.legacyTotalPoints), 0) : 0,
-                        level: isCurrentUser ? max(UserDefaults.standard.integer(forKey: LevelStorageKeys.currentLevel), 1) : 1,
+                        points: isCurrentUser ? max(LevelStore.shared.totalXP, 0) : 0,
+                        level: isCurrentUser ? max(LevelStore.shared.currentLevel, 1) : 1,
                         username: resolvedUsername
                     )
                 }
