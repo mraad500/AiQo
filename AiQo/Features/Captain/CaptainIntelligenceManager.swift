@@ -314,7 +314,7 @@ final class CaptainIntelligenceManager {
         let info = Bundle.main.infoDictionary ?? [:]
 
         if let explicitURLString = configValue(for: "CAPTAIN_ARABIC_API_URL", in: info),
-           let explicitURL = URL(string: explicitURLString) {
+           let explicitURL = validHTTPURL(from: explicitURLString) {
             return CaptainArabicAPIConfiguration(endpointURL: explicitURL)
         }
 
@@ -325,7 +325,7 @@ final class CaptainIntelligenceManager {
         return CaptainArabicAPIConfiguration(endpointURL: simulatorURL)
 #else
         if let deviceURLString = configValue(for: "CAPTAIN_ARABIC_API_DEVICE_URL", in: info),
-           let deviceURL = URL(string: deviceURLString) {
+           let deviceURL = validHTTPURL(from: deviceURLString) {
             return CaptainArabicAPIConfiguration(endpointURL: deviceURL)
         }
         throw CaptainIntelligenceError.arabicAPIConfigurationMissing
@@ -334,9 +334,7 @@ final class CaptainIntelligenceManager {
 
     private func configValue(for key: String, in info: [String: Any]) -> String? {
         let environment = ProcessInfo.processInfo.environment
-        if let fromEnvironment = environment[key]?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-           !fromEnvironment.isEmpty {
+        if let fromEnvironment = normalizedConfigValue(environment[key]) {
             return fromEnvironment
         }
 
@@ -344,10 +342,25 @@ final class CaptainIntelligenceManager {
     }
 
     private func nonEmptyInfoValue(for key: String, in info: [String: Any]) -> String? {
-        let value = (info[key] as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let value, !value.isEmpty else { return nil }
-        return value
+        normalizedConfigValue(info[key] as? String)
+    }
+
+    private func normalizedConfigValue(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else { return nil }
+        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
+        guard !trimmed.lowercased().hasPrefix("curl ") else { return nil }
+        return trimmed
+    }
+
+    private func validHTTPURL(from value: String) -> URL? {
+        guard let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil else {
+            return nil
+        }
+        return url
     }
 
     private func decodeCaptainArabicAPIResponse(from data: Data) throws -> String {

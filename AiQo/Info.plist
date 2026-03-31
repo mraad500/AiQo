@@ -36,7 +36,7 @@
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
 	<key>COACH_BRAIN_LLM_API_URL</key>
-	<string>https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent</string>
+	<string>$(COACH_BRAIN_LLM_API_URL)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>

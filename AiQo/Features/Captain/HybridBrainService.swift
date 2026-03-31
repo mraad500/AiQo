@@ -84,7 +84,7 @@ enum HybridBrainServiceError: LocalizedError {
 // MARK: - Gemini API Configuration
 
 private enum GeminiConfig {
-    static let model = "gemini-2.0-flash"
+    static let model = "gemini-flash-latest"
     static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
     static let requestTimeoutSeconds: TimeInterval = 35
 
@@ -106,8 +106,7 @@ private enum GeminiConfig {
     }
 
     static func endpointURL() throws -> URL {
-        let key = try resolvedAPIKey()
-        guard let url = URL(string: "\(baseEndpoint)/\(model):generateContent?key=\(key)") else {
+        guard let url = URL(string: "\(baseEndpoint)/\(model):generateContent") else {
             throw HybridBrainServiceError.invalidEndpoint
         }
         return url
@@ -220,12 +219,14 @@ private extension HybridBrainService {
     // MARK: - Network
 
     func requestCloudResponse(request: HybridBrainRequest) async throws -> CaptainStructuredResponse {
+        let apiKey = try GeminiConfig.resolvedAPIKey()
         var urlRequest = URLRequest(url: try GeminiConfig.endpointURL())
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
         urlRequest.httpBody = try JSONSerialization.data(
             withJSONObject: makeRequestBody(request: request)
         )
