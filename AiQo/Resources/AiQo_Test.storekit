@@ -36,44 +36,13 @@
           "localizations" : [
             {
               "description" : "Captain Hammoudi, Gym, Kitchen, My Vibe, Challenges, Smart Notifications",
-              "displayName" : "AiQo Core",
+              "displayName" : "AiQo Standard",
               "locale" : "en_US"
             }
           ],
-          "productID" : "aiqo_core_monthly_9_99",
+          "productID" : "com.mraad500.aiqo.standard.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "AiQo Core Monthly",
-          "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
-          "type" : "RecurringSubscription"
-        },
-        {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "19.99",
-          "familyShareable" : false,
-          "groupNumber" : 2,
-          "internalID" : "A2B3C4D5-E6F7-8901-2345-678901ABCDEF",
-          "introductoryOffer" : {
-            "displayPrice" : "0",
-            "internalID" : "F3A4B5C6-D7E8-9012-3456-789ABCDEF012",
-            "numberOfPeriods" : 1,
-            "paymentMode" : "free",
-            "subscriptionPeriod" : "P1W"
-          },
-          "localizations" : [
-            {
-              "description" : "All Core features plus Peaks, Weekly AI Workout Plan, HRR Assessment",
-              "displayName" : "AiQo Pro",
-              "locale" : "en_US"
-            }
-          ],
-          "productID" : "aiqo_pro_monthly_19_99",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "AiQo Pro Monthly",
+          "referenceName" : "AiQo Standard Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
           "type" : "RecurringSubscription"
         },
@@ -86,25 +55,25 @@
           ],
           "displayPrice" : "39.99",
           "familyShareable" : false,
-          "groupNumber" : 3,
-          "internalID" : "C3D4E5F6-A7B8-9012-3456-789012ABCDEF",
+          "groupNumber" : 2,
+          "internalID" : "A2B3C4D5-E6F7-8901-2345-678901ABCDEF",
           "introductoryOffer" : {
             "displayPrice" : "0",
-            "internalID" : "A4B5C6D7-E8F9-0123-4567-89ABCDEF0123",
+            "internalID" : "F3A4B5C6-D7E8-9012-3456-789ABCDEF012",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
           },
           "localizations" : [
             {
-              "description" : "All Pro features plus Extended Memory (500), Gemini Pro Model, Advanced Analytics",
-              "displayName" : "AiQo Intelligence",
+              "description" : "Everything in Standard plus Peaks, HRR, weekly review, record projects, larger Captain memory, and advanced AI guidance",
+              "displayName" : "AiQo Intelligence Pro",
               "locale" : "en_US"
             }
           ],
-          "productID" : "aiqo_intelligence_monthly_39_99",
+          "productID" : "com.mraad500.aiqo.intelligencepro.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "AiQo Intelligence Monthly",
+          "referenceName" : "AiQo Intelligence Pro Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
           "type" : "RecurringSubscription"
         }

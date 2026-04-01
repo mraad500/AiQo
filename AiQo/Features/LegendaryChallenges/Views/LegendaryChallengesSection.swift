@@ -54,7 +54,7 @@ private struct PeaksUpgradePromptView: View {
                 .font(.system(size: 28))
                 .foregroundStyle(mint.opacity(0.7))
 
-            Text("قمم متاحة في خطة Pro")
+            Text("قمم متاحة في AiQo Intelligence Pro")
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -66,7 +66,7 @@ private struct PeaksUpgradePromptView: View {
             Button {
                 showPaywall = true
             } label: {
-                Text("ترقية إلى Pro")
+                Text("الترقية إلى Intelligence Pro")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)

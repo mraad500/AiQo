@@ -174,7 +174,7 @@ struct TribeHubScreen: View {
             }
         }
         .sheet(isPresented: $isPaywallPresented) {
-            PaywallView(dismissOnFamilyUnlock: true)
+            PaywallView()
         }
         .sheet(isPresented: $isPreviewModeSheetPresented) {
             TribePreviewModeSheet(

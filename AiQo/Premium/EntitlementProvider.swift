@@ -2,14 +2,14 @@ import Foundation
 
 struct EntitlementSnapshot: Equatable {
     var hasTribeAccess: Bool
-    var hasFamilyPlanAccess: Bool
+    var hasIntelligenceProAccess: Bool
     var activePlan: PremiumPlan?
     var activeProductId: String?
     var isPreviewOverride: Bool
 
     static let locked = EntitlementSnapshot(
         hasTribeAccess: false,
-        hasFamilyPlanAccess: false,
+        hasIntelligenceProAccess: false,
         activePlan: nil,
         activeProductId: nil,
         isPreviewOverride: false
@@ -35,7 +35,7 @@ struct StoreKitEntitlementProvider: EntitlementProvider {
 
         return EntitlementSnapshot(
             hasTribeAccess: entitlementStore.isActive,
-            hasFamilyPlanAccess: entitlementStore.canCreateTribe,
+            hasIntelligenceProAccess: entitlementStore.hasIntelligenceProAccess,
             activePlan: activePlan,
             activeProductId: productId,
             isPreviewOverride: false
@@ -48,12 +48,10 @@ struct StoreKitEntitlementProvider: EntitlementProvider {
         }
 
         switch SubscriptionTier.from(productID: productId) {
-        case .core:
-            return .core
-        case .pro:
-            return .pro
-        case .intelligence:
-            return .intelligence
+        case .standard:
+            return .standard
+        case .intelligencePro:
+            return .intelligencePro
         case .none:
             return nil
         }
@@ -67,7 +65,7 @@ struct PreviewEntitlementProvider: EntitlementProvider {
     func snapshot() -> EntitlementSnapshot {
         EntitlementSnapshot(
             hasTribeAccess: true,
-            hasFamilyPlanAccess: selectedPlan == .intelligence,
+            hasIntelligenceProAccess: selectedPlan == .intelligencePro,
             activePlan: selectedPlan,
             activeProductId: selectedPlan.canonicalProductID,
             isPreviewOverride: true

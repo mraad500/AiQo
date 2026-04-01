@@ -25,12 +25,12 @@ final class EntitlementStore: ObservableObject {
         return expiresAt > nowProvider()
     }
 
-    var isFamily: Bool {
-        SubscriptionProductIDs.isFamily(productID: activeProductId)
+    var hasIntelligenceProAccess: Bool {
+        isActive && SubscriptionProductIDs.unlocksIntelligenceProFeatures(productID: activeProductId)
     }
 
     var canCreateTribe: Bool {
-        isActive && isFamily
+        isActive && SubscriptionProductIDs.unlocksTribeCreation(productID: activeProductId)
     }
 
     private let defaults: UserDefaults

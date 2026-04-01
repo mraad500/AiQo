@@ -15,7 +15,7 @@ struct PaywallView: View {
 
     private let onPurchaseSuccess: (() -> Void)?
 
-    init(dismissOnFamilyUnlock: Bool = false, onPurchaseSuccess: (() -> Void)? = nil) {
+    init(onPurchaseSuccess: (() -> Void)? = nil) {
         self.onPurchaseSuccess = onPurchaseSuccess
     }
 
@@ -30,11 +30,11 @@ struct PaywallView: View {
             return selectedProductID
         }
 
-        if orderedProducts.contains(where: { $0.id == SubscriptionProductIDs.proMonthly }) {
-            return SubscriptionProductIDs.proMonthly
+        if orderedProducts.contains(where: { $0.id == SubscriptionProductIDs.intelligenceProMonthly }) {
+            return SubscriptionProductIDs.intelligenceProMonthly
         }
 
-        return orderedProducts.first?.id ?? SubscriptionProductIDs.proMonthly
+        return orderedProducts.first?.id ?? SubscriptionProductIDs.standardMonthly
     }
 
     private var selectedProduct: Product? {
@@ -146,8 +146,8 @@ struct PaywallView: View {
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
                     Text(copy(
-                        ar: "ثلاث خطط شهرية متجددة تلقائياً عبر StoreKit 2: Core و Pro و Intelligence.",
-                        en: "Three auto-renewable monthly plans delivered through StoreKit 2: Core, Pro, and Intelligence."
+                        ar: "خطان شهريتان متجدّدتان عبر StoreKit 2: AiQo Standard و AiQo Intelligence Pro.",
+                        en: "Two monthly subscription tiers through StoreKit 2: AiQo Standard and AiQo Intelligence Pro."
                     ))
                     .font(AiQoTheme.Typography.body)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
@@ -683,51 +683,38 @@ struct PaywallView: View {
 
     private func tierDetails(for productID: String) -> PaywallTierDetails {
         switch productID {
-        case SubscriptionProductIDs.coreMonthly:
+        case SubscriptionProductIDs.standardMonthly:
             return PaywallTierDetails(
                 icon: "bolt.heart.fill",
                 badge: nil,
                 kicker: copy(ar: "الانطلاقة الأساسية", en: "Foundation tier"),
                 summary: copy(
-                    ar: "كل الأساسيات اليومية التي تربط الكابتن مع التمرين والتغذية والإيقاع اليومي.",
-                    en: "The essential daily stack that connects Captain, training, nutrition, and daily rhythm."
+                    ar: "كل أساسيات AiQo اليومية: الكابتن، التمرين، التغذية، والإيقاع اليومي بدون قمم.",
+                    en: "The essential AiQo stack for Captain, training, nutrition, and daily rhythm without Peaks."
                 ),
                 features: [
                     copy(ar: "Captain Hamoudi كمدربك الشخصي", en: "Captain Hamoudi as your personal coach"),
                     copy(ar: "Gym و Kitchen و My Vibe", en: "Gym, Kitchen, and My Vibe"),
-                    copy(ar: "Challenges يومية وإشعارات ذكية", en: "Daily Challenges and smart notifications")
+                    copy(ar: "Challenges يومية وإشعارات ذكية", en: "Daily Challenges and smart notifications"),
+                    copy(ar: "بدون Peaks / قمم", en: "Peaks stays locked on this tier")
                 ],
                 tint: AiQoTheme.Colors.surfaceSecondary
             )
-        case SubscriptionProductIDs.proMonthly:
-            return PaywallTierDetails(
-                icon: "mountain.2.fill",
-                badge: copy(ar: "الأكثر توازناً", en: "Most balanced"),
-                kicker: copy(ar: "أداء وتقدّم أعلى", en: "Performance upgrade"),
-                summary: copy(
-                    ar: "يرفع Core إلى مستوى أعلى مع قمم وخطة AI الأسبوعية وتقييم الاستشفاء.",
-                    en: "Extends Core with Peaks, a Weekly AI Workout Plan, and recovery-focused assessment."
-                ),
-                features: [
-                    copy(ar: "كل ميزات Core", en: "Everything in Core"),
-                    copy(ar: "Peaks للوصول إلى مشاريع الأرقام القياسية", en: "Peaks for legendary record projects"),
-                    copy(ar: "Weekly AI Workout Plan و HRR Assessment", en: "Weekly AI Workout Plan and HRR Assessment")
-                ],
-                tint: AiQoTheme.Colors.accent
-            )
-        case SubscriptionProductIDs.intelligenceMonthly:
+        case SubscriptionProductIDs.intelligenceProMonthly:
             return PaywallTierDetails(
                 icon: "brain.head.profile",
-                badge: copy(ar: "أقصى قوة AI", en: "Full AI power"),
+                badge: copy(ar: "الأكثر اكتمالاً", en: "Most complete"),
                 kicker: copy(ar: "الطبقة الأعلى", en: "Top tier"),
                 summary: copy(
-                    ar: "أعلى مستوى في AiQo: ذاكرة موسعة، نموذج أقوى، وتحليلات أعمق على نفس المنظومة.",
-                    en: "The highest AiQo tier: more memory, a stronger model, and deeper intelligence on top of Pro."
+                    ar: "كل ما في Standard مع قمم وHRR والمراجعة الأسبوعية ومشاريع الأرقام القياسية وذكاء أعمق.",
+                    en: "Everything in Standard plus Peaks, HRR, weekly review, record projects, and deeper intelligence."
                 ),
                 features: [
-                    copy(ar: "كل ميزات Pro", en: "Everything in Pro"),
+                    copy(ar: "كل ميزات Standard", en: "Everything in Standard"),
+                    copy(ar: "Peaks / قمم وHRR والمراجعة الأسبوعية", en: "Peaks, HRR, and weekly review"),
+                    copy(ar: "مشاريع الأرقام القياسية", en: "Record projects"),
                     copy(ar: "Extended Memory حتى 500 ذكرى", en: "Extended Memory up to 500 memories"),
-                    copy(ar: "Gemini Pro Model وتحليلات متقدمة", en: "Gemini Pro Model and advanced analytics")
+                    copy(ar: "توجيه AI أكثر تقدماً", en: "More advanced AI guidance")
                 ],
                 tint: AiQoTheme.Colors.ctaGradientTrailing
             )

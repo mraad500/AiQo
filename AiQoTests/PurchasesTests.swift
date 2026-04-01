@@ -23,41 +23,58 @@ final class PurchasesTests: XCTestCase {
     }
 
     @MainActor
-    func testEntitlementStorePersistsExpiryAcrossLaunches() {
+    func testEntitlementStorePersistsIntelligenceProExpiryAcrossLaunches() {
         let now = date(year: 2026, month: 2, day: 28, hour: 10)
         let expectedExpiry = calendar.date(byAdding: .day, value: 30, to: now) ?? now
 
         let store = EntitlementStore(defaults: defaults, nowProvider: { now })
         store.setEntitlement(
-            productId: SubscriptionProductIDs.aiqo_30d_family_10_00,
+            productId: SubscriptionProductIDs.intelligenceProMonthly,
             expiresAt: expectedExpiry
         )
 
         let reloadedStore = EntitlementStore(defaults: defaults, nowProvider: { now })
 
-        XCTAssertEqual(reloadedStore.activeProductId, SubscriptionProductIDs.aiqo_30d_family_10_00)
+        XCTAssertEqual(reloadedStore.activeProductId, SubscriptionProductIDs.intelligenceProMonthly)
         XCTAssertEqual(reloadedStore.expiresAt, expectedExpiry)
         XCTAssertTrue(reloadedStore.isActive)
-        XCTAssertTrue(reloadedStore.isFamily)
+        XCTAssertEqual(reloadedStore.currentTier, .intelligencePro)
+        XCTAssertTrue(reloadedStore.hasIntelligenceProAccess)
         XCTAssertTrue(reloadedStore.canCreateTribe)
     }
 
     @MainActor
-    func testExpiredFamilyPlanIsNotActiveAfterRelaunch() {
+    func testExpiredIntelligenceProPlanIsNotActiveAfterRelaunch() {
         let now = date(year: 2026, month: 2, day: 28, hour: 10)
         let expiredAt = calendar.date(byAdding: .day, value: -1, to: now) ?? now
 
         let store = EntitlementStore(defaults: defaults, nowProvider: { now })
         store.setEntitlement(
-            productId: SubscriptionProductIDs.aiqo_30d_family_10_00,
+            productId: SubscriptionProductIDs.intelligenceProMonthly,
             expiresAt: expiredAt
         )
 
         let reloadedStore = EntitlementStore(defaults: defaults, nowProvider: { now })
 
         XCTAssertFalse(reloadedStore.isActive)
-        XCTAssertTrue(reloadedStore.isFamily)
+        XCTAssertFalse(reloadedStore.hasIntelligenceProAccess)
         XCTAssertFalse(reloadedStore.canCreateTribe)
+    }
+
+    @MainActor
+    func testLegacyProProductMapsToIntelligenceProTier() {
+        let now = date(year: 2026, month: 2, day: 28, hour: 10)
+        let expectedExpiry = calendar.date(byAdding: .day, value: 30, to: now) ?? now
+
+        let store = EntitlementStore(defaults: defaults, nowProvider: { now })
+        store.setEntitlement(
+            productId: SubscriptionProductIDs.legacyProMonthly,
+            expiresAt: expectedExpiry
+        )
+
+        XCTAssertEqual(store.currentTier, .intelligencePro)
+        XCTAssertTrue(store.hasIntelligenceProAccess)
+        XCTAssertFalse(store.canCreateTribe)
     }
 
     func testNextExpiryAfterPurchaseExtendsExistingActiveWindow() {

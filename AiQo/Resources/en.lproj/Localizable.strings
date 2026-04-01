@@ -1110,7 +1110,7 @@
 "debug.preview.reset" = "Reset Preview Data";
 "debug.preview.status" = "Access Status";
 "debug.preview.status.tribe" = "Tribe Access";
-"debug.preview.status.family" = "Family Plan Access";
+"debug.preview.status.family" = "Intelligence Pro Access";
 "debug.preview.status.data" = "Data Source";
 "debug.preview.on" = "On";
 "debug.preview.off" = "Off";
@@ -1229,7 +1229,7 @@
 "tribe.toast.challengeSuggested" = "Suggestion sent to the local queue.";
 
 "tribe.error.nameRequired" = "Enter a tribe name first.";
-"tribe.error.familyRequired" = "A family plan is required to create a tribe.";
+"tribe.error.familyRequired" = "AiQo Intelligence Pro is required to create a tribe.";
 "tribe.error.inviteRequired" = "Enter an invite code.";
 "tribe.error.premiumRequired" = "An active premium plan is required.";
 
@@ -1292,13 +1292,13 @@
 "tribe.system" = "System";
 
 "premium.title" = "AiQo Premium";
-"premium.subtitle" = "30 days. Ends automatically. Renew only when you decide.";
+"premium.subtitle" = "Monthly subscription. Manage or cancel anytime from Apple.";
 "premium.restore" = "Restore";
 "premium.buy" = "Buy";
-"premium.plan.individual" = "Individual";
-"premium.plan.family" = "Family";
-"premium.plan.individual.description" = "Unlock Tribe access for one account.";
-"premium.plan.family.description" = "Unlock Tribe creation and family access.";
+"premium.plan.individual" = "Standard";
+"premium.plan.family" = "Intelligence Pro";
+"premium.plan.individual.description" = "Core app access without Peaks.";
+"premium.plan.family.description" = "Unlock Intelligence Pro features, including tribe creation.";
 "premium.error.productMissing" = "This product is unavailable right now.";
 "premium.status.activeUntil" = "Active until %@";
 "premium.status.synced" = "Premium synced";
@@ -1392,21 +1392,21 @@
 "fridge.add" = "Add";
 
 /* Paywall */
-"paywall.duration" = "Duration is 30 days and expires automatically. Renewal is your choice.";
+"paywall.duration" = "Monthly renewable subscription. Manage or cancel anytime from Apple.";
 "paywall.plans" = "Plans";
 "paywall.retry" = "Retry";
 "paywall.restore" = "Restore";
 "paywall.buy" = "Buy";
 "paywall.status" = "Status";
-"paywall.thirtyDays" = "30 days";
+"paywall.thirtyDays" = "Monthly";
 "paywall.status.synced" = "Subscription synced successfully.";
 "paywall.status.pending" = "Purchase is pending from Apple.";
 "paywall.status.cancelled" = "Purchase was cancelled.";
 "paywall.status.failed" = "Could not complete the operation: %@";
 "paywall.status.currentPlan" = "Current plan: %@. Expires on %@.";
 "paywall.status.canCreateTribe" = "You can create a tribe now.";
-"paywall.plan.familyDescription" = "This plan is for the family and activates tribe creation for the full 30 days.";
-"paywall.plan.individualDescription" = "Individual access for 30 days. Expires automatically with no auto-renewal.";
+"paywall.plan.familyDescription" = "Intelligence Pro unlocks tribe creation and the highest AiQo feature set.";
+"paywall.plan.individualDescription" = "Standard unlocks the core AiQo app experience without Peaks.";
 "paywall.debug.testing" = "Testing";
 "paywall.debug.resetPremium" = "Reset premium data";
 "paywall.debug.resetDone" = "Premium data has been reset locally for testing subscription expiry.";
@@ -1761,7 +1761,7 @@
 
 /* ─── Arena Tab ─── */
 "arena.tribesCompete" = "Tribes are competing — and you?";
-"arena.createOrJoin" = "Create your tribe with the family plan or join a friend's tribe";
+"arena.createOrJoin" = "Create your tribe with AiQo Intelligence Pro or join a friend's tribe";
 "arena.createTribe" = "Create tribe";
 "arena.joinWithCode" = "Join with code";
 
@@ -1866,11 +1866,11 @@
 "tribeHub.displayMode" = "Display mode";
 "tribeHub.tribeEnergyToday" = "Tribe energy today";
 "tribeHub.hubReady" = "Tribe hub ready";
-"tribeHub.hubReadyDesc" = "Create a tribe if you are on the family plan, or join with an invite code. After joining, tribe energy, missions, and members will appear here.";
+"tribeHub.hubReadyDesc" = "Create a tribe if you are on AiQo Intelligence Pro, or join with an invite code. After joining, tribe energy, missions, and members will appear here.";
 "tribeHub.canCreate" = "You can create a tribe now.";
-"tribeHub.familyRequired" = "Family plan required to create a tribe.";
+"tribeHub.familyRequired" = "AiQo Intelligence Pro is required to create a tribe.";
 "tribeHub.createTribe" = "Create tribe";
-"tribeHub.familyPlanRequired" = "Family plan required";
+"tribeHub.familyPlanRequired" = "Intelligence Pro required";
 "tribeHub.joinWithCode" = "Join with code";
 "tribeHub.enterCode" = "Enter invite code";
 "tribeHub.joinNow" = "Join now";

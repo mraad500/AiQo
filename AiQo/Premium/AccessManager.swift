@@ -7,7 +7,7 @@ final class AccessManager: ObservableObject {
 
     @Published private(set) var previewEnabled = false
     @Published private(set) var useMockTribeData = true
-    @Published private(set) var selectedPreviewPlan: PremiumPlan = .family
+    @Published private(set) var selectedPreviewPlan: PremiumPlan = .intelligencePro
     @Published private(set) var configurationVersion = 0
     @Published private(set) var entitlementSnapshot: EntitlementSnapshot = .locked
 
@@ -26,38 +26,40 @@ final class AccessManager: ObservableObject {
     // MARK: — Tier helpers
 
     var activeTier: SubscriptionTier {
-        if FreeTrialManager.shared.isTrialActive { return .pro }
+        if FreeTrialManager.shared.isTrialActive { return .intelligencePro }
         return EntitlementStore.shared.currentTier
     }
 
-    // MARK: — Core tier features ($9.99)
+    // MARK: — Standard tier features
 
-    var canAccessCaptain: Bool { activeTier >= .core }
-    var canAccessGym: Bool { activeTier >= .core }
-    var canAccessKitchen: Bool { activeTier >= .core }
-    var canAccessMyVibe: Bool { activeTier >= .core }
-    var canAccessChallenges: Bool { activeTier >= .core }
-    var canAccessDataTracking: Bool { activeTier >= .core }
-    var canReceiveCaptainNotifications: Bool { activeTier >= .core }
+    var canAccessCaptain: Bool { activeTier >= .standard }
+    var canAccessGym: Bool { activeTier >= .standard }
+    var canAccessKitchen: Bool { activeTier >= .standard }
+    var canAccessMyVibe: Bool { activeTier >= .standard }
+    var canAccessChallenges: Bool { activeTier >= .standard }
+    var canAccessDataTracking: Bool { activeTier >= .standard }
+    var canReceiveCaptainNotifications: Bool { activeTier >= .standard }
 
-    // MARK: — Pro tier features ($19.99)
+    // MARK: — Intelligence Pro feature gates
 
-    var canAccessPeaks: Bool { activeTier >= .pro }
-    var canAccessHRRAssessment: Bool { activeTier >= .pro }
-    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .pro }
-    var canAccessRecordProjects: Bool { activeTier >= .pro }
+    var canAccessPeaks: Bool { activeTier >= .intelligencePro }
+    var canAccessHRRAssessment: Bool { activeTier >= .intelligencePro }
+    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .intelligencePro }
+    var canAccessRecordProjects: Bool { activeTier >= .intelligencePro }
 
-    // MARK: — Intelligence tier features ($39.99)
+    // MARK: — Intelligence Pro intelligence features
 
-    var canAccessExtendedMemory: Bool { activeTier >= .intelligence }
-    var canAccessIntelligenceModel: Bool { activeTier >= .intelligence }
+    var canAccessExtendedMemory: Bool { activeTier >= .intelligencePro }
+    var canAccessIntelligenceModel: Bool { activeTier >= .intelligencePro }
 
     // MARK: — Memory limit based on tier
 
     var captainMemoryLimit: Int {
         switch activeTier {
-        case .intelligence: return 500
-        default:            return 200
+        case .intelligencePro:
+            return 500
+        default:
+            return 200
         }
     }
 
@@ -68,7 +70,7 @@ final class AccessManager: ObservableObject {
     }
 
     var canCreateTribe: Bool {
-        entitlementSnapshot.hasFamilyPlanAccess || FreeTrialManager.shared.isTrialActive
+        entitlementSnapshot.hasIntelligenceProAccess || FreeTrialManager.shared.isTrialActive
     }
 
     var activePlan: PremiumPlan? {
@@ -146,9 +148,9 @@ final class AccessManager: ObservableObject {
         }
 
         useMockTribeData = true
-        selectedPreviewPlan = .family
+        selectedPreviewPlan = .intelligencePro
         persist(true, key: Keys.useMockTribeData)
-        persist(PremiumPlan.family.rawValue, key: Keys.selectedPreviewPlan)
+        persist(PremiumPlan.intelligencePro.rawValue, key: Keys.selectedPreviewPlan)
         bumpConfiguration()
     }
 
@@ -159,7 +161,7 @@ final class AccessManager: ObservableObject {
 
         previewEnabled = false
         useMockTribeData = true
-        selectedPreviewPlan = .family
+        selectedPreviewPlan = .intelligencePro
 
         defaults.removeObject(forKey: Keys.previewEnabled)
         defaults.removeObject(forKey: Keys.useMockTribeData)
@@ -188,12 +190,12 @@ final class AccessManager: ObservableObject {
            let plan = PremiumPlan.fromStoredValue(storedPlan) {
             selectedPreviewPlan = plan
         } else {
-            selectedPreviewPlan = .family
+            selectedPreviewPlan = .intelligencePro
         }
 #else
         previewEnabled = false
         useMockTribeData = true
-        selectedPreviewPlan = .family
+        selectedPreviewPlan = .intelligencePro
         forceDisablePreviewOverrides()
 #endif
     }
@@ -216,8 +218,8 @@ final class AccessManager: ObservableObject {
         if TribeFeatureFlags.subscriptionGateEnabled == false {
             entitlementSnapshot = EntitlementSnapshot(
                 hasTribeAccess: true,
-                hasFamilyPlanAccess: true,
-                activePlan: .family,
+                hasIntelligenceProAccess: true,
+                activePlan: .intelligencePro,
                 activeProductId: nil,
                 isPreviewOverride: false
             )
