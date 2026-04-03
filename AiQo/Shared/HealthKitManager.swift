@@ -357,6 +357,9 @@ final class HealthKitManager: ObservableObject {
         )
 
         await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
+
+        // Dual-Persona HealthKit trigger evaluation
+        CaptainNotificationEngine.shared.evaluateHealthKitTriggers()
     }
     
     // MARK: - 5. Mining Logic ⛏️

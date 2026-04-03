@@ -46,6 +46,7 @@ final class AccessManager: ObservableObject {
     var canAccessHRRAssessment: Bool { activeTier >= .intelligencePro }
     var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .intelligencePro }
     var canAccessRecordProjects: Bool { activeTier >= .intelligencePro }
+    var canAccessCoachPersona: Bool { activeTier >= .intelligencePro }
 
     // MARK: — Intelligence Pro intelligence features
 
