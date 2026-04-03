@@ -116,14 +116,20 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         FreeTrialManager.shared.refreshState()
 
         LocalizationManager.shared.applySavedLanguage()
+
+        #if DEBUG
+        let isScreenshotMode = ScreenshotMode.isActive
+        #else
+        let isScreenshotMode = false
+        #endif
+
+        guard !isScreenshotMode else { return true }
+
         NotificationCategoryManager.shared.registerAllCategories()
         NotificationIntelligenceManager.shared.registerBackgroundTasks()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
-
-        // All permission-dependent services are deferred until the FULL onboarding is complete.
-        // Every flag must be true — prevents stale UserDefaults from triggering permissions.
         let didCompleteOnboarding = UserDefaults.standard.bool(forKey: "didSelectLanguage")
             && UserDefaults.standard.bool(forKey: "didShowFirstAuthScreen")
             && UserDefaults.standard.bool(forKey: "didCompleteDatingProfile")

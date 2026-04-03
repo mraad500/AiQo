@@ -62,12 +62,12 @@ struct PhoneWorkoutSummaryView: View {
 
                         // Top labels
                         VStack(spacing: 6) {
-                            Text("WORKOUT SUMMARY")
+                            Text(L10n.t("gym.summary.label"))
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                 .tracking(4)
                                 .foregroundStyle(.white.opacity(0.35))
 
-                            Text("WORKOUT COMPLETE")
+                            Text(L10n.t("gym.summary.complete"))
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .tracking(5)
                                 .foregroundStyle(.white.opacity(0.80))
@@ -93,7 +93,7 @@ struct PhoneWorkoutSummaryView: View {
                                 .scaleEffect(appearAnimation ? 1.0 : 0.92)
                                 .opacity(appearAnimation ? 1.0 : 0.0)
 
-                            Text("XP EARNED")
+                            Text(L10n.t("gym.summary.xpEarned"))
                                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                                 .tracking(2)
                                 .foregroundStyle(.white.opacity(0.55))
@@ -103,25 +103,25 @@ struct PhoneWorkoutSummaryView: View {
                         // Metric cards row
                         HStack(spacing: 14) {
                             ModernMetricCard(
-                                title: "TIME",
+                                title: L10n.t("gym.summary.time"),
                                 value: formatTime(duration),
-                                sub: "min",
+                                sub: L10n.t("gym.summary.timeUnit"),
                                 icon: "stopwatch.fill",
                                 delay: 0.10
                             )
 
                             ModernMetricCard(
-                                title: "KCAL",
+                                title: L10n.t("gym.summary.kcal"),
                                 value: "\(Int(calories))",
-                                sub: "cal",
+                                sub: L10n.t("gym.summary.kcalUnit"),
                                 icon: "flame.fill",
                                 delay: 0.18
                             )
 
                             ModernMetricCard(
-                                title: "AVG HR",
+                                title: L10n.t("gym.summary.avgHR"),
                                 value: "\(Int(avgHeartRate))",
-                                sub: "bpm",
+                                sub: L10n.t("gym.summary.bpm"),
                                 icon: "heart.fill",
                                 delay: 0.26
                             )
@@ -132,17 +132,17 @@ struct PhoneWorkoutSummaryView: View {
                         if recovery1 != nil || recovery2 != nil {
                             HStack(spacing: 14) {
                                 RecoveryMetricCard(
-                                    title: "RECOVERY 1",
+                                    title: L10n.t("gym.summary.recovery1"),
                                     value: recoveryCardValue(recovery1),
-                                    sub: "Peak - 1 min",
+                                    sub: L10n.t("gym.summary.recovery1Sub"),
                                     icon: "heart.circle.fill",
                                     delay: 0.30
                                 )
 
                                 RecoveryMetricCard(
-                                    title: "RECOVERY 2",
+                                    title: L10n.t("gym.summary.recovery2"),
                                     value: recoveryCardValue(recovery2),
-                                    sub: "Peak - 2 min",
+                                    sub: L10n.t("gym.summary.recovery2Sub"),
                                     icon: "heart.circle",
                                     delay: 0.34
                                 )

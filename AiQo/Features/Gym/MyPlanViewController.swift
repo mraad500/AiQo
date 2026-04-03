@@ -139,12 +139,12 @@ struct MyPlanView: View {
                         Text("🏋️‍♂️")
                             .font(.system(size: 24))
 
-                        Text("خطة التمرين")
+                        Text(L10n.t("gym.myplan.title"))
                             .font(.system(size: 21, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary)
                     }
 
-                    Text("بلمسة وحدة، ابدي خطة تدريب يومية ويّا الكابتن.")
+                    Text(L10n.t("gym.myplan.subtitle"))
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)

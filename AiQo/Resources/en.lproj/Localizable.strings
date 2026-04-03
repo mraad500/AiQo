@@ -2153,3 +2153,240 @@
 "profile.visibleToTribes" = "Visible to tribes and arena";
 "profile.hideName" = "Turning this off will hide your name and make it private whenever you want.";
 "profile.updateFailed" = "Update failed — try again";
+
+/* ─── Gym: Workout Categories ─── */
+"gym.category.cardio" = "Cardio";
+"gym.category.strength" = "Strength";
+"gym.category.serenity" = "Serenity";
+"gym.category.filter.label" = "Workout categories";
+"gym.category.openSession" = "Open session: %@";
+"gym.category.detailPlaceholder" = "Detailed view for this activity inside the Club.";
+"gym.category.startSession" = "Start Session";
+"gym.category.startSessionFor" = "Start session: %@";
+"gym.workout.cardioCaptain" = "Cardio with Captain Hamoudi";
+"gym.workout.cardioCaptain.sub" = "Zone 2 heart rate for optimal fat burn";
+"gym.workout.running" = "Running";
+"gym.workout.walking" = "Walking";
+"gym.workout.cycling" = "Cycling";
+"gym.workout.swimming" = "Swimming";
+"gym.workout.strength" = "Strength Training";
+"gym.workout.hiit" = "HIIT Workouts";
+"gym.workout.equestrian" = "Equestrian";
+"gym.workout.calisthenics" = "Bodyweight Training";
+"gym.workout.breathing" = "Breathing";
+"gym.workout.breathing.sub" = "Calm the nervous system";
+"gym.workout.gratitude" = "Gratitude";
+"gym.workout.gratitude.sub" = "Reset the ego";
+"gym.workout.yoga" = "Yoga";
+"gym.workout.yoga.sub" = "Movement + clarity";
+"gym.workout.auraCharge" = "Aura Charge";
+"gym.workout.auraCharge.sub" = "Your energy is clean";
+"gym.workout.deepClarity" = "Deep Clarity";
+"gym.workout.deepClarity.sub" = "Disconnect from the world and connect with yourself";
+
+/* ─── Gym: Quest Detail ─── */
+"gym.quest.progress" = "Progress";
+"gym.quest.sessionRunning" = "Status: Session in progress";
+"gym.quest.noSleepData" = "No sleep data in Apple Health";
+"gym.quest.openSettings" = "Open Settings";
+"gym.quest.sessionTime" = "Session Time";
+"gym.quest.done" = "Done";
+"gym.quest.confirmAchievement" = "Confirm Achievement";
+"gym.quest.openWaterEntry" = "Open Water Entry";
+"gym.quest.linkHealthKit" = "Link HealthKit";
+"gym.quest.refresh" = "Refresh";
+"gym.quest.endSession" = "End";
+"gym.quest.startSession" = "Start Session";
+"gym.quest.startPushupChallenge" = "Start Pushup Challenge";
+"gym.quest.logCardioSession" = "Log Cardio Session";
+"gym.quest.logInteraction" = "Log Interaction";
+"gym.quest.openKitchen" = "Open Kitchen";
+"gym.quest.shareAchievement" = "Share Achievement";
+"gym.quest.healthKitLinked" = "HealthKit linked and progress updated.";
+"gym.quest.progressUpdated" = "Progress updated.";
+"gym.quest.healthKitDenied" = "HealthKit permission denied. You can enable it from Settings.";
+"gym.quest.challenge" = "The Challenge";
+"gym.quest.benefit" = "The Benefit";
+"gym.quest.howToComplete" = "How to complete it?";
+"gym.quest.currentCenter" = "Your current center";
+"gym.quest.cantOpenHealth" = "Cannot open Health app";
+"gym.quest.ok" = "OK";
+"gym.quest.openHealthManual" = "Open Apple Health manually from your device, enable sleep data, then come back and press Refresh.";
+"gym.quest.noSleepQuestion" = "No sleep data?";
+"gym.quest.sleepStep1" = "1) Open the Health app (Apple Health)";
+"gym.quest.sleepStep2" = "2) Go to Sleep";
+"gym.quest.sleepStep3" = "3) Enable Sleep Schedule or sleep tracking";
+"gym.quest.sleepStep4" = "4) If you have Apple Watch, enable sleep tracking on it";
+"gym.quest.openHealthApp" = "Open Health App";
+"gym.quest.waterEntry" = "Water Entry";
+"gym.quest.waterAdd" = "Add 0.25 liters now to update the quest immediately";
+"gym.quest.waterButton" = "+0.25L";
+"gym.quest.logSession" = "Log Session";
+"gym.quest.minuteUnit" = "min";
+"gym.quest.minuteLabel" = "%d minutes";
+"gym.quest.save" = "Save";
+"gym.quest.setsFormat" = "%d sets";
+
+/* ─── Gym: Quest Stage 1 Content ─── */
+"gym.quest.s1q1.explanation" = "A one-time starter quest: a simple act of kindness that activates inner awareness and sets a clear intention.";
+"gym.quest.s1q1.benefit1" = "Boosts mental clarity and reduces daily stress.";
+"gym.quest.s1q1.benefit2" = "Strengthens intention and behavioral discipline from stage one.";
+"gym.quest.s1q1.benefit3" = "Builds inner balance that reflects on your decisions.";
+"gym.quest.s1q1.howTo1" = "Choose one direct act of help today.";
+"gym.quest.s1q1.howTo2" = "Complete the act without delay.";
+"gym.quest.s1q1.howTo3" = "Come back and press \"Confirm Achievement\".";
+"gym.quest.s1q2.explanation" = "A daily quest to hydrate your body today, with your rank based on your center from 3 to 1.";
+"gym.quest.s1q2.benefit1" = "Better hydration means higher energy and stability throughout the day.";
+"gym.quest.s1q2.benefit2" = "Supports focus and mental clarity at work and during exercise.";
+"gym.quest.s1q2.benefit3" = "Improves skin health and overall body performance.";
+"gym.quest.s1q2.howTo1" = "Spread your water intake over intervals instead of one gulp.";
+"gym.quest.s1q2.howTo2" = "Log every amount you drink from the entry button.";
+"gym.quest.s1q2.howTo3" = "Aim for 2.0L then raise it to 2.5L then 3.0L.";
+"gym.quest.s1q3.explanation" = "A daily sleep quest from last night's window, ranked by centers based on sleep hours.";
+"gym.quest.s1q3.benefit1" = "Accelerates muscular and nervous recovery.";
+"gym.quest.s1q3.benefit2" = "Helps balance hormones and regulate appetite.";
+"gym.quest.s1q3.benefit3" = "Improves focus and mental performance quality.";
+"gym.quest.s1q3.howTo1" = "Link Apple Health so it reads sleep hours automatically.";
+"gym.quest.s1q3.howTo2" = "Aim for 7.0h then 7.5h then 8.0h.";
+"gym.quest.s1q3.howTo3" = "Use the \"Refresh\" button after waking up.";
+"gym.quest.s1q4.explanation" = "A cumulative Zone 2 quest within Stage 1, the more minutes the higher your center up to center 1.";
+"gym.quest.s1q4.benefit1" = "Enhances long-term fat burning efficiency.";
+"gym.quest.s1q4.benefit2" = "Strengthens heart and endurance without excessive strain.";
+"gym.quest.s1q4.benefit3" = "Supports nervous calm and stress regulation.";
+"gym.quest.s1q4.howTo1" = "Log Zone 2 sessions regularly.";
+"gym.quest.s1q4.howTo2" = "Start at 20m then raise to 30m then 40m.";
+"gym.quest.s1q4.howTo3" = "Update minutes from the session log button.";
+"gym.quest.s1q5.explanation" = "A one-time setup quest: saving a kitchen plan establishes your nutrition system from the start.";
+"gym.quest.s1q5.benefit1" = "Establishes daily behavior and reduces randomness.";
+"gym.quest.s1q5.benefit2" = "Gives you better control over food choices.";
+"gym.quest.s1q5.benefit3" = "Reduces daily decision fatigue around meals.";
+"gym.quest.s1q5.howTo1" = "Open the Kitchen screen from the button.";
+"gym.quest.s1q5.howTo2" = "Create/save your meal plan.";
+"gym.quest.s1q5.howTo3" = "The quest completes automatically after saving the plan.";
+
+/* ─── Gym: Quests View ─── */
+"gym.quest.records" = "Records";
+"gym.quest.stageContentSoon" = "Content for this stage will appear here soon.";
+"gym.quest.stageLabel" = "Stage %@";
+"gym.quest.stagesLabel" = "Quest stages";
+"gym.quest.stageLocked" = "Stage Locked";
+"gym.quest.stageLockedMsg" = "Complete all challenges in the previous stage to unlock this one";
+"gym.quest.centerUpgrade" = "Upgraded to center %@";
+
+/* ─── Gym: Quest Completion ─── */
+"gym.quest.congrats" = "Congratulations!";
+"gym.quest.completedChallenge" = "You completed the %@ challenge";
+"gym.quest.rewardSaved" = "Reward saved in Achievements";
+"gym.quest.okay" = "Okay";
+
+/* ─── Gym: Quest Wins ─── */
+"gym.quest.noAchievements" = "No achievements yet";
+"gym.quest.completeQuests" = "Complete Peaks challenges to earn rewards";
+"gym.quest.stageNum" = "Stage %d";
+
+/* ─── Gym: Camera Permission ─── */
+"gym.camera.privacy" = "Camera Privacy";
+"gym.camera.description" = "We use the camera on-device only to count reps and check form accuracy. No video is uploaded to any server.";
+"gym.camera.granted" = "Camera permission granted";
+"gym.camera.needPermission" = "We need your permission to start";
+"gym.camera.denied" = "Permission denied. Enable it from Settings";
+"gym.camera.unknown" = "Unknown permission status";
+"gym.camera.startChallenge" = "Start Challenge";
+"gym.camera.requesting" = "Requesting...";
+"gym.camera.allowCamera" = "Allow Camera";
+
+/* ─── Gym: Pushup Challenge ─── */
+"gym.pushup.accuracy" = "Accuracy %d%%";
+"gym.pushup.finish" = "Finish";
+"gym.pushup.needCamera" = "Camera permission required";
+
+/* ─── Gym: Workout Plan ─── */
+"gym.plan.dailyPlans" = "Daily Workout Plans";
+"gym.plan.title" = "Workout Plan";
+"gym.plan.createWithCaptain" = "Create a workout plan with the Captain";
+"gym.plan.pressAndStart" = "Press and start";
+"gym.plan.noPlans" = "No pinned plans yet.";
+"gym.plan.startCaptainChat" = "Start a conversation with the Captain above to fill the schedule automatically.";
+"gym.plan.captainChat" = "Captain Chat";
+"gym.plan.captainTyping" = "Captain is typing...";
+"gym.plan.placeholder" = "Write your message to the Captain...";
+"gym.plan.pinPlan" = "OK, pin the plan to the schedule";
+"gym.plan.pinSuccess" = "Plan pinned successfully and will show in the daily schedule.";
+"gym.plan.pinConfirm" = "Done champ, I pinned %@ to the daily schedule.";
+"gym.plan.pinError" = "Could not pin the plan right now. Try again.";
+"gym.plan.kickoff" = "To build a personalized workout plan, write your current weight and goal like: 95 kg and cutting.";
+"gym.plan.preview" = "Preview";
+"gym.plan.setsFormat" = "%d sets";
+"gym.plan.taskFormat" = "%@ - %d sets - %@";
+
+/* ─── Gym: Workout Plan (MyPlan) ─── */
+"gym.myplan.title" = "Workout Plan";
+"gym.myplan.subtitle" = "With one tap, start a daily training plan with the Captain.";
+
+/* ─── Gym: Workout Summary ─── */
+"gym.summary.label" = "WORKOUT SUMMARY";
+"gym.summary.complete" = "WORKOUT COMPLETE";
+"gym.summary.xpEarned" = "XP EARNED";
+"gym.summary.time" = "TIME";
+"gym.summary.timeUnit" = "min";
+"gym.summary.kcal" = "KCAL";
+"gym.summary.kcalUnit" = "cal";
+"gym.summary.avgHR" = "AVG HR";
+"gym.summary.bpm" = "bpm";
+"gym.summary.recovery1" = "RECOVERY 1";
+"gym.summary.recovery1Sub" = "Peak - 1 min";
+"gym.summary.recovery2" = "RECOVERY 2";
+"gym.summary.recovery2Sub" = "Peak - 2 min";
+
+/* ─── Gym: Live Metrics ─── */
+"gym.metrics.heartRate" = "Heart rate";
+"gym.metrics.activeEnergy" = "Active energy";
+"gym.metrics.distance" = "Distance";
+"gym.metrics.pace" = "Pace";
+"gym.metrics.elapsed" = "Elapsed time";
+"gym.metrics.offline" = "offline";
+
+/* ─── Gym: Recovery ─── */
+"gym.recovery.title" = "Measure Heart Rate Recovery";
+"gym.recovery.description" = "Heart rate recovery is how fast your heart rate drops after exercise. If it drops quickly within the first two minutes, it indicates better heart health and fitness.";
+"gym.recovery.yes" = "Yes";
+"gym.recovery.no" = "No thanks";
+"gym.recovery.inhalePrompt" = "Champ, take a deep breath and let your chest open up.";
+"gym.recovery.exhalePrompt" = "Now exhale slowly, and let your heart rate come down gently.";
+
+/* ─── Gym: Impact ─── */
+"gym.impact.summary" = "Summary";
+"gym.impact.achievements" = "Achievements";
+
+/* ─── Gym: Watch ─── */
+"gym.watch.connected" = "Apple Watch connected";
+"gym.watch.disconnected" = "Apple Watch not connected";
+"gym.watch.checking" = "Checking Apple Watch";
+
+/* ─── Gym: Heart View ─── */
+"gym.heart.title" = "Heart Rate Monitor";
+"gym.heart.comingSoon" = "Coming Soon";
+
+/* ─── Gym: Rewards ─── */
+"gym.rewards.title" = "Rewards";
+"gym.rewards.subtitle" = "Unlock rewards by staying consistent";
+
+/* ─── Gym: Gratitude Session ─── */
+"gym.gratitude.sessionTitle" = "Gratitude Session";
+"gym.gratitude.sessionSubtitle" = "A calm morning ritual";
+"gym.gratitude.initialSentence" = "Give these two minutes some stillness, and thank God for a new day and a body still carrying you.";
+"gym.gratitude.completionMsg" = "Good. Carry this calm into the rest of your day.";
+"gym.gratitude.availabilityMsg" = "This session stays open until 12:00 PM.";
+"gym.gratitude.lockedMsg" = "The morning gratitude session has ended for today. We'll meet again tomorrow morning to start our day right.";
+"gym.gratitude.lockedTitle" = "Locked Today";
+"gym.gratitude.completedTitle" = "Session Complete";
+"gym.gratitude.serenityTitle" = "Serenity";
+"gym.gratitude.readyTitle" = "Ready For You";
+"gym.gratitude.lockedSubtitle" = "This morning ritual closes at noon so it stays anchored to the morning.";
+"gym.gratitude.completedSubtitle" = "Take one final slow breath and carry that softness into the day.";
+"gym.gratitude.serenitySubtitle" = "Stay with the sound and the sentence, and let the rest settle.";
+"gym.gratitude.readySubtitle" = "Start the session to fade through today's gratitude lines with voice and ambient sound.";
+"gym.gratitude.completeBtn" = "Session Complete";
+"gym.gratitude.inProgressBtn" = "Session In Progress";
+"gym.gratitude.startBtn" = "Start Gratitude Session";
+"gym.gratitude.guinness" = "GUINNESS RECORDS-AiQo";

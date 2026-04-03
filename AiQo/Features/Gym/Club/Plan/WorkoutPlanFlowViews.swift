@@ -19,7 +19,7 @@ struct WorkoutPlanDashboard: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("خطط التمارين اليومية")
+                Text(L10n.t("gym.plan.dailyPlans"))
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                     .padding(.top, 2)
@@ -41,7 +41,7 @@ struct WorkoutPlanDashboard: View {
             )
             .ignoresSafeArea()
         )
-        .navigationTitle("خطة التمرين")
+        .navigationTitle(L10n.t("gym.plan.title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: reloadDailyPlans)
         .onReceive(NotificationCenter.default.publisher(for: .aiqoWorkoutPlanSaved)) { _ in
@@ -58,14 +58,14 @@ struct WorkoutPlanDashboard: View {
                 .padding(.vertical, 2)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("إنشاء خطة تمارين مع الكابتن")
+                Text(L10n.t("gym.plan.createWithCaptain"))
                     .font(.system(size: 21, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
-                    Text("اضغط وابدأ")
+                    Text(L10n.t("gym.plan.pressAndStart"))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                     Image(systemName: "arrow.left.circle.fill")
                         .font(.system(size: 16, weight: .semibold))
@@ -94,11 +94,11 @@ struct WorkoutPlanDashboard: View {
     private var dailyPlansSection: some View {
         if savedDailyPlans.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text("لا توجد خطط مثبتة حالياً.")
+                Text(L10n.t("gym.plan.noPlans"))
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary)
 
-                Text("ابدأ محادثة الكابتن بالأعلى حتى نملأ الجدول تلقائياً.")
+                Text(L10n.t("gym.plan.startCaptainChat"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -193,7 +193,7 @@ struct CaptainPlanChatView: View {
             .padding(.top, 12)
             .padding(.bottom, 6)
         }
-        .navigationTitle("محادثة الكابتن")
+        .navigationTitle(L10n.t("gym.plan.captainChat"))
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             inputBar
@@ -294,7 +294,7 @@ struct CaptainPlanChatView: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("الكابتن يكتب...")
+                Text(L10n.t("gym.plan.captainTyping"))
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -320,7 +320,7 @@ struct CaptainPlanChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField("اكتب رسالتك للكابتن...", text: $globalBrain.inputText)
+            TextField(L10n.t("gym.plan.placeholder"), text: $globalBrain.inputText)
                 .textInputAutocapitalization(.sentences)
                 .autocorrectionDisabled(false)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -376,7 +376,7 @@ struct CaptainPlanChatView: View {
         Button {
             pinPlan(workoutPlan)
         } label: {
-            Text("موافق، ثبّت الخطة بالجدول")
+            Text(L10n.t("gym.plan.pinPlan"))
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(.black.opacity(0.85))
                 .frame(maxWidth: .infinity)
@@ -395,7 +395,7 @@ struct CaptainPlanChatView: View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 18, weight: .bold))
-            Text("تم تثبيت الخطة بنجاح ورح تنعرض بالجدول اليومي.")
+            Text(L10n.t("gym.plan.pinSuccess"))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
         }
         .foregroundStyle(.green)
@@ -456,7 +456,7 @@ struct CaptainPlanChatView: View {
             inputFieldFocused = false
             globalBrain.messages.append(
                 ChatMessage(
-                    text: "تمام بطل، ثبتتلك خطة \(workoutPlan.title) بالجدول اليومي.",
+                    text: String(format: L10n.t("gym.plan.pinConfirm"), workoutPlan.title),
                     isUser: false
                 )
             )
@@ -465,7 +465,7 @@ struct CaptainPlanChatView: View {
                 dismiss()
             }
         } catch {
-            errorMessage = "تعذر تثبيت الخطة حالياً. حاول مرة ثانية."
+            errorMessage = L10n.t("gym.plan.pinError")
         }
 
         isSavingPlan = false
@@ -480,7 +480,7 @@ struct CaptainPlanChatView: View {
         guard globalBrain.currentWorkoutPlan == nil else { return }
         guard !globalBrain.isLoading else { return }
 
-        let kickoffPrompt = "حتى أبني خطة تمرين شخصية، اكتب وزنك الحالي وهدفك مثل: 95 كيلو وتنشيف."
+        let kickoffPrompt = L10n.t("gym.plan.kickoff")
         guard !globalBrain.messages.contains(where: { $0.text == kickoffPrompt }) else { return }
 
         let hasUserMessages = globalBrain.messages.contains(where: \.isUser)
@@ -526,7 +526,7 @@ private struct CaptainPendingWorkoutPreviewCard: View {
                 .frame(width: 34, height: 34)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Preview")
+                    Text(L10n.t("gym.plan.preview"))
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
@@ -555,7 +555,7 @@ private struct CaptainPendingWorkoutPreviewCard: View {
 
                             Spacer(minLength: 8)
 
-                            Text("\(exercise.sets) جولات")
+                            Text(String(format: L10n.t("gym.plan.setsFormat"), exercise.sets))
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .foregroundStyle(.primary)
                                 .padding(.horizontal, 10)
@@ -598,7 +598,7 @@ private struct CaptainPendingWorkoutPreviewCard: View {
 
 private extension Exercise {
     var workoutTaskTitle: String {
-        "\(name) - \(sets) جولات - \(repsOrDuration)"
+        String(format: L10n.t("gym.plan.taskFormat"), name, sets, repsOrDuration)
     }
 }
 

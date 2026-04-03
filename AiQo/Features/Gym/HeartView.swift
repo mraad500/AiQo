@@ -8,9 +8,9 @@ struct HeartView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.red.opacity(0.4))
                 .padding()
-            Text("Heart Rate Monitor")
+            Text(L10n.t("gym.heart.title"))
                 .font(.title2.bold())
-            Text("Coming Soon")
+            Text(L10n.t("gym.heart.comingSoon"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

@@ -52,10 +52,7 @@ struct GratitudeSessionView: View {
 
     private var currentSentence: String {
         guard hasStartedSession else {
-            return localized(
-                ar: "خل هالدقيقتين هاديات، واشكر ربك على يوم جديد وجسم بعده شايلك.",
-                en: "Give these two minutes some stillness, and thank God for a new day and a body still carrying you."
-            )
+            return L10n.t("gym.gratitude.initialSentence")
         }
 
         let safeIndex = min(max(currentSentenceIndex, 0), max(dailySentences.count - 1, 0))
@@ -130,11 +127,11 @@ struct GratitudeSessionView: View {
             Spacer(minLength: 16)
 
             VStack(spacing: 6) {
-                Text(localized(ar: "جلسة الامتنان", en: "Gratitude Session"))
+                Text(L10n.t("gym.gratitude.sessionTitle"))
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
 
-                Text(localized(ar: "مسار صباحي يهدّي النفس", en: "A calm morning ritual"))
+                Text(L10n.t("gym.gratitude.sessionSubtitle"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.72))
             }
@@ -218,12 +215,7 @@ struct GratitudeSessionView: View {
                     Image(systemName: hasCompletedSession ? "checkmark.circle.fill" : "sun.haze.circle")
                         .font(.system(size: 16, weight: .semibold))
 
-                    Text(
-                        localized(
-                            ar: hasCompletedSession ? "تمام بطل.. خذ هالهدوء وكمل يومك." : "الجلسة مفتوحة لحد 12:00 ظهرًا.",
-                            en: hasCompletedSession ? "Good. Carry this calm into the rest of your day." : "This session stays open until 12:00 PM."
-                        )
-                    )
+                    Text(hasCompletedSession ? L10n.t("gym.gratitude.completionMsg") : L10n.t("gym.gratitude.availabilityMsg"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                 }
                 .foregroundStyle(.white.opacity(0.84))
@@ -265,7 +257,7 @@ struct GratitudeSessionView: View {
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(.white)
 
-            Text("جلسة الامتنان الصباحية انتهى وقتها. نلتقي باجر الصبح يا ذيب حتى نبدأ يومنا صح")
+            Text(L10n.t("gym.gratitude.lockedMsg"))
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
@@ -279,58 +271,46 @@ struct GratitudeSessionView: View {
 
     private var statusTitle: String {
         if isLocked {
-            return localized(ar: "مقفلة اليوم", en: "Locked Today")
+            return L10n.t("gym.gratitude.lockedTitle")
         }
 
         if hasCompletedSession {
-            return localized(ar: "اكتملت الجلسة", en: "Session Complete")
+            return L10n.t("gym.gratitude.completedTitle")
         }
 
         if hasStartedSession {
-            return localized(ar: "صفاء", en: "Serenity")
+            return L10n.t("gym.gratitude.serenityTitle")
         }
 
-        return localized(ar: "جاهزة إلك", en: "Ready For You")
+        return L10n.t("gym.gratitude.readyTitle")
     }
 
     private var subtitleText: String {
         if isLocked {
-            return localized(
-                ar: "هذا المسار الصباحي ينتهي ظهرًا حتى يبقى مرتبط ببداية اليوم.",
-                en: "This ritual closes at noon so it stays anchored to the morning."
-            )
+            return L10n.t("gym.gratitude.lockedSubtitle")
         }
 
         if hasCompletedSession {
-            return localized(
-                ar: "خذ نفسك الأخير بهدوء، وامشِ على يومك بخفة.",
-                en: "Take one final slow breath and carry that softness into the day."
-            )
+            return L10n.t("gym.gratitude.completedSubtitle")
         }
 
         if hasStartedSession {
-            return localized(
-                ar: "خلك ويّا الصوت والجملة، والباقي يهدأ وحده.",
-                en: "Stay with the sound and the sentence, and let the rest settle."
-            )
+            return L10n.t("gym.gratitude.serenitySubtitle")
         }
 
-        return localized(
-            ar: "ابدأ الجلسة حتى يشتغل الصوت والموسيقى وتتحرك جُمل الامتنان بهدوء.",
-            en: "Start the session to fade through today's gratitude lines with voice and ambient sound."
-        )
+        return L10n.t("gym.gratitude.readySubtitle")
     }
 
     private var startButtonTitle: String {
         if hasCompletedSession {
-            return localized(ar: "تمت الجلسة", en: "Session Complete")
+            return L10n.t("gym.gratitude.completeBtn")
         }
 
         if hasStartedSession {
-            return localized(ar: "الجلسة شغالة", en: "Session In Progress")
+            return L10n.t("gym.gratitude.inProgressBtn")
         }
 
-        return localized(ar: "ابدأ جلسة الامتنان", en: "Start Gratitude Session")
+        return L10n.t("gym.gratitude.startBtn")
     }
 
     private func startSession() {
@@ -383,10 +363,6 @@ struct GratitudeSessionView: View {
         sessionTask?.cancel()
         sessionTask = nil
         audioManager.stopAll()
-    }
-
-    private func localized(ar: String, en: String) -> String {
-        sessionLanguage == .english ? en : ar
     }
 
     private func gratitudeBundles(for language: GratitudeSessionLanguage) -> [[String]] {

@@ -91,11 +91,11 @@ struct RewardsView: View {
     // MARK: - Header
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Rewards")
+            Text(L10n.t("gym.rewards.title"))
                 .font(.system(size: 28, weight: .heavy))
                 .foregroundStyle(.primary)
-            
-            Text("Unlock rewards by staying consistent ✨")
+
+            Text(L10n.t("gym.rewards.subtitle"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.secondary)
         }

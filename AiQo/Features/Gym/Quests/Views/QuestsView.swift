@@ -10,7 +10,7 @@ struct PeaksRecordsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .trailing, spacing: 14) {
-                Text("الأرقام القياسية")
+                Text(L10n.t("gym.quest.records"))
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.trailing, 4)
@@ -84,7 +84,7 @@ struct BattleChallengesView: View {
                     }
 
                     if selectedStage.quests.isEmpty, questEngine.isStageUnlocked(selectedStageID) {
-                        Text("محتوى هذه المرحلة سيظهر هنا قريباً.")
+                        Text(L10n.t("gym.quest.stageContentSoon"))
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.primary.opacity(0.62))
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -195,11 +195,11 @@ struct BattleChallengesView: View {
                     .opacity(isLocked ? 0.5 : 1)
                 }
                 .disabled(isLocked)
-                .accessibilityLabel("المرحلة \(stage.id.arabicFormatted)")
+                .accessibilityLabel(String(format: L10n.t("gym.quest.stageLabel"), stage.id.arabicFormatted))
             }
         }
         .padding(.vertical, 8)
-        .accessibilityLabel(Text("مراحل القمم"))
+        .accessibilityLabel(Text(L10n.t("gym.quest.stagesLabel")))
     }
 
     private func stageCircleColor(isSelected: Bool, isLocked: Bool) -> Color {
@@ -216,7 +216,7 @@ struct BattleChallengesView: View {
 
     private var stageHeader: some View {
         VStack(spacing: 4) {
-            Text("المرحلة \(selectedStageID.arabicFormatted)")
+            Text(String(format: L10n.t("gym.quest.stageLabel"), selectedStageID.arabicFormatted))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
@@ -238,11 +238,11 @@ struct BattleChallengesView: View {
                 .font(.system(size: 36, design: .rounded))
                 .foregroundStyle(Color(hex: "CCCCCC"))
 
-            Text("المرحلة مقفلة")
+            Text(L10n.t("gym.quest.stageLocked"))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color(hex: "999999"))
 
-            Text("أكمل جميع تحديات المرحلة السابقة لفتح هذه المرحلة")
+            Text(L10n.t("gym.quest.stageLockedMsg"))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(Color(hex: "AAAAAA"))
                 .multilineTextAlignment(.center)
@@ -347,7 +347,7 @@ struct BattleChallengesView: View {
         guard center > 0 else { return }
         centerToastHideTask?.cancel()
         withAnimation(.easeInOut(duration: 0.22)) {
-            centerToastMessage = "ترقيت إلى مركز \(center.arabicFormatted)"
+            centerToastMessage = String(format: L10n.t("gym.quest.centerUpgrade"), center.arabicFormatted)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 

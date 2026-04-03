@@ -10,8 +10,25 @@ struct HomeView: View {
     
     // MARK: - ViewModel
     
+    #if DEBUG
+    @StateObject private var viewModel: HomeViewModel = {
+        if let scenario = ScreenshotMode.scenario {
+            return HomeViewModel(demoMode: true, demoConfig: scenario.demoConfig)
+        }
+        return HomeViewModel()
+    }()
+    @StateObject private var dailyAuraViewModel: DailyAuraViewModel = {
+        if let scenario = ScreenshotMode.scenario {
+            return DailyAuraViewModel(
+                provider: MockActivityProvider(snapshot: scenario.activitySnapshot)
+            )
+        }
+        return DailyAuraViewModel()
+    }()
+    #else
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var dailyAuraViewModel = DailyAuraViewModel()
+    #endif
     @StateObject private var vibeControlViewModel = VibeControlViewModel()
     
     // MARK: - Environment

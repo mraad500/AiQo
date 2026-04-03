@@ -2152,3 +2152,240 @@
 "profile.visibleToTribes" = "تظهر للقبائل والارينا";
 "profile.hideName" = "إيقاف هذا الخيار سيخفي اسمك ويجعله خاصاً متى ما شئت.";
 "profile.updateFailed" = "فشل التحديث — حاول مرة أخرى";
+
+/* ─── Gym: Workout Categories ─── */
+"gym.category.cardio" = "كارديو";
+"gym.category.strength" = "قوة";
+"gym.category.serenity" = "صفاء";
+"gym.category.filter.label" = "فئات التمارين";
+"gym.category.openSession" = "افتح جلسة %@";
+"gym.category.detailPlaceholder" = "واجهة تفصيلية تجريبية لهذا النشاط داخل النادي.";
+"gym.category.startSession" = "ابدأ الجلسة";
+"gym.category.startSessionFor" = "ابدأ جلسة %@";
+"gym.workout.cardioCaptain" = "كارديو ويا الكابتن حمّودي";
+"gym.workout.cardioCaptain.sub" = "نبض Zone 2 لحرق دهون مثالي";
+"gym.workout.running" = "الجري";
+"gym.workout.walking" = "المشي";
+"gym.workout.cycling" = "الدراجات";
+"gym.workout.swimming" = "السباحة";
+"gym.workout.strength" = "تمارين القوة";
+"gym.workout.hiit" = "تمارين HIIT";
+"gym.workout.equestrian" = "الفروسية";
+"gym.workout.calisthenics" = "تمارين وزن الجسم";
+"gym.workout.breathing" = "تنفّس";
+"gym.workout.breathing.sub" = "تهدئة الجهاز العصبي";
+"gym.workout.gratitude" = "الامتنان";
+"gym.workout.gratitude.sub" = "إعادة ضبط الأنا";
+"gym.workout.yoga" = "يوغا";
+"gym.workout.yoga.sub" = "حركة + صفاء";
+"gym.workout.auraCharge" = "شحن الهالة";
+"gym.workout.auraCharge.sub" = "طاقتك نظيفة";
+"gym.workout.deepClarity" = "صفاء الأعماق";
+"gym.workout.deepClarity.sub" = "افصل عن العالم واتصل بنفسك";
+
+/* ─── Gym: Quest Detail ─── */
+"gym.quest.progress" = "التقدم";
+"gym.quest.sessionRunning" = "الحالة: الجلسة قيد التشغيل";
+"gym.quest.noSleepData" = "لا توجد بيانات نوم في Apple Health";
+"gym.quest.openSettings" = "فتح الإعدادات";
+"gym.quest.sessionTime" = "زمن الجلسة";
+"gym.quest.done" = "تم";
+"gym.quest.confirmAchievement" = "أكد الإنجاز";
+"gym.quest.openWaterEntry" = "فتح إدخال الماء";
+"gym.quest.linkHealthKit" = "اربط هيلث كِت";
+"gym.quest.refresh" = "تحديث";
+"gym.quest.endSession" = "انهاية";
+"gym.quest.startSession" = "ابدأ الجلسة";
+"gym.quest.startPushupChallenge" = "ابدأ تحدي الشناوو";
+"gym.quest.logCardioSession" = "سجل جلسة كارديو";
+"gym.quest.logInteraction" = "سجّل تفاعل";
+"gym.quest.openKitchen" = "فتح المطبخ";
+"gym.quest.shareAchievement" = "مشاركة الإنجاز";
+"gym.quest.healthKitLinked" = "تم ربط هيلث كيت وتحديث التقدم.";
+"gym.quest.progressUpdated" = "تم تحديث التقدم.";
+"gym.quest.healthKitDenied" = "تم رفض صلاحية هيلث كيت. يمكنك تفعيلها من الإعدادات.";
+"gym.quest.challenge" = "التحدي";
+"gym.quest.benefit" = "الفائدة";
+"gym.quest.howToComplete" = "شلون تنجزه؟";
+"gym.quest.currentCenter" = "مركزك الحالي";
+"gym.quest.cantOpenHealth" = "تعذّر فتح تطبيق الصحة";
+"gym.quest.ok" = "حسنًا";
+"gym.quest.openHealthManual" = "افتح Apple Health يدويًا من الجهاز، وفعّل بيانات النوم ثم ارجع واضغط تحديث.";
+"gym.quest.noSleepQuestion" = "ماكو بيانات نوم؟";
+"gym.quest.sleepStep1" = "1) افتح تطبيق الصحة (Apple Health)";
+"gym.quest.sleepStep2" = "2) روح إلى Sleep / النوم";
+"gym.quest.sleepStep3" = "3) فعّل Sleep Schedule أو تتبّع النوم";
+"gym.quest.sleepStep4" = "4) إذا عندك Apple Watch، فعّل تتبّع النوم عليها";
+"gym.quest.openHealthApp" = "افتح تطبيق الصحة";
+"gym.quest.waterEntry" = "إدخال الماء";
+"gym.quest.waterAdd" = "أضف 0.25 لتر الآن لتحديث المهمة فوراً";
+"gym.quest.waterButton" = "+0.25ل";
+"gym.quest.logSession" = "سجّل جلسة";
+"gym.quest.minuteUnit" = "د";
+"gym.quest.minuteLabel" = "%d دقيقة";
+"gym.quest.save" = "حفظ";
+"gym.quest.setsFormat" = "%d جولات";
+
+/* ─── Gym: Quest Stage 1 Content ─── */
+"gym.quest.s1q1.explanation" = "مهمة بداية لمرة واحدة: فعل خير بسيط يوقّفك على نية واضحة ويشغّل الاستيقاظ من الداخل.";
+"gym.quest.s1q1.benefit1" = "يرفع صفاء النفس ويخفف ضغط اليوم.";
+"gym.quest.s1q1.benefit2" = "يقوّي النية والانضباط السلوكي من أول مرحلة.";
+"gym.quest.s1q1.benefit3" = "يبني توازنًا داخليًا ينعكس على قراراتك.";
+"gym.quest.s1q1.howTo1" = "اختَر مساعدة واحدة مباشرة اليوم.";
+"gym.quest.s1q1.howTo2" = "أكمل الفعل فعليًا بدون تأجيل.";
+"gym.quest.s1q1.howTo3" = "ارجع واضغط \"أكد الإنجاز\".";
+"gym.quest.s1q2.explanation" = "مهمة يومية لترطيب جسمك اليوم بنفس اليوم، وترقيتك تكون حسب مركزك من 3 إلى 1.";
+"gym.quest.s1q2.benefit1" = "ترطيب أفضل يعني طاقة وثبات أعلى خلال اليوم.";
+"gym.quest.s1q2.benefit2" = "يدعم التركيز وصفاء الذهن في الشغل والتمرين.";
+"gym.quest.s1q2.benefit3" = "يحسن نضارة الجلد وأداء الجسم العام.";
+"gym.quest.s1q2.howTo1" = "قسّم شرب الماء على فترات بدل دفعة واحدة.";
+"gym.quest.s1q2.howTo2" = "سجّل كل كمية تشربها من زر الإدخال.";
+"gym.quest.s1q2.howTo3" = "استهدف 2.0ل ثم ارفعها إلى 2.5ل ثم 3.0ل.";
+"gym.quest.s1q3.explanation" = "مهمة نوم يومية من نافذة الليل الماضية، وتقييمها بالمراكز حسب عدد ساعات النوم.";
+"gym.quest.s1q3.benefit1" = "يسرّع التعافي العضلي والعصبي.";
+"gym.quest.s1q3.benefit2" = "يساعد توازن الهرمونات وتنظيم الشهية.";
+"gym.quest.s1q3.benefit3" = "يرفع التركيز وجودة الأداء الذهني.";
+"gym.quest.s1q3.howTo1" = "اربط Apple Health حتى يقرأ ساعات النوم تلقائيًا.";
+"gym.quest.s1q3.howTo2" = "استهدف 7.0س ثم 7.5س ثم 8.0س.";
+"gym.quest.s1q3.howTo3" = "استخدم زر \"تحديث\" بعد الاستيقاظ.";
+"gym.quest.s1q4.explanation" = "مهمة تراكمية لزون 2 داخل المرحلة 1، وكل ما زادت الدقائق يرتفع مركزك حتى المركز 1.";
+"gym.quest.s1q4.benefit1" = "يعزّز حرق الدهون بكفاءة على المدى الطويل.";
+"gym.quest.s1q4.benefit2" = "يقوي القلب والتحمل بدون إجهاد مفرط.";
+"gym.quest.s1q4.benefit3" = "يدعم الهدوء العصبي وتنظيم التوتر.";
+"gym.quest.s1q4.howTo1" = "سجّل جلسات زون 2 بشكل منتظم.";
+"gym.quest.s1q4.howTo2" = "ابدأ بـ 20د ثم ارفعها إلى 30د ثم 40د.";
+"gym.quest.s1q4.howTo3" = "حدّث الدقائق من زر تسجيل الجلسة.";
+"gym.quest.s1q5.explanation" = "مهمة تأسيس لمرة واحدة: حفظ خطة المطبخ يثبت نظامك الغذائي من البداية.";
+"gym.quest.s1q5.benefit1" = "يثبّت السلوك اليومي ويقلل العشوائية.";
+"gym.quest.s1q5.benefit2" = "يعطيك تحكمًا أفضل في اختيارات الأكل.";
+"gym.quest.s1q5.benefit3" = "يقلل تعب القرارات اليومية حول الوجبات.";
+"gym.quest.s1q5.howTo1" = "افتح شاشة المطبخ من الزر.";
+"gym.quest.s1q5.howTo2" = "أنشئ/احفظ خطة وجباتك.";
+"gym.quest.s1q5.howTo3" = "تكتمل المهمة تلقائيًا بعد حفظ الخطة.";
+
+/* ─── Gym: Quests View ─── */
+"gym.quest.records" = "الأرقام القياسية";
+"gym.quest.stageContentSoon" = "محتوى هذه المرحلة سيظهر هنا قريباً.";
+"gym.quest.stageLabel" = "المرحلة %@";
+"gym.quest.stagesLabel" = "مراحل القمم";
+"gym.quest.stageLocked" = "المرحلة مقفلة";
+"gym.quest.stageLockedMsg" = "أكمل جميع تحديات المرحلة السابقة لفتح هذه المرحلة";
+"gym.quest.centerUpgrade" = "ترقيت إلى مركز %@";
+
+/* ─── Gym: Quest Completion ─── */
+"gym.quest.congrats" = "مبروك!";
+"gym.quest.completedChallenge" = "أكملت تحدي %@";
+"gym.quest.rewardSaved" = "الجائزة محفوظة في الإنجازات";
+"gym.quest.okay" = "تمام";
+
+/* ─── Gym: Quest Wins ─── */
+"gym.quest.noAchievements" = "ما عندك إنجازات بعد";
+"gym.quest.completeQuests" = "أكمل تحديات قِمَم عشان تحصل على جوائز";
+"gym.quest.stageNum" = "المرحلة %d";
+
+/* ─── Gym: Camera Permission ─── */
+"gym.camera.privacy" = "خصوصية الكاميرا";
+"gym.camera.description" = "نستخدم الكاميرا على الجهاز فقط لحساب العدّات ودقة الوضعية. لا يتم رفع الفيديو إلى أي خادم.";
+"gym.camera.granted" = "تم منح صلاحية الكاميرا";
+"gym.camera.needPermission" = "نحتاج إذنك للبدء";
+"gym.camera.denied" = "تم رفض الصلاحية. فعّلها من الإعدادات";
+"gym.camera.unknown" = "حالة صلاحية غير معروفة";
+"gym.camera.startChallenge" = "ابدأ التحدي";
+"gym.camera.requesting" = "جاري الطلب...";
+"gym.camera.allowCamera" = "السماح بالكاميرا";
+
+/* ─── Gym: Pushup Challenge ─── */
+"gym.pushup.accuracy" = "الدقة %d%%";
+"gym.pushup.finish" = "انهاء";
+"gym.pushup.needCamera" = "تحتاج صلاحية الكاميرا";
+
+/* ─── Gym: Workout Plan ─── */
+"gym.plan.dailyPlans" = "خطط التمارين اليومية";
+"gym.plan.title" = "خطة التمرين";
+"gym.plan.createWithCaptain" = "إنشاء خطة تمارين مع الكابتن";
+"gym.plan.pressAndStart" = "اضغط وابدأ";
+"gym.plan.noPlans" = "لا توجد خطط مثبتة حالياً.";
+"gym.plan.startCaptainChat" = "ابدأ محادثة الكابتن بالأعلى حتى نملأ الجدول تلقائياً.";
+"gym.plan.captainChat" = "محادثة الكابتن";
+"gym.plan.captainTyping" = "الكابتن يكتب...";
+"gym.plan.placeholder" = "اكتب رسالتك للكابتن...";
+"gym.plan.pinPlan" = "موافق، ثبّت الخطة بالجدول";
+"gym.plan.pinSuccess" = "تم تثبيت الخطة بنجاح ورح تنعرض بالجدول اليومي.";
+"gym.plan.pinConfirm" = "تمام بطل، ثبتتلك خطة %@ بالجدول اليومي.";
+"gym.plan.pinError" = "تعذر تثبيت الخطة حالياً. حاول مرة ثانية.";
+"gym.plan.kickoff" = "حتى أبني خطة تمرين شخصية، اكتب وزنك الحالي وهدفك مثل: 95 كيلو وتنشيف.";
+"gym.plan.preview" = "Preview";
+"gym.plan.setsFormat" = "%d جولات";
+"gym.plan.taskFormat" = "%@ - %d جولات - %@";
+
+/* ─── Gym: Workout Plan (MyPlan) ─── */
+"gym.myplan.title" = "خطة التمرين";
+"gym.myplan.subtitle" = "بلمسة وحدة، ابدي خطة تدريب يومية ويّا الكابتن.";
+
+/* ─── Gym: Workout Summary ─── */
+"gym.summary.label" = "ملخص التمرين";
+"gym.summary.complete" = "اكتمل التمرين";
+"gym.summary.xpEarned" = "XP مكتسبة";
+"gym.summary.time" = "الوقت";
+"gym.summary.timeUnit" = "د";
+"gym.summary.kcal" = "سعرات";
+"gym.summary.kcalUnit" = "سعرة";
+"gym.summary.avgHR" = "متوسط النبض";
+"gym.summary.bpm" = "نبضة/د";
+"gym.summary.recovery1" = "التعافي 1";
+"gym.summary.recovery1Sub" = "الذروة - 1 دقيقة";
+"gym.summary.recovery2" = "التعافي 2";
+"gym.summary.recovery2Sub" = "الذروة - 2 دقيقة";
+
+/* ─── Gym: Live Metrics ─── */
+"gym.metrics.heartRate" = "معدل ضربات القلب";
+"gym.metrics.activeEnergy" = "الطاقة النشطة";
+"gym.metrics.distance" = "المسافة";
+"gym.metrics.pace" = "السرعة";
+"gym.metrics.elapsed" = "الوقت المنقضي";
+"gym.metrics.offline" = "غير متصل";
+
+/* ─── Gym: Recovery ─── */
+"gym.recovery.title" = "قياس تعافي النبض";
+"gym.recovery.description" = "تعافي معدل ضربات القلب: هو سرعة نزول نبض القلب بعد التمرين. إذا نزل بسرعة خلال أول دقيقتين، فهذا دليل على صحة قلب ولياقة أفضل.";
+"gym.recovery.yes" = "نعم";
+"gym.recovery.no" = "لا شكراً";
+"gym.recovery.inhalePrompt" = "يا بطل، خذ شهيق عميق وخلي صدرك ينفتح.";
+"gym.recovery.exhalePrompt" = "هسه طلّع الزفير شوي شوي، وخلي النبض ينزل براحة.";
+
+/* ─── Gym: Impact ─── */
+"gym.impact.summary" = "الملخص";
+"gym.impact.achievements" = "الإنجازات";
+
+/* ─── Gym: Watch ─── */
+"gym.watch.connected" = "Apple Watch متصلة";
+"gym.watch.disconnected" = "Apple Watch غير متصلة";
+"gym.watch.checking" = "جاري التحقق من Apple Watch";
+
+/* ─── Gym: Heart View ─── */
+"gym.heart.title" = "مراقب ضربات القلب";
+"gym.heart.comingSoon" = "قريباً";
+
+/* ─── Gym: Rewards ─── */
+"gym.rewards.title" = "المكافآت";
+"gym.rewards.subtitle" = "افتح المكافآت بالاستمرارية";
+
+/* ─── Gym: Gratitude Session ─── */
+"gym.gratitude.sessionTitle" = "جلسة الامتنان";
+"gym.gratitude.sessionSubtitle" = "مسار صباحي يهدّي النفس";
+"gym.gratitude.initialSentence" = "خل هالدقيقتين هاديات، واشكر ربك على يوم جديد وجسم بعده شايلك.";
+"gym.gratitude.completionMsg" = "تمام بطل.. خذ هالهدوء وكمل يومك.";
+"gym.gratitude.availabilityMsg" = "الجلسة مفتوحة لحد 12:00 ظهرًا.";
+"gym.gratitude.lockedMsg" = "جلسة الامتنان الصباحية انتهى وقتها. نلتقي باجر الصبح يا ذيب حتى نبدأ يومنا صح";
+"gym.gratitude.lockedTitle" = "مقفلة اليوم";
+"gym.gratitude.completedTitle" = "اكتملت الجلسة";
+"gym.gratitude.serenityTitle" = "صفاء";
+"gym.gratitude.readyTitle" = "جاهزة إلك";
+"gym.gratitude.lockedSubtitle" = "هذا المسار الصباحي ينتهي ظهرًا حتى يبقى مرتبط ببداية اليوم.";
+"gym.gratitude.completedSubtitle" = "خذ نفسك الأخير بهدوء، وامشِ على يومك بخفة.";
+"gym.gratitude.serenitySubtitle" = "خلك ويّا الصوت والجملة، والباقي يهدأ وحده.";
+"gym.gratitude.readySubtitle" = "ابدأ الجلسة حتى يشتغل الصوت والموسيقى وتتحرك جُمل الامتنان بهدوء.";
+"gym.gratitude.completeBtn" = "تمت الجلسة";
+"gym.gratitude.inProgressBtn" = "الجلسة شغالة";
+"gym.gratitude.startBtn" = "ابدأ جلسة الامتنان";
+"gym.gratitude.guinness" = "GUINNESS RECORDS-AiQo";

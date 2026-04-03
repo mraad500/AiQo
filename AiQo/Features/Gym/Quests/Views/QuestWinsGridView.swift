@@ -56,10 +56,10 @@ struct QuestWinsGridView: View {
             Image(systemName: "trophy")
                 .font(.system(size: 48))
                 .foregroundStyle(Color(hex: "DDDDDD"))
-            Text("ما عندك إنجازات بعد")
+            Text(L10n.t("gym.quest.noAchievements"))
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color(hex: "999999"))
-            Text("أكمل تحديات قِمَم عشان تحصل على جوائز")
+            Text(L10n.t("gym.quest.completeQuests"))
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color(hex: "AAAAAA"))
         }
@@ -212,7 +212,7 @@ private struct QuestAchievementCard: View {
                     .font(.system(size: 16, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color(hex: "1A1A1A"))
 
-                Text("المرحلة \(achievement.stageNumber)")
+                Text(String(format: L10n.t("gym.quest.stageNum"), achievement.stageNumber))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color(hex: "666666"))
 

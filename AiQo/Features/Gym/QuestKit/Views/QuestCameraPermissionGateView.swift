@@ -12,10 +12,10 @@ struct QuestCameraPermissionGateView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("خصوصية الكاميرا")
+            Text(L10n.t("gym.camera.privacy"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
 
-            Text("نستخدم الكاميرا على الجهاز فقط لحساب العدّات ودقة الوضعية. لا يتم رفع الفيديو إلى أي خادم.")
+            Text(L10n.t("gym.camera.description"))
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
@@ -34,16 +34,16 @@ struct QuestCameraPermissionGateView: View {
     private var statusBlock: some View {
         switch status {
         case .authorized:
-            Label("تم منح صلاحية الكاميرا", systemImage: "checkmark.circle.fill")
+            Label(L10n.t("gym.camera.granted"), systemImage: "checkmark.circle.fill")
                 .foregroundStyle(Color.green)
         case .notDetermined:
-            Label("نحتاج إذنك للبدء", systemImage: "camera.fill")
+            Label(L10n.t("gym.camera.needPermission"), systemImage: "camera.fill")
                 .foregroundStyle(Color.blue)
         case .denied, .restricted:
-            Label("تم رفض الصلاحية. فعّلها من الإعدادات", systemImage: "exclamationmark.triangle.fill")
+            Label(L10n.t("gym.camera.denied"), systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(Color.orange)
         @unknown default:
-            Label("حالة صلاحية غير معروفة", systemImage: "questionmark.circle")
+            Label(L10n.t("gym.camera.unknown"), systemImage: "questionmark.circle")
                 .foregroundStyle(Color.gray)
         }
     }
@@ -52,21 +52,21 @@ struct QuestCameraPermissionGateView: View {
     private var actionButton: some View {
         switch status {
         case .authorized:
-            Button("ابدأ التحدي") {
+            Button(L10n.t("gym.camera.startChallenge")) {
                 onAuthorized()
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
 
         case .notDetermined:
-            Button(requesting ? "جاري الطلب..." : "السماح بالكاميرا") {
+            Button(requesting ? L10n.t("gym.camera.requesting") : L10n.t("gym.camera.allowCamera")) {
                 requestPermission()
             }
             .buttonStyle(.borderedProminent)
             .disabled(requesting)
 
         case .denied, .restricted:
-            Button("فتح الإعدادات") {
+            Button(L10n.t("gym.quest.openSettings")) {
                 openSettings()
             }
             .buttonStyle(.bordered)

@@ -133,11 +133,11 @@ final class LiveMetricsHeader: UIView {
 
         isAccessibilityElement = false
         [hr, kcal, dist, pace, time].forEach { $0.isAccessibilityElement = true }
-        hr.accessibilityLabel = "Heart rate"
-        kcal.accessibilityLabel = "Active energy"
-        dist.accessibilityLabel = "Distance"
-        pace.accessibilityLabel = "Pace"
-        time.accessibilityLabel = "Elapsed time"
+        hr.accessibilityLabel = L10n.t("gym.metrics.heartRate")
+        kcal.accessibilityLabel = L10n.t("gym.metrics.activeEnergy")
+        dist.accessibilityLabel = L10n.t("gym.metrics.distance")
+        pace.accessibilityLabel = L10n.t("gym.metrics.pace")
+        time.accessibilityLabel = L10n.t("gym.metrics.elapsed")
     }
 
     // MARK: - Private Animations
@@ -204,7 +204,7 @@ final class LiveMetricsHeader: UIView {
 
     public func setConnectionState(_ state: WorkoutConnectionState) {
         if state == .disconnected {
-            pace.text = "offline"
+            pace.text = L10n.t("gym.metrics.offline")
             pace.textColor = .systemRed
         } else {
             pace.textColor = .label

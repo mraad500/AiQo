@@ -60,7 +60,7 @@ struct WorkoutCategoriesView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCardPressStyle())
-                        .accessibilityHint(Text("افتح جلسة \(item.title)"))
+                        .accessibilityHint(Text(String(format: L10n.t("gym.category.openSession"), item.title)))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -110,7 +110,7 @@ struct WorkoutCategoriesView: View {
         .clipShape(RoundedRectangle(cornerRadius: 25))
         .padding(.top, 120)
         .animation(.easeInOut(duration: 0.3), value: selection)
-        .accessibilityLabel(Text("فئات التمارين"))
+        .accessibilityLabel(Text(L10n.t("gym.category.filter.label")))
     }
 
     private func animateCards(for items: [WorkoutCardItem]) {
@@ -272,7 +272,7 @@ private struct WorkoutPlaceholderDetailView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        Text("واجهة تفصيلية تجريبية لهذا النشاط داخل النادي.")
+                        Text(L10n.t("gym.category.detailPlaceholder"))
                             .font(.system(size: 15, weight: .medium, design: .rounded))
                             .foregroundStyle(Color.primary.opacity(0.68))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -284,7 +284,7 @@ private struct WorkoutPlaceholderDetailView: View {
                         Button {
                             onSelectExercise(linkedExercise)
                         } label: {
-                            Text("ابدأ الجلسة")
+                            Text(L10n.t("gym.category.startSession"))
                                 .font(.system(size: 17, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.primary)
                                 .frame(maxWidth: .infinity)
@@ -303,7 +303,7 @@ private struct WorkoutPlaceholderDetailView: View {
                                 )
                         }
                         .buttonStyle(GlassCardPressStyle())
-                        .accessibilityLabel(Text("ابدأ جلسة \(item.title)"))
+                        .accessibilityLabel(Text(String(format: L10n.t("gym.category.startSessionFor"), item.title)))
                     }
                 }
                 .padding(.horizontal, 18)
@@ -342,11 +342,11 @@ private enum WorkoutCategory: Int, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .cardio:
-            return "كارديو"
+            return L10n.t("gym.category.cardio")
         case .strength:
-            return "قوة"
+            return L10n.t("gym.category.strength")
         case .clarity:
-            return "صفاء"
+            return L10n.t("gym.category.serenity")
         }
     }
 
@@ -380,8 +380,8 @@ private enum WorkoutCategoriesCatalog {
     private static let cardioSeeds: [WorkoutSeed] = [
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "كارديو ويا الكابتن حمّودي",
-                subtitle: "نبض Zone 2 لحرق دهون مثالي",
+                title: L10n.t("gym.workout.cardioCaptain"),
+                subtitle: L10n.t("gym.workout.cardioCaptain.sub"),
                 iconName: "figure.run",
                 themeColor: AiQoColors.beige
             ),
@@ -389,7 +389,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "الجري",
+                title: L10n.t("gym.workout.running"),
                 iconName: "figure.run",
                 themeColor: AiQoColors.mint
             ),
@@ -397,7 +397,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "المشي",
+                title: L10n.t("gym.workout.walking"),
                 iconName: "figure.walk",
                 themeColor: AiQoColors.beige
             ),
@@ -405,7 +405,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "الدراجات",
+                title: L10n.t("gym.workout.cycling"),
                 iconName: "figure.outdoor.cycle",
                 themeColor: AiQoColors.mint
             ),
@@ -413,7 +413,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "السباحة",
+                title: L10n.t("gym.workout.swimming"),
                 iconName: "figure.pool.swim",
                 themeColor: AiQoColors.beige
             ),
@@ -424,7 +424,7 @@ private enum WorkoutCategoriesCatalog {
     private static let strengthSeeds: [WorkoutSeed] = [
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "تمارين القوة",
+                title: L10n.t("gym.workout.strength"),
                 iconName: "dumbbell.fill",
                 themeColor: AiQoColors.beige
             ),
@@ -432,7 +432,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "تمارين HIIT",
+                title: L10n.t("gym.workout.hiit"),
                 iconName: "flame.fill",
                 themeColor: AiQoColors.mint
             ),
@@ -440,7 +440,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "الفروسية",
+                title: L10n.t("gym.workout.equestrian"),
                 iconName: "figure.equestrian.sports",
                 themeColor: AiQoColors.beige
             ),
@@ -448,7 +448,7 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "تمارين وزن الجسم",
+                title: L10n.t("gym.workout.calisthenics"),
                 iconName: "figure.strengthtraining.traditional",
                 themeColor: AiQoColors.mint
             ),
@@ -459,8 +459,8 @@ private enum WorkoutCategoriesCatalog {
     private static let claritySeeds: [WorkoutSeed] = [
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "تنفّس",
-                subtitle: "تهدئة الجهاز العصبي",
+                title: L10n.t("gym.workout.breathing"),
+                subtitle: L10n.t("gym.workout.breathing.sub"),
                 iconName: "wind",
                 themeColor: AiQoColors.mint
             ),
@@ -468,8 +468,8 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "الامتنان",
-                subtitle: "إعادة ضبط الأنا",
+                title: L10n.t("gym.workout.gratitude"),
+                subtitle: L10n.t("gym.workout.gratitude.sub"),
                 iconName: "heart.text.square.fill",
                 themeColor: AiQoColors.beige
             ),
@@ -477,8 +477,8 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "يوغا",
-                subtitle: "حركة + صفاء",
+                title: L10n.t("gym.workout.yoga"),
+                subtitle: L10n.t("gym.workout.yoga.sub"),
                 iconName: "figure.yoga",
                 themeColor: AiQoColors.mint
             ),
@@ -486,8 +486,8 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "شحن الهالة",
-                subtitle: "طاقتك نظيفة",
+                title: L10n.t("gym.workout.auraCharge"),
+                subtitle: L10n.t("gym.workout.auraCharge.sub"),
                 iconName: "sparkles",
                 themeColor: AiQoColors.beige
             ),
@@ -495,8 +495,8 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
-                title: "صفاء الأعماق",
-                subtitle: "افصل عن العالم واتصل بنفسك",
+                title: L10n.t("gym.workout.deepClarity"),
+                subtitle: L10n.t("gym.workout.deepClarity.sub"),
                 iconName: "water.waves",
                 themeColor: AiQoColors.mint
             ),

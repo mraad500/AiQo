@@ -169,6 +169,10 @@ final class AppFlowController: ObservableObject {
     }
 
     private static func resolveCurrentScreen() -> RootScreen {
+        #if DEBUG
+        if ScreenshotMode.isActive { return .main }
+        #endif
+
         let didSelectLanguage = UserDefaults.standard.bool(forKey: OnboardingKeys.didSelectLanguage)
         let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)

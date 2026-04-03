@@ -50,7 +50,7 @@ struct ImpactContainerView: View {
 
     let winsStore: WinsStore
 
-    private let filterLabels = ["الملخص", "الإنجازات"]
+    private let filterLabels = [L10n.t("gym.impact.summary"), L10n.t("gym.impact.achievements")]
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {

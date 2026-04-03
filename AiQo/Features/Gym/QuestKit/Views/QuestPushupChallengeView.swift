@@ -53,7 +53,7 @@ struct QuestPushupChallengeView: View {
                         .foregroundStyle(.white)
                         .monospacedDigit()
 
-                    Text("الدقة \(Int(viewModel.accuracyPercent.rounded()))%")
+                    Text(String(format: L10n.t("gym.pushup.accuracy"), Int(viewModel.accuracyPercent.rounded())))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.92))
 
@@ -74,7 +74,7 @@ struct QuestPushupChallengeView: View {
                     onComplete(result.reps, result.accuracy)
                     dismiss()
                 } label: {
-                    Text("انهاء")
+                    Text(L10n.t("gym.pushup.finish"))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -88,11 +88,11 @@ struct QuestPushupChallengeView: View {
 
             if viewModel.cameraState == .denied {
                 VStack(spacing: 10) {
-                    Text("تحتاج صلاحية الكاميرا")
+                    Text(L10n.t("gym.pushup.needCamera"))
                         .font(.system(size: 20, weight: .heavy, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Button("فتح الإعدادات") {
+                    Button(L10n.t("gym.quest.openSettings")) {
                         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                         UIApplication.shared.open(url)
                     }

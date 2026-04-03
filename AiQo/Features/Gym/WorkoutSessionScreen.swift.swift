@@ -424,12 +424,12 @@ private struct OptionalRecoveryPromptCard: View {
             }
 
             VStack(spacing: 10) {
-                Text("قياس تعافي النبض")
+                Text(L10n.t("gym.recovery.title"))
                     .font(.system(size: 24, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
 
-                Text("تعافي معدل ضربات القلب: هو سرعة نزول نبض القلب بعد التمرين. إذا نزل بسرعة خلال أول دقيقتين، فهذا دليل على صحة قلب ولياقة أفضل.")
+                Text(L10n.t("gym.recovery.description"))
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.86))
                     .multilineTextAlignment(.center)
@@ -438,7 +438,7 @@ private struct OptionalRecoveryPromptCard: View {
 
             HStack(spacing: 12) {
                 Button(action: onConfirm) {
-                    Text("نعم")
+                    Text(L10n.t("gym.recovery.yes"))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -448,7 +448,7 @@ private struct OptionalRecoveryPromptCard: View {
                 }
 
                 Button(action: onSkip) {
-                    Text("لا شكراً")
+                    Text(L10n.t("gym.recovery.no"))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)

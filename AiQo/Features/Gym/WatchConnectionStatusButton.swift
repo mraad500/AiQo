@@ -38,11 +38,11 @@ struct WatchConnectionStatusButton: View {
     private var title: String {
         switch status {
         case .connected:
-            return "Apple Watch متصلة"
+            return L10n.t("gym.watch.connected")
         case .disconnected:
-            return "Apple Watch غير متصلة"
+            return L10n.t("gym.watch.disconnected")
         case .checking:
-            return "جاري التحقق من Apple Watch"
+            return L10n.t("gym.watch.checking")
         }
     }
 

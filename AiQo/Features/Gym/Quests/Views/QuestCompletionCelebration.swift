@@ -30,16 +30,16 @@ struct QuestCompletionCelebration: View {
 
                 // Congratulations text
                 VStack(spacing: 8) {
-                    Text("مبروك!")
+                    Text(L10n.t("gym.quest.congrats"))
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundStyle(.white)
 
-                    Text("أكملت تحدي \(quest.title)")
+                    Text(String(format: L10n.t("gym.quest.completedChallenge"), quest.title))
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
 
-                    Text("الجائزة محفوظة في الإنجازات")
+                    Text(L10n.t("gym.quest.rewardSaved"))
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(.white.opacity(0.6))
                         .padding(.top, 4)
@@ -50,7 +50,7 @@ struct QuestCompletionCelebration: View {
 
                 // Dismiss button
                 Button(action: { onDismiss() }) {
-                    Text("تمام")
+                    Text(L10n.t("gym.quest.okay"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
