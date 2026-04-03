@@ -15,7 +15,8 @@ final class NotificationCategoryManager {
     func registerAllCategories() {
         let categories: Set<UNNotificationCategory> = [
             ActivityNotificationEngine.notificationCategory,
-            CaptainSmartNotificationService.notificationCategory
+            CaptainSmartNotificationService.notificationCategory,
+            CaptainNotificationEngine.notificationCategory,
         ]
         notificationCenter.setNotificationCategories(categories)
     }
