@@ -67,13 +67,17 @@ final class NotificationService {
     }
 
     func sendImmediateNotification(body: String, type: String) {
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
         let content = UNMutableNotificationContent()
         content.title = "AiQo"
         content.body = body
         content.sound = .default
         content.userInfo = ["notification_type": type]
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: max(1, fireDate.timeIntervalSinceNow),
+            repeats: false
+        )
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
@@ -200,6 +204,7 @@ final class CaptainSmartNotificationService {
     }
 
     private func sendCaptainNotification(title: String, body: String, type: String, messageText: String) {
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -215,7 +220,10 @@ final class CaptainSmartNotificationService {
         let request = UNNotificationRequest(
             identifier: "aiqo.captain.smart.\(UUID().uuidString)",
             content: content,
-            trigger: nil
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, fireDate.timeIntervalSinceNow),
+                repeats: false
+            )
         )
         UNUserNotificationCenter.current().add(request)
     }

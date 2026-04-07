@@ -9,6 +9,9 @@ import Foundation
 /// - Removes trailing commas before } or ]
 /// - Falls back gracefully if JSON decode fails
 struct LLMJSONParser: Sendable {
+    private struct CaptainResponse: Decodable {
+        let message: String
+    }
 
     // MARK: - Public API
 
@@ -17,15 +20,12 @@ struct LLMJSONParser: Sendable {
     }
 
     func decode(rawText: String, fallback: CaptainStructuredResponse) -> CaptainStructuredResponse {
-        for candidate in jsonCandidates(from: rawText) {
-            if let decoded = decodeCandidate(candidate) {
-                return decoded
-            }
-            if let recovered = recoverCandidate(candidate, fallback: fallback) {
-                return recovered
-            }
-        }
-        return fallback
+        parsedStructuredResponse(from: rawText) ?? plainTextResponse(from: rawText) ?? fallback
+    }
+
+    func cleanDisplayText(from rawText: String, fallback: String) -> String {
+        let fallbackResponse = CaptainStructuredResponse(message: fallback)
+        return decode(rawText: rawText, fallback: fallbackResponse).message
     }
 
     // MARK: - Streaming Support
@@ -71,28 +71,61 @@ struct LLMJSONParser: Sendable {
 
 private extension LLMJSONParser {
 
+    func parsedStructuredResponse(from rawText: String) -> CaptainStructuredResponse? {
+        let sources = expandedSources(from: rawText)
+
+        for candidate in jsonCandidates(from: sources) {
+            if let decoded = decodeCandidate(candidate) {
+                return decoded
+            }
+            if let recovered = recoverCandidate(candidate) {
+                return recovered
+            }
+        }
+
+        for source in sources {
+            if let message = recoveredMessage(from: source) {
+                return CaptainStructuredResponse(message: message)
+            }
+        }
+
+        return nil
+    }
+
+    func plainTextResponse(from rawText: String) -> CaptainStructuredResponse? {
+        let cleaned = stripMarkdownCodeFences(from: normalize(rawText))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty, !looksLikeStructuredPayload(cleaned) else { return nil }
+        return CaptainStructuredResponse(message: cleaned)
+    }
+
     /// Generates candidate JSON strings in priority order
-    func jsonCandidates(from rawText: String) -> [String] {
-        let normalized = normalize(rawText)
-        var candidates = [normalized]
-
-        // Priority 1: Content inside markdown fences
-        if let fencedJSON = firstCapture(
-            using: #"```(?:json)?\s*([\s\S]*?)\s*```"#,
-            in: normalized
-        ) {
-            candidates.append(fencedJSON)
-        }
-
-        // Priority 2: Greedy regex for { ... }
-        candidates.append(contentsOf: matches(using: #"\{[\s\S]*\}"#, in: normalized))
-
-        // Priority 3: Balanced brace extraction
-        if let balanced = balancedJSONObject(in: normalized) {
-            candidates.append(balanced)
-        }
-
+    func jsonCandidates(from sources: [String]) -> [String] {
         var seen = Set<String>()
+        var candidates: [String] = []
+
+        for source in sources {
+            candidates.append(source)
+
+            let unfenced = stripMarkdownCodeFences(from: source)
+            if unfenced != source {
+                candidates.append(unfenced)
+            }
+
+            if let fencedJSON = firstCapture(
+                using: #"```(?:json)?\s*([\s\S]*?)\s*```"#,
+                in: source
+            ) {
+                candidates.append(fencedJSON)
+            }
+
+            candidates.append(contentsOf: matches(using: #"\{[\s\S]*\}"#, in: source))
+
+            if let balanced = balancedJSONObject(in: source) {
+                candidates.append(balanced)
+            }
+        }
+
         return candidates.compactMap { candidate in
             let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { return nil }
@@ -100,10 +133,37 @@ private extension LLMJSONParser {
         }
     }
 
+    func expandedSources(from rawText: String) -> [String] {
+        var seen = Set<String>()
+        var sources: [String] = []
+
+        func append(_ text: String?) {
+            guard let text else { return }
+            let normalized = normalize(text)
+            guard !normalized.isEmpty, seen.insert(normalized).inserted else { return }
+            sources.append(normalized)
+        }
+
+        append(rawText)
+
+        if let unwrapped = unwrapJSONStringLiteral(from: rawText) {
+            append(unwrapped)
+            append(stripMarkdownCodeFences(from: unwrapped))
+
+            if let doubleUnwrapped = unwrapJSONStringLiteral(from: unwrapped) {
+                append(doubleUnwrapped)
+                append(stripMarkdownCodeFences(from: doubleUnwrapped))
+            }
+        }
+
+        return sources
+    }
+
     /// Normalizes smart quotes, null bytes, and whitespace
     func normalize(_ rawText: String) -> String {
         rawText
             .replacingOccurrences(of: "\u{0000}", with: "")
+            .replacingOccurrences(of: "\u{FEFF}", with: "")
             .replacingOccurrences(of: "\u{201C}", with: "\"") // "
             .replacingOccurrences(of: "\u{201D}", with: "\"") // "
             .replacingOccurrences(of: "\u{2018}", with: "'")  // '
@@ -111,29 +171,81 @@ private extension LLMJSONParser {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    func stripMarkdownCodeFences(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("```"), trimmed.hasSuffix("```") else { return trimmed }
+
+        var lines = trimmed.components(separatedBy: .newlines)
+        guard !lines.isEmpty else { return trimmed }
+
+        let openingFence = lines.removeFirst().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard openingFence.hasPrefix("```") else { return trimmed }
+
+        if let lastIndex = lines.lastIndex(where: {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines) == "```"
+        }) {
+            lines.remove(at: lastIndex)
+        }
+
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func unwrapJSONStringLiteral(from text: String) -> String? {
+        let normalized = normalize(text)
+        guard let data = normalized.data(using: .utf8),
+              let unwrapped = try? JSONDecoder().decode(String.self, from: data) else {
+            return nil
+        }
+
+        let cleaned = normalize(unwrapped)
+        return cleaned == normalized ? nil : cleaned
+    }
+
+    func looksLikeStructuredPayload(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        if trimmed.first == "{" || trimmed.first == "[" {
+            return true
+        }
+
+        return trimmed.contains("\"message\"")
+            || trimmed.contains("```json")
+            || trimmed.contains("```JSON")
+    }
+
     /// Attempts strict Codable decode
     func decodeCandidate(_ candidate: String) -> CaptainStructuredResponse? {
         guard let data = sanitizedJSONData(from: candidate) else { return nil }
-        return try? JSONDecoder().decode(CaptainStructuredResponse.self, from: data)
+        let decoder = JSONDecoder()
+
+        if let structured = try? decoder.decode(CaptainStructuredResponse.self, from: data) {
+            return structured
+        }
+
+        guard let envelope = try? decoder.decode(CaptainResponse.self, from: data) else {
+            return nil
+        }
+
+        return CaptainStructuredResponse(message: envelope.message)
     }
 
     /// Partial recovery: extract known fields from a JSON object
-    func recoverCandidate(
-        _ candidate: String,
-        fallback: CaptainStructuredResponse
-    ) -> CaptainStructuredResponse? {
+    func recoverCandidate(_ candidate: String) -> CaptainStructuredResponse? {
         guard let data = sanitizedJSONData(from: candidate),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
 
-        let message = normalizedMessage(from: object["message"]) ?? fallback.message
+        guard let message = normalizedMessage(from: object["message"]) else { return nil }
         let workoutPlan = decodePlan(WorkoutPlan.self, from: object["workoutPlan"])
         let mealPlan = decodePlan(MealPlan.self, from: object["mealPlan"])
         let spotifyRecommendation = decodePlan(SpotifyRecommendation.self, from: object["spotifyRecommendation"])
+        let quickReplies = decodeQuickReplies(from: object["quickReplies"])
 
         return CaptainStructuredResponse(
             message: message,
+            quickReplies: quickReplies,
             workoutPlan: workoutPlan,
             mealPlan: mealPlan,
             spotifyRecommendation: spotifyRecommendation
@@ -156,6 +268,15 @@ private extension LLMJSONParser {
         return normalized.isEmpty ? nil : normalized
     }
 
+    func decodeQuickReplies(from value: Any?) -> [String]? {
+        guard let values = value as? [Any] else { return nil }
+        let normalized = values
+            .compactMap { $0 as? String }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return normalized.isEmpty ? nil : normalized
+    }
+
     func decodePlan<T: Decodable>(_ type: T.Type, from value: Any?) -> T? {
         guard let value, !(value is NSNull),
               JSONSerialization.isValidJSONObject(value),
@@ -165,15 +286,79 @@ private extension LLMJSONParser {
         return try? JSONDecoder().decode(T.self, from: data)
     }
 
+    func recoveredMessage(from text: String) -> String? {
+        let preview = currentMessagePreview(from: text)
+        if !preview.isEmpty {
+            return preview
+        }
+
+        let patterns = [
+            #""message"\s*:\s*"((?:\\.|[^"\\])*)""#,
+            #"\\\"message\\\"\s*:\s*\\\"((?:\\\\.|[^"\\])*)\\\""#,
+        ]
+
+        for pattern in patterns {
+            guard let capture = firstCapture(using: pattern, in: text),
+                  let message = decodeJSONStringFragment(capture) else {
+                continue
+            }
+
+            let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalized.isEmpty {
+                return normalized
+            }
+        }
+
+        return nil
+    }
+
+    func decodeJSONStringFragment(_ value: String) -> String? {
+        let sanitized = value
+            .replacingOccurrences(of: "\\\\\"", with: "\\\"")
+            .replacingOccurrences(of: "\\\\n", with: "\\n")
+            .replacingOccurrences(of: "\\\\t", with: "\\t")
+
+        guard let data = "\"\(sanitized)\"".data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(String.self, from: data) else {
+            return nil
+        }
+
+        return decoded
+    }
+
     // MARK: - Balanced JSON Object Extraction
 
     /// Extracts the first balanced { ... } object from text
     func balancedJSONObject(in text: String) -> String? {
         var startIndex: String.Index?
         var depth = 0
+        var isInsideString = false
+        var isEscaping = false
 
         for index in text.indices {
             let character = text[index]
+
+            if isInsideString {
+                if isEscaping {
+                    isEscaping = false
+                    continue
+                }
+
+                if character == "\\" {
+                    isEscaping = true
+                    continue
+                }
+
+                if character == "\"" {
+                    isInsideString = false
+                }
+                continue
+            }
+
+            if character == "\"" {
+                isInsideString = true
+                continue
+            }
 
             if character == "{" {
                 if depth == 0 { startIndex = index }

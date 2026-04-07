@@ -109,6 +109,7 @@ final class CaptainViewModel: ObservableObject {
     private let orchestrator: BrainOrchestrator
     private let contextBuilder: CaptainContextBuilder
     private let morningHabitOrchestrator: MorningHabitOrchestrator
+    private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
     private let globalProcessingTimeout: TimeInterval = 15
     /// Sleep analysis runs entirely on-device (HealthKit + Foundation Models) and needs more time.
@@ -414,9 +415,10 @@ final class CaptainViewModel: ObservableObject {
             // Validate and clean the reply before displaying:
             // 1. Remove duplicate sentences
             // 2. Trigger fallback if English ratio is too high in Arabic mode
+            let cleanedReplyMessage = cleanAssistantReplyMessage(reply.message)
             let validated = validateResponse(
                 CaptainStructuredResponse(
-                    message: reply.message,
+                    message: cleanedReplyMessage,
                     quickReplies: reply.quickReplies,
                     workoutPlan: reply.workoutPlan,
                     mealPlan: reply.mealPlan,
@@ -779,6 +781,15 @@ final class CaptainViewModel: ObservableObject {
 
     private func localizedFallbackMessage(arabic: String, english: String) -> String {
         AppSettingsStore.shared.appLanguage == .english ? english : arabic
+    }
+
+    private func cleanAssistantReplyMessage(_ rawReply: String) -> String {
+        let fallback = localizedFallbackMessage(
+            arabic: "عذراً، صار خلل بالاتصال، تكدر تعيد كلامك؟",
+            english: "Sorry, something went wrong with the connection. Could you say that again?"
+        )
+
+        return replyJSONParser.cleanDisplayText(from: rawReply, fallback: fallback)
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {

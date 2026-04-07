@@ -1109,7 +1109,7 @@
 "debug.preview.reset" = "إعادة ضبط بيانات المعاينة";
 "debug.preview.status" = "حالة الوصول";
 "debug.preview.status.tribe" = "وصول القبيلة";
-"debug.preview.status.family" = "وصول Intelligence Pro";
+"debug.preview.status.family" = "وصول AiQo Intelligence";
 "debug.preview.status.data" = "مصدر البيانات";
 "debug.preview.on" = "مفعّل";
 "debug.preview.off" = "متوقف";
@@ -1228,7 +1228,7 @@
 "tribe.toast.challengeSuggested" = "تم إرسال الاقتراح إلى القائمة المحلية.";
 
 "tribe.error.nameRequired" = "أدخل اسم القبيلة أولاً.";
-"tribe.error.familyRequired" = "تحتاج AiQo Intelligence Pro لإنشاء قبيلة.";
+"tribe.error.familyRequired" = "تحتاج AiQo Intelligence لإنشاء قبيلة.";
 "tribe.error.inviteRequired" = "أدخل رمز الدعوة.";
 "tribe.error.premiumRequired" = "تحتاج اشتراك بريميوم نشط.";
 
@@ -1294,10 +1294,10 @@
 "premium.subtitle" = "اشتراك شهري متجدّد. تقدر تديره أو تلغيه من آبل بأي وقت.";
 "premium.restore" = "استعادة";
 "premium.buy" = "شراء";
-"premium.plan.individual" = "Standard";
-"premium.plan.family" = "Intelligence Pro";
-"premium.plan.individual.description" = "يفتح ميزات التطبيق الأساسية بدون قمم.";
-"premium.plan.family.description" = "يفتح ميزات Intelligence Pro بما فيها إنشاء القبيلة.";
+"premium.plan.individual" = "AiQo Core";
+"premium.plan.family" = "AiQo Intelligence";
+"premium.plan.individual.description" = "يفتح تجربة AiQo الأساسية.";
+"premium.plan.family.description" = "يفتح ميزات AiQo Intelligence بما فيها إنشاء القبيلة.";
 "premium.error.productMissing" = "هذه الباقة غير متاحة حالياً.";
 "premium.status.activeUntil" = "نشط حتى %@";
 "premium.status.synced" = "تمت مزامنة البريميوم";
@@ -1404,8 +1404,8 @@
 "paywall.status.failed" = "تعذر إكمال العملية: %@";
 "paywall.status.currentPlan" = "الباقة الحالية: %@. تنتهي في %@.";
 "paywall.status.canCreateTribe" = "يمكنك إنشاء القبيلة الآن.";
-"paywall.plan.familyDescription" = "Intelligence Pro تفتح إنشاء القبيلة وأعلى مستوى من مزايا AiQo.";
-"paywall.plan.individualDescription" = "Standard تفتح تجربة AiQo الأساسية بدون قمم.";
+"paywall.plan.familyDescription" = "AiQo Intelligence تفتح إنشاء القبيلة، وذكاء أعمق، وأعلى مستوى من مزايا AiQo.";
+"paywall.plan.individualDescription" = "AiQo Core تفتح تجربة AiQo الأساسية.";
 "paywall.debug.testing" = "اختبار";
 "paywall.debug.resetPremium" = "حذف بيانات بريميوم";
 "paywall.debug.resetDone" = "تم حذف بيانات البريميوم محلياً لاختبار انتهاء الاشتراك.";
@@ -1760,7 +1760,7 @@
 
 /* ─── Arena Tab ─── */
 "arena.tribesCompete" = "القبائل تتنافس — وأنت وين؟";
-"arena.createOrJoin" = "أنشئ قبيلتك مع AiQo Intelligence Pro أو انضم لقبيلة صديقك";
+"arena.createOrJoin" = "أنشئ قبيلتك مع AiQo Intelligence أو انضم لقبيلة صديقك";
 "arena.createTribe" = "أنشئ قبيلة";
 "arena.joinWithCode" = "انضم برمز";
 
@@ -1865,11 +1865,11 @@
 "tribeHub.displayMode" = "وضع العرض";
 "tribeHub.tribeEnergyToday" = "طاقة القبيلة اليوم";
 "tribeHub.hubReady" = "مركز القبيلة جاهز";
-"tribeHub.hubReadyDesc" = "أنشئ قبيلة إذا كنت على AiQo Intelligence Pro، أو انضم بكود دعوة. بعد الدخول ستظهر طاقة القبيلة والمهام والأعضاء هنا.";
+"tribeHub.hubReadyDesc" = "أنشئ قبيلة إذا كنت على AiQo Intelligence، أو انضم بكود دعوة. بعد الدخول ستظهر طاقة القبيلة والمهام والأعضاء هنا.";
 "tribeHub.canCreate" = "يمكنك إنشاء القبيلة الآن.";
-"tribeHub.familyRequired" = "AiQo Intelligence Pro مطلوبة لإنشاء قبيلة.";
+"tribeHub.familyRequired" = "AiQo Intelligence مطلوبة لإنشاء قبيلة.";
 "tribeHub.createTribe" = "إنشاء قبيلة";
-"tribeHub.familyPlanRequired" = "Intelligence Pro مطلوبة";
+"tribeHub.familyPlanRequired" = "AiQo Intelligence مطلوبة";
 "tribeHub.joinWithCode" = "انضمام بكود";
 "tribeHub.enterCode" = "اكتب كود الدعوة";
 "tribeHub.joinNow" = "انضم الآن";

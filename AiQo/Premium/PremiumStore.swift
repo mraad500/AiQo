@@ -3,15 +3,18 @@ import Combine
 import StoreKit
 
 enum PremiumPlan: String, CaseIterable, Identifiable {
-    case standard
+    case core
+    case pro
     case intelligencePro
 
     var id: String { rawValue }
 
     var canonicalProductID: String {
         switch self {
-        case .standard:
-            return SubscriptionProductIDs.standardMonthly
+        case .core:
+            return SubscriptionProductIDs.coreMonthly
+        case .pro:
+            return SubscriptionProductIDs.proMonthly
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProMonthly
         }
@@ -19,24 +22,31 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .standard:
-            return "AiQo Standard"
+        case .core:
+            return "AiQo Core"
+        case .pro:
+            return "AiQo Pro"
         case .intelligencePro:
-            return "AiQo Intelligence Pro"
+            return "AiQo Intelligence"
         }
     }
 
     var description: String {
         switch self {
-        case .standard:
+        case .core:
             return localized(
-                ar: "كل ميزات AiQo الأساسية: الكابتن، Gym، Kitchen، My Vibe، التحديات، والإشعارات الذكية، بدون قمم.",
-                en: "All essential AiQo features: Captain, Gym, Kitchen, My Vibe, Challenges, and smart notifications, without Peaks."
+                ar: "الأساس اليومي في AiQo: الكابتن، Gym، Kitchen، My Vibe، التحديات، التتبع، والإشعارات الذكية.",
+                en: "The daily AiQo foundation: Captain, Gym, Kitchen, My Vibe, challenges, tracking, and smart notifications."
+            )
+        case .pro:
+            return localized(
+                ar: "كل ما في Core مع Peaks وHRR والمراجعة الأسبوعية ومشاريع الأرقام القياسية.",
+                en: "Everything in Core plus Peaks, HRR, weekly review, and record projects."
             )
         case .intelligencePro:
             return localized(
-                ar: "كل ميزات Standard، بالإضافة إلى قمم، HRR، المراجعة الأسبوعية، مشاريع الأرقام القياسية، ذاكرة كابتن أكبر، وتوجيه AI أعمق.",
-                en: "Everything in Standard, plus Peaks, HRR, weekly review, record projects, larger Captain memory, and more advanced AI guidance."
+                ar: "كل ما في Pro مع ذاكرة كابتن أكبر وتوجيه AI أعمق.",
+                en: "Everything in Pro plus larger Captain memory and deeper AI guidance."
             )
         }
     }
@@ -44,8 +54,10 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
     static func fromStoredValue(_ value: String) -> PremiumPlan? {
         switch value {
         case "standard", "core", "individual":
-            return .standard
-        case "intelligencePro", "intelligence", "pro", "family":
+            return .core
+        case "pro":
+            return .pro
+        case "intelligencePro", "intelligence", "family":
             return .intelligencePro
         default:
             return PremiumPlan(rawValue: value)
@@ -211,7 +223,7 @@ final class PremiumStore: ObservableObject {
             return String(
                 format: "premium.status.failed".localized,
                 locale: Locale.current,
-                message
+                arguments: [message]
             )
         }
     }

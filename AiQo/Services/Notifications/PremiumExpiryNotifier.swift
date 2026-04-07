@@ -87,7 +87,16 @@ enum PremiumExpiryNotifier {
             )
         ]
 
-        return candidates.filter { $0.fireDate > now }
+        return candidates
+            .map {
+                ScheduledPremiumNotification(
+                    identifier: $0.identifier,
+                    title: $0.title,
+                    body: $0.body,
+                    fireDate: SmartNotificationScheduler.shared.adjustedAutomationDate(for: $0.fireDate)
+                )
+            }
+            .filter { $0.fireDate > now }
     }
 
     private static func clearScheduledNotifications(center: UNUserNotificationCenter) {

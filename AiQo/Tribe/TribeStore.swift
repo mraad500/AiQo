@@ -16,6 +16,7 @@ final class TribeStore: ObservableObject {
     @Published var error: String?
 
     private let supabaseService: SupabaseService
+    private let arenaService: SupabaseArenaService
     private let accessManager: AccessManager
     private let dateProvider: () -> Date
     private let defaults: UserDefaults
@@ -25,6 +26,7 @@ final class TribeStore: ObservableObject {
         defaults: UserDefaults = .standard
     ) {
         self.supabaseService = SupabaseService.shared
+        self.arenaService = SupabaseArenaService.shared
         self.accessManager = AccessManager.shared
         self.dateProvider = dateProvider
         self.defaults = defaults
@@ -55,29 +57,24 @@ final class TribeStore: ObservableObject {
             return
         }
 
-        loading = true
-        defer { loading = false }
-
         error = nil
+        loading = true
 
-        // STUB: Live Supabase backend not yet connected.
-        // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
-        // TODO before launch: replace with live SupabaseTribeRepository call.
-        let tribe = Tribe(
-            id: UUID().uuidString,
-            name: trimmedName,
-            ownerUserId: currentUserId,
-            inviteCode: generatedInviteCode(),
-            createdAt: dateProvider()
-        )
-
-        currentTribe = tribe
-        members = [makeCurrentMember(energyContribution: 120)]
-        missions = demoMissions()
-        events = demoEvents()
-        persistLocalState()
-
-        print("🪶 Created tribe \(tribe.name) using local stub data until Supabase tribe tables are ready.")
+        Task {
+            do {
+                let snapshot = try await arenaService.createTribeSnapshot(name: trimmedName)
+                await MainActor.run {
+                    applySnapshot(snapshot)
+                    loading = false
+                }
+            } catch {
+                let message = error.localizedDescription
+                await MainActor.run {
+                    loading = false
+                    self.error = message
+                }
+            }
+        }
     }
 
     func joinTribe(inviteCode: String) {
@@ -92,107 +89,78 @@ final class TribeStore: ObservableObject {
             return
         }
 
-        loading = true
-        defer { loading = false }
-
         error = nil
+        loading = true
 
-        // STUB: Live Supabase backend not yet connected.
-        // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
-        // TODO before launch: replace with live SupabaseTribeRepository call.
-        currentTribe = Tribe(
-            id: UUID().uuidString,
-            name: String(
-                format: "tribe.mock.joinedName".localized,
-                locale: Locale.current,
-                String(trimmedCode.prefix(4))
-            ),
-            ownerUserId: "demo-owner",
-            inviteCode: trimmedCode,
-            createdAt: dateProvider().addingTimeInterval(-18_000)
-        )
-
-        members = demoMembers(inviteCode: trimmedCode)
-        syncCurrentMemberWithLatestProfile()
-        missions = demoMissions()
-        events = demoEvents()
-        persistLocalState()
-
-        print("🪶 Joined tribe with code \(trimmedCode) using local stub data. Supabase integration can replace this later.")
+        Task {
+            do {
+                let snapshot = try await arenaService.joinTribeSnapshot(inviteCode: trimmedCode)
+                await MainActor.run {
+                    applySnapshot(snapshot)
+                    loading = false
+                }
+            } catch {
+                let message = error.localizedDescription
+                await MainActor.run {
+                    loading = false
+                    self.error = message
+                }
+            }
+        }
     }
 
     func leaveTribe() {
-        loading = true
-        defer { loading = false }
-
         error = nil
-        currentTribe = nil
-        members = []
-        missions = []
-        events = []
-        persistLocalState()
+        loading = true
 
-        print("🪶 Left tribe and cleared local tribe state.")
+        Task {
+            do {
+                try await arenaService.leaveCurrentTribe()
+                await MainActor.run {
+                    currentTribe = nil
+                    members = []
+                    missions = []
+                    events = []
+                    persistLocalState()
+                    loading = false
+                }
+            } catch {
+                let message = error.localizedDescription
+                await MainActor.run {
+                    loading = false
+                    self.error = message
+                }
+            }
+        }
     }
 
-    // STUB: Live Supabase backend not yet connected.
-    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
-    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchTribe() {
-        loading = true
-        defer { loading = false }
-
         error = nil
+        loading = true
 
-        guard currentTribe != nil else {
-            members = []
-            missions = []
-            events = []
-            persistLocalState()
-            return
+        Task {
+            do {
+                let snapshot = try await arenaService.fetchCurrentTribeSnapshot()
+                await MainActor.run {
+                    applySnapshot(snapshot)
+                    loading = false
+                }
+            } catch {
+                let message = error.localizedDescription
+                await MainActor.run {
+                    loading = false
+                    self.error = message
+                }
+            }
         }
-
-        fetchMembers()
-        fetchMissions()
-        if events.isEmpty {
-            events = demoEvents()
-            persistLocalState()
-        }
-
-        print("🪶 Refreshed tribe state using local store. Current Supabase user: \(currentUserId)")
     }
 
-    // STUB: Live Supabase backend not yet connected.
-    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
-    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchMembers() {
-        guard currentTribe != nil else {
-            members = []
-            return
-        }
-
-        if members.isEmpty {
-            members = demoMembers(inviteCode: currentTribe?.inviteCode ?? generatedInviteCode())
-        }
-
-        syncCurrentMemberWithLatestProfile()
-        persistLocalState()
+        fetchTribe()
     }
 
-    // STUB: Live Supabase backend not yet connected.
-    // This feature is hidden via TRIBE_FEATURE_VISIBLE=false in Info.plist.
-    // TODO before launch: replace with live SupabaseTribeRepository call.
     func fetchMissions() {
-        guard currentTribe != nil else {
-            missions = []
-            return
-        }
-
-        if missions.isEmpty {
-            missions = demoMissions()
-        }
-
-        persistLocalState()
+        fetchTribe()
     }
 
     func updateMyPrivacy(mode: PrivacyMode) {
@@ -306,6 +274,17 @@ final class TribeStore: ObservableObject {
         } else {
             members.insert(currentMember, at: 0)
         }
+    }
+
+    private func applySnapshot(_ snapshot: TribeRepositorySnapshot) {
+        currentTribe = snapshot.tribe
+        members = snapshot.members
+        missions = snapshot.missions
+        events = snapshot.events
+        if snapshot.tribe != nil {
+            syncCurrentMemberWithLatestProfile()
+        }
+        persistLocalState()
     }
 
     private func demoMembers(inviteCode: String) -> [TribeMember] {

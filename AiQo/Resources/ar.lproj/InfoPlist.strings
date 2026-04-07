@@ -1,1 +1,3 @@
 "NSCameraUsageDescription" = "يستخدم AiQo الكاميرا لتحليل دقة الأداء وسلامة الوضعية.";
+"NSHealthShareUsageDescription" = "يقرأ AiQo بيانات صحية مختارة مثل الخطوات والنوم والماء لتجهيز ملخصاتك اليومية والأسبوعية.";
+"NSHealthUpdateUsageDescription" = "يكتب AiQo الإدخالات الصحية التي تختارها، مثل تسجيل شرب الماء والتمارين، داخل تطبيق الصحة.";

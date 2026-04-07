@@ -304,32 +304,31 @@ struct WeeklyReviewView: View {
     }
 
     private func sendReviewToLLM() async -> ReviewResult? {
-        let systemPrompt = """
-        أنت كابتن حمّودي. المستخدم أكمل أسبوع \(project.currentWeek) من مشروع كسر رقم "\(project.recordTitle)".
-
-        بيانات المشروع:
-        - الهدف: \(project.targetValue) \(project.unit)
-        - الأسبوع: \(project.currentWeek) من \(project.totalWeeks)
-        - أفضل أداء سابق: \(project.bestPerformance)
-
-        بيانات المراجعة:
-        - الوزن الحالي: \(currentWeight) كغم
-        - أفضل أداء هالأسبوع: \(bestPerformance)
-        - رأي المستخدم: "\(feedback)"
-        - تقييم الأسبوع: \(weekRating)/5
-        - عوائق: \(selectedObstacle)
-
-        المطلوب:
-        1. حلل التقدم (هل ماشي صح أو يحتاج تعديل)
-        2. أرجع JSON فقط بدون markdown:
-        {
-          "isOnTrack": true,
-          "captainMessage": "رسالة تحفيزية قصيرة بالعامي",
-          "adjustments": "وصف التعديلات أو null",
-          "updatedTotalWeeks": null,
-          "warningIfAny": null
+        let sanitizer = PrivacySanitizer()
+        let systemPrompt = "You are Captain Hamoudi reviewing a sanitized weekly fitness check-in. Return JSON only with keys: isOnTrack, captainMessage, adjustments, updatedTotalWeeks, warningIfAny."
+        var reviewData: [String: Any] = [
+            "feedback_summary": compactSanitizedText(feedback, sanitizer: sanitizer, limit: 220),
+            "week_rating": weekRating,
+            "selected_obstacle": compactSanitizedText(selectedObstacle, sanitizer: sanitizer, limit: 60)
+        ]
+        if let currentWeight = sanitizedNumber(currentWeight) {
+            reviewData["current_weight_kg"] = currentWeight
         }
-        """
+        if let performance = sanitizedNumber(bestPerformance) {
+            reviewData["best_performance_this_week"] = performance
+        }
+
+        let reviewPayload: [String: Any] = [
+            "project": [
+                "record_title": compactSanitizedText(project.recordTitle, sanitizer: sanitizer, limit: 80),
+                "target_value": project.targetValue,
+                "unit": compactSanitizedText(project.unit, sanitizer: sanitizer, limit: 12),
+                "week_index": project.currentWeek,
+                "total_weeks": project.totalWeeks,
+                "best_performance": project.bestPerformance
+            ],
+            "review": reviewData
+        ]
 
         do {
             let info = Bundle.main.infoDictionary ?? [:]
@@ -355,12 +354,13 @@ struct WeeklyReviewView: View {
                 "contents": [
                     [
                         "role": "user",
-                        "parts": [["text": "راجع أسبوعي وعطني رأيك"]]
+                        "parts": [["text": compactJSONString(from: reviewPayload)]]
                     ]
                 ],
                 "generationConfig": [
-                    "maxOutputTokens": 300,
-                    "temperature": 0.7
+                    "maxOutputTokens": 220,
+                    "temperature": 0.35,
+                    "responseMimeType": "application/json"
                 ]
             ]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -403,6 +403,30 @@ struct WeeklyReviewView: View {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
         return trimmed
+    }
+
+    private func compactSanitizedText(
+        _ text: String,
+        sanitizer: PrivacySanitizer,
+        limit: Int
+    ) -> String {
+        let sanitized = sanitizer.sanitizeText(text, knownUserName: nil)
+        return String(sanitized.trimmingCharacters(in: .whitespacesAndNewlines).prefix(limit))
+    }
+
+    private func sanitizedNumber(_ rawValue: String) -> Double? {
+        guard let value = Double(rawValue.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            return nil
+        }
+        return (value * 10).rounded() / 10
+    }
+
+    private func compactJSONString(from value: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
+              let string = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return string
     }
 }
 

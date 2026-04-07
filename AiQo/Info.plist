@@ -4,8 +4,8 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>aiqo.captain.spiritual-whispers.refresh</string>
-		<string>aiqo.captain.inactivity-check</string>
+		<string>aiqo.notifications.refresh</string>
+		<string>aiqo.notifications.inactivity-check</string>
 	</array>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
@@ -61,20 +61,16 @@
 		<string>com.aiqo.openKitchen</string>
 		<string>com.aiqo.weeklyReport</string>
 	</array>
-	<key>SPIRITUAL_WHISPERS_LLM_API_KEY</key>
-	<string></string>
-	<key>SPIRITUAL_WHISPERS_LLM_API_URL</key>
-	<string>https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent</string>
 	<key>SPOTIFY_CLIENT_ID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SUPABASE_ANON_KEY</key>
-	<string>$(SUPABASE_ANON_KEY)</string>
+	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M</string>
 	<key>SUPABASE_URL</key>
-	<string>$(SUPABASE_URL)</string>
+	<string>https://zidbsrepqpbucqzxnwgk.supabase.co</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
-	<false/>
+	<true/>
 	<key>TRIBE_FEATURE_VISIBLE</key>
-	<false/>
+	<true/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
 	<key>UIBackgroundModes</key>

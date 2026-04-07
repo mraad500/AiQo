@@ -10,6 +10,7 @@ class WatchHealthKitManager: ObservableObject {
     @Published var todayCalories: Int = 0
     @Published var todayDistanceKm: Double = 0.0
     @Published var todaySleepHours: Double = 0.0
+    @Published var todayWaterLiters: Double = 0.0
 
     func requestAuthorization() {
         let read: Set<HKObjectType> = [
@@ -31,10 +32,17 @@ class WatchHealthKitManager: ObservableObject {
     }
 
     func refresh() {
+        refreshSharedHydration()
         fetchSum(.stepCount, unit: .count()) { [weak self] v in self?.todaySteps = Int(v) }
         fetchSum(.activeEnergyBurned, unit: .kilocalorie()) { [weak self] v in self?.todayCalories = Int(v) }
         fetchSum(.distanceWalkingRunning, unit: .meter()) { [weak self] v in self?.todayDistanceKm = v / 1000.0 }
         fetchSleep()
+    }
+
+    private func refreshSharedHydration() {
+        let defaults = UserDefaults(suiteName: "group.aiqo")
+        let waterML = defaults?.double(forKey: "aiqo_water_ml") ?? 0
+        todayWaterLiters = waterML / 1000.0
     }
 
     private func fetchSum(_ id: HKQuantityTypeIdentifier, unit: HKUnit, handler: @escaping @MainActor (Double) -> Void) {

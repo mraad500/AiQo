@@ -1,1 +1,3 @@
 "NSCameraUsageDescription" = "AiQo uses camera access for form precision and safety.";
+"NSHealthShareUsageDescription" = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
+"NSHealthUpdateUsageDescription" = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";

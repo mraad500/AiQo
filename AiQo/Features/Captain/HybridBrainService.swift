@@ -271,9 +271,16 @@ private extension HybridBrainService {
             throw HybridBrainServiceError.emptyResponse
         }
 
-        // Use LLMJSONParser for robust extraction
-        let fallback = CaptainStructuredResponse(message: outputText)
-        return jsonParser.decode(outputText, fallback: fallback)
+        let fallback = CaptainStructuredResponse(
+            message: parsingFallbackMessage(for: request.language)
+        )
+        let parsedResponse = jsonParser.decode(rawText: outputText, fallback: fallback)
+
+        if parsedResponse.message == fallback.message {
+            logger.error("gemini_parse_fallback_applied raw=\(outputText.prefix(500), privacy: .public)")
+        }
+
+        return parsedResponse
     }
 
     // MARK: - Request Body
@@ -411,5 +418,13 @@ private extension HybridBrainService {
             return isNetworkUnavailable(underlying)
         }
         return false
+    }
+
+    func parsingFallbackMessage(for language: AppLanguage) -> String {
+        if language == .english {
+            return "Sorry, something went wrong with the connection. Could you say that again?"
+        }
+
+        return "عذراً، صار خلل بالاتصال، تكدر تعيد كلامك؟"
     }
 }

@@ -2,7 +2,9 @@ import Foundation
 
 enum SubscriptionProductIDs {
     // Live App Store Connect catalog.
-    static let standardMonthly = "com.mraad500.aiqo.standard.monthly"
+    // The existing StoreKit "standard" SKU now maps to the Core tier.
+    static let coreMonthly = "com.mraad500.aiqo.standard.monthly"
+    static let proMonthly = "com.mraad500.aiqo.pro.monthly"
     static let intelligenceProMonthly = "com.mraad500.aiqo.intelligencepro.monthly"
 
     // Legacy product IDs kept only to preserve entitlement decoding for older installs.
@@ -10,8 +12,12 @@ enum SubscriptionProductIDs {
     static let legacyProMonthly = "aiqo_pro_monthly_19_99"
     static let legacyIntelligenceMonthly = "aiqo_intelligence_monthly_39_99"
 
+    // Compatibility alias for older callsites while the runtime tier names move to Core / Pro / Intelligence.
+    static let standardMonthly = coreMonthly
+
     static let allCurrentIDs: Set<String> = [
-        standardMonthly,
+        coreMonthly,
+        proMonthly,
         intelligenceProMonthly
     ]
 
@@ -22,18 +28,33 @@ enum SubscriptionProductIDs {
     ])
 
     static let orderedCurrentIDs: [String] = [
-        standardMonthly,
+        coreMonthly,
+        proMonthly,
         intelligenceProMonthly
     ]
 
-    static let standardFallbackPrice = "$9.99"
+    static let coreFallbackPrice = "$9.99"
+    static let proFallbackPrice = "$19.99"
     static let intelligenceProFallbackPrice = "$39.99"
+
+    static let standardFallbackPrice = coreFallbackPrice
 
     static func unlocksIntelligenceProFeatures(productID: String?) -> Bool {
         guard let productID else { return false }
 
         switch productID {
-        case intelligenceProMonthly, legacyProMonthly, legacyIntelligenceMonthly:
+        case intelligenceProMonthly, legacyIntelligenceMonthly:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func unlocksProFeatures(productID: String?) -> Bool {
+        guard let productID else { return false }
+
+        switch productID {
+        case proMonthly, intelligenceProMonthly, legacyProMonthly, legacyIntelligenceMonthly:
             return true
         default:
             return false
@@ -62,10 +83,12 @@ enum SubscriptionProductIDs {
 
     static func displayName(for productID: String) -> String {
         switch productID {
-        case standardMonthly, legacyCoreMonthly:
-            return "AiQo Standard"
-        case intelligenceProMonthly, legacyProMonthly, legacyIntelligenceMonthly:
-            return "AiQo Intelligence Pro"
+        case coreMonthly, legacyCoreMonthly:
+            return "AiQo Core"
+        case proMonthly, legacyProMonthly:
+            return "AiQo Pro"
+        case intelligenceProMonthly, legacyIntelligenceMonthly:
+            return "AiQo Intelligence"
         default:
             return "AiQo Premium"
         }
@@ -73,12 +96,14 @@ enum SubscriptionProductIDs {
 
     static func fallbackDisplayPrice(for productID: String) -> String {
         switch productID {
-        case standardMonthly, legacyCoreMonthly:
-            return standardFallbackPrice
-        case intelligenceProMonthly, legacyProMonthly, legacyIntelligenceMonthly:
+        case coreMonthly, legacyCoreMonthly:
+            return coreFallbackPrice
+        case proMonthly, legacyProMonthly:
+            return proFallbackPrice
+        case intelligenceProMonthly, legacyIntelligenceMonthly:
             return intelligenceProFallbackPrice
         default:
-            return standardFallbackPrice
+            return coreFallbackPrice
         }
     }
 }

@@ -282,21 +282,40 @@ struct MockChallengeRepository: ChallengeRepositoryProtocol {
     }
 }
 
-// TODO: Remove mock delegation when backend is ready.
 struct SupabaseTribeRepository: TribeRepositoryProtocol {
+    private let service = SupabaseArenaService.shared
+
     func loadSnapshot() async -> TribeRepositorySnapshot {
-        await MockTribeRepository().loadSnapshot()
+        do {
+            return try await service.fetchCurrentTribeSnapshot()
+        } catch {
+            return TribeRepositorySnapshot(
+                tribe: nil,
+                members: [],
+                missions: [],
+                events: []
+            )
+        }
     }
 }
 
-// TODO: Remove mock delegation when backend is ready.
 struct SupabaseChallengeRepository: ChallengeRepositoryProtocol {
+    private let service = SupabaseArenaService.shared
+
     func loadChallenges() async -> [TribeChallenge] {
-        await MockChallengeRepository().loadChallenges()
+        do {
+            return try await service.fetchLiveChallenges()
+        } catch {
+            return []
+        }
     }
 
     func loadCuratedGalaxyChallenges() async -> [TribeChallenge] {
-        await MockChallengeRepository().loadCuratedGalaxyChallenges()
+        do {
+            return try await service.fetchLiveCuratedGalaxyChallenges()
+        } catch {
+            return []
+        }
     }
 }
 

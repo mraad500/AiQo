@@ -6,7 +6,6 @@ final class AccessManager: ObservableObject {
     static let shared = AccessManager()
 
     @Published private(set) var previewEnabled = false
-    @Published private(set) var useMockTribeData = true
     @Published private(set) var selectedPreviewPlan: PremiumPlan = .intelligencePro
     @Published private(set) var configurationVersion = 0
     @Published private(set) var entitlementSnapshot: EntitlementSnapshot = .locked
@@ -30,24 +29,24 @@ final class AccessManager: ObservableObject {
         return EntitlementStore.shared.currentTier
     }
 
-    // MARK: — Standard tier features
+    // MARK: — Core tier features
 
-    var canAccessCaptain: Bool { activeTier >= .standard }
-    var canAccessGym: Bool { activeTier >= .standard }
-    var canAccessKitchen: Bool { activeTier >= .standard }
-    var canAccessMyVibe: Bool { activeTier >= .standard }
-    var canAccessChallenges: Bool { activeTier >= .standard }
-    var canAccessDataTracking: Bool { activeTier >= .standard }
-    var canReceiveCaptainNotifications: Bool { activeTier >= .standard }
+    var canAccessCaptain: Bool { activeTier >= .core }
+    var canAccessGym: Bool { activeTier >= .core }
+    var canAccessKitchen: Bool { activeTier >= .core }
+    var canAccessMyVibe: Bool { activeTier >= .core }
+    var canAccessChallenges: Bool { activeTier >= .core }
+    var canAccessDataTracking: Bool { activeTier >= .core }
+    var canReceiveCaptainNotifications: Bool { activeTier >= .core }
 
-    // MARK: — Intelligence Pro feature gates
+    // MARK: — Pro tier feature gates
 
-    var canAccessPeaks: Bool { activeTier >= .intelligencePro }
-    var canAccessHRRAssessment: Bool { activeTier >= .intelligencePro }
-    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .intelligencePro }
-    var canAccessRecordProjects: Bool { activeTier >= .intelligencePro }
+    var canAccessPeaks: Bool { activeTier >= .pro }
+    var canAccessHRRAssessment: Bool { activeTier >= .pro }
+    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .pro }
+    var canAccessRecordProjects: Bool { activeTier >= .pro }
 
-    // MARK: — Intelligence Pro intelligence features
+    // MARK: — Intelligence tier features
 
     var canAccessExtendedMemory: Bool { activeTier >= .intelligencePro }
     var canAccessIntelligenceModel: Bool { activeTier >= .intelligencePro }
@@ -85,7 +84,6 @@ final class AccessManager: ObservableObject {
         [
             String(configurationVersion),
             isPreviewModeActive ? "preview" : "live",
-            useMockTribeData ? "mock" : "liveData",
             selectedPreviewPlan.rawValue
         ].joined(separator: "|")
     }
@@ -117,18 +115,6 @@ final class AccessManager: ObservableObject {
         bumpConfiguration()
     }
 
-    func setUseMockTribeData(_ enabled: Bool) {
-        guard allowsDeveloperOverrides else {
-            forceDisablePreviewOverrides()
-            return
-        }
-
-        guard useMockTribeData != enabled else { return }
-        useMockTribeData = enabled
-        persist(enabled, key: Keys.useMockTribeData)
-        bumpConfiguration()
-    }
-
     func setSelectedPreviewPlan(_ plan: PremiumPlan) {
         guard allowsDeveloperOverrides else {
             forceDisablePreviewOverrides()
@@ -147,9 +133,7 @@ final class AccessManager: ObservableObject {
             return
         }
 
-        useMockTribeData = true
         selectedPreviewPlan = .intelligencePro
-        persist(true, key: Keys.useMockTribeData)
         persist(PremiumPlan.intelligencePro.rawValue, key: Keys.selectedPreviewPlan)
         bumpConfiguration()
     }
@@ -157,19 +141,16 @@ final class AccessManager: ObservableObject {
     func forceDisablePreviewOverrides() {
         let hadPreviewOverride = defaults.bool(forKey: Keys.previewEnabled)
         let hadStoredPlan = defaults.string(forKey: Keys.selectedPreviewPlan) != nil
-        let hadStoredMockFlag = defaults.object(forKey: Keys.useMockTribeData) != nil
 
         previewEnabled = false
-        useMockTribeData = true
         selectedPreviewPlan = .intelligencePro
 
         defaults.removeObject(forKey: Keys.previewEnabled)
-        defaults.removeObject(forKey: Keys.useMockTribeData)
         defaults.removeObject(forKey: Keys.selectedPreviewPlan)
 
 #if !DEBUG
-        if hadPreviewOverride || hadStoredPlan || hadStoredMockFlag {
-            assertionFailure("Preview Tribe overrides are not available outside DEBUG builds.")
+        if hadPreviewOverride || hadStoredPlan {
+            assertionFailure("Preview subscription overrides are not available outside DEBUG builds.")
         }
 #endif
 
@@ -180,12 +161,6 @@ final class AccessManager: ObservableObject {
 #if DEBUG
         previewEnabled = defaults.bool(forKey: Keys.previewEnabled)
 
-        if defaults.object(forKey: Keys.useMockTribeData) != nil {
-            useMockTribeData = defaults.bool(forKey: Keys.useMockTribeData)
-        } else {
-            useMockTribeData = true
-        }
-
         if let storedPlan = defaults.string(forKey: Keys.selectedPreviewPlan),
            let plan = PremiumPlan.fromStoredValue(storedPlan) {
             selectedPreviewPlan = plan
@@ -194,7 +169,6 @@ final class AccessManager: ObservableObject {
         }
 #else
         previewEnabled = false
-        useMockTribeData = true
         selectedPreviewPlan = .intelligencePro
         forceDisablePreviewOverrides()
 #endif
@@ -247,7 +221,6 @@ final class AccessManager: ObservableObject {
 
     private enum Keys {
         static let previewEnabled = "aiqo.tribe.preview.enabled"
-        static let useMockTribeData = "aiqo.tribe.preview.useMockData"
         static let selectedPreviewPlan = "aiqo.tribe.preview.plan"
     }
 }

@@ -15,6 +15,7 @@ actor HealthKitService {
     private struct WidgetSnapshot: Equatable {
         let steps: Int
         let calories: Int
+        let waterML: Int
         let standPercent: Int
         let stepsGoal: Int
         let caloriesGoal: Int
@@ -157,6 +158,7 @@ actor HealthKitService {
     private func updateWidget(
         steps: Int,
         calories: Int,
+        waterML: Int,
         standPercent: Int,
         stepsGoal: Int,
         caloriesGoal: Int
@@ -164,6 +166,7 @@ actor HealthKitService {
         guard let shared = UserDefaults(suiteName: "group.aiqo") else { return }
         shared.set(steps, forKey: "aiqo_steps")
         shared.set(calories, forKey: "aiqo_active_cal")
+        shared.set(waterML, forKey: "aiqo_water_ml")
         shared.set(stepsGoal, forKey: "aiqo_steps_goal")
         shared.set(caloriesGoal, forKey: "aiqo_active_cal_goal")
         shared.set(standPercent, forKey: "aiqo_stand_percent")
@@ -171,6 +174,7 @@ actor HealthKitService {
         let snapshot = WidgetSnapshot(
             steps: steps,
             calories: calories,
+            waterML: waterML,
             standPercent: standPercent,
             stepsGoal: stepsGoal,
             caloriesGoal: caloriesGoal
@@ -210,6 +214,7 @@ actor HealthKitService {
         updateWidget(
             steps: Int(summary.steps),
             calories: Int(summary.activeKcal),
+            waterML: Int(summary.waterML),
             standPercent: Int(summary.standPercent),
             stepsGoal: resolvedGoals.stepsGoal,
             caloriesGoal: resolvedGoals.caloriesGoal
@@ -246,6 +251,7 @@ actor HealthKitService {
             updateWidget(
                 steps: Int(summary.steps),
                 calories: Int(summary.activeKcal),
+                waterML: Int(summary.waterML),
                 standPercent: Int(summary.standPercent),
                 stepsGoal: resolvedGoals.stepsGoal,
                 caloriesGoal: resolvedGoals.caloriesGoal
@@ -264,6 +270,7 @@ actor HealthKitService {
             updateWidget(
                 steps: Int(summary.steps),
                 calories: Int(summary.activeKcal),
+                waterML: Int(summary.waterML),
                 standPercent: Int(summary.standPercent),
                 stepsGoal: resolvedGoals.stepsGoal,
                 caloriesGoal: resolvedGoals.caloriesGoal
@@ -275,8 +282,17 @@ actor HealthKitService {
     }
 
     func getWaterIntake() async -> Double {
+        let resolvedGoals = currentWidgetGoals()
         do {
             let summary = try await fetchTodaySummary()
+            updateWidget(
+                steps: Int(summary.steps),
+                calories: Int(summary.activeKcal),
+                waterML: Int(summary.waterML),
+                standPercent: Int(summary.standPercent),
+                stepsGoal: resolvedGoals.stepsGoal,
+                caloriesGoal: resolvedGoals.caloriesGoal
+            )
             return summary.waterML
         } catch {
             return 0

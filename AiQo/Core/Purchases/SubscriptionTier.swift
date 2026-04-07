@@ -3,8 +3,9 @@ import Foundation
 /// The runtime subscription tiers of AiQo.
 enum SubscriptionTier: Int, Comparable {
     case none = 0
-    case standard = 1
-    case intelligencePro = 2
+    case core = 1
+    case pro = 2
+    case intelligencePro = 3
 
     static func < (lhs: SubscriptionTier, rhs: SubscriptionTier) -> Bool {
         lhs.rawValue < rhs.rawValue
@@ -12,11 +13,13 @@ enum SubscriptionTier: Int, Comparable {
 
     static func from(productID: String) -> SubscriptionTier {
         switch productID {
-        case SubscriptionProductIDs.standardMonthly,
+        case SubscriptionProductIDs.coreMonthly,
              SubscriptionProductIDs.legacyCoreMonthly:
-            return .standard
+            return .core
+        case SubscriptionProductIDs.proMonthly,
+             SubscriptionProductIDs.legacyProMonthly:
+            return .pro
         case SubscriptionProductIDs.intelligenceProMonthly,
-             SubscriptionProductIDs.legacyProMonthly,
              SubscriptionProductIDs.legacyIntelligenceMonthly:
             return .intelligencePro
         default:
@@ -28,10 +31,12 @@ enum SubscriptionTier: Int, Comparable {
         switch self {
         case .none:
             return ""
-        case .standard:
-            return "AiQo Standard"
+        case .core:
+            return "AiQo Core"
+        case .pro:
+            return "AiQo Pro"
         case .intelligencePro:
-            return "AiQo Intelligence Pro"
+            return "AiQo Intelligence"
         }
     }
 
@@ -43,8 +48,10 @@ enum SubscriptionTier: Int, Comparable {
         switch self {
         case .none:
             return ""
-        case .standard:
-            return SubscriptionProductIDs.standardFallbackPrice
+        case .core:
+            return SubscriptionProductIDs.coreFallbackPrice
+        case .pro:
+            return SubscriptionProductIDs.proFallbackPrice
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProFallbackPrice
         }
@@ -54,8 +61,10 @@ enum SubscriptionTier: Int, Comparable {
         switch self {
         case .none:
             return ""
-        case .standard:
-            return SubscriptionProductIDs.standardMonthly
+        case .core:
+            return SubscriptionProductIDs.coreMonthly
+        case .pro:
+            return SubscriptionProductIDs.proMonthly
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProMonthly
         }

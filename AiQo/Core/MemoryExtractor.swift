@@ -189,24 +189,24 @@ struct MemoryExtractor: Sendable {
         // Privacy-first: sanitize all outgoing text before it leaves the device
         let sanitizer = PrivacySanitizer()
         let sanitizedUserMessage = sanitizer.sanitizeText(userMessage, knownUserName: nil)
-        let sanitizedAssistantReply = sanitizer.sanitizeText(assistantReply, knownUserName: nil)
+        let compactUserMessage = compactSanitizedSnippet(sanitizedUserMessage, limit: 240)
+        guard !compactUserMessage.isEmpty else { return }
 
-        let systemPrompt = """
-        أنت محلل بيانات. من المحادثة التالية، استخرج أي معلومات جديدة عن المستخدم. أرجع JSON فقط بدون أي نص إضافي أو markdown.
-        المفاتيح المسموحة فقط:
-        * user_name, goal, weight, height, age, injury, mood
-        * preferred_workout, diet_preference, sleep_hours
-        * fitness_level, workout_feedback, available_equipment
-        * training_days, medical_condition, water_intake
-        * record_project_feedback
-        إذا ما في شي جديد أرجع: {}
-        مثال: {"weight": "95", "goal": "تنشيف", "mood": "متحمس"}
-        """
+        let allowedKeys = [
+            "user_name", "goal", "weight", "height", "age", "injury", "mood",
+            "preferred_workout", "diet_preference", "sleep_hours",
+            "fitness_level", "workout_feedback", "available_equipment",
+            "training_days", "medical_condition", "water_intake",
+            "record_project_feedback"
+        ]
+        let systemPrompt = "Extract only new durable user facts from the sanitized message. Return a flat JSON object with allowed keys only, or {}."
 
-        let userContent = """
-        المستخدم: \(sanitizedUserMessage)
-        الكابتن: \(sanitizedAssistantReply)
-        """
+        let userContent = compactJSONString(
+            from: [
+                "allowed_keys": allowedKeys,
+                "user_message": compactUserMessage
+            ]
+        )
 
         do {
             let config = try resolveLLMConfig()
@@ -226,8 +226,9 @@ struct MemoryExtractor: Sendable {
                     ]
                 ],
                 "generationConfig": [
-                    "maxOutputTokens": 200,
-                    "temperature": 0.1
+                    "maxOutputTokens": 160,
+                    "temperature": 0.1,
+                    "responseMimeType": "application/json"
                 ]
             ]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -320,5 +321,19 @@ struct MemoryExtractor: Sendable {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
         return trimmed
+    }
+
+    private static func compactSanitizedSnippet(_ text: String, limit: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        return String(trimmed.prefix(limit))
+    }
+
+    private static func compactJSONString(from value: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
+              let string = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return string
     }
 }

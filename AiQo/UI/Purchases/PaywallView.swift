@@ -4,15 +4,20 @@ import UIKit
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+
     @StateObject private var purchaseManager = PurchaseManager.shared
     @ObservedObject private var entitlementStore = EntitlementStore.shared
+    @AppStorage("aiqo.app.language") private var appLanguage = AppLanguage.arabic.rawValue
+
+    @Namespace private var selectionNamespace
 
     @State private var selectedProductID: String?
     @State private var processingProductID: String?
     @State private var statusMessage: String?
-    @State private var isDebugTestSetupPresented = false
-    @State private var isTribeFlowPresented = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfService = false
 
+    private let supportedTiers: [SubscriptionTier] = [.core, .pro, .intelligencePro]
     private let onPurchaseSuccess: (() -> Void)?
 
     init(onPurchaseSuccess: (() -> Void)? = nil) {
@@ -25,16 +30,34 @@ struct PaywallView: View {
         }
     }
 
+    private var isArabic: Bool {
+        appLanguage == AppLanguage.arabic.rawValue
+    }
+
+    private var plans: [PaywallPlanModel] {
+        supportedTiers.map { tier in
+            PaywallPlanModel(
+                tier: tier,
+                product: orderedProducts.first(where: { SubscriptionTier.from(productID: $0.id) == tier }),
+                details: details(for: tier)
+            )
+        }
+    }
+
     private var effectiveSelectedProductID: String {
-        if let selectedProductID, orderedProducts.contains(where: { $0.id == selectedProductID }) {
+        if let selectedProductID, plans.contains(where: { $0.productID == selectedProductID }) {
             return selectedProductID
         }
 
-        if orderedProducts.contains(where: { $0.id == SubscriptionProductIDs.intelligenceProMonthly }) {
-            return SubscriptionProductIDs.intelligenceProMonthly
-        }
+        return SubscriptionTier.intelligencePro.productID
+    }
 
-        return orderedProducts.first?.id ?? SubscriptionProductIDs.standardMonthly
+    private var selectedPlan: PaywallPlanModel? {
+        plans.first(where: { $0.productID == effectiveSelectedProductID })
+    }
+
+    private var missingPlans: [PaywallPlanModel] {
+        plans.filter { $0.product == nil }
     }
 
     private var selectedProduct: Product? {
@@ -42,362 +65,453 @@ struct PaywallView: View {
     }
 
     private var isProcessingPurchase: Bool {
-        guard let selectedProduct else { return false }
-        return processingProductID == selectedProduct.id
+        processingProductID == effectiveSelectedProductID
+    }
+
+    private var isRestoringPurchases: Bool {
+        processingProductID == "restore"
     }
 
     private var isPerformingAction: Bool {
         processingProductID != nil
     }
 
-    private var visibleStatusMessage: String? { statusMessage }
+    private var actionGradientColors: [Color] {
+        selectedPlan?.details.gradientColors ?? [Color(hex: "5ECDB7"), Color(hex: "B7E5D2")]
+    }
 
-    private var isArabic: Bool {
-        Locale.current.language.languageCode?.identifier == "ar"
+    private var actionSubtitle: String {
+        guard let selectedPlan else {
+            return copy(ar: "جارٍ تحميل الباقات الحالية…", en: "Loading the available plans...")
+        }
+
+        if purchaseManager.isLoadingProducts && selectedProduct == nil {
+            return copy(
+                ar: "نزامن سعر \(selectedPlan.details.title) الآن من App Store",
+                en: "Syncing the \(selectedPlan.details.title) price from the App Store"
+            )
+        }
+
+        if selectedPlan.product == nil {
+            return copy(
+                ar: "هذه الباقة غير مربوطة بالكامل في App Store Connect حتى الآن",
+                en: "This tier is not fully connected in App Store Connect yet"
+            )
+        }
+
+        return copy(
+            ar: "الخطة المختارة: \(selectedPlan.details.title) • ثم \(selectedPlan.priceText) شهرياً",
+            en: "Selected tier: \(selectedPlan.details.title) • then \(selectedPlan.priceText) monthly"
+        )
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                paywallBackground
+        ZStack {
+            paywallBackground
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        heroSection
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    heroSection
+                    credibilityStrip
 
-                        if statusMessage == nil, entitlementStore.isActive, let expiresAt = entitlementStore.expiresAt {
-                            statusCard(text: statusText(expiresAt: expiresAt), tint: AiQoTheme.Colors.accent.opacity(0.14))
-                        }
-
-                        tribeEntryButton
-                        plansSection
-
-                        if let visibleStatusMessage {
-                            statusCard(text: visibleStatusMessage, tint: AiQoTheme.Colors.ctaGradientTrailing.opacity(0.14))
-                        }
-
-                        if purchaseManager.productLoadErrorMessage == nil, !orderedProducts.isEmpty {
-                            primaryActionSection
-                            legalFooter
-                        }
-
-                        #if DEBUG
-                        debugSection
-                        #endif
+                    if purchaseManager.isLoadingProducts && orderedProducts.isEmpty {
+                        infoBanner(
+                            icon: "arrow.triangle.2.circlepath.circle.fill",
+                            title: copy(ar: "جارٍ تحميل الأسعار", en: "Loading pricing"),
+                            message: copy(
+                                ar: "نطلب الباقات مباشرة من App Store Connect حتى يظهر سعر كل باقة بدقة.",
+                                en: "Fetching your plans directly from App Store Connect so each tier shows its live price."
+                            ),
+                            tint: Color(hex: "5ECDB7")
+                        )
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+
+                    if !purchaseManager.isLoadingProducts, !missingPlans.isEmpty {
+                        infoBanner(
+                            icon: "exclamationmark.triangle.fill",
+                            title: copy(ar: "بعض الباقات غير جاهزة بعد", en: "Some tiers are not ready yet"),
+                            message: copy(
+                                ar: "أكمل إعداد هذه الباقات في App Store Connect: \(missingPlans.map(\.details.title).joined(separator: "، ")).",
+                                en: "Finish setting up these tiers in App Store Connect: \(missingPlans.map(\.details.title).joined(separator: ", "))."
+                            ),
+                            tint: Color(hex: "EBCF97")
+                        )
+                    }
+
+                    if let productLoadErrorMessage = purchaseManager.productLoadErrorMessage {
+                        errorBanner(message: productLoadErrorMessage)
+                    }
+
+                    if statusMessage == nil, entitlementStore.isActive, let expiresAt = entitlementStore.expiresAt {
+                        infoBanner(
+                            icon: "checkmark.shield.fill",
+                            title: copy(ar: "اشتراكك الحالي نشط", en: "Your subscription is active"),
+                            message: statusText(expiresAt: expiresAt),
+                            tint: Color(hex: "B7E5D2")
+                        )
+                    }
+
+                    plansSection
+
+                    if let statusMessage {
+                        infoBanner(
+                            icon: "sparkles",
+                            title: copy(ar: "حالة الاشتراك", en: "Subscription status"),
+                            message: statusMessage,
+                            tint: Color(hex: "EBCF97")
+                        )
+                    }
+
+                    #if DEBUG
+                    debugSection
+                    #endif
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 250)
             }
-            .navigationTitle("paywall.title".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                await reloadProducts()
-            }
-            .sheet(isPresented: $isTribeFlowPresented) {
-                TribeExperienceFlowView(source: .premium)
-            }
-            #if DEBUG
-            .alert("paywall.debug.setupTitle".localized, isPresented: $isDebugTestSetupPresented) {
-                Button("paywall.debug.ok".localized, role: .cancel) { }
-            } message: {
-                Text("paywall.debug.setupMessage".localized)
-            }
-            #endif
         }
+        .safeAreaInset(edge: .bottom) {
+            purchaseActionBar
+        }
+        .task {
+            await reloadProducts()
+        }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            LegalView(type: .privacyPolicy)
+        }
+        .sheet(isPresented: $showTermsOfService) {
+            LegalView(type: .termsOfService)
+        }
+        .environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)
+        .environment(\.locale, Locale(identifier: isArabic ? "ar" : "en"))
     }
 
     private var paywallBackground: some View {
         ZStack {
             LinearGradient(
                 colors: [
-                    AiQoTheme.Colors.primaryBackground,
-                    AiQoTheme.Colors.surfaceSecondary,
-                    AiQoTheme.Colors.primaryBackground
+                    Color(hex: "06131A"),
+                    Color(hex: "0B1016"),
+                    Color(hex: "121C24")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
             Circle()
-                .fill(AiQoTheme.Colors.accent.opacity(0.16))
-                .frame(width: 260, height: 260)
-                .blur(radius: 18)
-                .offset(x: 120, y: -180)
+                .fill(Color(hex: "5ECDB7").opacity(0.22))
+                .frame(width: 320, height: 320)
+                .blur(radius: 90)
+                .offset(x: isArabic ? 120 : -120, y: -220)
 
             Circle()
-                .fill(AiQoTheme.Colors.ctaGradientTrailing.opacity(0.12))
-                .frame(width: 220, height: 220)
-                .blur(radius: 20)
-                .offset(x: -120, y: 260)
+                .fill(Color(hex: "EBCF97").opacity(0.18))
+                .frame(width: 280, height: 280)
+                .blur(radius: 100)
+                .offset(x: isArabic ? -140 : 140, y: 260)
+
+            Circle()
+                .fill(Color(hex: "B7E5D2").opacity(0.12))
+                .frame(width: 260, height: 260)
+                .blur(radius: 80)
+                .offset(x: isArabic ? 150 : -150, y: 480)
+
+            Rectangle()
+                .fill(.ultraThinMaterial.opacity(0.12))
         }
         .ignoresSafeArea()
     }
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(copy(
-                        ar: "اختر مستوى AiQo المناسب لك",
-                        en: "Choose the AiQo tier that fits you"
-                    ))
-                    .font(.system(size: 31, weight: .bold, design: .rounded))
-                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+        VStack(alignment: .leading, spacing: 18) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    heroPill(
+                        icon: "sparkles",
+                        title: copy(ar: "7 أيام مجانية", en: "7 free days")
+                    )
 
-                    Text(copy(
-                        ar: "خطان شهريتان متجدّدتان عبر StoreKit 2: AiQo Standard و AiQo Intelligence Pro.",
-                        en: "Two monthly subscription tiers through StoreKit 2: AiQo Standard and AiQo Intelligence Pro."
-                    ))
-                    .font(AiQoTheme.Typography.body)
-                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    heroPill(
+                        icon: "lock.open.fill",
+                        title: copy(ar: "فتح كامل بعد التفعيل", en: "Unlocks the full dashboard")
+                    )
+
+                    heroPill(
+                        icon: "arrow.uturn.backward.circle",
+                        title: copy(ar: "إلغاء في أي وقت", en: "Cancel anytime")
+                    )
                 }
-
-                Spacer(minLength: 0)
-
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    AiQoTheme.Colors.ctaGradientLeading,
-                                    AiQoTheme.Colors.ctaGradientTrailing
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 62, height: 62)
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .shadow(color: AiQoTheme.Colors.accent.opacity(0.22), radius: 16, x: 0, y: 10)
+                .padding(.vertical, 2)
             }
 
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                    .font(.caption.weight(.bold))
+            VStack(alignment: .leading, spacing: 10) {
                 Text(copy(
-                    ar: "اشتراكات شهرية متجددة. يمكنك الترقية أو الإلغاء من آبل في أي وقت.",
-                    en: "Monthly renewable subscriptions. Upgrade or cancel anytime from Apple."
+                    ar: "اكتشف قدراتك الحقيقية مع AiQo",
+                    en: "Discover your true potential with AiQo"
                 ))
-                .font(AiQoTheme.Typography.caption)
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Text(copy(
+                    ar: "اختر الباقة التي تناسب مرحلتك وابدأ التجربة المجانية قبل دخولك الكامل إلى لوحة التحكم. كل باقة تفتح طبقة مختلفة من التدريب، التحليل، وذكاء AiQo.",
+                    en: "Pick the tier that matches your level and start your free trial before entering the full dashboard. Each tier unlocks a different layer of coaching, analytics, and AiQo intelligence."
+                ))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(AiQoTheme.Colors.textSecondary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    benefitChip(title: "Captain Memory")
+                    benefitChip(title: "Kitchen Vision")
+                    benefitChip(title: "Zone 2 Live")
+                    benefitChip(title: "Legendary Challenges")
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func heroPill(icon: String, title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .bold))
+
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+        }
+        .foregroundStyle(.white.opacity(0.9))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private func benefitChip(title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(Color.white.opacity(0.82))
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(
                 Capsule(style: .continuous)
-                    .fill(AiQoTheme.Colors.surface.opacity(0.72))
+                    .fill(Color.black.opacity(0.18))
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(AiQoTheme.Colors.border, lineWidth: 1)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var tribeEntryButton: some View {
-        Button {
-            isTribeFlowPresented = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "person.3.fill")
-                    .font(.system(size: 13, weight: .bold))
+    private var credibilityStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                credibilityItem(
+                    icon: "heart.text.square.fill",
+                    title: copy(ar: "ذكاء صحي", en: "Health intelligence")
+                )
 
-                Text("paywall.joinTribe".localized)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .tracking(isArabic ? 0 : 1.1)
+                credibilityItem(
+                    icon: "moon.stars.fill",
+                    title: copy(ar: "نوم وتحليل", en: "Sleep insights")
+                )
+
+                credibilityItem(
+                    icon: "figure.run.circle.fill",
+                    title: copy(ar: "تدريب حي", en: "Live coaching")
+                )
             }
-            .foregroundStyle(AiQoTheme.Colors.textPrimary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(AiQoTheme.Colors.surface.opacity(0.82))
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(AiQoTheme.Colors.borderStrong, lineWidth: 1)
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
         }
-        .buttonStyle(AiQoPressButtonStyle())
     }
 
-    @ViewBuilder
+    private func credibilityItem(icon: String, title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color(hex: "B7E5D2"))
+
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.82))
+                .lineLimit(2)
+        }
+        .frame(width: 140, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
     private var plansSection: some View {
-        if purchaseManager.isLoadingProducts {
-            loadingStateCard
-        } else if let productLoadErrorMessage = purchaseManager.productLoadErrorMessage {
-            errorStateCard(message: productLoadErrorMessage)
-        } else {
-            VStack(spacing: 16) {
-                ForEach(orderedProducts, id: \.id) { product in
-                    tierCard(for: product)
-                }
-            }
-        }
-    }
-
-    private var loadingStateCard: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-                .controlSize(.large)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(copy(
+                ar: "اختر باقتك الآن",
+                en: "Choose your tier now"
+            ))
+            .font(.system(size: 21, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
 
             Text(copy(
-                ar: "جارٍ تحميل الباقات الحالية…",
-                en: "Loading the current subscription tiers..."
+                ar: "ابدأ من Core أو اصعد مباشرة إلى Pro أو Intelligence Pro. التغيير بين الباقات يتم داخل Apple لاحقاً متى ما احتجت.",
+                en: "Start with Core or jump straight to Pro or Intelligence Pro. You can change plans later through Apple whenever you need."
             ))
-            .font(AiQoTheme.Typography.sectionTitle)
-            .foregroundStyle(AiQoTheme.Colors.textPrimary)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(Color.white.opacity(0.62))
+            .fixedSize(horizontal: false, vertical: true)
 
-            Text(copy(
-                ar: "نطلب المنتجات مباشرة من App Store Connect عبر StoreKit 2.",
-                en: "Products are being fetched directly from App Store Connect via StoreKit 2."
-            ))
-            .font(AiQoTheme.Typography.body)
-            .foregroundStyle(AiQoTheme.Colors.textSecondary)
-            .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AiQoTheme.Colors.surface.opacity(0.82))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AiQoTheme.Colors.border, lineWidth: 1)
-        )
-    }
-
-    private func errorStateCard(message: String) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label {
-                Text(copy(
-                    ar: "تعذر تحميل الاشتراكات",
-                    en: "Could not load subscriptions"
-                ))
-                .font(AiQoTheme.Typography.sectionTitle)
-            } icon: {
-                Image(systemName: "wifi.exclamationmark")
-            }
-            .foregroundStyle(AiQoTheme.Colors.textPrimary)
-
-            Text(message)
-                .font(AiQoTheme.Typography.body)
-                .foregroundStyle(AiQoTheme.Colors.textSecondary)
-
-            VStack(spacing: 10) {
-                secondaryActionButton(
-                    title: "paywall.retry".localized,
-                    tint: AiQoTheme.Colors.accent
-                ) {
-                    retryLoadingProducts()
-                }
-
-                secondaryActionButton(
-                    title: "paywall.restore".localized,
-                    tint: AiQoTheme.Colors.ctaGradientTrailing
-                ) {
-                    restorePurchases()
+            VStack(spacing: 20) {
+                ForEach(plans) { plan in
+                    tierCard(for: plan)
                 }
             }
+            .padding(.top, 4)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AiQoTheme.Colors.surface.opacity(0.84))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AiQoTheme.Colors.borderStrong, lineWidth: 1)
-        )
     }
 
-    private func tierCard(for product: Product) -> some View {
-        let details = tierDetails(for: product.id)
-        let isSelected = effectiveSelectedProductID == product.id
+    private func tierCard(for plan: PaywallPlanModel) -> some View {
+        let isSelected = effectiveSelectedProductID == plan.productID
+        let isAvailable = plan.product != nil || purchaseManager.isLoadingProducts
+        let priceCaption = purchaseManager.isLoadingProducts && plan.product == nil
+            ? copy(ar: "جارٍ مزامنة السعر من App Store", en: "Syncing price from the App Store")
+            : !isAvailable
+                ? copy(ar: "أكمل إنشاء هذه الباقة في App Store Connect", en: "Finish creating this tier in App Store Connect")
+            : copy(ar: "7 أيام مجانية ثم يتجدد تلقائياً", en: "7 free days, then renews automatically")
 
         return Button {
-            selectedProductID = product.id
-            statusMessage = nil
-        } label: {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill((isSelected ? AiQoTheme.Colors.accent : details.tint).opacity(0.18))
-                            .frame(width: 44, height: 44)
+            guard isAvailable else {
+                statusMessage = copy(
+                    ar: "باقة \(plan.details.title) غير جاهزة بعد في App Store Connect.",
+                    en: "\(plan.details.title) is not ready in App Store Connect yet."
+                )
+                return
+            }
 
-                        Image(systemName: details.icon)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(isSelected ? AiQoTheme.Colors.accent : details.tint)
+            withAnimation(.spring(response: 0.44, dampingFraction: 0.82)) {
+                selectedProductID = plan.productID
+                statusMessage = nil
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 12) {
+                    if let badge = plan.details.badge {
+                        Text(badge)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: "0F1721"))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(hex: "EBCF97"),
+                                                Color(hex: "F7E5BE")
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Text(product.displayName)
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundStyle(AiQoTheme.Colors.textPrimary)
-
-                            if let badge = details.badge {
-                                Text(badge)
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundStyle(isSelected ? .white : AiQoTheme.Colors.accent)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(isSelected ? AiQoTheme.Colors.accent : AiQoTheme.Colors.accent.opacity(0.12))
-                                    )
-                            }
-                        }
-
-                        Text(details.kicker)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(isSelected ? AiQoTheme.Colors.accent : AiQoTheme.Colors.textSecondary)
+                    if !isAvailable {
+                        Text(copy(ar: "غير جاهز", en: "Not ready"))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.86))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.white.opacity(0.10))
+                            )
                     }
 
                     Spacer(minLength: 0)
 
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(isSelected ? AiQoTheme.Colors.accent : AiQoTheme.Colors.borderStrong)
+                        .foregroundStyle(isSelected ? plan.details.secondaryTint : Color.white.opacity(0.34))
                 }
 
-                HStack(alignment: .lastTextBaseline, spacing: 6) {
-                    Text(product.displayPrice)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: plan.details.gradientColors.map { $0.opacity(0.92) },
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 54, height: 54)
 
-                    Text(copy(ar: "شهرياً", en: "monthly"))
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                        Image(systemName: plan.details.icon)
+                            .font(.system(size: 21, weight: .bold))
+                            .foregroundStyle(Color(hex: "071015"))
+                    }
+                    .shadow(color: plan.details.glow.opacity(0.35), radius: 18, x: 0, y: 10)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(plan.details.title)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Text(plan.details.eyebrow)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(plan.details.secondaryTint)
+
+                        Text(plan.details.summary)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
-                Text(details.summary)
-                    .font(AiQoTheme.Typography.body)
-                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(plan.priceText)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(details.features, id: \.self) { feature in
+                        Text(copy(ar: "/ شهرياً", en: "/ month"))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.54))
+                    }
+
+                    Text(priceCaption)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.52))
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(plan.details.features) { feature in
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(isSelected ? AiQoTheme.Colors.accent : details.tint)
+                            Image(systemName: feature.icon)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(plan.details.secondaryTint)
+                                .frame(width: 18)
                                 .padding(.top, 2)
 
-                            Text(feature)
+                            Text(feature.text)
                                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                                .foregroundStyle(.white.opacity(0.86))
                                 .multilineTextAlignment(.leading)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -405,205 +519,265 @@ struct PaywallView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
+            .padding(plan.details.isFeatured ? 24 : 22)
             .background {
-                PaywallGlassBackground(tint: UIColor(isSelected ? AiQoTheme.Colors.accent : details.tint))
+                PaywallGlassPanelBackground(
+                    style: plan.details.glassStyle,
+                    tint: UIColor(plan.details.tint),
+                    intensity: plan.details.tintIntensity
+                )
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        isSelected ? AiQoTheme.Colors.accent : AiQoTheme.Colors.border,
-                        lineWidth: isSelected ? 2 : 1
-                    )
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .stroke(Color.white.opacity(isSelected ? 0.18 : 0.08), lineWidth: 1)
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: plan.details.gradientColors,
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 2.4
+                                )
+                                .matchedGeometryEffect(id: "selected-tier-outline", in: selectionNamespace)
+                        }
+                    }
             }
+            .shadow(
+                color: (isSelected ? plan.details.glow.opacity(0.28) : Color.black.opacity(0.12)),
+                radius: isSelected ? 26 : 16,
+                x: 0,
+                y: isSelected ? 16 : 10
+            )
+            .opacity(isAvailable ? 1 : 0.76)
+            .scaleEffect(isSelected ? 1.05 : (plan.details.isFeatured ? 1.015 : 1.0))
+            .animation(.spring(response: 0.44, dampingFraction: 0.82), value: effectiveSelectedProductID)
         }
         .buttonStyle(AiQoPressButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
-    private var primaryActionSection: some View {
+    private func infoBanner(icon: String, title: String, message: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(tint.opacity(0.18))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(tint)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text(message)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background {
+            PaywallGlassPanelBackground(
+                style: .soft,
+                tint: UIColor(tint),
+                intensity: 0.14
+            )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        }
+    }
+
+    private func errorBanner(message: String) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            infoBanner(
+                icon: "wifi.exclamationmark",
+                title: copy(ar: "تعذر تحميل الاشتراكات", en: "Couldn't load subscriptions"),
+                message: message,
+                tint: Color(hex: "EBCF97")
+            )
+
+            Button {
+                retryLoadingProducts()
+            } label: {
+                Text(copy(ar: "إعادة المحاولة", en: "Retry"))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "091117"))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color(hex: "EBCF97"))
+                    )
+            }
+            .buttonStyle(AiQoPressButtonStyle())
+            .disabled(isPerformingAction)
+        }
+    }
+
+    private var purchaseActionBar: some View {
         VStack(spacing: 12) {
+            Text(copy(
+                ar: "لن تدخل إلى لوحة AiQo الرئيسية حتى تبدأ التجربة المجانية على واحدة من هذه الباقات.",
+                en: "You won’t enter the main AiQo dashboard until you start your free trial on one of these tiers."
+            ))
+            .font(.system(size: 12, weight: .medium, design: .rounded))
+            .foregroundStyle(Color.white.opacity(0.58))
+            .multilineTextAlignment(.center)
+
             Button {
                 purchaseSelectedProduct()
             } label: {
-                HStack(spacing: 10) {
-                    if isProcessingPurchase {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: "lock.open.fill")
-                            .font(.system(size: 15, weight: .bold))
+                VStack(spacing: 6) {
+                    HStack(spacing: 10) {
+                        if isProcessingPurchase {
+                            ProgressView()
+                                .tint(Color(hex: "071015"))
+                        } else {
+                            Image(systemName: "sparkles.rectangle.stack.fill")
+                                .font(.system(size: 15, weight: .bold))
 
-                        Text(copy(
-                            ar: "اشترك في \(SubscriptionProductIDs.displayName(for: effectiveSelectedProductID))",
-                            en: "Subscribe to \(SubscriptionProductIDs.displayName(for: effectiveSelectedProductID))"
-                        ))
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                            Text(copy(
+                                ar: "ابدأ فترتك التجريبية المجانية (7 أيام)",
+                                en: "Start your 7-day free trial"
+                            ))
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                        }
                     }
+
+                    Text(actionSubtitle)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color(hex: "071015").opacity(0.78))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(hex: "071015"))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 18)
                 .background(
                     LinearGradient(
-                        colors: [
-                            AiQoTheme.Colors.ctaGradientLeading,
-                            AiQoTheme.Colors.ctaGradientTrailing
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                        colors: actionGradientColors,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     ),
-                    in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 28, style: .continuous)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                )
+                .shadow(
+                    color: (selectedPlan?.details.glow ?? Color(hex: "5ECDB7")).opacity(0.28),
+                    radius: 24,
+                    x: 0,
+                    y: 14
                 )
             }
             .buttonStyle(AiQoPressButtonStyle())
             .disabled(selectedProduct == nil || isPerformingAction || purchaseManager.isLoadingProducts)
             .opacity(selectedProduct == nil || isPerformingAction || purchaseManager.isLoadingProducts ? 0.65 : 1)
 
-            secondaryActionButton(
-                title: "paywall.restore".localized,
-                tint: AiQoTheme.Colors.surfaceSecondary
-            ) {
-                restorePurchases()
-            }
-        }
-    }
-
-    private var legalFooter: some View {
-        VStack(spacing: 12) {
-            Text(copy(
-                ar: "يتجدد الاشتراك كل شهر تلقائياً. يمكنك إدارة أو إلغاء الاشتراك من إعدادات Apple ID في أي وقت.",
-                en: "Subscriptions renew monthly until cancelled. Manage or cancel anytime from your Apple ID settings."
-            ))
-            .font(.system(size: 12, weight: .medium, design: .rounded))
-            .foregroundStyle(AiQoTheme.Colors.textSecondary)
-            .multilineTextAlignment(.center)
-
-            VStack(spacing: 10) {
-                LegalLinksView()
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background {
-                PaywallGlassBackground(tint: .black)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var debugSection: some View {
-        if purchaseManager.productLoadErrorMessage != nil, let debugDetails = purchaseManager.productLoadDebugDetails {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("DEBUG")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
-
-                Text(debugDetails)
-                    .font(.caption2)
-                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                    .textSelection(.enabled)
-
-                secondaryActionButton(
-                    title: "Open test setup",
-                    tint: AiQoTheme.Colors.surfaceSecondary
+            HStack(spacing: 14) {
+                footerTextButton(
+                    title: isRestoringPurchases
+                        ? copy(ar: "جارٍ الاستعادة…", en: "Restoring...")
+                        : copy(ar: "استعادة المشتريات", en: "Restore Purchases")
                 ) {
-                    isDebugTestSetupPresented = true
+                    restorePurchases()
+                }
+                .disabled(isPerformingAction || purchaseManager.isLoadingProducts)
+
+                footerDivider
+
+                footerTextButton(title: "legal.terms.title".localized) {
+                    showTermsOfService = true
+                }
+
+                footerDivider
+
+                footerTextButton(title: "legal.privacy.title".localized) {
+                    showPrivacyPolicy = true
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(AiQoTheme.Colors.surface.opacity(0.84))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(AiQoTheme.Colors.borderStrong, lineWidth: 1)
-            )
         }
-
-        VStack(alignment: .leading, spacing: 12) {
-            Text("paywall.debug.testing".localized)
-                .font(AiQoTheme.Typography.sectionTitle)
-                .foregroundStyle(AiQoTheme.Colors.textPrimary)
-
-            Button("paywall.debug.resetPremium".localized) {
-                purchaseManager.debugResetPremiumData()
-                statusMessage = "paywall.debug.resetDone".localized
-            }
-            .foregroundStyle(.red)
-            .disabled(isPerformingAction)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AiQoTheme.Colors.surface.opacity(0.84))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(AiQoTheme.Colors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color.black.opacity(0.34))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                )
+                .padding(.horizontal, 10)
+                .padding(.bottom, 4)
         )
     }
 
-    private func secondaryActionButton(
-        title: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func footerTextButton(title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.54))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var footerDivider: some View {
+        Text("·")
+            .foregroundStyle(Color.white.opacity(0.28))
+    }
+
+    #if DEBUG
+    private var debugSection: some View {
+        Group {
+            if let debugDetails = purchaseManager.productLoadDebugDetails {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("DEBUG")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.55))
+
+                    Text(debugDetails)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                        .textSelection(.enabled)
+
+                    Button("paywall.debug.resetPremium".localized) {
+                        purchaseManager.debugResetPremiumData()
+                        statusMessage = "paywall.debug.resetDone".localized
+                    }
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(hex: "EBCF97"))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(tint.opacity(0.14))
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(tint.opacity(0.28), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 )
+            }
         }
-        .buttonStyle(AiQoPressButtonStyle())
-        .disabled(isPerformingAction || purchaseManager.isLoadingProducts)
     }
-
-    private func statusCard(text: String, tint: Color) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(AiQoTheme.Colors.accent)
-                .padding(.top, 2)
-
-            Text(text)
-                .font(AiQoTheme.Typography.body)
-                .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(tint)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(AiQoTheme.Colors.border, lineWidth: 1)
-        )
-    }
+    #endif
 
     private func reloadProducts() async {
         purchaseManager.start()
@@ -673,6 +847,7 @@ struct PaywallView: View {
 
     private func statusText(expiresAt: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: isArabic ? "ar" : "en")
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
 
@@ -681,51 +856,89 @@ struct PaywallView: View {
         return String(format: "paywall.status.currentPlan".localized, plan, formatter.string(from: expiresAt))
     }
 
-    private func tierDetails(for productID: String) -> PaywallTierDetails {
-        switch productID {
-        case SubscriptionProductIDs.standardMonthly:
-            return PaywallTierDetails(
+    private func details(for tier: SubscriptionTier) -> PaywallPlanDetails {
+        switch tier {
+        case .core:
+            return PaywallPlanDetails(
+                title: "AiQo Core",
+                eyebrow: copy(ar: "الأساس اليومي للالتزام", en: "The daily foundation"),
+                summary: copy(
+                    ar: "لمن يريد بداية نظيفة وواضحة: تتبع صحي أساسي، التزام يومي، ونسخة مركزة من تجربة AiQo.",
+                    en: "For a clean and focused start: essential health tracking, daily consistency, and a streamlined AiQo experience."
+                ),
+                features: [
+                    PaywallFeature(icon: "heart.text.square.fill", text: copy(ar: "Basic health tracking للحركة والنشاط اليومي", en: "Basic health tracking for movement and daily activity")),
+                    PaywallFeature(icon: "figure.strengthtraining.traditional", text: copy(ar: "Standard Gym Quests لبناء العادة", en: "Standard gym quests to build consistency")),
+                    PaywallFeature(icon: "chart.bar.fill", text: copy(ar: "لوحة تقدم بسيطة وواضحة بدون تعقيد", en: "A simple, clear progress dashboard"))
+                ],
+                badge: nil,
                 icon: "bolt.heart.fill",
+                tint: Color(hex: "264339"),
+                secondaryTint: Color(hex: "B7E5D2"),
+                glow: Color(hex: "5ECDB7"),
+                glassStyle: .soft,
+                tintIntensity: 0.18,
+                isFeatured: false
+            )
+        case .pro:
+            return PaywallPlanDetails(
+                title: "AiQo Pro",
+                eyebrow: copy(ar: "ترقية الأداء والتحليل", en: "Performance and insight"),
+                summary: copy(
+                    ar: "طبقة أعمق لمَن يريد أن يرى جسده بوضوح أكثر ويحوّل البيانات إلى قرارات يومية أذكى.",
+                    en: "A deeper layer for users who want a clearer view of their body and smarter day-to-day decisions."
+                ),
+                features: [
+                    PaywallFeature(icon: "camera.macro", text: copy(ar: "Kitchen Vision لرؤية أدق للوجبات والمكونات", en: "Kitchen Vision for smarter meal and ingredient awareness")),
+                    PaywallFeature(icon: "waveform.path.ecg.rectangle", text: copy(ar: "Deeper biometric analytics لتحليل المؤشرات بشكل أوسع", en: "Deeper biometric analytics across your health signals")),
+                    PaywallFeature(icon: "bed.double.fill", text: copy(ar: "Sleep architecture لفهم مراحل النوم وجودته", en: "Sleep architecture to understand sleep stages and quality"))
+                ],
                 badge: nil,
-                kicker: copy(ar: "الانطلاقة الأساسية", en: "Foundation tier"),
+                icon: "waveform.path.ecg",
+                tint: Color(hex: "1D3538"),
+                secondaryTint: Color(hex: "5ECDB7"),
+                glow: Color(hex: "5ECDB7"),
+                glassStyle: .glass,
+                tintIntensity: 0.12,
+                isFeatured: false
+            )
+        case .intelligencePro:
+            return PaywallPlanDetails(
+                title: "AiQo Intelligence Pro",
+                eyebrow: copy(ar: "النسخة الكاملة من عقل AiQo", en: "The full AiQo intelligence stack"),
                 summary: copy(
-                    ar: "كل أساسيات AiQo اليومية: الكابتن، التمرين، التغذية، والإيقاع اليومي بدون قمم.",
-                    en: "The essential AiQo stack for Captain, training, nutrition, and daily rhythm without Peaks."
+                    ar: "هذه الباقة تفتح أقوى نسخة من AiQo: ذاكرة أعمق، تدريب لحظي، وتوجيه AI يعطي الأولوية لك في كل لحظة.",
+                    en: "This tier unlocks the strongest AiQo experience: deeper memory, live coaching, and priority AI guidance."
                 ),
                 features: [
-                    copy(ar: "Captain Hamoudi كمدربك الشخصي", en: "Captain Hamoudi as your personal coach"),
-                    copy(ar: "Gym و Kitchen و My Vibe", en: "Gym, Kitchen, and My Vibe"),
-                    copy(ar: "Challenges يومية وإشعارات ذكية", en: "Daily Challenges and smart notifications"),
-                    copy(ar: "بدون Peaks / قمم", en: "Peaks stays locked on this tier")
+                    PaywallFeature(icon: "brain.head.profile", text: copy(ar: "Full Captain Hamoudi memory لذاكرة شخصية ممتدة", en: "Full Captain Hamoudi memory for a richer personal context")),
+                    PaywallFeature(icon: "figure.run", text: copy(ar: "Zone 2 live coaching أثناء التدريب اللحظي", en: "Zone 2 live coaching during active sessions")),
+                    PaywallFeature(icon: "crown.fill", text: copy(ar: "Legendary Challenges للوصول إلى المستوى الأسطوري", en: "Legendary Challenges for next-level progression")),
+                    PaywallFeature(icon: "point.3.connected.trianglepath.dotted", text: copy(ar: "Priority AI routing لاستجابة أسرع وأذكى", en: "Priority AI routing for faster, smarter responses"))
                 ],
-                tint: AiQoTheme.Colors.surfaceSecondary
-            )
-        case SubscriptionProductIDs.intelligenceProMonthly:
-            return PaywallTierDetails(
-                icon: "brain.head.profile",
-                badge: copy(ar: "الأكثر اكتمالاً", en: "Most complete"),
-                kicker: copy(ar: "الطبقة الأعلى", en: "Top tier"),
-                summary: copy(
-                    ar: "كل ما في Standard مع قمم وHRR والمراجعة الأسبوعية ومشاريع الأرقام القياسية وذكاء أعمق.",
-                    en: "Everything in Standard plus Peaks, HRR, weekly review, record projects, and deeper intelligence."
-                ),
-                features: [
-                    copy(ar: "كل ميزات Standard", en: "Everything in Standard"),
-                    copy(ar: "Peaks / قمم وHRR والمراجعة الأسبوعية", en: "Peaks, HRR, and weekly review"),
-                    copy(ar: "مشاريع الأرقام القياسية", en: "Record projects"),
-                    copy(ar: "Extended Memory حتى 500 ذكرى", en: "Extended Memory up to 500 memories"),
-                    copy(ar: "توجيه AI أكثر تقدماً", en: "More advanced AI guidance")
-                ],
-                tint: AiQoTheme.Colors.ctaGradientTrailing
-            )
-        default:
-            return PaywallTierDetails(
+                badge: copy(ar: "الأكثر اختياراً", en: "Most chosen"),
                 icon: "sparkles",
-                badge: nil,
-                kicker: copy(ar: "خطة AiQo", en: "AiQo tier"),
+                tint: Color(hex: "4A3E24"),
+                secondaryTint: Color(hex: "EBCF97"),
+                glow: Color(hex: "EBCF97"),
+                glassStyle: .glass,
+                tintIntensity: 0.12,
+                isFeatured: true
+            )
+        case .none:
+            return PaywallPlanDetails(
+                title: "AiQo",
+                eyebrow: "",
                 summary: "",
                 features: [],
-                tint: AiQoTheme.Colors.surfaceSecondary
+                badge: nil,
+                icon: "sparkles",
+                tint: Color(hex: "1D2A30"),
+                secondaryTint: Color(hex: "B7E5D2"),
+                glow: Color(hex: "5ECDB7"),
+                glassStyle: .soft,
+                tintIntensity: 0.14,
+                isFeatured: false
             )
         }
     }
@@ -735,30 +948,77 @@ struct PaywallView: View {
     }
 }
 
-private struct PaywallTierDetails {
-    let icon: String
-    let badge: String?
-    let kicker: String
-    let summary: String
-    let features: [String]
-    let tint: Color
+private struct PaywallPlanModel: Identifiable {
+    let tier: SubscriptionTier
+    let product: Product?
+    let details: PaywallPlanDetails
+
+    var id: String { productID }
+    var productID: String { tier.productID }
+    var priceText: String { product?.displayPrice ?? tier.monthlyPrice }
 }
 
-private struct PaywallGlassBackground: UIViewRepresentable {
-    let tint: UIColor
+private struct PaywallPlanDetails {
+    let title: String
+    let eyebrow: String
+    let summary: String
+    let features: [PaywallFeature]
+    let badge: String?
+    let icon: String
+    let tint: Color
+    let secondaryTint: Color
+    let glow: Color
+    let glassStyle: PaywallGlassPanelStyle
+    let tintIntensity: CGFloat
+    let isFeatured: Bool
 
-    func makeUIView(context: Context) -> GlassCardView {
-        let view = GlassCardView()
-        view.isUserInteractionEnabled = false
-        view.setTint(tint)
-        return view
+    var gradientColors: [Color] {
+        [secondaryTint, tint.opacity(0.92)]
+    }
+}
+
+private struct PaywallFeature: Identifiable {
+    let id = UUID()
+    let icon: String
+    let text: String
+}
+
+private enum PaywallGlassPanelStyle {
+    case glass
+    case soft
+}
+
+private struct PaywallGlassPanelBackground: UIViewRepresentable {
+    let style: PaywallGlassPanelStyle
+    let tint: UIColor
+    let intensity: CGFloat
+
+    func makeUIView(context: Context) -> UIView {
+        switch style {
+        case .glass:
+            let view = GlassCardView()
+            view.isUserInteractionEnabled = false
+            view.setTint(tint)
+            return view
+        case .soft:
+            let view = SoftGlassCardView()
+            view.isUserInteractionEnabled = false
+            view.setTint(tint, intensity: intensity)
+            return view
+        }
     }
 
-    func updateUIView(_ uiView: GlassCardView, context: Context) {
-        uiView.setTint(tint)
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if let glassView = uiView as? GlassCardView {
+            glassView.setTint(tint)
+        } else if let softGlassView = uiView as? SoftGlassCardView {
+            softGlassView.setTint(tint, intensity: intensity)
+        }
     }
 }
 
 #Preview {
     PaywallView()
+        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.locale, Locale(identifier: "ar"))
 }

@@ -949,6 +949,409 @@ final class SupabaseArenaService {
         }
     }
 
+    // MARK: - Domain snapshots for Tribe UI
+
+    func fetchCurrentTribeSnapshot() async throws -> TribeRepositorySnapshot {
+        guard let userID = client.auth.currentUser?.id.uuidString else {
+            logger.error("fetchCurrentTribeSnapshot: no authenticated user")
+            throw AiQoError.tribeAccessDenied
+        }
+
+        let memberResponse = try await client
+            .from("arena_tribe_members")
+            .select("tribe_id")
+            .eq("user_id", value: userID)
+            .limit(1)
+            .execute()
+
+        let rows = try JSONDecoder().decode([TribeIDRow].self, from: memberResponse.data)
+        guard let tribeID = rows.first?.tribe_id else {
+            return TribeRepositorySnapshot(tribe: nil, members: [], missions: [], events: [])
+        }
+
+        let tribeResponse = try await client
+            .from("arena_tribes")
+            .select("*, arena_tribe_members(*, profiles(display_name, username, level, total_points))")
+            .eq("id", value: tribeID.uuidString)
+            .single()
+            .execute()
+
+        let dto = try JSONDecoder().decode(TribeWithProfileMembersDTO.self, from: tribeResponse.data)
+        return makeTribeSnapshot(from: dto, currentUserID: userID)
+    }
+
+    func createTribeSnapshot(name: String) async throws -> TribeRepositorySnapshot {
+        guard let userID = client.auth.currentUser?.id.uuidString else {
+            logger.error("createTribeSnapshot: no authenticated user")
+            throw AiQoError.tribeAccessDenied
+        }
+
+        let payload = InsertTribePayload(
+            name: name,
+            owner_id: userID,
+            invite_code: ArenaTribe.generateInviteCode()
+        )
+
+        let response = try await client
+            .from("arena_tribes")
+            .insert(payload)
+            .select()
+            .single()
+            .execute()
+
+        let tribe = try JSONDecoder().decode(TribeDTO.self, from: response.data)
+
+        let memberPayload = InsertMemberPayload(
+            tribe_id: tribe.id,
+            user_id: userID,
+            role: "owner"
+        )
+        try await client
+            .from("arena_tribe_members")
+            .insert(memberPayload)
+            .execute()
+
+        return try await fetchTribeSnapshot(tribeID: tribe.id, currentUserID: userID)
+    }
+
+    func joinTribeSnapshot(inviteCode: String) async throws -> TribeRepositorySnapshot {
+        guard let userID = client.auth.currentUser?.id.uuidString else {
+            logger.error("joinTribeSnapshot: no authenticated user")
+            throw AiQoError.tribeAccessDenied
+        }
+
+        let lookupResponse = try await client
+            .from("arena_tribes")
+            .select("*, arena_tribe_members(*)")
+            .eq("invite_code", value: inviteCode)
+            .eq("is_active", value: true)
+            .single()
+            .execute()
+
+        let tribe = try JSONDecoder().decode(TribeWithMembersDTO.self, from: lookupResponse.data)
+        let members = tribe.arena_tribe_members ?? []
+
+        guard members.count < 5 else {
+            throw AiQoError.tribeFull
+        }
+
+        guard !members.contains(where: { $0.user_id == userID }) else {
+            throw AiQoError.tribeAlreadyJoined
+        }
+
+        let payload = InsertMemberPayload(
+            tribe_id: tribe.id,
+            user_id: userID,
+            role: "member"
+        )
+
+        try await client
+            .from("arena_tribe_members")
+            .insert(payload)
+            .execute()
+
+        return try await fetchTribeSnapshot(tribeID: tribe.id, currentUserID: userID)
+    }
+
+    func leaveCurrentTribe() async throws {
+        guard let userID = client.auth.currentUser?.id.uuidString else {
+            logger.error("leaveCurrentTribe: no authenticated user")
+            throw AiQoError.tribeAccessDenied
+        }
+
+        let memberResponse = try await client
+            .from("arena_tribe_members")
+            .select("id, tribe_id, role")
+            .eq("user_id", value: userID)
+            .limit(1)
+            .execute()
+
+        struct MemberRow: Decodable {
+            let id: UUID
+            let tribe_id: UUID
+            let role: String?
+        }
+
+        let rows = try JSONDecoder().decode([MemberRow].self, from: memberResponse.data)
+        guard let membership = rows.first else {
+            return
+        }
+
+        try await client
+            .from("arena_tribe_members")
+            .delete()
+            .eq("id", value: membership.id.uuidString)
+            .execute()
+
+        if membership.role == "owner" {
+            let remainingResponse = try await client
+                .from("arena_tribe_members")
+                .select("id, user_id, joined_at")
+                .eq("tribe_id", value: membership.tribe_id.uuidString)
+                .order("joined_at", ascending: true)
+                .limit(1)
+                .execute()
+
+            struct RemainingRow: Decodable {
+                let id: UUID
+                let user_id: String
+            }
+
+            let remaining = try JSONDecoder().decode([RemainingRow].self, from: remainingResponse.data)
+
+            if let nextMember = remaining.first {
+                try await client
+                    .from("arena_tribe_members")
+                    .update(["role": "owner"])
+                    .eq("id", value: nextMember.id.uuidString)
+                    .execute()
+
+                try await client
+                    .from("arena_tribes")
+                    .update(["owner_id": nextMember.user_id])
+                    .eq("id", value: membership.tribe_id.uuidString)
+                    .execute()
+            } else {
+                try await client
+                    .from("arena_tribes")
+                    .update(["is_active": false])
+                    .eq("id", value: membership.tribe_id.uuidString)
+                    .execute()
+            }
+        }
+    }
+
+    func fetchLiveChallenges() async throws -> [TribeChallenge] {
+        let currentUserID = client.auth.currentUser?.id.uuidString
+        let response = try await client
+            .from("arena_weekly_challenges")
+            .select()
+            .gte("end_date", value: Self.iso8601.string(from: Date()))
+            .order("start_date", ascending: true)
+            .limit(1)
+            .execute()
+
+        let dtos = try JSONDecoder().decode([WeeklyChallengeDTO].self, from: response.data)
+        guard let dto = dtos.first else { return [] }
+
+        let startDate = date(from: dto.start_date)
+        let endDate = date(from: dto.end_date)
+        let cadence: ChallengeCadence = endDate.timeIntervalSince(startDate) > 60 * 60 * 24 ? .monthly : .daily
+        let metricType = mapLiveMetric(dto.metric)
+        let title = dto.title ?? "تحدي الأسبوع"
+        let subtitle = dto.description_text ?? "تحدي حي من سحابة AiQo."
+
+        var challenges: [TribeChallenge] = []
+        var liveParticipantCount = 0
+        var tribeProgress = 0
+
+        if let currentUserID,
+           let snapshot = try? await fetchCurrentTribeSnapshot(),
+           let tribe = snapshot.tribe,
+           let tribeID = UUID(uuidString: tribe.id) {
+            tribeProgress = Int((try? await fetchTribeParticipation(tribeId: tribeID, challengeId: dto.id)) ?? 0)
+            liveParticipantCount = max(snapshot.members.count, 1)
+
+            challenges.append(
+                TribeChallenge(
+                    id: "live-tribe-\(dto.id.uuidString)",
+                    scope: .tribe,
+                    cadence: cadence,
+                    title: title,
+                    subtitle: subtitle,
+                    metricType: metricType,
+                    targetValue: max(tribeProgress + 10, 50),
+                    progressValue: tribeProgress,
+                    endAt: endDate,
+                    createdByUserId: currentUserID,
+                    participantsCount: liveParticipantCount
+                )
+            )
+        }
+
+        challenges.append(
+            TribeChallenge(
+                id: "live-galaxy-\(dto.id.uuidString)",
+                scope: .galaxy,
+                cadence: cadence,
+                title: title,
+                subtitle: subtitle,
+                metricType: metricType,
+                targetValue: max(tribeProgress + 25, 100),
+                progressValue: tribeProgress,
+                endAt: endDate,
+                isCuratedGlobal: true,
+                participantsCount: max(liveParticipantCount, 1)
+            )
+        )
+
+        return challenges
+    }
+
+    func fetchLiveCuratedGalaxyChallenges() async throws -> [TribeChallenge] {
+        try await fetchLiveChallenges().filter { $0.scope == .galaxy }
+    }
+
+    private func fetchTribeSnapshot(
+        tribeID: UUID,
+        currentUserID: String
+    ) async throws -> TribeRepositorySnapshot {
+        let tribeResponse = try await client
+            .from("arena_tribes")
+            .select("*, arena_tribe_members(*, profiles(display_name, username, level, total_points))")
+            .eq("id", value: tribeID.uuidString)
+            .single()
+            .execute()
+
+        let dto = try JSONDecoder().decode(TribeWithProfileMembersDTO.self, from: tribeResponse.data)
+        return makeTribeSnapshot(from: dto, currentUserID: currentUserID)
+    }
+
+    private func makeTribeSnapshot(
+        from dto: TribeWithProfileMembersDTO,
+        currentUserID: String
+    ) -> TribeRepositorySnapshot {
+        let calendar = Calendar.current
+        let tribe = Tribe(
+            id: dto.id.uuidString,
+            name: dto.name ?? "AiQo Tribe",
+            ownerUserId: dto.owner_id ?? "",
+            inviteCode: dto.invite_code ?? "",
+            createdAt: date(from: dto.created_at)
+        )
+
+        let members = (dto.arena_tribe_members ?? [])
+            .map { memberDTO in
+                let userID = memberDTO.user_id ?? memberDTO.id.uuidString
+                let localProfile = UserProfileStore.shared.current
+                let fallbackName = localProfile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "tribe.member.anonymous".localized
+                    : localProfile.name
+                let baseName = memberDTO.profiles?.display_name
+                    ?? memberDTO.profiles?.username
+                    ?? (userID == currentUserID ? fallbackName : "tribe.member.anonymous".localized)
+                let privacyMode: PrivacyMode = userID == currentUserID ? UserProfileStore.shared.tribePrivacyMode : .public
+                let role = mapRole(memberDTO.role)
+
+                return TribeMember(
+                    id: userID,
+                    userId: userID,
+                    displayName: baseName,
+                    displayNamePublic: baseName,
+                    displayNamePrivate: privacyMode == .public ? baseName : "tribe.member.anonymous".localized,
+                    avatarURL: nil,
+                    level: max(memberDTO.profiles?.level ?? 1, 1),
+                    privacyMode: privacyMode,
+                    energyContributionToday: max(memberDTO.contribution_points ?? 0, 0),
+                    initials: Self.resolveInitials(from: baseName),
+                    isLeader: role == .owner,
+                    role: role
+                )
+            }
+            .sorted {
+                if $0.role == $1.role {
+                    return $0.energyContributionToday > $1.energyContributionToday
+                }
+                return $0.role == .owner
+            }
+
+        let totalEnergy = members.reduce(0) { $0 + $1.energyContributionToday }
+        let now = Date()
+        let missions = [
+            TribeMission(
+                id: "mission-energy",
+                title: "tribe.store.mission.energy".localized,
+                targetValue: max(totalEnergy + 100, 500),
+                progressValue: totalEnergy,
+                endsAt: calendar.date(byAdding: .day, value: 1, to: now) ?? now
+            ),
+            TribeMission(
+                id: "mission-checkin",
+                title: "tribe.store.mission.checkin".localized,
+                targetValue: 5,
+                progressValue: min(members.count, 5),
+                endsAt: calendar.date(byAdding: .hour, value: 12, to: now) ?? now
+            ),
+            TribeMission(
+                id: "mission-streak",
+                title: "tribe.store.mission.streak".localized,
+                targetValue: 8,
+                progressValue: min(max(members.filter { $0.energyContributionToday > 0 }.count, 1), 8),
+                endsAt: calendar.date(byAdding: .day, value: 1, to: now) ?? now
+            )
+        ]
+
+        let createdEvent = TribeEvent(
+            id: "created-\(tribe.id)",
+            type: .join,
+                actorId: tribe.ownerUserId,
+                actorDisplayName: members.first(where: { $0.userId == tribe.ownerUserId })?.visibleDisplayName ?? tribe.name,
+                message: String(
+                    format: "tribe.event.created".localized,
+                    locale: Locale.current,
+                    arguments: [
+                        members.first(where: { $0.userId == tribe.ownerUserId })?.visibleDisplayName ?? tribe.name
+                    ]
+                ),
+                createdAt: tribe.createdAt
+            )
+
+        var events = [createdEvent]
+        if let latestContributor = members.max(by: { $0.energyContributionToday < $1.energyContributionToday }),
+           latestContributor.energyContributionToday > 0 {
+            events.insert(
+                TribeEvent(
+                    id: "contribution-\(latestContributor.id)",
+                    type: .contribution,
+                    actorId: latestContributor.id,
+                    actorDisplayName: latestContributor.visibleDisplayName,
+                    message: String(
+                        format: "tribe.event.contribution".localized,
+                        locale: Locale.current,
+                        arguments: [
+                            latestContributor.visibleDisplayName,
+                            latestContributor.energyContributionToday
+                        ]
+                    ),
+                    value: latestContributor.energyContributionToday,
+                    createdAt: now.addingTimeInterval(-900)
+                ),
+                at: 0
+            )
+        }
+
+        return TribeRepositorySnapshot(
+            tribe: tribe,
+            members: members,
+            missions: missions,
+            events: events.sorted { $0.createdAt > $1.createdAt }
+        )
+    }
+
+    private func mapLiveMetric(_ rawValue: String?) -> TribeChallengeMetricType {
+        switch ArenaChallengeMetric(rawValue: rawValue ?? "") {
+        case .avgSteps:
+            return .steps
+        case .avgSleepScore:
+            return .sleep
+        case .avgCalories:
+            return .custom
+        case .avgWorkoutDays, .consistency, .none:
+            return .minutes
+        }
+    }
+
+    private func mapRole(_ rawValue: String?) -> TribeMemberRole {
+        switch rawValue {
+        case "owner":
+            return .owner
+        case "admin":
+            return .admin
+        default:
+            return .member
+        }
+    }
+
     private func saveContext(_ context: ModelContext) {
         do {
             try context.save()

@@ -148,6 +148,7 @@ private extension SleepSessionObserver {
         body: String,
         sessionEndedAt: Date
     ) async {
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
         let content = UNMutableNotificationContent()
         content.title = "Captain Hamoudi"
         content.body = body
@@ -168,7 +169,10 @@ private extension SleepSessionObserver {
         let request = UNNotificationRequest(
             identifier: "aiqo.sleepObserver.\(UUID().uuidString)",
             content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, fireDate.timeIntervalSinceNow),
+                repeats: false
+            )
         )
 
         do {

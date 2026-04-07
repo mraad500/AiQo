@@ -86,7 +86,7 @@ struct WatchHomeView: View {
             WatchStatCard(
                 sfSymbol: "drop.fill",
                 label: "الماء",
-                value: "2",
+                value: String(format: "%.1f", health.todayWaterLiters),
                 unit: "L",
                 cardBg: AiQoWatch.mintCard,
                 iconBg: AiQoWatch.mintIcon

@@ -341,21 +341,6 @@ final class HealthKitManager: ObservableObject {
             currentDistanceKm: data.distanceMeters / 1000.0
         )
         
-        let appLanguage = AppSettingsStore.shared.appLanguage
-        let notifLanguage: ActivityNotificationLanguage = appLanguage == .english ? .english : .arabic
-
-        let gender = UserProfileStore.shared.current.gender ?? .male
-
-        let goals = GoalsStore.shared.current
-        ActivityNotificationEngine.shared.evaluateAndSendIfNeeded(
-            steps: stepCount,
-            calories: data.activeKcal,
-            stepsGoal: goals.steps,
-            caloriesGoal: goals.activeCalories,
-            gender: gender,
-            language: notifLanguage
-        )
-
         await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
     }
     

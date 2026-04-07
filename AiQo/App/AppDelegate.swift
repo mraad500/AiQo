@@ -126,7 +126,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         guard !isScreenshotMode else { return true }
 
         NotificationCategoryManager.shared.registerAllCategories()
-        NotificationIntelligenceManager.shared.registerBackgroundTasks()
+        SmartNotificationScheduler.shared.registerBackgroundTasks()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
@@ -147,11 +147,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             }
 
             if AppSettingsStore.shared.notificationsEnabled {
-                scheduleAngelNotifications()
-                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
-                SmartNotificationScheduler.shared.scheduleSmartNotifications()
+                SmartNotificationScheduler.shared.refreshAutomationState()
             } else {
-                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
+                SmartNotificationScheduler.shared.cancelScheduledBackgroundTasks()
             }
         }
 
@@ -166,23 +164,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         StreakManager.shared.checkStreakContinuity()
 
         return true
-    }
-
-    private func scheduleAngelNotifications() {
-        let genderString = UserDefaults.standard.string(forKey: "user_gender") ?? "male"
-        let gender: ActivityNotificationGender = genderString == "female" ? .female : .male
-
-        let appLanguage = AppSettingsStore.shared.appLanguage
-        let language: ActivityNotificationLanguage = appLanguage == .english ? .english : .arabic
-
-        ActivityNotificationEngine.shared.scheduleAngelNumberNotifications(
-            gender: gender,
-            language: language
-        )
-
-        #if DEBUG
-        ActivityNotificationEngine.shared.printPendingNotifications()
-        #endif
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
@@ -226,12 +207,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         AnalyticsService.shared.track(.appEnteredBackground)
-        NotificationIntelligenceManager.shared.scheduleQueuedDeveloperWhisperIfNeeded()
+        SmartNotificationScheduler.shared.scheduleQueuedDeveloperNudgeIfNeeded()
 
         if AppSettingsStore.shared.notificationsEnabled {
-            NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
+            SmartNotificationScheduler.shared.scheduleBackgroundTasksIfNeeded()
         } else {
-            NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
+            SmartNotificationScheduler.shared.cancelScheduledBackgroundTasks()
         }
     }
 

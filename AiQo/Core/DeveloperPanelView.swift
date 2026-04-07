@@ -40,14 +40,6 @@ struct DeveloperPanelView: View {
                 )
             )
 
-            Toggle(
-                "debug.preview.useMock".localized,
-                isOn: Binding(
-                    get: { accessManager.useMockTribeData },
-                    set: { accessManager.setUseMockTribeData($0) }
-                )
-            )
-
             Picker(
                 "debug.preview.plan".localized,
                 selection: Binding(
@@ -81,7 +73,7 @@ struct DeveloperPanelView: View {
             )
             statusRow(
                 title: "debug.preview.status.data".localized,
-                value: accessManager.useMockTribeData ? "debug.preview.mockData".localized : "debug.preview.liveData".localized
+                value: "debug.preview.liveData".localized
             )
         }
     }

@@ -239,14 +239,14 @@ struct AppSettingsScreen: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    triggerTestSpiritualWhisper()
+                    triggerTestCoachNudge()
                 } label: {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Trigger Test Spiritual Whisper")
                                 .foregroundStyle(.primary)
 
-                            Text("Queues an Iraqi Arabic whisper and fires it 5 seconds after backgrounding.")
+                            Text("Queues an Iraqi Arabic coach nudge and fires it 5 seconds after backgrounding.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -295,10 +295,9 @@ struct AppSettingsScreen: View {
 
             if enabled {
                 NotificationService.shared.requestPermissions()
-                rescheduleNotifications(language: appLanguage)
-                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
+                SmartNotificationScheduler.shared.refreshAutomationState()
             } else {
-                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
+                SmartNotificationScheduler.shared.cancelScheduledBackgroundTasks()
                 UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                 UNUserNotificationCenter.current().removeAllDeliveredNotifications()
             }
@@ -307,7 +306,7 @@ struct AppSettingsScreen: View {
             LocalizationManager.shared.setLanguage(language)
 
             if notificationsEnabled {
-                rescheduleNotifications(language: language)
+                SmartNotificationScheduler.shared.refreshAutomationState()
             }
 
             if UserDefaults.standard.string(forKey: "notificationLanguage") == nil {
@@ -319,6 +318,9 @@ struct AppSettingsScreen: View {
         .onChange(of: notificationLanguage) { _, language in
             let normalized = CoachNotificationLanguage(rawValue: language) ?? .arabic
             NotificationPreferencesStore.shared.language = normalized == .english ? .english : .arabic
+            if notificationsEnabled {
+                SmartNotificationScheduler.shared.refreshAutomationState()
+            }
         }
         .alert(
             NSLocalizedString("settings.logout.title", value: "Log Out", comment: ""),
@@ -383,22 +385,15 @@ struct AppSettingsScreen: View {
         }
     }
 
-    private func rescheduleNotifications(language: AppLanguage) {
-        ActivityNotificationEngine.shared.forceReschedule(
-            gender: NotificationPreferencesStore.shared.gender,
-            language: language == .english ? .english : .arabic
-        )
-    }
-
     #if DEBUG
-    private func triggerTestSpiritualWhisper() {
+    private func triggerTestCoachNudge() {
         guard !isPreparingTestWhisper else { return }
 
         isPreparingTestWhisper = true
-        testWhisperStatus = "Preparing test whisper..."
+        testWhisperStatus = "Preparing test coach nudge..."
 
         Task {
-            let didQueue = await NotificationIntelligenceManager.shared.queueDeveloperTestSpiritualWhisper()
+            let didQueue = await SmartNotificationScheduler.shared.queueDeveloperTestCoachNudge()
 
             await MainActor.run {
                 isPreparingTestWhisper = false

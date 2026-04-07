@@ -299,6 +299,7 @@ private extension MorningHabitOrchestrator {
         stepsSinceWake: Int,
         body: String
     ) async {
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
         let content = UNMutableNotificationContent()
         content.title = "Captain Hamoudi"
         content.body = body
@@ -318,7 +319,10 @@ private extension MorningHabitOrchestrator {
         let request = UNNotificationRequest(
             identifier: Self.notificationIdentifier,
             content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, fireDate.timeIntervalSinceNow),
+                repeats: false
+            )
         )
 
         do {
