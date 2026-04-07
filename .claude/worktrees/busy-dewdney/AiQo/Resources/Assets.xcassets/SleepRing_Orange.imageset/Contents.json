@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "SleepRing_Orange.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

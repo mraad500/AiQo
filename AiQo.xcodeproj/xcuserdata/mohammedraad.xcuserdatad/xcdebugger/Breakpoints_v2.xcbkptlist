@@ -36,28 +36,28 @@
             landmarkType = "14">
             <Locations>
                <Location
-                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - 55a27401929c9205"
+                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - f29ec2eb3c46d91a"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "property wrapper backing initializer of AiQo.GlobalTribeRadialView.nodes : Swift.Array&lt;AiQo.RadialSoulNode&gt;"
                   moduleName = "AiQo.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/mohammedraad/Desktop/untitled%20folder/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+                  urlString = "file:///Users/mohammedraad/Desktop/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "0"
-                  endingLineNumber = "0">
+                  startingLineNumber = "6"
+                  endingLineNumber = "6">
                </Location>
                <Location
-                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - a5a8d61cb0c4bcf2"
+                  uuid = "49A5FB22-3C49-4D2B-91A6-309380C5894F - 29460f61e1ef6a7"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "AiQo.GlobalTribeRadialView.init(nodeCount: Swift.Int) -&gt; AiQo.GlobalTribeRadialView"
                   moduleName = "AiQo.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/mohammedraad/Desktop/untitled%20folder/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
+                  urlString = "file:///Users/mohammedraad/Desktop/AiQo/AiQo/Tribe/Views/GlobalTribeRadialView.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
                   startingLineNumber = "6"

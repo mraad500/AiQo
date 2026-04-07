@@ -1,0 +1,2154 @@
+/* 
+  Localizable.strings.strings
+  AiQo
+
+  Created by Mohammed Raad on 15/11/2025.
+  
+*/
+/* Onboarding */
+"onboarding.page1.title" = "تابع صحتك بذكاء";
+"onboarding.page1.subtitle" = "خطوات، سعرات، نوم، نبض القلب — كلشي بمكان واحد مع تحليل ذكي يومي.";
+"onboarding.page2.title" = "كابتن حمّودي";
+"onboarding.page2.subtitle" = "مدربك الشخصي بالذكاء الاصطناعي. يعطيك نصائح، خطط تمارين، وخطط أكل مخصصة إلك.";
+"onboarding.page3.title" = "إمارة";
+"onboarding.page3.subtitle" = "يمكنك إنشاء قبيلة مع الأصدقاء والتنافس.";
+"onboarding.page4.title" = "مستعد تبدأ رحلتك؟";
+"onboarding.page4.subtitle" = "7 أيام مجانية. بدون بطاقة. ابدأ الحين وشوف الفرق.";
+"onboarding.next" = "التالي";
+"onboarding.skip" = "تخطي";
+"onboarding.getStarted" = "يلا نبدأ";
+
+/* Errors & Offline */
+"offline.banner" = "لا يوجد اتصال بالإنترنت";
+"error.noInternet" = "لا يوجد اتصال بالإنترنت";
+"error.noInternet.recovery" = "تحقق من اتصالك وحاول مرة ثانية.";
+"error.serverUnreachable" = "تعذر الاتصال بالسيرفر";
+"error.timeout" = "انتهت مهلة الاتصال";
+"error.server" = "خطأ من السيرفر (كود %d)";
+"error.server.recovery" = "حاول مرة ثانية بعد شوي.";
+"error.captainUnavailable" = "الكابتن غير متاح حالياً";
+"error.captainRateLimited" = "طلبات كثيرة. انتظر شوي.";
+"error.captainResponseInvalid" = "رد الكابتن غير صالح";
+"error.captain.recovery" = "حاول مرة ثانية أو جرب لاحقاً.";
+"error.healthKitUnavailable" = "بيانات الصحة غير متاحة";
+"error.healthKitPermissionDenied" = "تحتاج تفعّل صلاحيات الصحة";
+"error.healthKit.recovery" = "روح الإعدادات > الخصوصية > الصحة وفعّل AiQo.";
+"error.purchaseFailed" = "فشل الشراء: %@";
+"error.trialExpired" = "انتهت فترة التجربة المجانية";
+"error.trialExpired.recovery" = "اشترك بالباقة المدفوعة لمتابعة الاستخدام.";
+"error.tribeNotFound" = "القبيلة غير موجودة";
+"error.tribeAccessDenied" = "ما عندك صلاحية لهذي القبيلة";
+"error.tribeFull" = "القبيلة ممتلئة (الحد الأقصى 5 أعضاء)";
+"error.tribeAlreadyJoined" = "أنت عضو بهذي القبيلة بالفعل";
+
+/* Legal */
+"legal.section" = "القانونية";
+"legal.privacy.title" = "سياسة الخصوصية";
+"legal.terms.title" = "شروط الاستخدام";
+"legal.privacy.content" = "سياسة الخصوصية لتطبيق AiQo\n\nآخر تحديث: مارس 2026\n\n1. البيانات التي نجمعها\nنحن نجمع بيانات الصحة (الخطوات، السعرات، النوم، نبض القلب) من Apple HealthKit بإذنك. نحن أيضاً نجمع معلومات الملف الشخصي التي تقدمها (الاسم، العمر، الطول، الوزن).\n\n2. كيف نستخدم بياناتك\nبيانات الصحة تُستخدم فقط لتقديم تحليلات ونصائح مخصصة داخل التطبيق. لا نبيع بياناتك أبداً لأي طرف ثالث.\n\n3. تخزين البيانات\nبيانات الصحة تُخزن محلياً على جهازك. البيانات المُرسلة لخدمة الذكاء الاصطناعي تُعالج بدون تخزين دائم.\n\n4. المشاركة مع أطراف ثالثة\nلا نشارك بياناتك الشخصية مع أي طرف ثالث إلا بإذنك الصريح.\n\n5. حقوقك\nيمكنك حذف بياناتك في أي وقت من إعدادات التطبيق. يمكنك سحب إذن HealthKit من إعدادات الجهاز.\n\n6. اتصل بنا\nلأي استفسارات حول الخصوصية، تواصل معنا عبر التطبيق.";
+"legal.terms.content" = "شروط استخدام تطبيق AiQo\n\nآخر تحديث: مارس 2026\n\n1. القبول\nباستخدام تطبيق AiQo، أنت توافق على هذه الشروط.\n\n2. الخدمة\nAiQo يقدم تتبع صحي ونصائح بالذكاء الاصطناعي. المحتوى ليس بديلاً عن المشورة الطبية المتخصصة.\n\n3. الاشتراكات\n- التجربة المجانية: 7 أيام\n- الاشتراك الفردي: $5.99/شهر\n- الاشتراك العائلي: $10.00/شهر (حتى 5 أشخاص)\nالاشتراكات لا تتجدد تلقائياً. كل دورة 30 يوم.\n\n4. سلوك المستخدم\nأنت مسؤول عن استخدامك للتطبيق وأي محتوى تنشره في ميزة القبيلة.\n\n5. إخلاء المسؤولية\nAiQo لا يقدم نصائح طبية. استشر طبيبك قبل اتخاذ أي قرارات صحية بناءً على بيانات التطبيق.\n\n6. التعديلات\nنحتفظ بحق تعديل هذه الشروط في أي وقت.";
+
+/* Referral */
+"referral.section" = "ادعُ أصدقائك";
+"referral.title" = "شارك AiQo";
+"referral.subtitle" = "ادعُ صديقك واحصل على 3 أيام مجانية إضافية!";
+"referral.yourCode" = "كودك: %@";
+"referral.earned" = "ربحت %d يوم إضافي";
+"referral.share" = "مشاركة";
+"referral.shareText" = "جرّب تطبيق AiQo — مدرب صحي بالذكاء الاصطناعي! حمّله من هنا: %@";
+
+"tab.home"    = "الرئيسية";
+"tab.gym"     = "النادي";
+"tab.kitchen" = "المطبخ";
+"tab.captain" = "الكابتن";
+"screen.home.title" = "الرئيسية";
+"screen.home.tribe" = "إمارة";
+"metric.steps.title" = "الخطوات";
+"metric.calories.title" = "السعرات";
+"metric.stand.title" = "الوقوف";
+"metric.water.title" = "الماء";
+"metric.sleep.title" = "النوم";
+"metric.distance.title" = "المسافة";
+"screen.gym.title"              = "النادي";
+"screen.gym.segment.exercises"  = "التمارين";
+"screen.gym.segment.news"       = "الأخبار";
+"screen.gym.segment.plan"       = "خُطتي";
+"screen.gym.segment.rewards"    = "المكافآت";
+"screen.gym.live.start"         = "ابدأ التمرين";
+"screen.gym.live.stop"          = "إيقاف";
+"sheet.workout.quickRunTitle"   = "الجري";
+"sheet.workout.button.start"    = "بدء";
+"sheet.workout.button.end"      = "إنهاء";
+"sheet.profile.title"           = "الملف الشخصي";
+/* Gym */
+"screen.gym.title" = "النادي";
+"screen.gym.segment.exercises" = "التمارين";
+"screen.gym.segment.news" = "الأخبار";
+"screen.gym.segment.plan" = "خُطتي";
+"screen.gym.segment.rewards" = "المكافآت";
+"screen.gym.live.start" = "ابدأ التمرين";
+"screen.gym.live.stop" = "أوقف";
+"sheet.workout.quickRunTitle" = "ركض سريع";
+"sheet.workout.button.start" = "ابدأ";
+"sheet.workout.button.end" = "إنهاء";
+"sheet.profile.title" = "الملف الشخصي";
+/* التمارين */
+"exercise.gratitude.title"      = "امتنان";
+"exercise.walk.indoor.title"    = "مشي داخل البيت";
+"exercise.walk.outdoor.title"   = "مشي خارج البيت";
+"exercise.run.indoor.title"     = "ركض داخل البيت";
+"exercise.run.outdoor.title"    = "ركض خارج البيت";
+/* News sections */
+"screen.news.section.results"      = "النتائج";
+"screen.news.section.favoriteTeam" = "الفريق المفضل";
+"screen.news.section.league"       = "الدوري";
+"screen.news.section.thisWeek"     = "هذا الأسبوع";
+/* News sheets */
+"screen.news.sheet.latestResults.title" = "أحدث النتائج";
+"screen.news.sheet.latestResults.empty" = "ماكو نتائج حديثة.";
+"screen.news.sheet.week.title"          = "مباريات هذا الأسبوع";
+"screen.news.sheet.week.empty"          = "ماكو مباريات هذا الأسبوع.";
+"screen.news.favorite.nextMatch"        = "المباراة القادمة";
+/* Rewards */
+"rewards.badge.5kSteps.title"            = "٥ آلاف خطوة";
+"rewards.badge.5kSteps.subtitle"         = "أول ٥ آلاف خطوة باليوم";
+"rewards.badge.hydration.title"          = "سلسلة الترطيب";
+"rewards.badge.hydration.subtitle"       = "٣ أيام شارب مي كافي";
+"rewards.badge.sleepHero.title"          = "بطل النوم";
+"rewards.badge.sleepHero.subtitle"       = "٧ ساعات نوم متواصلة";
+"rewards.badge.consistencyKing.title"    = "ملك الاستمرارية";
+"rewards.badge.consistencyKing.subtitle" = "٧ أيام متتالية داخل للجيم";
+/* News – matches & sections */
+"news.match.status.ft"          = "نهاية";
+"news.match1.date"              = "أمس • ٨:٠٠ م";
+"news.match2.date"              = "أمس • ٦:٣٠ م";
+/* News – favorite team */
+"news.favorite.nextMatch.time"  = "السبت • ٨:٠٠ م";
+"news.favorite.lastResult"      = "المباراة الأخيرة • فاز ٣–١ ضد إشبيلية";
+"news.favorite.formText"        = "السجل • ف • ف • ت • خ • ف";
+"news.favorite.nextMatch.line"  = "المباراة القادمة • ضد %@ • %@";
+/* News – league card */
+"news.league.highlightMatch"    = "مباراة الأسبوع • ريال مدريد ضد برشلونة";
+"news.league.highlightTime"     = "السبت • ٨:٠٠ م";
+"news.league.matchesCount"      = "٨ مباريات هذا الأسبوع";
+"news.league.liveBadge"         = "مباراة حية ١";
+"screen.kitchen.title" = "المطبخ";
+
+"kitchen.section.breakfast" = "الفطور";
+"kitchen.section.lunch"     = "الغداء";
+"kitchen.section.dinner"    = "العشاء";
+
+"kitchen.meal.breakfast.total" = "تقريبًا ٣٨٠–٤٥٠ سعرة";
+"kitchen.meal.lunch.total"     = "تقريبًا ٥٠٠–٦٠٠ سعرة";
+"kitchen.meal.dinner.total"    = "تقريبًا ٤٠٠–٥٠٠ سعرة";
+
+"kitchen.meal.breakfast.item1" = "بياض بيض مع خضار";
+"kitchen.meal.breakfast.item2" = "شوفان مع حليب";
+"kitchen.meal.breakfast.item3" = "فاكهة";
+
+"kitchen.meal.lunch.item1" = "صدر دجاج مشوي";
+"kitchen.meal.lunch.item2" = "رز بسمتي";
+"kitchen.meal.lunch.item3" = "لبن قليل الدسم";
+
+"kitchen.meal.dinner.item1" = "سمك أو تونة مشوية";
+"kitchen.meal.dinner.item2" = "خضار مطهوة على البخار";
+"kitchen.meal.dinner.item3" = "خبز أو كينوا حبة كاملة";
+
+"kitchen.item.calories" = "%d سعرة";
+
+"kitchen.button.regenerate"       = "إعادة توليد بالذكاء الاصطناعي";
+"kitchen.button.dietModification" = "تعديل النظام الغذائي";
+
+"kitchen.diet.title" = "تعديل النظام الغذائي";
+"kitchen.diet.body"  = "هنا راح تقدر تعدّل سعراتك اليومية، الماكروز، وتفضيلات الأكل.\n\nلاحقًا نربطها مع الذكاء الاصطناعي حتى يقترح لك خطة أكل خاصة بهدفك ووقتك.";
+"screen.captain.title" = "الكابتن حمّودي";
+
+"captain.firstMessage" = "هلو، آني الكابتن حمّودي. شلونك اليوم؟";
+"captain.placeholder"  = "اكتب للكابتن حمّودي…";
+
+"captain.errorMessage" = "صار خلل بسيط بالاتصال هسه، جرّب بعد شوية حبي 🌧️";
+"screen.profile.title" = "الملف الشخصي";
+"screen.profile.chip" = "الملف الشخصي";
+"screen.profile.subtitle" = "خل نرتّب جسمك وعقلك مع بعض";
+
+"screen.profile.section.health" = "Bio-Scan";
+"screen.profile.section.body" = "بيانات جسمك";
+"screen.profile.section.preferences" = "التفضيلات";
+"screen.profile.section.app"  = "تطبيق AiQo";
+
+"screen.profile.hero.progress" = "التقدم للمستوى القادم";
+"screen.profile.hero.avatar.action" = "تغيير صورة الملف الشخصي";
+
+"screen.profile.metric.age"    = "العمر";
+"screen.profile.metric.height" = "الطول";
+"screen.profile.metric.weight" = "الوزن";
+"screen.profile.metric.goal"   = "الهدف";
+
+"screen.profile.metric.age.value"    = "%d سنة";
+"screen.profile.metric.height.value" = "%d سم";
+"screen.profile.metric.weight.value" = "%d كغم";
+"screen.profile.metric.goal.valuePrefix" = "";
+
+"screen.profile.metric.height.full" = "الطول (سم)";
+"screen.profile.metric.weight.full" = "الوزن (كغم)";
+
+"screen.profile.bio.subtitle" = "آخر تركيبة جسمية متزامنة من HealthKit";
+"screen.profile.bio.highlightFallback" = "ملخص صحي";
+"screen.profile.bio.bodyFat" = "دهون الجسم";
+"screen.profile.bio.muscleMass" = "الكتلة العضلية";
+"screen.profile.bio.water" = "الماء";
+"screen.profile.bio.bmr" = "معدل الحرق الأساسي";
+"screen.profile.bioSheet.title" = "تفاصيل Bio-Scan";
+"screen.profile.bioSheet.subtitle" = "نظرة سريعة على تركيبة جسمك الحالية.";
+"screen.profile.bioSheet.caption" = "آخر تركيبة جسمية متزامنة من HealthKit";
+
+"screen.profile.app.settings.title"    = "إعدادات التطبيق";
+"screen.profile.app.settings.subtitle" = "الإشعارات، الوحدات، اللغة";
+
+"screen.profile.app.support.title"    = "تواصل مع الدعم";
+"screen.profile.app.support.subtitle" = "إحنا وياك نساعدك";
+"screen.profile.app.support.message"  = "راسلنا على: support@aiqo.app\nأو DM على إنستغرام @hamoudi";
+
+"screen.profile.app.about.title"    = "عن تطبيق AiQo";
+"screen.profile.app.about.subtitle" = "رؤيتنا لصحة الجسد والعقل";
+
+"screen.profile.editName.title"       = "اسمك";
+"screen.profile.editName.message"     = "عدّل اسم العرض مالتك";
+"screen.profile.editName.placeholder" = "الاسم";
+
+"screen.profile.goal.message"    = "شنو هدفك الأساسي هالفترة؟";
+"screen.profile.goal.placeholder" = "تنشيف • قوة • طاقة أعلى";
+"screen.profile.goal.hint" = "اضغط لتحديث هدفك";
+"screen.profile.preferences.subtitle" = "يُستخدم لتخصيص التمارين والإشعارات";
+
+"action.cancel" = "إلغاء";
+"action.save"   = "حفظ";
+"action.ok"     = "حسِّن";
+"screen.gym.segment.heart" = "قلب";
+"screen.kitchen.title" = "المطبخ";
+"screen.kitchen.breakfast" = "الفطور";
+"screen.kitchen.lunch" = "الغداء";
+"screen.kitchen.dinner" = "العشاء";
+"screen.kitchen.regenerate" = "المطبخ";
+"screen.kitchen.analyze" = "تحليل النظام الغذائي";
+"screen.kitchen.calorie" = "سعرة";
+/// Localizable (Arabic).strings
+"screen.kitchen.noMeals" = "لا توجد وجبات مسجلة لهذا القسم حالياً";
+"screen.kitchen.profileTitle" = "الملف الشخصي";
+"screen.kitchen.profileSubtitle" = "نافذة مؤقتة";
+"screen.kitchen.caloriesUnit" = "سعرة حرارية";
+"screen.kitchen.mealDetailsPlaceholder" = "تفاصيل الوجبة وتوزيع العناصر الغذائية ستظهر هنا لاحقاً";
+"kitchen.scene.title" = "مشهد المطبخ";
+"kitchen.scene.missingAsset" = "صورة المطبخ غير متوفرة حالياً. أضف imageKitchenHamoudi داخل Assets.xcassets.";
+"kitchen.hotspot.fridge" = "منطقة الثلاجة";
+"kitchen.hotspot.fridge.hint" = "افتح شاشة الثلاجة";
+"kitchen.hotspot.captain" = "منطقة الكابتن";
+"kitchen.hotspot.captain.hint" = "افتح شات الكابتن بالمطبخ";
+"kitchen.hotspot.plan" = "منطقة الخطة";
+"kitchen.hotspot.plan.hint" = "افتح النظام الغذائي";
+
+"kitchen.fridge.title" = "الثلاجة";
+"kitchen.fridge.add" = "إضافة عنصر";
+"kitchen.fridge.itemNamePlaceholder" = "اسم العنصر";
+"kitchen.fridge.quantityPlaceholder" = "الكمية";
+"kitchen.fridge.unitPlaceholder" = "الوحدة (اختياري)";
+"kitchen.fridge.addButton" = "إضافة للثلاجة";
+"kitchen.fridge.camera" = "تصوير الثلاجة";
+"kitchen.fridge.inventory" = "محتويات الثلاجة";
+"kitchen.fridge.empty" = "ماكو عناصر حالياً بالثلاجة.";
+
+"kitchen.mealplan.title" = "النظام الغذائي";
+"kitchen.mealplan.duration" = "مدة الخطة";
+"kitchen.mealplan.days" = "أيام";
+"kitchen.mealplan.generateButton" = "ولّد الخطة مع كابتن حمّودي";
+"kitchen.mealplan.pinned" = "الخطة المثبّتة";
+"kitchen.mealplan.empty" = "ماكو خطة مثبتة حالياً.";
+"kitchen.mealplan.day" = "اليوم";
+"kitchen.mealplan.noMealsDay" = "ماكو وجبات مسجلة لهذا اليوم.";
+"kitchen.mealplan.protein" = "بروتين";
+"kitchen.mealtype.snack" = "سناك";
+
+"kitchen.availability.available" = "متوفر";
+"kitchen.availability.low" = "قليل";
+"kitchen.availability.missing" = "ناقص";
+
+"kitchen.impact.title" = "هذا العنصر ناقص. شتريد تسوي؟";
+"kitchen.impact.missingItem" = "العنصر الناقص";
+"kitchen.impact.replace" = "بدّل المكوّن";
+"kitchen.impact.addShopping" = "أضف لقائمة الشراء";
+"kitchen.impact.keepNeedsPurchase" = "خلّي الوجبة وعلّمها تحتاج شراء";
+"kitchen.impact.needsPurchase" = "يحتاج شراء";
+
+"kitchen.shopping.title" = "قائمة الشراء";
+"kitchen.shopping.addMissing" = "أضف كل النواقص لقائمة الشراء";
+"kitchen.shopping.empty" = "قائمة الشراء فارغة.";
+"kitchen.shopping.addSingle" = "أضف";
+"kitchen.shopping.added" = "مضاف";
+"kitchen.mealdetail.calories" = "السعرات";
+"kitchen.mealdetail.protein" = "البروتين";
+"kitchen.mealdetail.contents" = "محتويات الأكلة";
+"kitchen.scanner.title" = "ماسح الثلاجة الذكي";
+"kitchen.scanner.subtitle" = "مختبر الخيمياء الغذائي";
+"kitchen.scanner.hint" = "وجّه الكاميرا داخل الثلاجة وخلي العناصر واضحة";
+"kitchen.scanner.capture" = "امسح وحلّل";
+"kitchen.scanner.viewfinder" = "AI يراقب المكونات";
+"kitchen.scanner.processing.title" = "جاري تحليل الثلاجة";
+"kitchen.scanner.processing.biofuel" = "جاري تحليل الوقود الحيوي...";
+"kitchen.scanner.processing.extracting" = "جاري استخراج المكونات...";
+"kitchen.scanner.processing.classifying" = "جاري تصنيف الغنائم الغذائية...";
+"kitchen.scanner.processing.syncing" = "جاري مزامنة الثلاجة الافتراضية...";
+"kitchen.scanner.processing.failed" = "ما قدرنا نحلل الصورة. جرّب مرّة ثانية بخلفية أوضح.";
+"kitchen.scanner.permission.denied.title" = "نحتاج صلاحية الكاميرا";
+"kitchen.scanner.permission.denied.message" = "فعّل الكاميرا من الإعدادات حتى يشتغل ماسح الثلاجة الذكي ويحلل المكونات داخل الثلاجة.";
+"kitchen.scanner.permission.unavailable.title" = "الكاميرا غير متاحة";
+"kitchen.scanner.permission.unavailable.message" = "ما قدرنا نوصل للكاميرا على هذا الجهاز حالياً.";
+"kitchen.scanner.permission.settings" = "فتح الإعدادات";
+"kitchen.scanner.permission.close" = "إغلاق";
+"kitchen.scanner.results.title" = "تمت إضافة الغنائم";
+"kitchen.scanner.results.subtitle" = "انضافت العناصر مباشرة إلى الثلاجة الافتراضية.";
+"kitchen.scanner.results.done" = "تم";
+"kitchen.scanner.results.scanAgain" = "مسح جديد";
+"kitchen.scanner.error.title" = "صار خلل بالمسح";
+"kitchen.scanner.error.retry" = "إعادة المحاولة";
+"kitchen.scanner.item.chicken" = "صدر دجاج";
+"kitchen.scanner.item.eggs" = "بيض";
+"kitchen.scanner.item.broccoli" = "بروكلي";
+"kitchen.scanner.item.yogurt" = "لبن يوناني";
+"kitchen.scanner.unit.pieces" = "قطع";
+"kitchen.scanner.unit.eggs" = "حبات";
+"kitchen.scanner.unit.head" = "رأس";
+"kitchen.scanner.unit.cups" = "أكواب";
+"kitchen.scanner.note.chicken" = "وقود بروتيني لرفع القوة والاستشفاء.";
+"kitchen.scanner.note.eggs" = "تركيز ذهني وطاقة ثابتة لبداية اليوم.";
+"kitchen.scanner.note.broccoli" = "درع ألياف ومغذيات لدعم الصفاء الجسدي.";
+"kitchen.scanner.note.yogurt" = "تبريد داخلي وتوازن للهضم والاستشفاء.";
+
+"kitchen.captain.title" = "الكابتن";
+"kitchen.captain.welcome" = "هلا! آني كابتن حمودي بالمطبخ. اكتبلي شنو تحتاج من الموجود بالثلاجة.";
+"kitchen.captain.planReady" = "تم توليد وتثبيت خطة %d أيام.";
+"kitchen.captain.draftDetected" = "تم التقاط خطة من النص (فطور/غداء/عشاء).";
+"kitchen.captain.draftHint" = "قريت الفطور والغداء والعشاء. إذا مناسبك اضغط تثبيت الخطة.";
+"kitchen.captain.pinDraft" = "تثبيت الخطة في المطبخ";
+"kitchen.captain.pinSuccess" = "تم تثبيت الخطة وحفظها في كروت المطبخ.";
+"kitchen.quick.3days" = "سويلي خطة 3 أيام";
+"kitchen.quick.week" = "سويلي خطة أسبوع";
+"kitchen.quick.10min" = "وجبة سريعة 10 دقايق";
+"kitchen.quick.highProtein" = "بروتين عالي";
+"kitchen.quick.swap" = "بدائل من الموجود";
+"kitchen.delete" = "حذف";
+"meal.steak" = "ستيك لحم مشوي";
+"meal.steak.calories" = "560 سعرة";
+
+"meal.tunaSalad" = "تونة مع سلطة";
+"meal.tunaSalad.calories" = "380 سعرة";
+"your_level_with_aiqo" = "مستواك مع AiQo";
+"level" = "المستوى";
+"line_score" = "رصيدك";
+"points" = "نقطة";
+
+"your_body_data" = "بيانات جسمك";
+
+"age" = "سنة";
+"height" = "سم";
+"weight" = "كغم";
+
+"goal_strength" = "أقوى • أنحف";
+
+"gender" = "الجنس";
+"male" = "ذكر";
+"female" = "أنثى";
+
+"daily_goals" = "الأهداف اليومية";
+"steps_goal" = "هدف الخطوات";
+"calories_goal" = "هدف السعرات";
+
+"app_settings" = "إعدادات التطبيق";
+"app_settings_sub" = "الإشعارات، الوحدات، اللغة";
+
+"contact_support" = "الدعم الفني";
+"contact_support_sub" = "نحن هنا لمساعدتك";
+
+"about_aiqo" = "عن AiQo";
+"about_aiqo_sub" = "مهمتنا لرفاهية الإنسان";
+"heart.title" = "قياس نبض القلب";
+"heart.subtitle.initial" = "غطّ الكاميرا الخلفية بإصبعك حتى تمتلئ الدائرة باللون";
+"heart.subtitle.denied" = "صلاحية الكاميرا مرفوضة. فعّلها من الإعدادات لاستخدام قياس النبض.";
+"heart.subtitle.measure" = "غطّ الكاميرا الخلفية بإصبعك، وحاول ما تتحرك 15–20 ثانية.";
+"heart.subtitle.final" = "آخر قياس تقريبي: %@ نبضة/دقيقة (ليست أداة طبية).";
+"heart.subtitle.tooShort" = "القياس كان قصير أو غير واضح. حاول مرة أخرى وثبّت إصبعك لـ 15 ثانية.";
+"heart.subtitle.noBackCamera" = "ما قدرنا نستخدم الكاميرا الخلفية.";
+"heart.subtitle.cameraError" = "خطأ في إعداد الكاميرا: %@";
+"heart.bpmUnit" = "BPM";
+"heart.action.start" = "ابدأ القياس";
+"heart.action.stop" = "إيقاف القياس";
+"heart.disclaimer" = "هذه الأداة ليست لأغراض طبية أو تشخيصية";
+
+"plan.today.title" = "خُطّتي لليوم";
+"plan.today.workoutsTitle" = "تمارين اليوم";
+"plan.templates.title" = "خطة تماريني";
+"plan.input.placeholder" = "اكتب تمرين جديد (مثلاً: 3 مجاميع شناو)";
+"plan.today.empty" = "ما عندك تمارين لليوم.\nإبدي بوضع خطة من الأسفل.";
+"plan.templates.empty" = "أضف تمارينك المفضلة حتى تصير خطة ثابتة لكل يوم.";
+
+"plan.stats.steps.loading" = "الخطوات: ...";
+"plan.stats.calories.loading" = "السعرات: ...";
+"plan.stats.water.loading" = "الماء: ...";
+"plan.stats.training.loading" = "التمرين: ...";
+"plan.stats.steps.value" = "الخطوات: %@/%@";
+"plan.stats.calories.value" = "السعرات المحروقة: %@ kcal";
+"plan.stats.water.value" = "الماء: %@ مل";
+
+"plan.suggestion.low" = "اقتراح اليوم: 20 دقيقة مشي خفيف + 3 مجاميع شناو";
+"plan.suggestion.mid" = "اقتراح اليوم: 10 دقايق HIIT + 5 دقايق بايسكل";
+"plan.suggestion.high" = "اقتراح اليوم: يوم ريكوفري، مطاوعة خفيفة + تنفس عميق";
+/* AiQo Legacy Strings - Arabic */
+
+"legacy_intro_title" = "AiQo يحدد مستواك الرياضي";
+"legacy_intro_subtitle" = "نحلّل كل بياناتك الصحية المسجّلة في Apple Health من بداية استخدامك للجهاز، ونحوّلها إلى مستوى رياضي واضح داخل AiQo.";
+"legacy_loading_text" = "جاري تحليل تاريخ نشاطك وتحديد مستواك الرياضي...";
+
+"btn_agree" = "موافق";
+"btn_no_thanks" = "لا شكراً";
+"btn_goto_main" = "يلا نروح للواجهة الرئيسية";
+
+"result_header_format" = "مستواك الحالي: %@ – Level %d – %d نقطة";
+"result_explanation_intro" = "هذا المستوى مبني على كل بياناتك الصحية المخزّنة في Apple Health منذ بداية استخدامك للجهاز وحتى اليوم.";
+
+/* Stats Block Format:
+   %1$@ = Steps Count, %2$d = Steps Points
+   %3$@ = Calories Count, %4$d = Calories Points
+   %5$@ = Distance, %6$d = Distance Points
+   %7$@ = Sleep Hours, %8$d = Sleep Points
+   %9$d = Total Points
+*/
+"result_stats_block" = "مجموع عدد خطواتك الكلي %1$@ = %2$d نقطة\nمجموع عدد السعرات الحرارية الكلي %3$@ = %4$d نقطة\nمجموع مسافة المشي/الجري الكلية %5$@ كم = %6$d نقطة\nمجموع عدد ساعات النوم الكلي %7$@ ساعة = %8$d نقطة\n\nالمجموع الكلي = %9$d نقطة";
+
+"result_footer_success" = "بناءً على مجموع نقاطك، تم تعيينك في Level %d.\nتقدر تشوف مستوىًك وتطوّره دائماً من كارت الـ Level داخل صفحة البروفايل،\nوتشوف ترتيبك العالمي في القبيلة (Tribe) من تبويب Tribe داخل AiQo.";
+
+"result_footer_no_data" = "يبدو أن AiQo ما عنده صلاحية كافية يقرأ بياناتك أو ما متوفرة بيانات صحية سابقة في Apple Health.\nنعينك كبداية في Level 1، وبمجرد ما تبدي تمشي، تتحرك، وتنام بشكل منتظم،\nرح يبدأ مستوى AiQo يرتفع تلقائياً حسب نشاطك الحقيقي.";
+
+/* Profile - Modern UI */
+"screen.profile.app.kernel.title" = "نواة Bio‑Digital";
+"screen.profile.currency.title" = "رصيد AiQo";
+"screen.profile.currency.subtitle" = "عملات Bio‑Digital";
+"screen.profile.wallet.title" = "محفظة AiQo";
+"screen.profile.wallet.message" = "تحرّك أكثر حتى تكسب عملات أكثر.";
+"screen.profile.level.title" = "معلومات المستوى";
+"screen.profile.level.message" = "استمر بالتقدم!";
+"screen.profile.editAge.title" = "تحديث العمر";
+"screen.profile.editAge.message" = "كم عمرك؟";
+"screen.profile.editAge.placeholder" = "سنة";
+"screen.profile.editHeight.title" = "تحديث الطول";
+"screen.profile.editHeight.message" = "أدخل الطول بالسم";
+"screen.profile.editHeight.placeholder" = "سم";
+"screen.profile.editWeight.title" = "تحديث الوزن";
+"screen.profile.editWeight.message" = "أدخل الوزن بالكغم";
+"screen.profile.editWeight.placeholder" = "كغم";
+"screen.profile.editGoal.title" = "الهدف اليومي";
+"screen.profile.editGoal.message" = "اكتب هدفك";
+"screen.profile.editGoal.placeholder" = "مثلاً 500 سعرة";
+"screen.profile.support.subject" = "دعم AiQo";
+
+/* Settings */
+"settings.title" = "إعدادات التطبيق";
+"settings.section.notifications" = "الإشعارات";
+"settings.section.language" = "اللغة";
+"settings.notifications.title" = "الإشعارات";
+"settings.notifications.subtitle" = "تنبيهات النشاط اليومية";
+"settings.language.title" = "لغة التطبيق";
+"settings.language.subtitle" = "العربية / الإنجليزية";
+"settings.language.ar" = "العربية";
+"settings.language.en" = "الإنجليزية";
+
+/* Gym */
+"gym.tab.body" = "الجسم";
+"gym.tab.vitals" = "التحديات";
+"gym.tab.plan" = "الخطة";
+"gym.tab.wins" = "الإنجازات";
+"gym.tab.recap" = "الملخص";
+
+"gym.exercise.cinematic_grind" = "سينماتك غرايند";
+"gym.exercise.cinematic_grind.subtitle" = "كارديو Zone 2 وإنت تشوف نتفلكس أو يوتيوب";
+"gym.exercise.cardio_captain_hamoudi" = "كارديو ويا الكابتن حمّودي";
+"gym.exercise.cardio_captain_hamoudi.subtitle" = "نبض Zone 2 لحرق دهون مثالي";
+"gym.exercise.running" = "الجري";
+"gym.exercise.walking" = "المشي";
+"gym.exercise.cycling" = "الدراجات";
+"gym.exercise.swimming" = "السباحة";
+"gym.exercise.strength" = "تمارين القوة";
+"gym.exercise.hiit" = "تمارين HIIT";
+"gym.exercise.yoga" = "اليوغا";
+"gym.exercise.equestrian" = "الفروسية";
+"gym.exercise.calisthenics" = "تمارين وزن الجسم";
+"gym.exercise.pilates" = "بيلاتس";
+"gym.exercise.gratitude" = "الامتنان";
+"gym.exercise.indoor_cycle" = "دراجة داخلية";
+"gym.exercise.elliptical" = "إليبتكال";
+"gym.exercise.stair_stepper" = "صعود الدرج";
+"gym.exercise.football" = "كرة القدم";
+"gym.exercise.padel_tennis" = "بادل / تنس";
+"gym.exercise.basketball" = "كرة السلة";
+"gym.exercise.boxing" = "الملاكمة";
+"gym.exercise.martial_arts" = "فنون قتالية";
+"gym.exercise.jump_rope" = "نط الحبل";
+"gym.exercise.other" = "تمرين";
+
+"gym.zone2.card.title" = "Aura الكابتن حمّودي";
+"gym.zone2.target" = "هدف Zone 2: %@";
+"gym.zone2.warmup_remaining" = "الإحماء: باقي %@";
+"gym.zone2.state.inactive" = "جاهز لـ Zone 2";
+"gym.zone2.state.warming_up" = "مرحلة الإحماء";
+"gym.zone2.state.in_zone" = "داخل Zone 2";
+"gym.zone2.state.too_fast" = "أسرع من المطلوب";
+"gym.zone2.state.too_slow" = "أبطأ من المطلوب";
+"cinematic.header.eyebrow" = "سينماتك غرايند";
+"cinematic.header.title" = "رتّب أهدأ جلسة كارديو ويا الشاشة.";
+"cinematic.header.subtitle" = "اختَر الوقت والمنصة والمود، والكابتن حمّودي يطلع لك اقتراح مناسب لـ Zone 2.";
+"cinematic.duration.title" = "مدة التمرين";
+"cinematic.duration.subtitle" = "حدّد شكد تريد الغرايند يستمر.";
+"cinematic.duration.minutes" = "دقيقة";
+"cinematic.duration.minutes.short" = "د";
+"cinematic.platform.title" = "المنصة";
+"cinematic.platform.subtitle" = "اختَر وين الكابتن يوديك.";
+"cinematic.platform.netflix.subtitle" = "مود سينمائي هادئ";
+"cinematic.platform.youtube.subtitle" = "اختيارات سريعة بلا نهاية";
+"cinematic.mood.title" = "مود الفيلم";
+"cinematic.mood.subtitle" = "خلّي جو الشاشة يطابق رتم الكارديو.";
+"cinematic.thinking.title" = "الكابتن حمّودي ديبحث عن اللقطة الصح.";
+"cinematic.thinking.subtitle" = "يدوّر على أحسن مشاهدة تخلي النفس ثابت والتركيز داخل Zone 2.";
+"cinematic.recommendation.title" = "اقتراح الكابتن";
+"cinematic.search.label" = "ابحث على المنصة";
+"cinematic.accept.button" = "اعتمد اختيار الكابتن";
+"cinematic.start.button" = "ابدأ الغرايند والمشاهدة";
+"cinematic.active.eyebrow" = "تتبع بسيط";
+"cinematic.active.goal" = "تقدم الهدف";
+"cinematic.active.live_sync" = "شجرة";
+"cinematic.active.connected" = "شغال على الساعة";
+"cinematic.active.connecting" = "جاري الاتصال بالساعة";
+"cinematic.active.search" = "الاختيار";
+"cinematic.metrics.heart_rate" = "نبض القلب";
+"cinematic.metrics.calories" = "السعرات";
+"cinematic.metrics.zone" = "Zone 2";
+"cinematic.metrics.platform" = "المنصة";
+"cinematic.return.button" = "ارجع إلى %@";
+"cinematic.control.pause" = "إيقاف مؤقت";
+"cinematic.control.resume" = "استئناف";
+"cinematic.control.start" = "ابدأ";
+"cinematic.control.connecting" = "جاري الاتصال...";
+"cinematic.control.ending" = "جاري الإنهاء...";
+"cinematic.zone.ready" = "جاهز";
+"cinematic.zone.warmup" = "إحماء";
+"cinematic.zone.locked" = "مثبّت";
+"cinematic.zone.too_fast" = "أسرع";
+"cinematic.zone.too_slow" = "أبطأ";
+"design.badge.cinema" = "سينما";
+
+"gym.recap.empty" = "لا توجد تمارين بعد.";
+"gym.recap.device" = "الجهاز";
+"gym.recap.workout_id" = "معرف التمرين";
+"gym.recap.swipe_close" = "اسحب للأسفل للإغلاق";
+"gym.recap.indoor" = "داخلي";
+"gym.recap.outdoor" = "خارجي";
+"gym.recap.intensity.moderate" = "متوسط";
+
+"gym.metric.duration" = "المدة";
+"gym.metric.calories" = "السعرات";
+"gym.metric.distance" = "المسافة";
+"gym.metric.avg_hr" = "متوسط النبض";
+"gym.metric.max_hr" = "أعلى نبض";
+"gym.metric.pace" = "السرعة";
+"gym.metric.steps" = "الخطوات";
+"gym.metric.elevation" = "الارتفاع";
+
+/* Tribe */
+"tribe.title" = "إمارة";
+"tribe.segment.global" = "العالمي";
+"tribe.segment.region" = "Arena";
+"tribe.segment.friends" = "الأصدقاء";
+"tribe.level.format" = "المستوى %d";
+"tribe.region.title" = "تحديات المنطقة";
+"tribe.challenge.add_placeholder" = "أضف تحدي";
+"tribe.challenge.add_action" = "إضافة تحدي";
+"tribe.challenge.10k" = "10 آلاف خطوة";
+"tribe.challenge.no_sugar" = "بدون سكر اليوم";
+"tribe.challenge.calm" = "5 دقائق هدوء";
+
+/* Captain */
+"captain.input.prompt" = "شنو هدفك اليوم؟";
+"captain.customize.title" = "تخصيص الكابتن";
+"captain.customize.subtitle" = "أضف معلوماتك حتى يصير أقرب إلك.";
+"captain.customize.name" = "اسمك";
+"captain.customize.age" = "العمر";
+"captain.customize.height" = "الطول (سم)";
+"captain.customize.weight" = "الوزن (كغم)";
+"captain.customize.calling" = "شلون تحب الكابتن يناديك؟";
+"captain.customize.tone" = "نبرة الكابتن";
+"captain.tone.practical" = "عملي";
+"captain.tone.caring" = "حنون";
+"captain.tone.strict" = "صارم";
+
+/* Time Scope */
+"time.scope" = "الفترة";
+"time.day" = "اليوم";
+"time.week" = "الأسبوع";
+"time.month" = "الشهر";
+"time.year" = "السنة";
+"time.all" = "الكل";
+
+/* Plan */
+"plan.title" = "خطة اليوم";
+"plan.overview" = "نظرة عامة";
+"plan.today_workouts" = "تمارين اليوم";
+"plan.templates" = "قوالب التمارين";
+"plan.no_workouts" = "لا توجد تمارين مجدولة اليوم";
+"plan.add_exercise" = "أضف تمرين...";
+"plan.add_routine" = "أضف تمارين حتى تبني روتينك";
+"plan.suggested.title" = "اقتراح";
+"plan.suggested.value" = "جرّب يوغا 20 دقيقة اليوم";
+"plan.sample.stats.steps" = "%@ / %@";
+"plan.sample.stats.calories" = "%@ / %@ سعرة";
+"plan.sample.stats.water" = "%@ / %@ أكواب";
+"plan.sample.workout.pushups" = "تمارين الضغط (3 مجاميع)";
+"plan.sample.workout.squats" = "سكوات (3 مجاميع)";
+"plan.sample.workout.plank" = "بلانك (60 ثانية)";
+"plan.sample.template.morning_stretch" = "تمدد الصباح";
+"plan.sample.template.full_body" = "تمرين الجسم الكامل";
+"plan.sample.template.evening_run" = "جري المساء";
+
+/* Recap */
+"recap.history.title" = "السجل";
+"recap.history.subtitle" = "متابعة نشاطك عبر Apple Health.";
+"recap.swipe_close" = "اسحب للأسفل للإغلاق";
+"recap.section.session" = "الجلسة";
+"recap.section.tracking" = "التتبع";
+"recap.section.notes" = "الملاحظات";
+"recap.info.date" = "التاريخ";
+"recap.info.start_time" = "وقت البدء";
+"recap.info.end_time" = "وقت الانتهاء";
+"recap.info.time" = "الوقت";
+"recap.info.location" = "الموقع";
+"recap.info.intensity" = "الشدة";
+"recap.info.device" = "الجهاز";
+"recap.info.source" = "المصدر";
+"recap.info.workout_id" = "معرّف التمرين";
+"recap.source.health" = "الصحة";
+"recap.source.aiqo" = "AiQo";
+"recap.location.outdoor" = "خارجي";
+"recap.location.indoor" = "داخلي";
+"recap.intensity.moderate" = "متوسط";
+"recap.intensity.light" = "خفيف";
+"recap.metric.duration" = "المدة";
+"recap.metric.calories" = "السعرات";
+"recap.metric.distance" = "المسافة";
+"recap.metric.avg_hr" = "معدل النبض";
+"recap.metric.max_hr" = "أعلى نبض";
+"recap.metric.pace" = "السرعة";
+"recap.metric.steps" = "الخطوات";
+"recap.metric.elevation" = "الارتفاع";
+"recap.note.warmup" = "ركض إحماء قبل تمارين القوة.";
+"recap.note.recovery" = "مشي خفيف للتعافي.";
+"recap.note.autopause" = "جلسة إيقاف تلقائي.";
+"recap.note.quick" = "مشي سريع بين الاجتماعات.";
+"recap.note.morning" = "مشي صباحي بوتيرة ثابتة.";
+"recap.note.evening" = "مشي مسائي بشدة خفيفة.";
+"recap.date.2026_01_15" = "15 يناير 2026";
+"recap.date.2026_01_14" = "14 يناير 2026";
+
+/* Wins */
+"wins.title" = "الإنجازات";
+"wins.subtitle" = "افتح الجوائز بالاستمرارية ✨";
+"wins.item.streak.title" = "سلسلة 7 أيام";
+"wins.item.streak.subtitle" = "تمرّن 7 أيام بالمجمل";
+"wins.item.streak.detail_value" = "12 يوم";
+"wins.item.streak.detail_hint" = "أفضل سلسلة هذا الشهر";
+"wins.item.heart.title" = "بطل القلب";
+"wins.item.heart.subtitle" = "حقق هدف النبض 3 مرات";
+"wins.item.heart.detail_value" = "148 نبضة";
+"wins.item.heart.detail_hint" = "متوسط أعلى الجلسات";
+"wins.item.steps.title" = "سيّد الخطوات";
+"wins.item.steps.subtitle" = "10 آلاف خطوة في يوم واحد";
+"wins.item.steps.detail_value" = "10,432";
+"wins.item.steps.detail_hint" = "خطوات (قمة اليوم)";
+"wins.item.gratitude.title" = "امتنان";
+"wins.item.gratitude.subtitle" = "سجّل الامتنان 5 مرات";
+"wins.item.gratitude.detail_value" = "2 / 5";
+"wins.item.gratitude.detail_hint" = "المدخلات هذا الأسبوع";
+"wins.featured.title" = "صندوق الأسبوع";
+"wins.featured.subtitle" = "أكمل 3 تمارين هذا الأسبوع";
+"wins.sheet.keep_going" = "استمر — قارب تفكها.";
+"wins.sheet.unlocked" = "تم الفتح — شغل مرتب!";
+"wins.sheet.swipe_close" = "اسحب للأسفل للإغلاق";
+"wins.sheet.reward_title" = "جائزة التحدي";
+"wins.sheet.reward_desc" = "أكمل التحدي حتى تنكشف الدرع.";
+
+/* Level Names */
+"level_name_starter" = "البداية الذكية";
+"level_name_riser" = "المجتهد الصاعد";
+"level_name_fighter" = "المقاتل المنضبط";
+"level_name_legend" = "الأسطورة الرياضية";
+
+/* Level Messages */
+"msg_level_starter" = "بياناتك تبين إنك بالبداية، وهذا شيء ممتاز لأن AiQo جاي حتى يرفع مستواك خطوة بخطوة.";
+"msg_level_riser" = "واضح إن عندك حركة ونشاط محترم. نقدر نحول هذا الاجتهاد إلى استمرارية يومية.";
+"msg_level_fighter" = "مستوى قوي! جسمك متعود على الجهد، و AiQo رح يساعدك توصل لنسخة أعلى من نفسك.";
+"msg_level_legend" = "أرقامك تبين إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي للحفاظ على هذا المستوى الأسطوري.";
+/* General */
+"optimize_bio" = "لنقم بتحسين جسدك وعقلك";
+"default_name" = "كابتن حمودي";
+
+/* Profile Header & Body */
+"body_stats" = "بيانات الجسم";
+"gender" = "الجنس";
+"male" = "ذكر";
+"female" = "أنثى";
+
+/* Units & Goals */
+"years" = "سنة";
+"cm" = "سم";
+"kg" = "كجم";
+"goal_stronger" = "أقوى وأنحف";
+
+/* App Section */
+"app_section" = "التطبيق";
+"focus_protection" = "حماية التركيز";
+"settings" = "الإعدادات";
+"notif_lang" = "التنبيهات واللغة";
+"support" = "الدعم الفني";
+"contact_us" = "تواصل معنا";
+
+/* Alerts & Dialogs */
+"current_level" = "مستواك الحالي";
+"you_have" = "لديك";
+"xp_points" = "نقطة خبرة";
+"add_xp_test" = "إضافة 50 نقطة (تجربة)";
+"close" = "إغلاق";
+"contact_soon" = "تواصل معنا قريباً";
+"protection_active" = "الحماية مفعّلة";
+"protection_inactive" = "الحماية متوقفة";
+"edit_blocked_apps" = "تعديل التطبيقات المحظورة";
+"stop_protection" = "إيقاف الحماية";
+"start_protection" = "تفعيل الحماية";
+
+/* Quests */
+"quests.status.completed" = "مكتمل";
+"quests.status.tracking" = "متابعة";
+"quests.status.ready" = "جاهز";
+"quests.status.locked" = "مغلق";
+
+"quests.detail.goal" = "الهدف";
+"quests.detail.verify" = "التحقق";
+"quests.detail.reward" = "الجائزة";
+"quests.detail.reward.hint" = "تُفتح شارة الجائزة بعد إكمال التحدي.";
+"quests.detail.tracking_note" = "وضع المتابعة مفعّل. يتم تحديث التقدم تلقائياً من HealthKit.";
+"quests.detail.completed_today" = "مكتمل اليوم";
+"quests.detail.tracking_active" = "المتابعة مفعلة";
+"quests.detail.start" = "ابدأ التحدي";
+
+"quests.run.title" = "تشغيل التحدي";
+"quests.run.progress" = "التقدم";
+"quests.run.automatic" = "هذا التحدي يعمل تلقائياً.";
+"quests.run.completed_today" = "اكتمل التحدي لليوم.";
+"quests.run.plank_session" = "جلسة البلانك";
+"quests.run.preset" = "المدة";
+"quests.run.preset_target" = "الهدف المحدد";
+"quests.run.current_set" = "الجولة الحالية";
+"quests.run.timer_running" = "المؤقت يعمل...";
+"quests.run.start_timer" = "ابدأ المؤقت";
+"quests.run.finish_set" = "إنهاء الجولة";
+"quests.run.pushups_counter" = "عداد الضغط";
+"quests.run.manual_counter" = "عداد يدوي";
+"quests.run.undo" = "تراجع";
+
+"quests.reward.completed" = "تم إكمال التحدي!";
+"quests.reward.add_to_wins" = "أضف إلى الإنجازات";
+
+"quests.wins.empty_title" = "لا توجد إنجازات بعد";
+"quests.wins.empty_subtitle" = "أكمل تحديًا واضغط \"أضف إلى الإنجازات\" لجمع الجوائز.";
+"quests.placeholder.stage_title" = "المرحلة %d";
+"quests.placeholder.empty" = "لا توجد تحديات مضافة لهذه المرحلة حالياً.";
+
+"quests.vision.coach_name" = "الكابتن حمودي";
+"quests.vision.detected_reps" = "عدد الضغط المكتشف";
+"quests.vision.camera.request.title" = "جاري طلب صلاحية الكاميرا";
+"quests.vision.camera.request.message" = "اسمح بالوصول للكاميرا لبدء المدرب البصري الذكي.";
+"quests.vision.camera.denied.title" = "تحتاج صلاحية الكاميرا";
+"quests.vision.camera.denied.message" = "فعّل إذن الكاميرا من الإعدادات لاستخدام تتبع تمارين الضغط.";
+"quests.vision.camera.unavailable.title" = "الكاميرا غير متاحة";
+"quests.vision.camera.unavailable.message" = "هذا الجهاز لا يحتوي على كاميرا مدعومة للمدرب البصري.";
+"quests.vision.camera.failed.title" = "فشل إعداد الكاميرا";
+"quests.vision.camera.failed.message" = "يرجى إغلاق هذه الشاشة والمحاولة مرة أخرى.";
+"quests.vision.camera.open_settings" = "فتح الإعدادات";
+"quests.vision.hint.initial" = "ضع الكتفين والمرفقين والمعصمين داخل الإطار.";
+"quests.vision.hint.lower_then_push" = "انزل بجسمك ثم ادفع للأعلى لاحتساب كل عدة.";
+"quests.vision.hint.vision_failed" = "فشلت معالجة الرؤية. حاول مرة أخرى.";
+"quests.vision.hint.no_body" = "لم يتم اكتشاف الجسم. ابتعد قليلاً عن الكاميرا.";
+"quests.vision.hint.show_joints" = "أظهر الكتف والمرفق والمعصم بوضوح.";
+"quests.vision.hint.full_range" = "استخدم المدى الكامل: نزول ثم صعود كامل.";
+"quests.vision.hint.great_depth" = "عمق ممتاز. ادفع للأعلى لإكمال هذه العدة.";
+"quests.vision.hint.rep_counted" = "تم احتساب عدة. حافظ على شدّ عضلاتك.";
+"quests.vision.hint.lower_control" = "انزل بتحكم حتى ينثني المرفق.";
+"quests.vision.hint.press_up" = "ادفع للأعلى حتى تصبح الذراع شبه مستقيمة.";
+"quests.vision.hint.keep_visible" = "أبقِ الجزء العلوي من جسمك ظاهرًا بالكامل.";
+
+"quests.unit.sec" = "ث";
+"quests.unit.reps" = "تكرار";
+"quests.unit.h" = "ساعة";
+"quests.unit.steps" = "خطوة";
+"quests.unit.kcal" = "سعرة";
+"quests.unit.km" = "كم";
+"quests.unit.quests" = "تحديات";
+"quests.unit.helps" = "مساعدة";
+"quests.unit.min" = "دقيقة";
+"quests.unit.sessions" = "جلسات";
+"quests.unit.days" = "أيام";
+
+"quests.metric.sleep" = "النوم";
+"quests.metric.steps" = "الخطوات";
+"quests.metric.plank" = "البلانك";
+"quests.metric.pushups" = "الضغط";
+"quests.metric.active" = "السعرات النشطة";
+"quests.metric.distance" = "المسافة";
+"quests.metric.stage2" = "المرحلة 2";
+"quests.metric.kindness" = "المساعدة";
+"quests.metric.zone2" = "زون 2";
+"quests.metric.mindfulness" = "اليقظة";
+"quests.metric.sleep_streak" = "سلسلة النوم";
+
+"quests.challenge.s1.help.title" = "ساعد 3 غرباء";
+"quests.challenge.s1.help.subtitle" = "قدّم المساعدة لـ 3 أشخاص اليوم";
+"quests.challenge.s1.help.description" = "اخرج وساعد 3 أشخاص لا تعرفهم.";
+"quests.challenge.s1.help.goal" = "مساعدة 3 أشخاص لا تعرفهم";
+"quests.challenge.s1.help.verify" = "تسجيل يدوي داخل التطبيق";
+"quests.help_sheet.title" = "ساعد 3 غرباء";
+"quests.help_sheet.subtitle" = "خذ نفسًا عميقًا وسجّل ثلاث مواقف قدّمت فيها المساعدة اليوم.";
+"quests.help_sheet.microcopy" = "اختر أي نوع مساعدة. لا حاجة لأي مال.";
+"quests.help_sheet.entry_label" = "المساعدة %d";
+"quests.help_sheet.prefix" = "ساعدت";
+"quests.help_sheet.placeholder" = "شخصًا بـ...";
+"quests.help_sheet.type.label" = "النوع";
+"quests.help_sheet.type.time" = "وقت";
+"quests.help_sheet.type.kind_word" = "كلمة طيبة";
+"quests.help_sheet.type.service" = "خدمة";
+"quests.help_sheet.type.donation" = "تبرّع";
+"quests.help_sheet.impact.label" = "الأثر";
+"quests.help_sheet.impact.smile" = "ابتسامة";
+"quests.help_sheet.impact.relief" = "ارتياح";
+"quests.help_sheet.impact.solved_problem" = "حلّ مشكلة";
+"quests.help_sheet.impact.guidance" = "إرشاد";
+"quests.help_sheet.button.complete" = "إنجاز المهمة";
+"quests.help_sheet.noor.title" = "لحظة نور";
+"quests.help_sheet.noor.subtitle" = "اليوم رفعت 3 قلوب.";
+"quests.help_sheet.noor.share_toggle" = "مشاركة مجهولة مع Tribe";
+"quests.help_sheet.noor.done" = "تم";
+"quests.help_sheet.accessibility.note_input" = "حقل إدخال المساعدة %d";
+"quests.help_sheet.accessibility.type_picker" = "منتقي النوع للمساعدة %d";
+"quests.help_sheet.accessibility.impact_picker" = "منتقي الأثر للمساعدة %d";
+"quests.help_sheet.accessibility.complete_button" = "إنجاز المهمة";
+"quests.help_sheet.accessibility.noor_done" = "تم";
+
+"quests.challenge.s1.zone2.title" = "حارس زون 2";
+"quests.challenge.s1.zone2.subtitle" = "اجمع 30 دقيقة في زون 2";
+"quests.challenge.s1.zone2.description" = "ابقَ ضمن نبض زون 2 لمدة 30 دقيقة تراكمية.";
+"quests.challenge.s1.zone2.goal" = "30 دقيقة تراكمية في زون 2";
+"quests.challenge.s1.zone2.verify" = "عداد يدوي داخل التطبيق";
+
+"quests.challenge.s1.walk.title" = "امشِ 5K";
+"quests.challenge.s1.walk.subtitle" = "امشِ 5.0 كم في يوم واحد";
+"quests.challenge.s1.walk.description" = "امشِ 5.0 كم في يوم واحد.";
+"quests.challenge.s1.walk.goal" = "5.0 كم في يوم واحد";
+"quests.challenge.s1.walk.verify" = "HealthKit DistanceWalkingRunning (تلقائي)";
+
+"quests.challenge.s1.gratitude.title" = "جلسة امتنان";
+"quests.challenge.s1.gratitude.subtitle" = "سجّل جلسة واحدة لمدة دقيقتين";
+"quests.challenge.s1.gratitude.description" = "سجّل جلسة يقظة وامتنان لمدة دقيقتين.";
+"quests.challenge.s1.gratitude.goal" = "جلسة امتنان واحدة لمدة دقيقتين";
+"quests.challenge.s1.gratitude.verify" = "تسجيل يدوي داخل التطبيق";
+
+"quests.challenge.s1.recovery.title" = "زعيم التعافي";
+"quests.challenge.s1.recovery.subtitle" = "سلسلة 3 أيام نوم 8 ساعات";
+"quests.challenge.s1.recovery.description" = "سجّل 8 ساعات نوم لمدة 3 أيام متتالية.";
+"quests.challenge.s1.recovery.goal" = "3 أيام متتالية بنوم 8 ساعات";
+"quests.challenge.s1.recovery.verify" = "تسجيل يومي يدوي داخل التطبيق";
+
+"quests.challenge.steps.title" = "10K خطوة";
+"quests.challenge.steps.subtitle" = "امشِ 10,000 خطوة اليوم";
+"quests.challenge.steps.description" = "تحرك بثبات خلال يومك وحقق مجموع عشرة آلاف خطوة.";
+"quests.challenge.steps.goal" = "10,000 خطوة خلال اليوم";
+"quests.challenge.steps.verify" = "خطوات HealthKit (تلقائي)";
+
+"quests.challenge.plank.title" = "سلم البلانك";
+"quests.challenge.plank.subtitle" = "اجمع 3:00 دقائق بلانك";
+"quests.challenge.plank.description" = "قسّمها على جولات متعددة حتى يصل المجموع إلى 180 ثانية.";
+"quests.challenge.plank.goal" = "مجموع 3:00 دقائق بلانك خلال اليوم";
+"quests.challenge.plank.verify" = "داخل التطبيق (يدوي + مؤقت)";
+
+"quests.challenge.pushups.title" = "بناء الضغط";
+"quests.challenge.pushups.subtitle" = "اجمع 60 عدة ضغط";
+"quests.challenge.pushups.description" = "ابنِ العدات على مدار اليوم بجولات سريعة وواصل التجميع.";
+"quests.challenge.pushups.goal" = "مجموع 60 عدة ضغط خلال اليوم";
+"quests.challenge.pushups.verify" = "داخل التطبيق (عداد يدوي)";
+
+"quests.challenge.sleep.title" = "نوم 8 ساعات";
+"quests.challenge.sleep.subtitle" = "حقق 8 ساعات نوم فعلي";
+"quests.challenge.sleep.description" = "أكمل ثماني ساعات نوم مسجلة خلال اليوم.";
+"quests.challenge.sleep.goal" = "8 ساعات نوم فعلي";
+"quests.challenge.sleep.verify" = "تحليل النوم من HealthKit (تلقائي)";
+
+"quests.challenge.active.title" = "حرق 600 سعرة نشطة";
+"quests.challenge.active.subtitle" = "احرق 600 سعرة نشطة";
+"quests.challenge.active.description" = "ارفع نشاطك وحقق 600 سعرة حرارية نشطة اليوم.";
+"quests.challenge.active.goal" = "600 سعرة نشطة";
+"quests.challenge.active.verify" = "السعرات النشطة من HealthKit (تلقائي)";
+
+"quests.challenge.s2.steps.title" = "11K خطوة";
+"quests.challenge.s2.steps.subtitle" = "امشِ 11,000 خطوة اليوم";
+"quests.challenge.s2.steps.description" = "تحرك بثبات خلال اليوم وحقق مجموع 11 ألف خطوة.";
+"quests.challenge.s2.steps.goal" = "11,000 خطوة خلال اليوم";
+"quests.challenge.s2.steps.verify" = "خطوات HealthKit (تلقائي)";
+
+"quests.challenge.s2.active.title" = "حرق 650 سعرة نشطة";
+"quests.challenge.s2.active.subtitle" = "احرق 650 سعرة نشطة";
+"quests.challenge.s2.active.description" = "ارفع شدة نشاطك وحقق 650 سعرة حرارية نشطة اليوم.";
+"quests.challenge.s2.active.goal" = "650 سعرة نشطة";
+"quests.challenge.s2.active.verify" = "السعرات النشطة المحروقة من HealthKit (تلقائي)";
+
+"quests.challenge.s2.pushups.title" = "بناء الضغط (70)";
+"quests.challenge.s2.pushups.subtitle" = "اجمع 70 عدة ضغط";
+"quests.challenge.s2.pushups.description" = "نفّذ جولات سريعة خلال اليوم حتى تصل إلى 70 عدة.";
+"quests.challenge.s2.pushups.goal" = "مجموع 70 عدة خلال اليوم";
+"quests.challenge.s2.pushups.verify" = "عداد يدوي (يتجمع خلال اليوم)";
+
+"quests.challenge.s2.plank.title" = "سلم البلانك (4:00)";
+"quests.challenge.s2.plank.subtitle" = "اجمع 4:00 دقائق بلانك";
+"quests.challenge.s2.plank.description" = "أكمل عدة جولات واجمع إجمالي 240 ثانية بلانك.";
+"quests.challenge.s2.plank.goal" = "مجموع 240 ثانية خلال اليوم";
+"quests.challenge.s2.plank.verify" = "مؤقت يدوي (الجولات تتجمع خلال اليوم)";
+
+"quests.challenge.s2.move.title" = "تحرك 5KM (مشي + جري)";
+"quests.challenge.s2.move.subtitle" = "حقق 5.0 كم اليوم";
+"quests.challenge.s2.move.description" = "تتبع مسافة المشي والجري حتى تكمل 5.0 كم.";
+"quests.challenge.s2.move.goal" = "إجمالي مسافة 5.0 كم";
+"quests.challenge.s2.move.verify" = "HealthKit DistanceWalkingRunning (تلقائي)";
+
+"quests.challenge.s2.boss.title" = "Boss المرحلة 2";
+"quests.challenge.s2.boss.subtitle" = "أكمل 4 من 5 تحديات المرحلة 2";
+"quests.challenge.s2.boss.description" = "أكمل أي 4 تحديات يومية من المرحلة 2 في نفس اليوم.";
+"quests.challenge.s2.boss.goal" = "أكمل 4 من 5 تحديات المرحلة 2 اليوم";
+"quests.challenge.s2.boss.verify" = "تلقائي (عدد إكمالات المرحلة 2 اليوم)";
+
+/* MARK: - Quests Rewrite (Stage + Quest Engine) */
+"quests.screen.title" = "المهام";
+"quests.card.levels" = "المستويات";
+"quests.card.camera_required" = "كاميرا مطلوبة";
+"quests.common.tier_format" = "المستوى %d/3";
+"quests.common.locked" = "مقفول";
+"quests.share.message.format" = "مهمة AiQo: %@";
+"quests.share.stage_quest.format" = "المرحلة %d - المهمة %d";
+"quests.detail.healthkit_title" = "هيلث كيت";
+"quests.detail.healthkit_description" = "اربط هيلث كيت لقراءة الخطوات/النوم/المسافة وتحديث التقدم تلقائياً.";
+
+"quests.camera.sheet.title" = "صلاحية الكاميرا";
+"quests.camera.sheet.quest_label" = "المهمة المحددة";
+"quests.camera.sheet.reason" = "نستخدم الكاميرا لقياس دقة وضعية الحركة.";
+"quests.camera.sheet.reason.safety" = "هذا يدعم السلامة والتحكم في الوضعية وليس السرعة.";
+"quests.camera.sheet.status.not_determined" = "امنح إذن الكاميرا للمتابعة في هذه المهمة.";
+"quests.camera.sheet.status.authorized" = "تم منح إذن الكاميرا. يمكنك إغلاق هذه الشاشة.";
+"quests.camera.sheet.status.denied" = "تم رفض إذن الكاميرا. فعّله من الإعدادات.";
+"quests.camera.sheet.status.restricted" = "الوصول إلى الكاميرا مقيّد على هذا الجهاز.";
+"quests.camera.sheet.status.unavailable" = "الكاميرا غير متاحة على هذا الجهاز.";
+"quests.camera.sheet.action.request" = "السماح بالكاميرا";
+"quests.camera.sheet.action.open_settings" = "فتح الإعدادات";
+"quests.camera.sheet.action.done" = "تم";
+
+"quests.stage.1.title" = "المرحلة 1: الاستيقاظ";
+"quests.stage.1.tab" = "المرحلة 1";
+"quests.stage.1.quest.1.title" = "شرارة الخير (مكافأة)";
+"quests.stage.1.quest.1.levels" = "مركز 1";
+"quests.stage.1.quest.2.title" = "نبع الماء (يومي)";
+"quests.stage.1.quest.2.levels" = "3.0ل / 2.5ل / 2.0ل";
+"quests.stage.1.quest.3.title" = "عرش التعافي (يومي)";
+"quests.stage.1.quest.3.levels" = "8س / 7.5س / 7س";
+"quests.stage.1.quest.4.title" = "نبض زون 2 (تراكمي)";
+"quests.stage.1.quest.4.levels" = "40د / 30د / 20د";
+"quests.stage.1.quest.5.title" = "تأسيس المطبخ";
+"quests.stage.1.quest.5.levels" = "مركز 1";
+
+"quests.stage.2.title" = "المرحلة 2: تشغيل المحرك";
+"quests.stage.2.tab" = "المرحلة 2";
+"quests.stage.2.quest.1.title" = "دقة آلة الرؤية (كاميرا)";
+"quests.stage.2.quest.1.levels" = "10 / 15 / 20 تمرين ضغط (دقة 70%/85%/100%)";
+"quests.stage.2.quest.2.title" = "الحركة في يوم واحد";
+"quests.stage.2.quest.2.levels" = "3كم / 5كم / 6كم";
+"quests.stage.2.quest.3.title" = "سلم البلانك";
+"quests.stage.2.quest.3.levels" = "30ث / 60ث / 90ث";
+"quests.stage.2.quest.4.title" = "جلسة امتنان";
+"quests.stage.2.quest.4.levels" = "2د / 3د / 5د";
+"quests.stage.2.quest.5.title" = "سلسلة الوقود";
+"quests.stage.2.quest.5.levels" = "ماء 2.0 لتر لمدة 1 / 2 / 3 أيام";
+
+"quests.stage.3.title" = "المرحلة 3: كسر منطقة الراحة";
+"quests.stage.3.tab" = "المرحلة 3";
+"quests.stage.3.quest.1.title" = "نسبة هدف الحركة";
+"quests.stage.3.quest.1.levels" = "70% / 90% / 100% من الهدف اليومي";
+"quests.stage.3.quest.2.title" = "بناء الضغط";
+"quests.stage.3.quest.2.levels" = "20 / 40 / 50 تكرار";
+"quests.stage.3.quest.3.title" = "حارس زون 2";
+"quests.stage.3.quest.3.levels" = "30د / 45د / 60د";
+"quests.stage.3.quest.4.title" = "سلسلة التعافي";
+"quests.stage.3.quest.4.levels" = "نوم 7س لمدة 1 / 2 / 3 أيام";
+"quests.stage.3.quest.5.title" = "ساعد شخصين (مكافأة)";
+"quests.stage.3.quest.5.levels" = "مكافأة أسبوعية (1 / 2 / 2)";
+
+"quests.stage.4.title" = "المرحلة 4: عجلة الزخم";
+"quests.stage.4.tab" = "المرحلة 4";
+"quests.stage.4.quest.1.title" = "الخطوات";
+"quests.stage.4.quest.1.levels" = "8K / 10K / 12K";
+"quests.stage.4.quest.2.title" = "سلم البلانك";
+"quests.stage.4.quest.2.levels" = "60ث / 120ث / 180ث";
+"quests.stage.4.quest.3.title" = "ضغط بالرؤية (كاميرا)";
+"quests.stage.4.quest.3.levels" = "15 / 25 / 30 (دقة 70%/85%/100%)";
+"quests.stage.4.quest.4.title" = "نسبة هدف الحركة";
+"quests.stage.4.quest.4.levels" = "80% / 100% / 110% من الهدف";
+"quests.stage.4.quest.5.title" = "سلسلة الماء";
+"quests.stage.4.quest.5.levels" = "2 أيام / 3 أيام / 4 أيام (2.0ل / 2.5ل / 3.0ل)";
+
+"quests.stage.5.title" = "المرحلة 5: الانضباط الحديدي";
+"quests.stage.5.tab" = "المرحلة 5";
+"quests.stage.5.quest.1.title" = "سلسلة زون 2";
+"quests.stage.5.quest.1.levels" = "2 أيام / 3 أيام / 4 أيام (زون 2: 25د / 30د / 35د)";
+"quests.stage.5.quest.2.title" = "بناء الضغط";
+"quests.stage.5.quest.2.levels" = "40 / 60 / 70";
+"quests.stage.5.quest.3.title" = "سلسلة الخطوات";
+"quests.stage.5.quest.3.levels" = "2 أيام / 3 أيام / 4 أيام (خطوات: 8000 / 10000 / 10000)";
+"quests.stage.5.quest.4.title" = "جلسة صفاء";
+"quests.stage.5.quest.4.levels" = "3د / 5د / 7د";
+"quests.stage.5.quest.5.title" = "ساعد 3 غرباء (مكافأة)";
+"quests.stage.5.quest.5.levels" = "مكافأة أسبوعية (1 / 2 / 3)";
+
+"quests.stage.6.title" = "المرحلة 6: التدفق";
+"quests.stage.6.tab" = "المرحلة 6";
+"quests.stage.6.quest.1.title" = "دقة الرؤية المطلقة (كاميرا)";
+"quests.stage.6.quest.1.levels" = "30 / 40 / 50 تمرين ضغط (دقة 70%/85%/100%)";
+"quests.stage.6.quest.2.title" = "مسافة ممتدة";
+"quests.stage.6.quest.2.levels" = "6كم / 8كم / 10كم";
+"quests.stage.6.quest.3.title" = "سلسلة الحركة";
+"quests.stage.6.quest.3.levels" = "2 أيام / 3 أيام / 4 أيام (حركة: 90% / 100% / 110%)";
+"quests.stage.6.quest.4.title" = "بلانك";
+"quests.stage.6.quest.4.levels" = "120ث / 180ث / 240ث";
+"quests.stage.6.quest.5.title" = "سلسلة النوم";
+"quests.stage.6.quest.5.levels" = "2 أيام / 3 أيام / 4 أيام (نوم: 7س / 7.5س / 8س)";
+
+"quests.stage.7.title" = "المرحلة 7: وعي القبيلة";
+"quests.stage.7.tab" = "المرحلة 7";
+"quests.stage.7.quest.1.title" = "نبض القبيلة (الساحة)";
+"quests.stage.7.quest.1.levels" = "تفاعل مع 1 / 2 / 3 أصدقاء";
+"quests.stage.7.quest.2.title" = "زون 2 العظيم";
+"quests.stage.7.quest.2.levels" = "45د / 60د / 75د";
+"quests.stage.7.quest.3.title" = "الخطوات";
+"quests.stage.7.quest.3.levels" = "10K / 12K / 14K";
+"quests.stage.7.quest.4.title" = "سلسلة الماء";
+"quests.stage.7.quest.4.levels" = "3 / 4 / 5 أيام";
+"quests.stage.7.quest.5.title" = "مشاركة إنجاز داخل التطبيق (مكافأة)";
+"quests.stage.7.quest.5.levels" = "مكافأة";
+
+"quests.stage.8.title" = "المرحلة 8: التحكم الذهني";
+"quests.stage.8.tab" = "المرحلة 8";
+"quests.stage.8.quest.1.title" = "الخطوات";
+"quests.stage.8.quest.1.levels" = "12K / 14K / 16K";
+"quests.stage.8.quest.2.title" = "بناء الضغط";
+"quests.stage.8.quest.2.levels" = "60 / 80 / 100";
+"quests.stage.8.quest.3.title" = "الرؤية المثالية (كاميرا)";
+"quests.stage.8.quest.3.levels" = "40 / 50 / 60 تمرين ضغط";
+"quests.stage.8.quest.4.title" = "سلسلة الحركة";
+"quests.stage.8.quest.4.levels" = "2 / 3 / 4 أيام";
+"quests.stage.8.quest.5.title" = "سلسلة الامتنان";
+"quests.stage.8.quest.5.levels" = "2 / 3 / 4 أيام";
+
+"quests.stage.9.title" = "المرحلة 9: موت الأنا";
+"quests.stage.9.tab" = "المرحلة 9";
+"quests.stage.9.quest.1.title" = "الحركة في يوم واحد";
+"quests.stage.9.quest.1.levels" = "110% / 130% / 150%";
+"quests.stage.9.quest.2.title" = "بلانك";
+"quests.stage.9.quest.2.levels" = "180ث / 240ث / 300ث";
+"quests.stage.9.quest.3.title" = "الساحة المتقدمة";
+"quests.stage.9.quest.3.levels" = "تفاعل مع 2 / 3 / 5 أصدقاء";
+"quests.stage.9.quest.4.title" = "سلسلة الخطوات";
+"quests.stage.9.quest.4.levels" = "3 / 4 / 5 أيام (10K)";
+"quests.stage.9.quest.5.title" = "أثر حقيقي: ساعد 5 غرباء (مكافأة)";
+"quests.stage.9.quest.5.levels" = "مكافأة";
+
+"quests.stage.10.title" = "المرحلة 10: أسطورة AiQo";
+"quests.stage.10.tab" = "المرحلة 10";
+"quests.stage.10.quest.1.title" = "أسبوع المحارب";
+"quests.stage.10.quest.1.levels" = "3 / 4 / 5 أيام من 10K خطوة";
+"quests.stage.10.quest.2.title" = "دقة الرؤية الأسطورية (كاميرا)";
+"quests.stage.10.quest.2.levels" = "60 / 80 / 100 تمرين ضغط";
+"quests.stage.10.quest.3.title" = "سلسلة التعافي المركبة";
+"quests.stage.10.quest.3.levels" = "نوم + ماء لمدة 2 / 3 / 4 أيام";
+"quests.stage.10.quest.4.title" = "قلب الأسد (كارديو)";
+"quests.stage.10.quest.4.levels" = "60د / 90د / 120د";
+"quests.stage.10.quest.5.title" = "مشاركة \"شارة الأسطورة\" داخل التطبيق (مكافأة)";
+"quests.stage.10.quest.5.levels" = "مكافأة";
+"quests.detail.title" = "تفاصيل المهمة";
+"quests.detail.challenge_overview" = "شرح التحدي";
+"quests.detail.camera_hint" = "هذا التحدي يستخدم الكاميرا لدقة الأداء وسلامة الوضعية.";
+"quests.detail.finish" = "إنهاء التحدي";
+"quests.detail.status.idle" = "الحالة: لم يبدأ بعد";
+"quests.detail.status.started" = "الحالة: تم بدء التحدي";
+"quests.detail.status.finished" = "الحالة: تم إنهاء التحدي";
+
+/* Tribe + Premium */
+"common.done" = "تم";
+
+"debug.preview.navigation" = "دعم المطور";
+"debug.preview.unavailable" = "أدوات المعاينة للمطور غير متاحة في نسخ الإنتاج.";
+"debug.preview.section" = "معاينة القبيلة";
+"debug.preview.enable" = "معاينة القبيلة (فتح جميع ميزات القبيلة)";
+"debug.preview.useMock" = "استخدام بيانات قبيلة وهمية";
+"debug.preview.plan" = "خطة المعاينة";
+"debug.preview.reset" = "إعادة ضبط بيانات المعاينة";
+"debug.preview.status" = "حالة الوصول";
+"debug.preview.status.tribe" = "وصول القبيلة";
+"debug.preview.status.family" = "وصول Intelligence Pro";
+"debug.preview.status.data" = "مصدر البيانات";
+"debug.preview.on" = "مفعّل";
+"debug.preview.off" = "متوقف";
+"debug.preview.mockData" = "وهمي";
+"debug.preview.liveData" = "حي";
+"debug.preview.banner" = "وضع المعاينة";
+"debug.preview.settingsHint" = "فتح القبيلة ببيانات وهمية في وضع Debug فقط.";
+
+"tribe.screen.title" = "إمارة";
+"tribe.screen.subtitle" = "مساحة هادئة للتقدم المشترك.";
+"tribe.presentationMode" = "وضع العرض";
+"tribe.tab.hub" = "المركز";
+"tribe.tab.arena" = "الأرينا";
+"tribe.tab.log" = "السجل";
+"tribe.tab.galaxy" = "المجرة";
+
+"tribe.hub.energy.complete" = "درع اليوم مكتمل.";
+"tribe.hub.energy.remaining" = "باقي %d طاقة لإكمال الدرع";
+"tribe.hub.energy.title" = "طاقة القبيلة اليوم";
+"tribe.hub.energy.description" = "نبضة هادئة من الاستمرارية المشتركة داخل القبيلة.";
+"tribe.hub.enterGalaxy" = "ادخل إلى المجرة";
+"tribe.hub.enterGalaxy.subtitle" = "خريطة الأرواح، التحديات، وشرارة سريعة.";
+"tribe.hub.inviteCode" = "رمز الدعوة: %@";
+"tribe.hub.privacy" = "الخصوصية";
+"tribe.hub.missions" = "مهام القبيلة";
+"tribe.hub.members" = "الأعضاء";
+
+"tribe.member.anonymous" = "عضو";
+"tribe.member.initialsFallback" = "أق";
+"tribe.member.level" = "المستوى %d";
+"tribe.member.accessibility" = "%@، المستوى %d";
+
+"tribe.privacy.private" = "خاص";
+"tribe.privacy.public" = "عام";
+
+"tribe.action.spark" = "شرارة";
+"tribe.action.view" = "شاهد";
+"tribe.action.start" = "ابدأ";
+"tribe.action.contribute" = "ساهم";
+"tribe.action.create" = "إنشاء";
+"tribe.action.suggestGalaxy" = "اقتراح للمجرة";
+
+"tribe.mock.name" = "قبيلة الهدوء";
+"tribe.mock.selfName" = "أنت";
+"tribe.mock.privateMember" = "عضو خاص";
+"tribe.mock.joinedName" = "قبيلة %@";
+
+"tribe.challenge.scope.personal" = "شخصي";
+"tribe.challenge.scope.tribe" = "القبيلة";
+"tribe.challenge.scope.galaxy" = "المجرة";
+"tribe.challenge.cadence.daily" = "يومي";
+"tribe.challenge.cadence.monthly" = "شهري";
+"tribe.challenge.section.daily" = "تحديات اليوم";
+"tribe.challenge.section.monthly" = "تحديات الشهر";
+"tribe.challenge.remaining" = "باقي %d %@";
+"tribe.challenge.timeRemaining.days" = "باقي %d يوم";
+"tribe.challenge.timeRemaining.hours" = "باقي %d ساعة";
+
+"tribe.metric.steps" = "خطوات";
+"tribe.metric.water" = "ماء";
+"tribe.metric.sleep" = "نوم";
+"tribe.metric.minutes" = "دقائق";
+"tribe.metric.custom" = "مخصص";
+"tribe.metric.sugarFree" = "بدون سكر";
+"tribe.metric.calmMinutes" = "دقائق هدوء";
+
+"tribe.unit.steps" = "خطوة";
+"tribe.unit.water" = "كوب";
+"tribe.unit.sleep" = "ساعة";
+"tribe.unit.minutes" = "دقيقة";
+"tribe.unit.custom" = "وحدة";
+"tribe.unit.sugarFree" = "يوم";
+
+"tribe.arena.title" = "الأرينا";
+"tribe.arena.subtitle" = "تحديات مختارة ولوحة ترتيب سريعة.";
+"tribe.arena.newChallenge" = "تحدي جديد";
+"tribe.arena.filter.myTribe" = "قبيلتي فقط";
+"tribe.arena.empty.filteredGalaxy" = "تم إخفاء تحديات المجرة لأن فلتر القبيلة مفعّل.";
+"tribe.arena.empty" = "لا توجد تحديات هنا بعد.";
+"tribe.arena.suggestions" = "اقتراحات المجرة المعلقة";
+"tribe.arena.leaderboard" = "لوحة الترتيب";
+"tribe.arena.composer.scope" = "النطاق";
+"tribe.arena.composer.cadence" = "المدة";
+"tribe.arena.composer.type" = "القياس";
+"tribe.arena.composer.content" = "التفاصيل";
+"tribe.arena.composer.title" = "العنوان";
+"tribe.arena.composer.subtitle" = "الوصف";
+"tribe.arena.composer.suggestionFallback" = "تحدي مقترح للمجرة";
+
+"tribe.galaxy.title" = "المجرة";
+"tribe.galaxy.subtitle" = "شبكة هادئة حول المصدر.";
+"tribe.galaxy.caption" = "كل روح مرتبطة بالمصدر";
+"tribe.galaxy.source" = "المصدر";
+"tribe.galaxy.layout.network" = "شبكة";
+"tribe.galaxy.layout.spokes" = "خيوط";
+"tribe.galaxy.mode.network" = "شبكة";
+"tribe.galaxy.mode.arena" = "الأرينا";
+"tribe.galaxy.node.accessibility.public" = "%@، المستوى %d، الطاقة %d";
+"tribe.galaxy.node.accessibility.private" = "عضو خاص، المستوى %d";
+"tribe.galaxy.node.energy" = "طاقة اليوم +%d";
+"tribe.galaxy.node.private" = "ملف خاص";
+"tribe.galaxy.quickSuggestion" = "ابدأ بـ %@";
+"tribe.galaxy.createChallenge" = "تحدي";
+"tribe.galaxy.openArena" = "افتح الأرينا";
+"tribe.galaxy.sheet.section" = "إنشاء من المجرة";
+"tribe.galaxy.sheet.createInTribe" = "إنشاء داخل القبيلة";
+"tribe.galaxy.sheet.createdFromGalaxy" = "تم الإنشاء من المجرة";
+
+"tribe.log.title" = "السجل";
+
+"tribe.toast.sparkSent" = "تم إرسال شرارة";
+"tribe.toast.challengeUpdated" = "تم تحديث التحدي";
+"tribe.toast.galaxyCuratedOnly" = "تحديات المجرة مختارة من AiQo.";
+"tribe.toast.challengeCreated" = "تم إنشاء التحدي";
+"tribe.toast.challengeTitleRequired" = "أضف عنواناً أولاً.";
+"tribe.toast.challengeSuggested" = "تم إرسال الاقتراح إلى القائمة المحلية.";
+
+"tribe.error.nameRequired" = "أدخل اسم القبيلة أولاً.";
+"tribe.error.familyRequired" = "تحتاج AiQo Intelligence Pro لإنشاء قبيلة.";
+"tribe.error.inviteRequired" = "أدخل رمز الدعوة.";
+"tribe.error.premiumRequired" = "تحتاج اشتراك بريميوم نشط.";
+
+"tribe.challenge.template.steps.daily" = "10,000 خطوة اليوم";
+"tribe.challenge.template.steps.monthly" = "120,000 خطوة هذا الشهر";
+"tribe.challenge.template.water.daily" = "12 كوب ماء";
+"tribe.challenge.template.water.monthly" = "180 كوب ماء";
+"tribe.challenge.template.sleep.daily" = "8 ساعات نوم";
+"tribe.challenge.template.sleep.monthly" = "40 ساعة نوم";
+"tribe.challenge.template.calm.daily" = "20 دقيقة هدوء";
+"tribe.challenge.template.calm.monthly" = "240 دقيقة هدوء";
+"tribe.challenge.template.sugarFree.daily" = "يوم بدون سكر";
+"tribe.challenge.template.sugarFree.monthly" = "20 يوماً بدون سكر";
+"tribe.challenge.template.custom.daily" = "تحدي يومي مخصص";
+"tribe.challenge.template.custom.monthly" = "تحدي شهري مخصص";
+
+"tribe.mock.mission.energy" = "اجمع 500 طاقة للقبيلة";
+"tribe.mock.mission.calm" = "180 دقيقة هدوء";
+"tribe.mock.event.memberJoined" = "انضم عضو جديد إلى القبيلة";
+"tribe.mock.event.spark" = "أرسلت شرارة";
+"tribe.mock.event.challengeCompleted" = "تم إكمال تحدي";
+"tribe.mock.event.leadChanged" = "تغيّر المتصدر";
+"tribe.mock.event.contribution" = "تمت إضافة مساهمة";
+"tribe.mock.event.suggested" = "تم اقتراح تحدي للمجرة";
+
+"tribe.mock.challenge.personalCalm.title" = "20 دقيقة هدوء";
+"tribe.mock.challenge.personalCalm.subtitle" = "إعادة ضبط هادئة لليوم.";
+"tribe.mock.challenge.tribeSteps.title" = "50,000 خطوة اليوم";
+"tribe.mock.challenge.tribeSteps.subtitle" = "هدف حركة مشترك للقبيلة.";
+"tribe.mock.challenge.tribeWater.title" = "40 كوب ماء";
+"tribe.mock.challenge.tribeWater.subtitle" = "ترطيب جماعي هادئ.";
+"tribe.mock.challenge.personalMonthlySteps.title" = "120,000 خطوة هذا الشهر";
+"tribe.mock.challenge.personalMonthlySteps.subtitle" = "حافظ على نسقك بثبات.";
+"tribe.mock.challenge.tribeSleep.title" = "40 ساعة نوم";
+"tribe.mock.challenge.tribeSleep.subtitle" = "شهر أهدأ للقبيلة.";
+"tribe.mock.challenge.curatedDailyWater.title" = "نبضة ماء للمجرة";
+"tribe.mock.challenge.curatedDailyWater.subtitle" = "تحدي ترطيب هادئ للجميع.";
+"tribe.mock.challenge.curatedDailySugar.title" = "قوس بدون سكر";
+"tribe.mock.challenge.curatedDailySugar.subtitle" = "يوم أخف للمجرة كلها.";
+"tribe.mock.challenge.curatedDailyCalm.title" = "60 دقيقة هدوء";
+"tribe.mock.challenge.curatedDailyCalm.subtitle" = "اجمع سلسلة هدوء عالمية.";
+"tribe.mock.challenge.curatedMonthlySteps.title" = "250,000 خطوة للمجرة";
+"tribe.mock.challenge.curatedMonthlySteps.subtitle" = "مسار شهري للحركة مختار من AiQo.";
+"tribe.mock.challenge.curatedMonthlySleep.title" = "40 ساعة تعافٍ";
+"tribe.mock.challenge.curatedMonthlySleep.subtitle" = "طقس نوم عالمي للتعافي.";
+
+"tribe.store.mission.energy" = "ارفع درع القبيلة";
+"tribe.store.mission.checkin" = "تسجيل يومي";
+"tribe.store.mission.streak" = "حافظ على السلسلة";
+"tribe.event.contribution" = "%@ ساهم +%d طاقة";
+"tribe.event.sparkTo" = "%@ أرسل شرارة إلى %@";
+"tribe.event.created" = "%@ أنشأ القبيلة";
+"tribe.event.shieldUnlocked" = "تم تفعيل الدرع";
+"tribe.event.missionCompleted" = "اكتملت مهمة: %@";
+"tribe.event.memberJoined" = "%@ انضم إلى القبيلة";
+"tribe.event.spark" = "%@ أرسل شرارة";
+"tribe.event.challengeCompleted" = "%@ أكمل تحدياً";
+"tribe.event.leadChanged" = "%@ تصدّر الترتيب";
+"tribe.event.challengeSuggested" = "%@ اقترح تحدياً للمجرة";
+"tribe.system" = "النظام";
+
+"premium.title" = "AiQo Premium";
+"premium.subtitle" = "اشتراك شهري متجدّد. تقدر تديره أو تلغيه من آبل بأي وقت.";
+"premium.restore" = "استعادة";
+"premium.buy" = "شراء";
+"premium.plan.individual" = "Standard";
+"premium.plan.family" = "Intelligence Pro";
+"premium.plan.individual.description" = "يفتح ميزات التطبيق الأساسية بدون قمم.";
+"premium.plan.family.description" = "يفتح ميزات Intelligence Pro بما فيها إنشاء القبيلة.";
+"premium.error.productMissing" = "هذه الباقة غير متاحة حالياً.";
+"premium.status.activeUntil" = "نشط حتى %@";
+"premium.status.synced" = "تمت مزامنة البريميوم";
+"premium.status.pending" = "الشراء قيد الانتظار";
+"premium.status.cancelled" = "تم إلغاء الشراء";
+"premium.status.failed" = "فشل الشراء: %@";
+"premium.perMonth" = "/ شهر";
+"premium.trial.title" = "جرّب مجاناً 7 أيام";
+"premium.trial.subtitle" = "استخدم كل الميزات المدفوعة مجاناً. بدون بطاقة.";
+"premium.trial.start" = "ابدأ";
+"premium.trial.active.title" = "التجربة المجانية نشطة";
+"premium.trial.active.days" = "باقي %d يوم";
+"premium.active" = "الاشتراك فعّال";
+"premium.expired" = "انتهى الاشتراك";
+"premium.expires.date" = "ينتهي: %@";
+
+/* Club */
+"club.tab.impact" = "الأثر";
+"club.tab.challenges" = "قِمَم";
+"club.tab.plan" = "الخطة";
+"club.tab.body" = "الجسم";
+"club.impact.tab.summary" = "الملخص";
+"club.impact.tab.achievements" = "الإنجازات";
+"club.primary_tabs.accessibility.label" = "تبويبات أقسام النادي";
+"club.impact_tabs.accessibility.label" = "تبويبات قسم الأثر";
+"club.tab.impact.accessibility.label" = "تبويب الأثر";
+"club.tab.impact.accessibility.hint" = "يعرض الملخص والإنجازات.";
+"club.tab.challenges.accessibility.label" = "تبويب قِمَم";
+"club.tab.challenges.accessibility.hint" = "يعرض تحديات قِمَم الحالية.";
+"club.tab.plan.accessibility.label" = "تبويب الخطة";
+"club.tab.plan.accessibility.hint" = "يعرض خطة اليوم.";
+"club.tab.body.accessibility.label" = "تبويب الجسم";
+"club.tab.body.accessibility.hint" = "يعرض أنشطة الجسم.";
+"club.impact.summary.accessibility.label" = "تبويب الملخص";
+"club.impact.summary.accessibility.hint" = "يعرض سجل ملخص التمارين.";
+"club.impact.achievements.accessibility.label" = "تبويب الإنجازات";
+"club.impact.achievements.accessibility.hint" = "يعرض الإنجازات المجمعة.";
+"club_title" = "النادي";
+"tab_body" = "الجسم";
+"tab_plan" = "الخطة";
+"tab_peaks" = "قِمَم";
+"tab_battle" = "معركة";
+"tab_impact" = "الأثر";
+"club.tab.peaks.accessibility.label" = "قِمَم";
+"club.tab.peaks.accessibility.hint" = "عرض الأرقام القياسية";
+"club.tab.battle.accessibility.label" = "معركة";
+"club.tab.battle.accessibility.hint" = "عرض التحديات والمراحل";
+"impact_summary" = "الملخص";
+"impact_achievements" = "الإنجازات";
+"club_top_tabs_accessibility" = "تبويبات النادي العلوية";
+
+/* Weekly Report */
+"screen.profile.weeklyReport.title" = "تقرير الأسبوع";
+"screen.profile.weeklyReport.subtitle" = "ملخص نشاطك الأسبوعي";
+
+/* Progress Photos */
+"screen.profile.progressPhotos.title" = "صور التقدم";
+"screen.profile.progressPhotos.subtitle" = "تابع تحولك الجسدي";
+
+/* Accessibility */
+"tab.home.hint" = "عرض ملخص الصحة اليومي";
+"tab.gym.hint" = "التمارين والتحديات الرياضية";
+"tab.captain.hint" = "تكلم مع كابتن حمّودي";
+"accessibility.steps" = "الخطوات";
+"accessibility.calories" = "السعرات الحرارية";
+"accessibility.sleep" = "ساعات النوم";
+"accessibility.water" = "شرب الماء";
+"accessibility.distance" = "المسافة";
+"accessibility.stand" = "ساعات الوقوف";
+"accessibility.workout.start" = "ابدأ التمرين";
+"accessibility.workout.pause" = "أوقف التمرين مؤقتاً";
+"accessibility.workout.stop" = "أنهي التمرين";
+
+/* Vibe */
+"vibe.title" = "ذوقي";
+"vibe.audioSource" = "مصدر الصوت";
+"vibe.aiqoSounds" = "أصوات AiQo";
+"vibe.spotify" = "Spotify";
+"vibe.soundControls" = "التحكم بالصوت";
+"vibe.mixAudio" = "مزج مع صوت آخر";
+"vibe.intensity" = "الشدة";
+"vibe.djPick" = "اختيار دي جي حمّودي";
+"vibe.openSpotify" = "افتح في Spotify";
+
+/* Fridge */
+"fridge.addOne" = "أضف واحد";
+"fridge.useOne" = "استخدم واحد";
+"fridge.remove" = "إزالة";
+"fridge.addToFridge" = "إضافة إلى الثلاجة";
+"fridge.tapAnyItem" = "اضغط على أي عنصر";
+"fridge.add" = "أضف";
+
+/* Paywall */
+"paywall.duration" = "اشتراك شهري متجدّد. تقدر تديره أو تلغيه من آبل بأي وقت.";
+"paywall.plans" = "الباقات";
+"paywall.retry" = "إعادة المحاولة";
+"paywall.restore" = "استرجاع";
+"paywall.buy" = "شراء";
+"paywall.status" = "الحالة";
+"paywall.thirtyDays" = "شهري";
+"paywall.status.synced" = "تمت مزامنة الاشتراك بنجاح.";
+"paywall.status.pending" = "الشراء قيد الانتظار من آبل.";
+"paywall.status.cancelled" = "تم إلغاء عملية الشراء.";
+"paywall.status.failed" = "تعذر إكمال العملية: %@";
+"paywall.status.currentPlan" = "الباقة الحالية: %@. تنتهي في %@.";
+"paywall.status.canCreateTribe" = "يمكنك إنشاء القبيلة الآن.";
+"paywall.plan.familyDescription" = "Intelligence Pro تفتح إنشاء القبيلة وأعلى مستوى من مزايا AiQo.";
+"paywall.plan.individualDescription" = "Standard تفتح تجربة AiQo الأساسية بدون قمم.";
+"paywall.debug.testing" = "اختبار";
+"paywall.debug.resetPremium" = "حذف بيانات بريميوم";
+"paywall.debug.resetDone" = "تم حذف بيانات البريميوم محلياً لاختبار انتهاء الاشتراك.";
+"paywall.debug.setupTitle" = "إعدادات الاختبار";
+"paywall.debug.ok" = "حسناً";
+"paywall.debug.setupMessage" = "افتح Scheme > Run > Options > StoreKit Configuration ثم اختر AiQo_Test.storekit وبعدها أعد تشغيل التطبيق.";
+
+/* Captain Welcome */
+"captain.welcome" = "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟";
+
+/* Profile Setup - Privacy */
+"profile.privacy.public" = "عام";
+"profile.privacy.private" = "خاص";
+"profile.privacy.publicAccount" = "حساب عام";
+"profile.privacy.arenaHint" = "للمنافسة في الارينا";
+"profile.privacy.changeHint" = "يمكنك إخفاء اسمك لاحقاً وجعله خاصاً متى ما شئت.";
+
+/* Units */
+"unit.kg" = "كغم";
+"unit.cm" = "سم";
+"unit.km" = "كم";
+"unit.hours.short" = "س";
+
+/* Legacy Calculation - Intro */
+"legacy.intro.body" = "%@، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.";
+"legacy.intro.tagline" = "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.";
+"legacy.continue" = "متابعة";
+"legacy.skip" = "ليس الآن";
+"legacy.goHome" = "الذهاب إلى الرئيسية";
+"legacy.fallbackName" = "أنت";
+
+/* Legacy Calculation - Result */
+"legacy.result.level" = "المستوى";
+"legacy.result.total" = "المجموع: %@ نقطة";
+"legacy.metric.steps" = "الخطوات";
+"legacy.metric.calories" = "السعرات";
+"legacy.metric.distance" = "المسافة";
+"legacy.metric.sleep" = "النوم";
+"legacy.metric.total" = "المجموع";
+
+/* Legacy Calculation - Loading Phases */
+"legacy.loading.permissions.title" = "نطلب Apple Health";
+"legacy.loading.permissions.subtitle" = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل";
+"legacy.loading.locating.title" = "نحدد أول سجل";
+"legacy.loading.locating.subtitle" = "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك";
+"legacy.loading.aggregating.title" = "نجمع تاريخك الكامل";
+"legacy.loading.aggregating.subtitle" = "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح";
+"legacy.loading.finalizing.title" = "نشكّل مستواك";
+"legacy.loading.finalizing.subtitle" = "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي";
+"legacy.loading.timeout.title" = "أخذت البيانات وقتاً أطول";
+"legacy.loading.timeout.subtitle" = "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة";
+"legacy.loading.unauthorized.title" = "لم تُمنح الصلاحية";
+"legacy.loading.unauthorized.subtitle" = "يمكنك تفعيل Apple Health لاحقاً من الإعدادات";
+
+/* Legacy Calculation - Rank Titles */
+"legacy.rank.0.title" = "المبتدئ";
+"legacy.rank.0.desc" = "يلا نبدأ!";
+"legacy.rank.1.title" = "البداية";
+"legacy.rank.1.desc" = "كل رحلة تبدأ بخطوة. AiQo معك من هنا.";
+"legacy.rank.2.title" = "المتحرّك";
+"legacy.rank.2.desc" = "بدأت تتحرك وتبني عادات. استمر!";
+"legacy.rank.3.title" = "النشيط";
+"legacy.rank.3.desc" = "جسمك يشكرك. مستواك يرتفع بثبات.";
+"legacy.rank.4.title" = "المنضبط";
+"legacy.rank.4.desc" = "التزامك واضح. أنت فوق المعدّل.";
+"legacy.rank.5.title" = "القوي";
+"legacy.rank.5.desc" = "بيانات قوية. جسمك يتكلم وأنت تسمع.";
+"legacy.rank.6.title" = "المحارب";
+"legacy.rank.6.desc" = "قليلين يوصلون هنا. أنت محارب حقيقي.";
+"legacy.rank.7.title" = "البطل";
+"legacy.rank.7.desc" = "أرقامك تتكلم عنك. بطل بكل المقاييس.";
+"legacy.rank.8.title" = "الأسطورة الرياضية";
+"legacy.rank.8.desc" = "أرقامك تبيّن إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي.";
+"legacy.rank.9.title" = "الخارق";
+"legacy.rank.9.desc" = "مستوى لا يُصدَّق. أنت تتحدى الحدود.";
+"legacy.rank.10.title" = "الأسطورة الحيّة";
+"legacy.rank.10.desc" = "أنت في القمة المطلقة. تاريخك الصحي استثنائي.";
+
+/* Profile Setup - Dating fields */
+"dating.title" = "أكمل ملفك";
+"dating.subtitle" = "خلينا نجهّز حسابك";
+"dating.name" = "الاسم";
+"dating.username" = "اسم المستخدم";
+"dating.birthDate" = "تاريخ الميلاد";
+"dating.gender" = "الجنس";
+"dating.weight" = "الوزن";
+"dating.height" = "الطول";
+"dating.continue" = "متابعة";
+
+/* Captain Chat Timestamps */
+"time.now" = "الحين";
+"time.minutesAgo" = "قبل %d دقايق";
+"time.yesterday" = "البارحة";
+
+/* Home — Emirate Card */
+"home.emirate.title" = "إمارة 🏆";
+"home.emirate.subtitle" = "المستوى %d · %@ نقطة";
+
+/* Tribe — Join */
+"tribe.join.tooShort" = "الرمز لازم يكون بصيغة AQ-XXXX";
+"tribe.join.invalidCode" = "الكود غلط، تأكد منه وحاول مرة ثانية";
+"tribe.join.error" = "ما قدرنا نوصلك بالقبيلة هسه. جرّب مرة ثانية.";
+
+/* Tribe — Create */
+"tribe.create.error" = "ما قدرنا ننشئ القبيلة هسه. جرّب مرة ثانية.";
+
+/* Tribe — Invite / Share */
+"tribe.invite.shareText" = "انضم لقبيلتي في AiQo! 💪\nالكود: %@\nhttps://aiqo.app/tribe/%@";
+"tribe.invite.subject" = "دعوة قبيلة AiQo";
+"tribe.invite.message" = "انضم لقبيلتي في AiQo! 💪";
+
+/* Leaderboard */
+"leaderboard.yourRank" = "ترتيبك: #%d عالمياً";
+"leaderboard.startWalking" = "ابدأ تمشي واكسب نقاطك الأولى 🚀";
+
+/* Level Up */
+"levelUp.celebration" = "وصلت للمستوى %d 🎉";
+
+/* Settings — Account */
+"settings.section.account" = "الحساب";
+"settings.logout" = "تسجيل خروج";
+"settings.logout.title" = "تسجيل خروج";
+"settings.logout.confirm" = "تسجيل خروج";
+"settings.logout.message" = "متأكد تبي تسجل خروج؟";
+"settings.deleteAccount" = "حذف الحساب";
+"settings.deleteAccount.title" = "حذف الحساب";
+"settings.deleteAccount.confirm" = "حذف";
+"settings.deleteAccount.message" = "راح ينحذف حسابك وكل البيانات المرتبطة بيه بشكل نهائي. هاي العملية ما تنعكس.";
+"settings.cancel" = "إلغاء";
+"settings.coachLanguage" = "لغة الكابتن";
+"settings.section.captain" = "كابتن حمّودي";
+"settings.captainMemory" = "ذاكرة الكابتن 🧠";
+"settings.captainMemory.subtitle" = "المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن";
+"settings.section.community" = "المجتمع";
+"settings.tribe" = "AiQo Tribe";
+"settings.tribe.subtitle" = "معاينات VIP، طقوس، ومساحات الأعضاء القادمة.";
+
+/* Paywall */
+"paywall.title" = "AiQo Premium";
+"paywall.joinTribe" = "انضم لقبيلة AIQO";
+"paywall.tribe" = "القبيلة";
+
+/* Plan View */
+"plan.period.today" = "اليوم";
+"plan.period.month" = "الشهر";
+"plan.period.year" = "السنة";
+"plan.recordProject" = "مشروع كسر الرقم";
+"plan.weekProgress" = "الأسبوع %d من %d";
+"plan.filter.accessibility" = "فلاتر الخطة";
+"plan.captainPlan" = "خطة كابتن حمّودي";
+"plan.suggestedExercises" = "التمارين المقترحة";
+"plan.sets" = "%d مجموعات";
+
+/* Nutrition */
+"nutrition.daily" = "التغذية اليومية";
+"nutrition.calories.progress" = "%d / %d سعرة";
+"nutrition.protein" = "بروتين";
+"nutrition.carbs" = "كارب";
+"nutrition.fat" = "دهون";
+"nutrition.fiber" = "ألياف";
+"nutrition.gram" = "غ";
+"nutrition.goals.calories" = "السعرات الحرارية";
+"nutrition.goals.calorieValue" = "%d سعرة";
+"nutrition.goals.protein" = "البروتين (غرام)";
+"nutrition.goals.carbs" = "الكربوهيدرات (غرام)";
+"nutrition.goals.fat" = "الدهون (غرام)";
+"nutrition.goals.fiber" = "الألياف (غرام)";
+"nutrition.goals.reset" = "استعادة القيم الافتراضية";
+"nutrition.goals.title" = "أهداف التغذية";
+"nutrition.goals.save" = "حفظ";
+"nutrition.goals" = "الأهداف";
+"nutrition.mealType" = "نوع الوجبة";
+"nutrition.mealName" = "اسم الوجبة";
+"nutrition.caloriesPlaceholder" = "السعرات";
+"nutrition.addMeal" = "أضف وجبة";
+"nutrition.addMeal.title" = "أضف وجبة";
+"nutrition.addMeal.button" = "أضف الوجبة ✨";
+"nutrition.cancel" = "إلغاء";
+
+// MARK: - Legacy Calculation Screen
+"legacy.intro.body" = "%@، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.";
+"legacy.intro.tagline" = "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.";
+"legacy.permissions.granted" = "تم منح الصلاحيات";
+"legacy.permissions.title" = "منح صلاحيات الصحة والإشعارات";
+"legacy.permissions.subtitle" = "مطلوب للمتابعة";
+"legacy.permissions.a11y" = "منح صلاحيات الصحة والإشعارات";
+"legacy.continue" = "متابعة";
+"legacy.skip" = "ليس الآن";
+"legacy.result.level" = "المستوى";
+"legacy.result.total" = "المجموع: %@ نقطة";
+"legacy.metric.steps" = "الخطوات";
+"legacy.metric.calories" = "السعرات";
+"legacy.metric.distance" = "المسافة";
+"legacy.metric.sleep" = "النوم";
+"legacy.metric.total" = "المجموع";
+"legacy.goHome" = "الذهاب إلى الرئيسية";
+"legacy.fallbackName" = "أنت";
+"legacy.loading.permissions.title" = "نطلب Apple Health";
+"legacy.loading.permissions.subtitle" = "مرّة واحدة فقط للوصول إلى تاريخك الصحي الكامل";
+"legacy.loading.locating.title" = "نحدد أول سجل";
+"legacy.loading.locating.subtitle" = "نبحث عن أقدم بياناتك الصحية المتاحة على جهازك";
+"legacy.loading.aggregating.title" = "نجمع تاريخك الكامل";
+"legacy.loading.aggregating.subtitle" = "خطواتك، سعراتك، المسافة والنوم من أول يوم متاح";
+"legacy.loading.finalizing.title" = "نشكّل مستواك";
+"legacy.loading.finalizing.subtitle" = "نحوّل هذا التاريخ الصحي إلى مستوى واضح وشخصي";
+"legacy.loading.timeout.title" = "أخذت البيانات وقتاً أطول";
+"legacy.loading.timeout.subtitle" = "سنكمل بالبيانات المتاحة حتى لا تبقى الشاشة معلّقة";
+"legacy.loading.unauthorized.title" = "لم تُمنح الصلاحية";
+"legacy.loading.unauthorized.subtitle" = "يمكنك تفعيل Apple Health لاحقاً من الإعدادات";
+"legacy.rank.1.title" = "البداية";
+"legacy.rank.1.desc" = "كل رحلة تبدأ بخطوة. AiQo معك من هنا.";
+"legacy.rank.2.title" = "المتحرّك";
+"legacy.rank.2.desc" = "بدأت تتحرك وتبني عادات. استمر!";
+"legacy.rank.3.title" = "النشيط";
+"legacy.rank.3.desc" = "جسمك يشكرك. مستواك يرتفع بثبات.";
+"legacy.rank.4.title" = "المنضبط";
+"legacy.rank.4.desc" = "التزامك واضح. أنت فوق المعدّل.";
+"legacy.rank.5.title" = "القوي";
+"legacy.rank.5.desc" = "بيانات قوية. جسمك يتكلم وأنت تسمع.";
+"legacy.rank.6.title" = "المحارب";
+"legacy.rank.6.desc" = "قليلين يوصلون هنا. أنت محارب حقيقي.";
+"legacy.rank.7.title" = "البطل";
+"legacy.rank.7.desc" = "أرقامك تتكلم عنك. بطل بكل المقاييس.";
+"legacy.rank.8.title" = "الأسطورة الرياضية";
+"legacy.rank.8.desc" = "أرقامك تبيّن إنك ماخذ صحتك بجدية عالية. AiQo صار شريكك الرسمي.";
+"legacy.rank.9.title" = "الخارق";
+"legacy.rank.9.desc" = "مستوى لا يُصدَّق. أنت تتحدى الحدود.";
+"legacy.rank.10.title" = "الأسطورة الحيّة";
+"legacy.rank.10.desc" = "أنت في القمة المطلقة. تاريخك الصحي استثنائي.";
+"legacy.rank.0.title" = "المبتدئ";
+"legacy.rank.0.desc" = "يلا نبدأ!";
+"unit.km" = "كم";
+"unit.hours.short" = "س";
+
+/* ═══════════════════════════════════════════════════════════
+   ترجمات مفقودة – أُضيفت لتغطية كاملة للترجمة
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Daily Aura ─── */
+"aura.goals" = "الأهداف";
+"aura.history" = "السجل";
+"aura.dailyGoals" = "الأهداف اليومية";
+"aura.stepsGoal" = "هدف الخطوات";
+"aura.caloriesGoal" = "هدف السعرات";
+"aura.today" = "اليوم";
+"aura.a11y.progress" = "تقدم اليوم %@";
+"aura.a11y.hint" = "اضغط مرتين لعرض الأهداف اليومية";
+
+/* ─── Sleep Detail ─── */
+"sleep.timeNavigation" = "التنقل الزمني";
+"sleep.architecture" = "هيكل النوم";
+"sleep.stages" = "مراحل النوم";
+"sleep.stages.unavailable" = "مراحل النوم غير متاحة";
+"sleep.stages.noData" = "لا توجد بيانات مراحل نوم بعد";
+"sleep.stages.noDataMessage" = "البس Apple Watch وقت النوم حتى تنفتح مراحل Core وDeep وREM وAwake هنا.";
+"sleep.trend.noData" = "لا يوجد تاريخ نوم بعد";
+"sleep.trend.noDataMessage" = "ارجع لليوم أو انتظر بيانات HealthKit أكثر لعرض ايقاعات النوم الأسبوعية والشهرية.";
+"sleep.syncing" = "جاري مزامنة مراحل نوم الليلة الماضية...";
+"sleep.lastNight" = "الليلة الماضية";
+"sleep.nextSync" = "نوم الليلة الماضية يظهر بعد المزامنة القادمة مع HealthKit.";
+"sleep.subtitle.day" = "الليلة الماضية";
+"sleep.subtitle.week" = "إيقاع النوم الأسبوعي";
+"sleep.subtitle.month" = "إيقاع النوم الشهري";
+"sleep.subtitle.year" = "تاريخ النوم السنوي";
+"sleep.subtitle.all" = "كل سجل النوم المسجل";
+"sleep.score.outOf" = "من 100";
+"sleep.score.title" = "تقييم النوم";
+
+/* ─── Smart Wake Calculator ─── */
+"smartwake.title" = "حاسبة الاستيقاظ الذكي";
+"smartwake.mode" = "وضع الحاسبة";
+"smartwake.selectSleep" = "اختر وقت النوم";
+"smartwake.selectWake" = "اختر آخر وقت لازم تصحى بيه";
+"smartwake.wakeWindow" = "نافذة الاستيقاظ";
+"smartwake.bestSuggestion" = "أفضل وقت مقترح للاستيقاظ";
+"smartwake.otherSuggestions" = "اقتراحات أخرى";
+"smartwake.cyclesBased" = "اعتمادًا على دورات النوم التقديرية";
+"smartwake.withinWindow" = "ضمن نافذة الاستيقاظ الذكي";
+"smartwake.cycles" = "عدد الدورات";
+"smartwake.expectedDuration" = "مدة النوم المتوقعة";
+"smartwake.confidence" = "مستوى الثقة";
+"smartwake.latestAllowed" = "آخر وقت مسموح";
+"smartwake.result" = "النتيجة";
+"smartwake.bestBalance" = "الأقرب للتوازن";
+"smartwake.cyclesFormat" = "%d دورات";
+
+/* ─── Alarm Setup ─── */
+"alarm.setWake" = "ضبط منبه للاستيقاظ";
+"alarm.scheduledTime" = "الوقت المحدد للمنبه";
+"alarm.helper.ready" = "اضبط هذا الوقت كمنبه للاستيقاظ";
+"alarm.helper.requesting" = "جاري طلب إذن المنبه...";
+"alarm.helper.saving" = "جاري حفظ المنبه...";
+"alarm.helper.saved" = "هذا الوقت صار منبهك القادم";
+"alarm.button.save" = "حفظ";
+"alarm.button.requesting" = "جاري طلب الإذن...";
+"alarm.button.saving" = "جاري حفظ المنبه...";
+"alarm.button.saved" = "تم الحفظ";
+"alarm.button.settings" = "الإعدادات";
+"alarm.button.retry" = "حاول مرة ثانية";
+"alarm.badge.set" = "المنبه مضبوط";
+"alarm.badge.request" = "طلب الإذن";
+"alarm.badge.saving" = "جارٍ الحفظ";
+"alarm.badge.required" = "إذن مطلوب";
+"alarm.badge.failed" = "تعذر الحفظ";
+
+/* ─── DJ Captain Chat ─── */
+"dj.title" = "DJ حمّودي 🎧";
+"dj.thinking" = "يفكر";
+"dj.ready" = "جاهز";
+"dj.headerFallback" = "اسأل الكابتن عن mood أو playlist يناسب يومك";
+"dj.placeholder" = "اطلب مود الأغاني من الكابتن...";
+
+/* ─── Water Detail ─── */
+"water.close" = "إغلاق";
+"water.add" = "+ 0.25 ل";
+"water.a11y.add" = "أضف 0.25 لتر ماء";
+"water.a11y.hint" = "اضغط مرتين لتسجيل شرب الماء";
+
+/* ─── Streak Badge ─── */
+"streak.a11y" = "streak %d يوم متتالي";
+"streak.commitment" = "الالتزام";
+"streak.consecutiveDays" = "يوم متتالي";
+"streak.longestStreak" = "أطول streak";
+"streak.weekCommitment" = "التزام الأسبوع";
+"streak.today" = "اليوم";
+
+/* ─── My Vibe ─── */
+"vibe.live" = "مباشر";
+"vibe.idle" = "متوقف";
+"vibe.myVibe" = "ذوقي";
+"vibe.djHamoudi" = "DJ حمّودي";
+"vibe.bioTimeline" = "الخط الزمني البيولوجي";
+"vibe.bioFrequency" = "التردد الحيوي";
+"vibe.spotifyLabel" = "سبوتيفاي";
+"vibe.connected" = "متصل";
+"vibe.djOverride" = "تجاوز DJ مفعّل";
+"vibe.djPlaceholder" = "اطلب من DJ حمّودي تغيير المود...";
+
+/* ─── Galaxy Screen ─── */
+"galaxy.soulConnected" = "كل روح مرتبطة بالمصدر";
+"galaxy.networkSubtitle" = "شبكة هادئة حول المصدر";
+"galaxy.arenaSubtitle" = "تحديات القبيلة داخل نفس المدار";
+"galaxy.challengesDescription" = "تحديات يومية وشهرية مع مسارات شخصية وقبلية ومجرية.";
+"galaxy.orbitMissions" = "مهام المدار";
+
+/* ─── Arena Screen ─── */
+"arena.createChallenge" = "إنشاء تحدٍ جديد";
+"arena.goal" = "الهدف";
+"arena.titlePlaceholder" = "عنوان التحدي (اختياري)";
+"arena.addChallenge" = "إضافة التحدي";
+"arena.galaxyNote" = "تحديات المجرة مختارة من AiQo، ويمكنك إنشاء تحديات شخصية أو قبلية فقط.";
+
+/* ─── Arena Tab ─── */
+"arena.tribesCompete" = "القبائل تتنافس — وأنت وين؟";
+"arena.createOrJoin" = "أنشئ قبيلتك مع AiQo Intelligence Pro أو انضم لقبيلة صديقك";
+"arena.createTribe" = "أنشئ قبيلة";
+"arena.joinWithCode" = "انضم برمز";
+
+/* ─── Tribe Invite ─── */
+"tribe.invite.newMembers" = "دعوة أعضاء جدد";
+"tribe.invite.membersFormat" = "%@ — %d/٥ أعضاء";
+"tribe.invite.code" = "رمز الدعوة";
+"tribe.invite.copied" = "تم النسخ!";
+"tribe.invite.copyCode" = "نسخ الرمز";
+"tribe.invite.shareImage" = "شارك كصورة";
+"tribe.invite.membersSection" = "الأعضاء";
+"tribe.invite.founder" = "المؤسس";
+"tribe.invite.close" = "إغلاق";
+
+/* ─── Invite Card ─── */
+"inviteCard.title" = "دعوة قبيلة";
+"inviteCard.from" = "دعوة من";
+"inviteCard.joinCode" = "رمز الانضمام";
+"inviteCard.qr" = "QR";
+"inviteCard.validUntil" = "صالح حتى %@";
+"inviteCard.membersCount" = "%d/٥ أعضاء";
+
+/* ─── Tribe Tab ─── */
+"tribeTab.leaveAlert" = "تبي تطلع من القبيلة؟";
+"tribeTab.stayButton" = "لا، أبي أبقى";
+"tribeTab.leaveButton" = "أطلع";
+"tribeTab.leaveWarning" = "إذا طلعت، بتفقد مكانك بالقبيلة";
+"tribeTab.leaveTribe" = "مغادرة القبيلة";
+
+/* ─── Hall of Fame ─── */
+"hallOfFame.week" = "الأسبوع";
+"hallOfFame.title" = "سجل الأمجاد";
+"hallOfFame.close" = "إغلاق";
+
+/* ─── Quick Challenges ─── */
+"quickChallenge.title" = "تحديات سريعة";
+"quickChallenge.subtitle" = "اختر تحدي وابدأ فوراً!";
+"quickChallenge.duration.day" = "%d يوم";
+"quickChallenge.duration.hour" = "%d ساعة";
+"quickChallenge.shortMarathon" = "ماراثون قصير";
+"quickChallenge.10kSteps" = "10K خطوة";
+"quickChallenge.wetDay" = "يوم رطب";
+"quickChallenge.8cups" = "8 أكواب ماء";
+"quickChallenge.noSugar" = "بدون سكر";
+"quickChallenge.24hours" = "24 ساعة";
+"quickChallenge.calmMoment" = "لحظة هدوء";
+"quickChallenge.15minMeditation" = "15 دقيقة تأمل";
+"quickChallenge.earlySleep" = "نوم مبكر";
+"quickChallenge.8hoursSleep" = "8 ساعات نوم";
+"quickChallenge.stepsSprint" = "سبرنت الخطوات";
+"quickChallenge.5kIn3hours" = "5K خلال 3 ساعات";
+
+/* ─── Arena Challenge Detail ─── */
+"challengeDetail.ended" = "انتهى";
+"challengeDetail.dayUnit" = "%d يوم";
+"challengeDetail.hourMinute" = "%d ساعة %d دقيقة";
+"challengeDetail.minuteUnit" = "%d دقيقة";
+"challengeDetail.timeRemaining" = "الوقت المتبقي";
+"challengeDetail.perContribution" = "لكل مساهمة";
+"challengeDetail.participants" = "مشاركين";
+"challengeDetail.topScorers" = "المتصدرين";
+"challengeDetail.levelFormat" = "المستوى %@";
+"challengeDetail.contributeFormat" = "ساهم +%d %@";
+"challengeDetail.completed" = "مكتمل! 🎉";
+"challengeDetail.wellDone" = "أحسنت! أكملت التحدي بنجاح";
+
+/* ─── Challenge History ─── */
+"challengeHistory.myAchievements" = "إنجازاتي";
+"challengeHistory.challenge" = "تحدي";
+"challengeHistory.noChallenges" = "لا توجد تحديات مكتملة بعد";
+"challengeHistory.completeFirst" = "أكمل تحدي أول وشوف إنجازاتك هنا!";
+"challengeHistory.badges" = "البادجات";
+"challengeHistory.badge.start" = "البداية";
+"challengeHistory.badge.start.req" = "أول تحدي";
+"challengeHistory.badge.persistent" = "المثابر";
+"challengeHistory.badge.persistent.req" = "5 تحديات";
+"challengeHistory.badge.warrior" = "المحارب";
+"challengeHistory.badge.warrior.req" = "10 تحديات";
+"challengeHistory.badge.legend" = "الأسطورة";
+"challengeHistory.badge.legend.req" = "25 تحدي";
+"challengeHistory.badge.immortal" = "الخالد";
+"challengeHistory.badge.immortal.req" = "50 تحدي";
+"challengeHistory.badge.walker" = "الماشي";
+"challengeHistory.badge.walker.req" = "تحدي خطوات";
+"challengeHistory.badge.hydrator" = "المرطّب";
+"challengeHistory.badge.hydrator.req" = "تحدي ماء";
+
+/* ─── Tribe Log ─── */
+"tribeLog.title" = "السجل";
+"tribeLog.subtitle" = "آخر 10 أحداث داخل القبيلة.";
+
+/* ─── Tribe Hub ─── */
+"tribeHub.center" = "المركز";
+"tribeHub.arena" = "الأرينا";
+"tribeHub.log" = "السجل";
+"tribeHub.galaxy" = "المجرة";
+"tribeHub.shieldComplete" = "تم فتح الدرع اليوم.";
+"tribeHub.shieldRemaining" = "باقي %d حتى نفتح الدرع";
+"tribeHub.emirate" = "إمارة";
+"tribeHub.previewOn" = "تم تفعيل وضع العرض";
+"tribeHub.previewOff" = "تم إيقاف وضع العرض";
+"tribeHub.displayMode" = "وضع العرض";
+"tribeHub.tribeEnergyToday" = "طاقة القبيلة اليوم";
+"tribeHub.hubReady" = "مركز القبيلة جاهز";
+"tribeHub.hubReadyDesc" = "أنشئ قبيلة إذا كنت على AiQo Intelligence Pro، أو انضم بكود دعوة. بعد الدخول ستظهر طاقة القبيلة والمهام والأعضاء هنا.";
+"tribeHub.canCreate" = "يمكنك إنشاء القبيلة الآن.";
+"tribeHub.familyRequired" = "AiQo Intelligence Pro مطلوبة لإنشاء قبيلة.";
+"tribeHub.createTribe" = "إنشاء قبيلة";
+"tribeHub.familyPlanRequired" = "Intelligence Pro مطلوبة";
+"tribeHub.joinWithCode" = "انضمام بكود";
+"tribeHub.enterCode" = "اكتب كود الدعوة";
+"tribeHub.joinNow" = "انضم الآن";
+"tribeHub.previewHint" = "معاينة لما سيظهر بعد دخولك القبيلة";
+"tribeHub.sparkSent" = "تم إرسال شرارة";
+"tribeHub.contributionAdded" = "تمت إضافة المساهمة";
+"tribeHub.joinFirst" = "انضم إلى قبيلة أولاً حتى يظهر هذا القسم ببياناتك الحقيقية.";
+"tribeHub.enterGalaxy" = "ادخل إلى المجرة";
+"tribeHub.enterGalaxyDesc" = "خريطة الأرواح، التحديات، وشرارة سريعة داخل نفس المدار.";
+"tribeHub.missions" = "مهام القبيلة";
+"tribeHub.missionsSubtitle" = "خطوات جماعية قصيرة وواضحة.";
+"tribeHub.noMissions" = "لا توجد مهام حالياً.";
+"tribeHub.tribeMembers" = "أعضاء القبيلة";
+"tribeHub.membersPrivacy" = "المعروض هنا: الاسم عند العام فقط، والمستوى والطاقة العامة للجميع. لا تُعرض أي بيانات صحية.";
+"tribeHub.noMembers" = "لا يوجد أعضاء بعد.";
+"tribeHub.leader" = "قائد";
+"tribeHub.inviteCodeFormat" = "كود الدعوة: %@";
+"tribeHub.profilePrivacy" = "خصوصية ملفك داخل القبيلة";
+"tribeHub.privateDesc" = "الملف الخاص يخفي اسمك وصورتك الحقيقية، ويُبقي فقط المستوى ومساهمة الطاقة العامة.";
+"tribeHub.leaveTribe" = "مغادرة القبيلة";
+"tribeHub.memberLabel" = "عضو";
+"tribeHub.energyFormat" = "طاقة %d";
+"tribeHub.levelFormat" = "Lv %d";
+"tribeHub.spark" = "شرارة";
+"tribeHub.sendSpark" = "إرسال شرارة";
+"tribeHub.tribeName" = "اسم القبيلة";
+"tribeHub.namePlaceholder" = "مثال: Calm Core";
+"tribeHub.cancel" = "إلغاء";
+"tribeHub.create" = "إنشاء";
+
+/* ─── Tribe Pulse ─── */
+"pulse.harmony" = "الانسجام";
+"pulse.members" = "الأعضاء";
+"pulse.energy" = "الطاقة";
+"pulse.tribePulse" = "نبض القبيلة";
+"pulse.todayHarmony" = "انسجام اليوم %@";
+"pulse.activeMembers" = "%d أعضاء نشطين";
+
+/* ─── Tribe Leaderboard ─── */
+"leaderboard.allTime" = "كل الوقت";
+"leaderboard.monthly" = "شهري";
+"leaderboard.weekly" = "أسبوعي";
+"leaderboard.emirate" = "إمارة";
+"leaderboard.level" = "المستوى";
+"leaderboard.you" = "أنت";
+"leaderboard.rank" = "الترتيب";
+"leaderboard.points" = "النقاط";
+"leaderboard.global" = "عالمي";
+"leaderboard.privateAccount" = "حساب خاص 🔒";
+"leaderboard.publicAccount" = "حساب عام";
+
+/* ─── Tribe View / Emara ─── */
+"emara.global" = "العالمية";
+"emara.arena" = "الارينا";
+"emara.tribe" = "القبيلة";
+"emara.title" = "إمارة";
+"emara.levelFormat" = "المستوى %@";
+"emara.profilePublic" = "ملف عام";
+"emara.profilePrivate" = "ملف خاص";
+"emara.public" = "عام";
+"emara.private" = "حساب خاص";
+
+/* ─── Fitness Assessment ─── */
+"assessment.title" = "قياس المحرك";
+"assessment.checkBody" = "فحص جاهزية جسمك";
+"assessment.twoSystems" = "جسمك فيه نظامين:";
+"assessment.sympathetic" = "واحد يدوس بنزين 🔥 السمبثاوي (للحركة والتوتر)";
+"assessment.parasympathetic" = "وواحد يدوس بريك 🧊 الباراسمبثاوي (للراحة والاسترداد)";
+"assessment.brakeTest" = "هالفحص يكشف قوة البريك حقّك — يعني شلون جسمك يسترد بعد الجهد.";
+"assessment.howItWorks" = "كيف يشتغل؟";
+"assessment.step1" = "٣ دقايق جهد (صعود ونزول على درجة)";
+"assessment.step2" = "دقيقة راحة (كاعد ومرتاح)";
+"assessment.step3" = "النتيجة فورية";
+"assessment.needsWatch" = "يحتاج Apple Watch حتى نقيس نبضك بدقة";
+"assessment.disclaimer" = "هذا التقييم لأغراض اللياقة فقط وليس بديلاً عن استشارة طبية.";
+"assessment.startButton" = "يلا نبدأ الفحص ⚡";
+"assessment.skipButton" = "تخطي الفحص";
+"assessment.bpm" = "نبضة/د";
+"assessment.stepUpDown" = "صعود ونزول على الدرجة";
+"assessment.warmup" = "إحماء";
+"assessment.moderate" = "معتدل";
+"assessment.intense" = "مكثّف";
+"assessment.maximum" = "أقصى";
+"assessment.relax" = "استرخ... تنفّس بعمق 🧘";
+"assessment.peakHR" = "أعلى نبض:";
+"assessment.peakHRLabel" = "أعلى نبض";
+"assessment.recoveryHR" = "نبض الاسترداد";
+"assessment.difference" = "الفرق";
+"assessment.captainSays" = "🗨️ كابتن حمّودي:";
+"assessment.startPlan" = "ابدأ الخطة 🚀";
+
+/* ─── Project View ─── */
+"project.title" = "المشروع";
+"project.weekOf" = "الأسبوع %d من %d";
+"project.bestPerformance" = "أفضل أداء";
+"project.goal" = "الهدف";
+"project.weekPlan" = "خطة هذا الأسبوع";
+"project.dayNumber" = "يوم %d";
+"project.weekMeasure" = "قياس الأسبوع";
+"project.howMuch" = "كم %@ قدرت تسوي؟";
+"project.record" = "سجّل";
+"project.numberPlaceholder" = "الرقم";
+"project.recorded" = "تم التسجيل ✓";
+"project.captainHamoudi" = "كابتن حمّودي";
+
+/* ─── Record Detail ─── */
+"recordDetail.title" = "التحدّيات الأسطورية";
+"recordDetail.activeProject" = "عندك مشروع نشط";
+"recordDetail.ok" = "تمام";
+"recordDetail.activeProjectMessage" = "عندك مشروع نشط حالياً. لازم تنهيه أول قبل ما تبدأ مشروع جديد.";
+"recordDetail.difficulty" = "الصعوبة";
+"recordDetail.expectedDuration" = "المدة المتوقعة";
+"recordDetail.weekUnit" = "أسبوع";
+"recordDetail.category" = "الفئة";
+"recordDetail.story" = "القصة";
+"recordDetail.requirements" = "المتطلبات";
+"recordDetail.startProject" = "ابدأ المشروع ويا الكابتن 🚀";
+
+/* ─── Record Project ─── */
+"recordProject.endProject" = "إنهاء المشروع";
+"recordProject.cancel" = "إلغاء";
+"recordProject.confirmEnd" = "نعم، متأكد";
+"recordProject.endMessage" = "متأكد تبي تنهي مشروع كسر رقم \"%@\"؟";
+"recordProject.finalConfirm" = "⚠️ تأكيد نهائي";
+"recordProject.deleteForever" = "احذف المشروع نهائياً";
+"recordProject.deleteWarning" = "هالخطوة ما تنعكس. بيتم حذف كل بيانات المشروع والخطة المثبتة. متأكد 100%؟";
+"recordProject.loadingPlan" = "جاري تحميل الخطة...";
+"recordProject.weeklyReview" = "📋 المراجعة وضبط البوصلة";
+"recordProject.reviewSubtitle" = "مراجعة أسبوعية مع الكابتن";
+"recordProject.captainHamoudi" = "🗨️ كابتن حمّودي";
+"recordProject.endProjectButton" = "🛑 إنهاء المشروع";
+
+/* ─── Weekly Review ─── */
+"review.obstacle.injury" = "إصابة / ألم";
+"review.obstacle.busy" = "انشغال / وقت";
+"review.obstacle.fatigue" = "تعب / إرهاق";
+"review.obstacle.none" = "ما في شي، كل شي تمام";
+"review.title" = "المراجعة وضبط البوصلة";
+"review.close" = "إغلاق";
+"review.weight" = "⚖️ وزنك الحالي";
+"review.kgUnit" = "كغم";
+"review.bestPerformance" = "💪 أفضل أداء هالأسبوع";
+"review.howWere" = "📝 شلون كانت التمارين؟";
+"review.rateWeek" = "⭐ قيّم أسبوعك";
+"review.obstacles" = "😤 في شي منعك أو أثر عليك؟";
+"review.sendToCaptain" = "أرسل للكابتن حمّودي 📤";
+"review.fallbackMessage" = "أحسنت! كمّل بنفس المستوى 💪";
+
+/* ─── Weekly Review Result ─── */
+"reviewResult.onTrack" = "ماشي صح!";
+"reviewResult.needsAdjust" = "نحتاج نعدّل";
+"reviewResult.captainSays" = "🗨️ كابتن حمّودي:";
+"reviewResult.adjustments" = "التعديلات:";
+"reviewResult.noAdjust" = "ما في تعديل";
+"reviewResult.done" = "تم ✓";
+
+/* ─── Progress Photos ─── */
+"photos.title" = "صور التقدم";
+"photos.startJourney" = "ابدأ رحلة التحول";
+"photos.takeWeekly" = "صوّر جسمك كل أسبوع وشوف الفرق بعينك.\nالصور تنحفظ على جهازك فقط.";
+"photos.addFirst" = "أضف أول صورة";
+"photos.photoUnit" = "صورة";
+"photos.dayUnit" = "يوم";
+"photos.kgUnit" = "كغم";
+"photos.compareProgress" = "قارن التقدم";
+"photos.compareDesc" = "شوف الفرق بين أول صورة وآخر صورة";
+"photos.album" = "الألبوم";
+"photos.takePhoto" = "التقط صورة";
+"photos.useCamera" = "استخدم الكاميرا";
+"photos.chooseGallery" = "اختر من المعرض";
+"photos.fromAlbum" = "من ألبوم الصور";
+"photos.weightOptional" = "الوزن (اختياري)";
+"photos.noteOptional" = "ملاحظة (اختياري)";
+"photos.savePhoto" = "حفظ الصورة ✨";
+"photos.newPhoto" = "صورة جديدة";
+"photos.date" = "التاريخ";
+"photos.weight" = "الوزن";
+"photos.note" = "ملاحظة";
+"photos.from" = "من";
+"photos.deletePhoto" = "حذف الصورة";
+"photos.deleteConfirm" = "حذف الصورة؟";
+"photos.delete" = "حذف";
+"photos.deleteMessage" = "هالصورة بتنحذف نهائياً من الجهاز.";
+"photos.start" = "البداية";
+"photos.now" = "الحين";
+"photos.before" = "قبل";
+"photos.after" = "بعد";
+"photos.comparison" = "المقارنة";
+
+/* ─── Weekly Report ─── */
+"weeklyReport.shareImage" = "مشاركة كصورة";
+"weeklyReport.instagramStories" = "قصص إنستغرام";
+"weeklyReport.reportTitle" = "تقرير AiQo الأسبوعي";
+"weeklyReport.reportMessage" = "شوف تقدمي هالأسبوع!";
+"weeklyReport.shareText" = "مشاركة نص";
+"weeklyReport.exportPDF" = "تصدير PDF";
+"weeklyReport.exportCSV" = "تصدير CSV";
+"weeklyReport.outOf100" = "من 100";
+"weeklyReport.dailySteps" = "الخطوات اليومية";
+"weeklyReport.workoutSummary" = "ملخص التمارين";
+"weeklyReport.workoutUnit" = "تمرين";
+"weeklyReport.minuteUnit" = "دقيقة";
+"weeklyReport.avgPerWorkout" = "معدل / تمرين";
+"weeklyReport.preparing" = "جاري تحضير التقرير...";
+"weeklyReport.aboutLastWeek" = "عن الأسبوع الماضي";
+
+/* ─── Feature Intro ─── */
+"featureIntro.skip" = "تخطي";
+"featureIntro.startJourney" = "ابدأ رحلتك";
+"featureIntro.next" = "التالي";
+"featureIntro.captainTitle" = "كابتن حمّودي";
+"featureIntro.captainDesc" = "مدربك الذكي. يعرف جسمك، يفهم أهدافك، ويوجّهك كل يوم بأسلوب يناسبك.";
+"featureIntro.workoutsTitle" = "تمارين، تحديات، وقمم";
+"featureIntro.workoutsDesc" = "تمارين مصممة لك. تحديات يومية وأسبوعية. ومشاريع لكسر الأرقام القياسية — كلها مع الكابتن.";
+"featureIntro.kitchenTitle" = "المطبخ";
+"featureIntro.kitchenDesc" = "خطط وجبات ذكية، تصوير الأكل وتحليله، ومتابعة السعرات والبروتين — كل يوم.";
+
+/* ─── Active Recovery ─── */
+"recovery.title" = "الاسترداد النشط";
+"recovery.liveHR" = "النبض المباشر: %d نبضة/د";
+"recovery.motivational" = "مو القوة إنك تعلي النبض...\nالقوة إنك ترجع تسيطر عليه.";
+"recovery.inhale" = "استنشق بعمق...";
+"recovery.exhale" = "زفير ببطء...";
+
+/* ─── Captain Memory ─── */
+"memory.title" = "ذاكرة الكابتن";
+"memory.clearAll" = "مسح كل الذاكرة";
+"memory.clearCancel" = "إلغاء";
+"memory.clearConfirm" = "مسح الكل";
+"memory.clearMessage" = "متأكد تبي تمسح كل ذاكرة الكابتن؟ هالخطوة ما تنعكس.";
+"memory.subtitle" = "المعلومات اللي يتذكرها الكابتن عشان يساعدك أحسن";
+"memory.enableToggle" = "تفعيل ذاكرة الكابتن";
+"memory.enableDesc" = "يوقف حفظ واستخراج المعلومات";
+"memory.clearButton" = "مسح كل الذاكرة";
+"memory.category.identity" = "الهوية";
+"memory.category.goals" = "الأهداف";
+"memory.category.body" = "الجسم";
+"memory.category.preferences" = "التفضيلات";
+"memory.category.mood" = "المزاج";
+"memory.category.injuries" = "الإصابات";
+"memory.category.nutrition" = "التغذية";
+"memory.category.history" = "تاريخ التمارين";
+"memory.category.sleep" = "النوم";
+"memory.category.notes" = "ملاحظات";
+"memory.category.recordProject" = "مشروع كسر الرقم";
+"memory.key.name" = "الاسم";
+"memory.key.weight" = "الوزن";
+"memory.key.height" = "الطول";
+"memory.key.age" = "العمر";
+"memory.key.goal" = "الهدف";
+"memory.key.sleepHours" = "ساعات النوم";
+"memory.key.fitnessLevel" = "مستوى اللياقة";
+"memory.key.trainingDays" = "أيام التمرين";
+"memory.key.mood" = "المزاج";
+"memory.key.dietPreference" = "تفضيل غذائي";
+"memory.key.favExercise" = "تمرين مفضل";
+"memory.key.equipment" = "معدات متاحة";
+"memory.key.water" = "شرب الماء";
+"memory.key.projectId" = "معرّف المشروع";
+"memory.key.projectName" = "اسم المشروع";
+"memory.key.avgSteps" = "معدل الخطوات";
+"memory.key.avgSleep" = "معدل النوم";
+"memory.key.avgCalories" = "معدل السعرات";
+"memory.key.avgHR" = "معدل النبض";
+"memory.key.injury" = "إصابة";
+
+/* ─── Language Selection ─── */
+"lang.systemAr" = "لغة النظام";
+"lang.systemEn" = "System language";
+"lang.arabic" = "عربي";
+"lang.english" = "English";
+"lang.explore" = "استكشف مستواك الحقيقي";
+
+/* ─── App Settings ─── */
+"settings.coachLang.arabic" = "العربية";
+"settings.coachLang.english" = "الإنجليزية";
+
+/* ─── Profile Privacy ─── */
+"profile.publicAccount" = "حساب عام";
+"profile.visibleToTribes" = "تظهر للقبائل والارينا";
+"profile.hideName" = "إيقاف هذا الخيار سيخفي اسمك ويجعله خاصاً متى ما شئت.";
+"profile.updateFailed" = "فشل التحديث — حاول مرة أخرى";
