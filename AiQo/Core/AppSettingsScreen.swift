@@ -10,10 +10,6 @@ struct AppSettingsScreen: View {
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
-    #if DEBUG
-    @State private var isPreparingTestWhisper = false
-    @State private var testWhisperStatus: String?
-    #endif
 
     var body: some View {
         Form {
@@ -130,6 +126,27 @@ struct AppSettingsScreen: View {
                 NSLocalizedString("settings.section.captain", value: "كابتن حمّودي", comment: "Captain section")
             ) {
                 NavigationLink {
+                    BriefingSettingsView()
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(appLanguage == .arabic ? "إشعارات الكابتن" : "Captain Notifications")
+                                .foregroundStyle(.primary)
+
+                            Text(appLanguage == .arabic ? "أربع رسائل تحفيزية باليوم" : "Up to 4 motivational messages daily")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "bell.badge")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                NavigationLink {
                     CaptainMemorySettingsView()
                 } label: {
                     HStack(spacing: 12) {
@@ -237,40 +254,6 @@ struct AppSettingsScreen: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
-
-                Button {
-                    triggerTestSpiritualWhisper()
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Trigger Test Spiritual Whisper")
-                                .foregroundStyle(.primary)
-
-                            Text("Queues an Iraqi Arabic whisper and fires it 5 seconds after backgrounding.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        if isPreparingTestWhisper {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "bell.and.waves.left.and.right.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(.plain)
-                .disabled(isPreparingTestWhisper)
-
-                if let testWhisperStatus {
-                    Text(testWhisperStatus)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
             }
             #endif
         }
@@ -282,23 +265,10 @@ struct AppSettingsScreen: View {
             )
         )
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if UserDefaults.standard.string(forKey: "notificationLanguage") == nil {
-                let inferred = NotificationPreferencesStore.shared.language == .english
-                    ? CoachNotificationLanguage.english
-                    : CoachNotificationLanguage.arabic
-                notificationLanguage = inferred.rawValue
-            }
-        }
         .onChange(of: notificationsEnabled) { _, enabled in
             AppSettingsStore.shared.notificationsEnabled = enabled
 
-            if enabled {
-                NotificationService.shared.requestPermissions()
-                rescheduleNotifications(language: appLanguage)
-                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
-            } else {
-                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
+            if !enabled {
                 UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                 UNUserNotificationCenter.current().removeAllDeliveredNotifications()
             }
@@ -306,19 +276,15 @@ struct AppSettingsScreen: View {
         .onChange(of: appLanguage) { _, language in
             LocalizationManager.shared.setLanguage(language)
 
-            if notificationsEnabled {
-                rescheduleNotifications(language: language)
-            }
-
             if UserDefaults.standard.string(forKey: "notificationLanguage") == nil {
                 notificationLanguage = language == .english
                     ? CoachNotificationLanguage.english.rawValue
                     : CoachNotificationLanguage.arabic.rawValue
             }
-        }
-        .onChange(of: notificationLanguage) { _, language in
-            let normalized = CoachNotificationLanguage(rawValue: language) ?? .arabic
-            NotificationPreferencesStore.shared.language = normalized == .english ? .english : .arabic
+
+            // Refresh notification categories and reschedule for new language
+            WorkoutSummaryNotifier.shared.refreshCategoryForCurrentLanguage()
+            Task { await CaptainBriefingScheduler.shared.rescheduleAll() }
         }
         .alert(
             NSLocalizedString("settings.logout.title", value: "Log Out", comment: ""),
@@ -382,33 +348,6 @@ struct AppSettingsScreen: View {
             }
         }
     }
-
-    private func rescheduleNotifications(language: AppLanguage) {
-        ActivityNotificationEngine.shared.forceReschedule(
-            gender: NotificationPreferencesStore.shared.gender,
-            language: language == .english ? .english : .arabic
-        )
-    }
-
-    #if DEBUG
-    private func triggerTestSpiritualWhisper() {
-        guard !isPreparingTestWhisper else { return }
-
-        isPreparingTestWhisper = true
-        testWhisperStatus = "Preparing test whisper..."
-
-        Task {
-            let didQueue = await NotificationIntelligenceManager.shared.queueDeveloperTestSpiritualWhisper()
-
-            await MainActor.run {
-                isPreparingTestWhisper = false
-                testWhisperStatus = didQueue
-                    ? "Ready. Send the app to the background to receive it in 5 seconds."
-                    : "Notification permission is unavailable. Enable notifications for AiQo first."
-            }
-        }
-    }
-    #endif
 }
 
 #Preview {

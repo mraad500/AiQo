@@ -43,7 +43,7 @@ final class HealthKitManager: ObservableObject {
     @Published var todaySteps: Int = 0
     @Published var todayCalories: Double = 0
     @Published var todayDistanceKm: Double = 0
-    private var lastObservedSteps: Int = 0
+    // lastObservedSteps removed — was only for InactivityTracker
     private var hasStartedBackgroundObserver = false
     private var stepObserverQuery: HKObserverQuery?
     @MainActor private var isProcessingHealthData = false
@@ -328,11 +328,6 @@ final class HealthKitManager: ObservableObject {
             self.todayDistanceKm = data.distanceMeters / 1000.0
         }
 
-        if stepCount > lastObservedSteps {
-            InactivityTracker.shared.markActive()
-        }
-        lastObservedSteps = stepCount
-
         logger.debug("health_data_updated steps=\(stepCount)")
 
         calculateAndAwardCoins(
@@ -341,25 +336,7 @@ final class HealthKitManager: ObservableObject {
             currentDistanceKm: data.distanceMeters / 1000.0
         )
         
-        let appLanguage = AppSettingsStore.shared.appLanguage
-        let notifLanguage: ActivityNotificationLanguage = appLanguage == .english ? .english : .arabic
-
-        let gender = UserProfileStore.shared.current.gender ?? .male
-
-        let goals = GoalsStore.shared.current
-        ActivityNotificationEngine.shared.evaluateAndSendIfNeeded(
-            steps: stepCount,
-            calories: data.activeKcal,
-            stepsGoal: goals.steps,
-            caloriesGoal: goals.activeCalories,
-            gender: gender,
-            language: notifLanguage
-        )
-
-        await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
-
-        // Dual-Persona HealthKit trigger evaluation
-        CaptainNotificationEngine.shared.evaluateHealthKitTriggers()
+        // Old notification evaluation removed — CaptainBriefingScheduler handles all notifications
     }
     
     // MARK: - 5. Mining Logic ⛏️

@@ -258,7 +258,17 @@ struct WorkoutSessionScreen: View {
                 let summary = pendingCoachingSummary
                 self.pendingCoachingSummary = nil
                 Task {
-                    await CaptainSmartNotificationService.shared.handleWorkoutCompleted(summary: summary)
+                    await AIWorkoutSummaryService.shared.handleWorkoutEnded(
+                        workoutType: summary.workoutType,
+                        duration: summary.duration,
+                        keyMetrics: [
+                            "calories": summary.calories,
+                            "averageHeartRate": summary.averageHeartRate,
+                            "distanceKm": summary.distanceMeters / 1000.0,
+                            "estimatedSteps": Double(summary.estimatedSteps)
+                        ],
+                        endedAt: Date()
+                    )
                 }
             }
 

@@ -1,6 +1,5 @@
 import Foundation
 import HealthKit
-import UserNotifications
 
 @MainActor
 final class MorningHabitOrchestrator: NSObject {
@@ -22,15 +21,12 @@ final class MorningHabitOrchestrator: NSObject {
 
     private enum DefaultsKeys {
         static let scheduledWakeTimestamp = "aiqo.morningHabit.scheduledWakeTimestamp"
-        static let notificationWakeTimestamp = "aiqo.morningHabit.notificationWakeTimestamp"
         static let cachedInsight = "aiqo.morningHabit.cachedInsight"
     }
 
     private let healthStore: HKHealthStore
     private let healthManager: HealthKitManager
-    private let notificationCenter: UNUserNotificationCenter
     private let userDefaults: UserDefaults
-    private let notificationComposer: CaptainBackgroundNotificationComposer
 
     private let stepThreshold = 25
     private let monitoringWindow: TimeInterval = 6 * 60 * 60
@@ -41,15 +37,11 @@ final class MorningHabitOrchestrator: NSObject {
     init(
         healthStore: HKHealthStore = HKHealthStore(),
         healthManager: HealthKitManager? = nil,
-        notificationCenter: UNUserNotificationCenter = .current(),
-        userDefaults: UserDefaults = .standard,
-        notificationComposer: CaptainBackgroundNotificationComposer? = nil
+        userDefaults: UserDefaults = .standard
     ) {
         self.healthStore = healthStore
         self.healthManager = healthManager ?? .shared
-        self.notificationCenter = notificationCenter
         self.userDefaults = userDefaults
-        self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
         super.init()
     }
 
@@ -68,7 +60,6 @@ final class MorningHabitOrchestrator: NSObject {
 
         if hasWakeChanged {
             clearCachedInsight()
-            cancelMorningNotification()
         }
 
         start()
@@ -86,18 +77,9 @@ final class MorningHabitOrchestrator: NSObject {
                 for: wakeDate,
                 stepsSinceWake: stepsSinceWake
             )
-            guard !insight.isRead else {
-                cancelMorningNotification()
-                return
-            }
+            guard !insight.isRead else { return }
 
-            guard !hasScheduledNotification(for: wakeDate) else { return }
-
-            await scheduleMorningNotification(
-                for: wakeDate,
-                stepsSinceWake: stepsSinceWake,
-                body: insight.message
-            )
+            // Notification delivery removed — Phase 2 CaptainBriefingScheduler handles morning slot
         } catch {
             print("MorningHabitOrchestrator refresh failed:", error.localizedDescription)
         }
@@ -120,14 +102,10 @@ final class MorningHabitOrchestrator: NSObject {
 
     func markEphemeralInsightRead() {
         guard var insight = cachedInsight else { return }
-        guard !insight.isRead else {
-            cancelMorningNotification()
-            return
-        }
+        guard !insight.isRead else { return }
 
         insight.isRead = true
         saveCachedInsight(insight)
-        cancelMorningNotification()
     }
 
     func deleteReadEphemeralInsightIfNeeded() {
@@ -135,18 +113,13 @@ final class MorningHabitOrchestrator: NSObject {
         clearCachedInsight()
     }
 
-    func cancelMorningNotification() {
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
-        notificationCenter.removeDeliveredNotifications(withIdentifiers: [Self.notificationIdentifier])
-        userDefaults.removeObject(forKey: DefaultsKeys.notificationWakeTimestamp)
+    /// Returns the scheduled wake date, if any.
+    var scheduledWakeDate: Date? {
+        date(forKey: DefaultsKeys.scheduledWakeTimestamp)
     }
 }
 
 private extension MorningHabitOrchestrator {
-    var scheduledWakeDate: Date? {
-        date(forKey: DefaultsKeys.scheduledWakeTimestamp)
-    }
-
     var cachedInsight: MorningInsight? {
         guard let data = userDefaults.data(forKey: DefaultsKeys.cachedInsight) else { return nil }
         return try? JSONDecoder().decode(MorningInsight.self, from: data)
@@ -199,7 +172,7 @@ private extension MorningHabitOrchestrator {
             return cachedInsight
         }
 
-        let generatedMessage = try await generateEphemeralInsightMessage(
+        let generatedMessage = generateDefaultInsightMessage(
             for: wakeDate,
             stepsSinceWake: stepsSinceWake
         )
@@ -213,24 +186,14 @@ private extension MorningHabitOrchestrator {
         return insight
     }
 
-    func generateEphemeralInsightMessage(
+    func generateDefaultInsightMessage(
         for wakeDate: Date,
         stepsSinceWake: Int?
-    ) async throws -> String {
-        if let stepsSinceWake {
-            return await notificationComposer.composeMorningSleepNotification(
-                wakeDate: wakeDate,
-                stepsSinceWake: stepsSinceWake,
-                language: AppSettingsStore.shared.appLanguage,
-                level: max(LevelStore.shared.level, 1)
-            )
+    ) -> String {
+        if let steps = stepsSinceWake, steps >= stepThreshold {
+            return "صباح الخير بطل، بديت يومك بـ\(steps) خطوة، استمر!"
         }
-
-        return await notificationComposer.composeSleepCompletionNotification(
-            sessionEndedAt: wakeDate,
-            language: AppSettingsStore.shared.appLanguage,
-            level: max(LevelStore.shared.level, 1)
-        )
+        return "صباح الخير بطل، قوم وابدأ يومك بقوة!"
     }
 
     func sleepSession(from stages: [SleepStageData]) -> SleepSession? {
@@ -292,45 +255,6 @@ private extension MorningHabitOrchestrator {
 
             healthStore.execute(query)
         }
-    }
-
-    func scheduleMorningNotification(
-        for wakeDate: Date,
-        stepsSinceWake: Int,
-        body: String
-    ) async {
-        let content = UNMutableNotificationContent()
-        content.title = "Captain Hamoudi"
-        content.body = body
-        content.sound = nil
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "source": Self.notificationSource,
-            "destination": "captain_chat",
-            "wakeTimestamp": wakeDate.timeIntervalSince1970,
-            "stepsSinceWake": stepsSinceWake
-        ]
-
-        if #available(iOS 15.0, *) {
-            content.interruptionLevel = .passive
-        }
-
-        let request = UNNotificationRequest(
-            identifier: Self.notificationIdentifier,
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-
-        do {
-            try await notificationCenter.add(request)
-            userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
-        } catch {
-            print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)
-        }
-    }
-
-    func hasScheduledNotification(for wakeDate: Date) -> Bool {
-        userDefaults.double(forKey: DefaultsKeys.notificationWakeTimestamp) == wakeDate.timeIntervalSince1970
     }
 
     func saveCachedInsight(_ insight: MorningInsight) {

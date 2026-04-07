@@ -73,7 +73,7 @@ struct LegacyCalculationScreenView: View {
                     Task { @MainActor in
                         HealthKitService.permissionFlowEnabled = true
                         _ = try? await HealthKitService.shared.requestAuthorization()
-                        _ = await NotificationService.shared.ensureAuthorizationIfNeeded()
+                        // Notification authorization removed — Phase 2 CaptainBriefingScheduler handles this
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                             hasGrantedPermissions = true
                             isRequestingPermissions = false
