@@ -119,12 +119,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         LocalizationManager.shared.applySavedLanguage()
 
         #if DEBUG
-        let isScreenshotMode = ScreenshotMode.isActive
-        #else
-        let isScreenshotMode = false
+        if ScreenshotMode.isActive { return true }
         #endif
-
-        guard !isScreenshotMode else { return true }
 
         Task { @MainActor in
             PurchaseManager.shared.start()
