@@ -61,7 +61,7 @@ final class CaptainBriefingDelegate: NSObject, UNUserNotificationCenterDelegate 
 
                 // Generate real content if needed
                 if userInfo["needsContentGeneration"] as? Bool == true {
-                    let content = await BriefingContentGenerator.shared.generate(for: slot, context: context)
+                    _ = await BriefingContentGenerator.shared.generate(for: slot, context: context)
                     // Update the notification content dynamically is not possible in willPresent,
                     // so we show the placeholder. For fixed-time slots, the content generation
                     // should happen at scheduling time or via notification service extension.

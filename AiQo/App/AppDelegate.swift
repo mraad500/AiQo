@@ -122,6 +122,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         if ScreenshotMode.isActive { return true }
         #endif
 
+        return launchRemainingServices(application)
+    }
+
+    private func launchRemainingServices(_ application: UIApplication) -> Bool {
         Task { @MainActor in
             PurchaseManager.shared.start()
         }

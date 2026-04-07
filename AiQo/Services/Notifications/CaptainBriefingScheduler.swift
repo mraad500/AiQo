@@ -342,7 +342,8 @@ final class CaptainBriefingScheduler: ObservableObject {
         let stepsGoal = max(1, goals.steps)
         let dailyRingProgress = Double(metrics.stepCount) / Double(stepsGoal)
 
-        let userName = UserProfileStore.shared.current.name ?? (currentLanguage() == .arabic ? "بطل" : "Champ")
+        let storedName = UserProfileStore.shared.current.name
+        let userName = storedName.isEmpty ? (currentLanguage() == .arabic ? "بطل" : "Champ") : storedName
         let language = currentLanguage()
         let gender = BriefingGender.from(UserProfileStore.shared.current.gender)
 
