@@ -118,12 +118,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         LocalizationManager.shared.applySavedLanguage()
 
         #if DEBUG
-        let isScreenshotMode = ScreenshotMode.isActive
-        #else
-        let isScreenshotMode = false
+        if ScreenshotMode.isActive {
+            return true
+        }
         #endif
-
-        guard !isScreenshotMode else { return true }
 
         NotificationCategoryManager.shared.registerAllCategories()
         SmartNotificationScheduler.shared.registerBackgroundTasks()

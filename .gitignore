@@ -6,3 +6,6 @@ build/
 # Local build secrets
 Configuration/Secrets.xcconfig
 *.xcconfig.local
+
+# Local Codex/Claude worktrees should not be tracked by the app repo.
+.claude/worktrees/

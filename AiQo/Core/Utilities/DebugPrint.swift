@@ -1,7 +1,7 @@
 import Foundation
 
 /// Keep accidental debug prints out of release builds.
-func print(
+nonisolated func print(
     _ items: Any...,
     separator: String = " ",
     terminator: String = "\n"

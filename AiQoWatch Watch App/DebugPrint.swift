@@ -1,7 +1,7 @@
 import Foundation
 
 /// Keep watch debug logs out of release builds.
-func print(
+nonisolated func print(
     _ items: Any...,
     separator: String = " ",
     terminator: String = "\n"
