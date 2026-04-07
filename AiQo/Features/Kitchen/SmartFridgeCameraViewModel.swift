@@ -28,7 +28,7 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     @Published private(set) var capturedImage: UIImage?
     @Published private(set) var analyzedItems: [FridgeItem] = []
     @Published private(set) var processingTextKey: String = "kitchen.scanner.processing.biofuel"
-    @Published private(set) var errorTextKey: String?
+    @Published private(set) var error: AiQoError?
     @Published private(set) var latestResultID: UUID?
 
     let captureSession = AVCaptureSession()
@@ -93,7 +93,7 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         guard permissionState == .granted else { return }
         guard scanPhase == .previewing else { return }
 
-        errorTextKey = nil
+        error = nil
         analyzedItems = []
         scanPhase = .capturing
 
@@ -111,7 +111,7 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         processingTickerTask?.cancel()
         capturedImage = nil
         analyzedItems = []
-        errorTextKey = nil
+        error = nil
         processingTextKey = processingKeys.first ?? "kitchen.scanner.processing.biofuel"
         scanPhase = .previewing
         configureAndStartSessionIfNeeded()
@@ -121,13 +121,13 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         do {
             let items = try await callVisionAPI(image: image)
             guard !items.isEmpty else {
-                logger.warning("Vision API returned empty items, using fallback")
-                return fallbackItems()
+                logger.warning("Vision API returned empty items")
+                throw AiQoError.visionAnalysisFailed
             }
             return items
         } catch {
             logger.error("Fridge image analysis failed: \(error.localizedDescription, privacy: .public)")
-            return fallbackItems()
+            throw AiQoError.visionAnalysisFailed
         }
     }
 
@@ -255,35 +255,6 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         }
     }
 
-    private func fallbackItems() -> [FridgeItem] {
-        [
-            FridgeItem(
-                name: "kitchen.scanner.item.chicken".localized,
-                quantity: 2,
-                unit: "kitchen.scanner.unit.pieces".localized,
-                alchemyNoteKey: "kitchen.scanner.note.chicken"
-            ),
-            FridgeItem(
-                name: "kitchen.scanner.item.eggs".localized,
-                quantity: 6,
-                unit: "kitchen.scanner.unit.eggs".localized,
-                alchemyNoteKey: "kitchen.scanner.note.eggs"
-            ),
-            FridgeItem(
-                name: "kitchen.scanner.item.broccoli".localized,
-                quantity: 1,
-                unit: "kitchen.scanner.unit.head".localized,
-                alchemyNoteKey: "kitchen.scanner.note.broccoli"
-            ),
-            FridgeItem(
-                name: "kitchen.scanner.item.yogurt".localized,
-                quantity: 2,
-                unit: "kitchen.scanner.unit.cups".localized,
-                alchemyNoteKey: "kitchen.scanner.note.yogurt"
-            )
-        ]
-    }
-
     private func minimizedGeminiImageData(from imageData: Data) -> Data {
         guard imageData.count > maxGeminiImageBytes,
               let image = UIImage(data: imageData) else {
@@ -402,6 +373,13 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
         }
     }
 
+    @MainActor
+    private func presentVisionAnalysisError() {
+        analyzedItems = []
+        error = .visionAnalysisFailed
+        scanPhase = .error
+    }
+
     private func handleCapturedPhoto(_ image: UIImage) {
         DispatchQueue.main.async {
             self.capturedImage = image
@@ -429,24 +407,22 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
             } catch {
                 await MainActor.run {
                     self.processingTickerTask?.cancel()
-                    self.errorTextKey = "kitchen.scanner.processing.failed"
-                    self.scanPhase = .error
+                    self.presentVisionAnalysisError()
                 }
             }
         }
     }
 
+    @MainActor
     fileprivate func handleCapturedPhotoOutput(photo: AVCapturePhoto, error: Error?) {
         if error != nil {
-            errorTextKey = "kitchen.scanner.processing.failed"
-            scanPhase = .error
+            presentVisionAnalysisError()
             return
         }
 
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else {
-            errorTextKey = "kitchen.scanner.processing.failed"
-            scanPhase = .error
+            presentVisionAnalysisError()
             return
         }
 

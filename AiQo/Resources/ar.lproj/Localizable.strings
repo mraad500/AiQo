@@ -29,6 +29,7 @@
 "error.captainUnavailable" = "الكابتن غير متاح حالياً";
 "error.captainRateLimited" = "طلبات كثيرة. انتظر شوي.";
 "error.captainResponseInvalid" = "رد الكابتن غير صالح";
+"error.visionAnalysisFailed" = "عذراً، لم نتمكن من تحليل الصورة بوضوح. يرجى المحاولة مرة أخرى بصورة أوضح.";
 "error.captain.recovery" = "حاول مرة ثانية أو جرب لاحقاً.";
 "error.healthKitUnavailable" = "بيانات الصحة غير متاحة";
 "error.healthKitPermissionDenied" = "تحتاج تفعّل صلاحيات الصحة";
@@ -297,7 +298,7 @@
 "kitchen.scanner.processing.extracting" = "جاري استخراج المكونات...";
 "kitchen.scanner.processing.classifying" = "جاري تصنيف الغنائم الغذائية...";
 "kitchen.scanner.processing.syncing" = "جاري مزامنة الثلاجة الافتراضية...";
-"kitchen.scanner.processing.failed" = "ما قدرنا نحلل الصورة. جرّب مرّة ثانية بخلفية أوضح.";
+"kitchen.scanner.processing.failed" = "عذراً، لم نتمكن من تحليل الصورة بوضوح. يرجى المحاولة مرة أخرى بصورة أوضح.";
 "kitchen.scanner.permission.denied.title" = "نحتاج صلاحية الكاميرا";
 "kitchen.scanner.permission.denied.message" = "فعّل الكاميرا من الإعدادات حتى يشتغل ماسح الثلاجة الذكي ويحلل المكونات داخل الثلاجة.";
 "kitchen.scanner.permission.unavailable.title" = "الكاميرا غير متاحة";

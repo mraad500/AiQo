@@ -108,7 +108,7 @@ struct SmartFridgeScannerView: View {
 
             if viewModel.scanPhase == .error {
                 SmartFridgeErrorOverlay(
-                    messageKey: viewModel.errorTextKey ?? "kitchen.scanner.processing.failed",
+                    message: viewModel.error?.localizedDescription ?? AiQoError.visionAnalysisFailed.localizedDescription,
                     onRetry: {
                         persistedResultID = nil
                         viewModel.resetScanner()
@@ -546,7 +546,7 @@ private struct SmartFridgeResultsOverlay: View {
 }
 
 private struct SmartFridgeErrorOverlay: View {
-    let messageKey: String
+    let message: String
     let onRetry: () -> Void
 
     var body: some View {
@@ -559,7 +559,7 @@ private struct SmartFridgeErrorOverlay: View {
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
 
-            Text(messageKey.localized)
+            Text(message)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.74))
                 .multilineTextAlignment(.center)

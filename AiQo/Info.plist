@@ -68,9 +68,9 @@
 	<key>SUPABASE_URL</key>
 	<string>https://zidbsrepqpbucqzxnwgk.supabase.co</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
-	<true/>
+	<false/>
 	<key>TRIBE_FEATURE_VISIBLE</key>
-	<true/>
+	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
 	<key>UIBackgroundModes</key>

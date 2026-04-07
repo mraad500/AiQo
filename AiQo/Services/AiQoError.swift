@@ -12,6 +12,7 @@ enum AiQoError: LocalizedError {
     case captainUnavailable
     case captainRateLimited
     case captainResponseInvalid
+    case visionAnalysisFailed
 
     // Health
     case healthKitUnavailable
@@ -49,6 +50,8 @@ enum AiQoError: LocalizedError {
             return "error.captainRateLimited".localized
         case .captainResponseInvalid:
             return "error.captainResponseInvalid".localized
+        case .visionAnalysisFailed:
+            return "error.visionAnalysisFailed".localized
         case .healthKitUnavailable:
             return "error.healthKitUnavailable".localized
         case .healthKitPermissionDenied:

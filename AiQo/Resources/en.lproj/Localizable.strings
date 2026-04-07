@@ -29,6 +29,7 @@
 "error.captainUnavailable" = "Captain is unavailable right now";
 "error.captainRateLimited" = "Too many requests. Wait a moment.";
 "error.captainResponseInvalid" = "Captain response was invalid";
+"error.visionAnalysisFailed" = "Sorry, we couldn't analyze the image clearly. Please try again with a clearer picture.";
 "error.captain.recovery" = "Try again or come back later.";
 "error.healthKitUnavailable" = "Health data is not available";
 "error.healthKitPermissionDenied" = "Health permissions required";
@@ -295,7 +296,7 @@
 "kitchen.scanner.processing.extracting" = "Extracting Ingredients...";
 "kitchen.scanner.processing.classifying" = "Classifying nutritional loot...";
 "kitchen.scanner.processing.syncing" = "Syncing the Virtual Fridge...";
-"kitchen.scanner.processing.failed" = "The image analysis failed. Try again with a clearer fridge view.";
+"kitchen.scanner.processing.failed" = "Sorry, we couldn't analyze the image clearly. Please try again with a clearer picture.";
 "kitchen.scanner.permission.denied.title" = "Camera Access Needed";
 "kitchen.scanner.permission.denied.message" = "Enable camera access in Settings so the Smart Fridge Scanner can analyze the ingredients in your fridge.";
 "kitchen.scanner.permission.unavailable.title" = "Camera Unavailable";
