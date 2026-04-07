@@ -90,7 +90,7 @@ struct AiQoApp: App {
     }
 }
 
-final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
@@ -106,8 +106,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         _ = PhoneConnectivityManager.shared
 
-        let center = UNUserNotificationCenter.current()
-        center.delegate = self
+        // Notification delegate — CaptainBriefingDelegate handles all notification presentation/routing
+        UNUserNotificationCenter.current().delegate = CaptainBriefingDelegate.shared
+        WorkoutSummaryNotifier.registerCategories()
 
         // Core services initialization
         _ = CrashReporter.shared
@@ -125,8 +126,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
         guard !isScreenshotMode else { return true }
 
-        NotificationCategoryManager.shared.registerAllCategories()
-        NotificationIntelligenceManager.shared.registerBackgroundTasks()
         Task { @MainActor in
             PurchaseManager.shared.start()
         }
@@ -137,21 +136,14 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             && UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro")
         if didCompleteOnboarding {
             HealthKitService.permissionFlowEnabled = true
-            NotificationService.shared.requestPermissions()
             application.registerForRemoteNotifications()
             MorningHabitOrchestrator.shared.start()
             SleepSessionObserver.shared.start()
 
             Task {
+                await CaptainBriefingScheduler.shared.requestAuthorizationIfNeeded()
+                await CaptainBriefingScheduler.shared.rescheduleAll()
                 await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
-            }
-
-            if AppSettingsStore.shared.notificationsEnabled {
-                scheduleAngelNotifications()
-                NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
-                SmartNotificationScheduler.shared.scheduleSmartNotifications()
-            } else {
-                NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
             }
         }
 
@@ -168,23 +160,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         return true
     }
 
-    private func scheduleAngelNotifications() {
-        let genderString = UserDefaults.standard.string(forKey: "user_gender") ?? "male"
-        let gender: ActivityNotificationGender = genderString == "female" ? .female : .male
-
-        let appLanguage = AppSettingsStore.shared.appLanguage
-        let language: ActivityNotificationLanguage = appLanguage == .english ? .english : .arabic
-
-        ActivityNotificationEngine.shared.scheduleAngelNumberNotifications(
-            gender: gender,
-            language: language
-        )
-
-        #if DEBUG
-        ActivityNotificationEngine.shared.printPendingNotifications()
-        #endif
-    }
-
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         return SiriShortcutsManager.shared.handle(activity: userActivity)
     }
@@ -194,6 +169,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         PhoneConnectivityManager.shared.refreshFromCompanionApplicationContext()
         reloadWidgetTimelines()
         clearAppBadge()
+        CaptainBriefingScheduler.shared.handleAppDidBecomeActive()
 
         // Only start HealthKit-dependent services for users who completed ALL onboarding steps.
         let allOnboardingDone = UserDefaults.standard.bool(forKey: "didSelectLanguage")
@@ -209,7 +185,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             Task {
                 await AIWorkoutSummaryService.shared.startMonitoringWorkoutEnds()
                 await MorningHabitOrchestrator.shared.refreshMonitoringState()
-                await CaptainSmartNotificationService.shared.evaluateInactivityAndNotifyIfNeeded()
             }
         }
 
@@ -226,13 +201,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         AnalyticsService.shared.track(.appEnteredBackground)
-        NotificationIntelligenceManager.shared.scheduleQueuedDeveloperWhisperIfNeeded()
-
-        if AppSettingsStore.shared.notificationsEnabled {
-            NotificationIntelligenceManager.shared.scheduleBackgroundTasksIfNeeded()
-        } else {
-            NotificationIntelligenceManager.shared.cancelScheduledBackgroundTasks()
-        }
     }
 
     private func clearAppBadge() {
@@ -262,7 +230,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        print("❌ Failed to register for remote notifications: \(error)")
+        print("[AppDelegate] Failed to register for remote notifications: \(error)")
     }
 
     func application(
@@ -270,46 +238,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         didReceiveRemoteNotification userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        NotificationService.shared.handleRemoteNotification(userInfo: userInfo)
+        // Remote notification handling — kept for push notification support
+        print("[AppDelegate] Handling remote data: \(userInfo)")
         completionHandler(.newData)
     }
 
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        if #available(iOS 14.0, *) {
-            completionHandler([.banner, .list, .sound, .badge])
-        } else {
-            completionHandler([.alert, .sound, .badge])
-        }
-    }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        let userInfo = response.notification.request.content.userInfo
-        let notifType = (userInfo["source"] as? String) ?? response.notification.request.identifier
-        AnalyticsService.shared.track(.notificationTapped(type: notifType))
-
-        if let source = userInfo["source"] as? String, source == "captain_hamoudi" {
-            CaptainNotificationHandler.shared.handleIncomingNotification(userInfo: userInfo)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                CaptainNavigationHelper.shared.navigateToCaptainScreen()
-            }
-        } else if let source = userInfo["source"] as? String, source == MorningHabitOrchestrator.notificationSource {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                AppRootManager.shared.openCaptainChat()
-            }
-        } else {
-            NotificationService.shared.handle(response: response)
-        }
-
-        completionHandler()
-    }
 }
 
 // MARK: - Siri Workout Intents

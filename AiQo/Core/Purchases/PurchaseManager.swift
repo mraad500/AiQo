@@ -31,7 +31,6 @@ final class PurchaseManager: ObservableObject {
 
     private let calendar: Calendar
     private let nowProvider: () -> Date
-    private let scheduleNotifications: @MainActor (Date) -> Void
 
     private var updatesTask: Task<Void, Never>?
     private var didStart = false
@@ -42,13 +41,11 @@ final class PurchaseManager: ObservableObject {
 
     private init(
         calendar: Calendar = .current,
-        nowProvider: @escaping () -> Date = Date.init,
-        scheduleNotifications: @escaping @MainActor (Date) -> Void = PremiumExpiryNotifier.scheduleAllNotifications
+        nowProvider: @escaping () -> Date = Date.init
     ) {
         self.entitlementStore = EntitlementStore.shared
         self.calendar = calendar
         self.nowProvider = nowProvider
-        self.scheduleNotifications = scheduleNotifications
     }
 
     func start() {
@@ -64,7 +61,6 @@ final class PurchaseManager: ObservableObject {
     @discardableResult
     func refreshEntitlements() async -> Bool {
         await updateEntitlementsFromLatestTransactions()
-        scheduleNotificationsIfNeeded()
         return entitlementStore.isActive
     }
 
@@ -152,7 +148,6 @@ final class PurchaseManager: ObservableObject {
         productLoadErrorMessage = nil
         productLoadDebugDetails = nil
         lastOutcome = nil
-        PremiumExpiryNotifier.clearScheduledNotifications()
         logger.debug("debug_premium_data_cleared")
 #else
         logger.warning("debug_premium_reset_unavailable_in_release")
@@ -167,7 +162,6 @@ final class PurchaseManager: ObservableObject {
             case .success(let verification):
                 let transaction = try Self.verifiedTransaction(from: verification)
                 applySuccessfulPurchase(productId: transaction.productID)
-                scheduleNotificationsIfNeeded()
                 await transaction.finish()
                 lastOutcome = .success
                 logger.info("purchase_finished product=\(transaction.productID, privacy: .public)")
@@ -237,14 +231,6 @@ final class PurchaseManager: ObservableObject {
             calendar: calendar
         )
         entitlementStore.setEntitlement(productId: productId, expiresAt: nextExpiry)
-    }
-
-    private func scheduleNotificationsIfNeeded() {
-        if let expiresAt = entitlementStore.expiresAt {
-            scheduleNotifications(expiresAt)
-        } else {
-            PremiumExpiryNotifier.clearScheduledNotifications()
-        }
     }
 
     private func observeTransactionUpdates() {

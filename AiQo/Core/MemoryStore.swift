@@ -466,4 +466,22 @@ final class MemoryStore {
             logger.error("memory_store_remove_lowest_error error=\(error.localizedDescription)")
         }
     }
+
+    // MARK: - Briefing Anti-Repetition
+
+    private let recentBriefingBodiesKey = "aiqo.briefing.recentBodies"
+
+    func recentBriefingBodies(limit: Int) -> [String] {
+        let all = UserDefaults.standard.stringArray(forKey: recentBriefingBodiesKey) ?? []
+        return Array(all.suffix(limit))
+    }
+
+    func storeBriefingBody(_ body: String) {
+        var all = UserDefaults.standard.stringArray(forKey: recentBriefingBodiesKey) ?? []
+        all.append(body)
+        if all.count > 10 {
+            all = Array(all.suffix(10))
+        }
+        UserDefaults.standard.set(all, forKey: recentBriefingBodiesKey)
+    }
 }

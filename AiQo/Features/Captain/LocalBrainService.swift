@@ -446,10 +446,22 @@ private extension LocalBrainService {
         currentSteps: Int,
         language: AppLanguage
     ) -> String {
-        SmartNotificationManager.shared.inactivityNotificationBody(
-            currentSteps: currentSteps,
-            language: language
-        )
+        if language == .arabic {
+            if currentSteps < 2000 {
+                return "يلا بطل، قوم هسه وخلي أول ألف خطوة باسمك اليوم."
+            } else if currentSteps < 6000 {
+                return "ممتاز، كمل نفس الهمة وخل نرفعها شوي شوي."
+            } else {
+                return "عفية عليك، تقدمك واضح اليوم، استمر وخليها عادة."
+            }
+        }
+        if currentSteps < 2000 {
+            return "Time to move. Start with a quick walk and build from there."
+        } else if currentSteps < 6000 {
+            return "Good progress. Keep the momentum going with another burst."
+        } else {
+            return "Great work today. Stay consistent and finish strong."
+        }
     }
 
     func buildWorkoutPlan(

@@ -69,7 +69,7 @@ final class AppFlowController: ObservableObject {
         Task { @MainActor in
             HealthKitService.permissionFlowEnabled = true
             await requestFullHealthKitPermissions()
-            requestNotificationAuthorizationIfNeeded()
+            // Notification authorization removed — Phase 2 CaptainBriefingScheduler handles this
             await protectionModel.requestAuthorization()
             finalizeOnboarding()
 
@@ -229,9 +229,7 @@ final class AppFlowController: ObservableObject {
         return .main
     }
 
-    private func requestNotificationAuthorizationIfNeeded() {
-        NotificationService.shared.requestPermissions()
-    }
+    // Notification authorization removed — Phase 2 CaptainBriefingScheduler handles this
 }
 
 struct AppRootView: View {

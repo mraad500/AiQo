@@ -1,6 +1,5 @@
 import Foundation
 import HealthKit
-import UserNotifications
 
 @MainActor
 final class SleepSessionObserver: NSObject {
@@ -12,9 +11,7 @@ final class SleepSessionObserver: NSObject {
     }
 
     private let healthStore: HKHealthStore
-    private let notificationCenter: UNUserNotificationCenter
     private let userDefaults: UserDefaults
-    private let notificationComposer: CaptainBackgroundNotificationComposer
 
     private var sleepObserverQuery: HKObserverQuery?
     private var sleepAnchor: HKQueryAnchor?
@@ -22,14 +19,10 @@ final class SleepSessionObserver: NSObject {
 
     init(
         healthStore: HKHealthStore = HKHealthStore(),
-        notificationCenter: UNUserNotificationCenter = .current(),
-        userDefaults: UserDefaults = .standard,
-        notificationComposer: CaptainBackgroundNotificationComposer? = nil
+        userDefaults: UserDefaults = .standard
     ) {
         self.healthStore = healthStore
-        self.notificationCenter = notificationCenter
         self.userDefaults = userDefaults
-        self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
         self.sleepAnchor = Self.loadAnchor(from: userDefaults)
         super.init()
     }
@@ -38,6 +31,13 @@ final class SleepSessionObserver: NSObject {
         Task { @MainActor [weak self] in
             await self?.startSleepObservationIfNeeded()
         }
+    }
+
+    /// Returns the latest sleep session end date, if available within the last 4 hours.
+    func latestSleepEndDate() async -> Date? {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+        let (samples, _) = await fetchAnchoredSleepSamples(type: sleepType, anchor: nil)
+        return latestRelevantSleepEndDate(in: samples)
     }
 }
 
@@ -71,7 +71,7 @@ private extension SleepSessionObserver {
 
             Task { @MainActor [weak self] in
                 defer { completionHandler() }
-                await self?.syncSleepUpdates(shouldNotify: true)
+                await self?.syncSleepUpdates()
             }
         }
 
@@ -79,32 +79,20 @@ private extension SleepSessionObserver {
         healthStore.execute(query)
         hasStartedObserver = true
 
-        // Establish the anchor without sending a historical notification on first launch.
-        await syncSleepUpdates(shouldNotify: false)
+        // Establish the anchor without sending a notification on first launch.
+        await syncSleepUpdates()
     }
 
-    func syncSleepUpdates(shouldNotify: Bool) async {
+    func syncSleepUpdates() async {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
-        let (samples, newAnchor) = await fetchAnchoredSleepSamples(type: sleepType, anchor: sleepAnchor)
+        let (_, newAnchor) = await fetchAnchoredSleepSamples(type: sleepType, anchor: sleepAnchor)
 
         if let newAnchor {
             sleepAnchor = newAnchor
             persistAnchor(newAnchor)
         }
 
-        guard shouldNotify else { return }
-        guard let latestEndDate = latestRelevantSleepEndDate(in: samples) else { return }
-        guard shouldNotifyForSleepSessionEnding(at: latestEndDate) else { return }
-
-        let body = await notificationComposer.composeSleepCompletionNotification(
-            sessionEndedAt: latestEndDate,
-            language: AppSettingsStore.shared.appLanguage,
-            level: max(LevelStore.shared.level, 1)
-        )
-        await scheduleSleepNotification(
-            body: body,
-            sessionEndedAt: latestEndDate
-        )
+        // Notification delivery removed — Phase 2 CaptainBriefingScheduler handles sleep-related briefings
     }
 
     func fetchAnchoredSleepSamples(
@@ -137,46 +125,6 @@ private extension SleepSessionObserver {
         guard latestEndDate <= Date() else { return nil }
         guard Date().timeIntervalSince(latestEndDate) <= 4 * 60 * 60 else { return nil }
         return latestEndDate
-    }
-
-    func shouldNotifyForSleepSessionEnding(at endDate: Date) -> Bool {
-        let lastNotifiedTimestamp = userDefaults.double(forKey: DefaultsKeys.lastNotifiedSleepEnd)
-        return endDate.timeIntervalSince1970 > lastNotifiedTimestamp + 60
-    }
-
-    func scheduleSleepNotification(
-        body: String,
-        sessionEndedAt: Date
-    ) async {
-        let content = UNMutableNotificationContent()
-        content.title = "Captain Hamoudi"
-        content.body = body
-        content.sound = .default
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "notification_type": "sleep_complete",
-            "source": "captain_hamoudi",
-            "messageText": body,
-            "deepLink": "aiqo://captain",
-            "sleepSessionEndTimestamp": sessionEndedAt.timeIntervalSince1970
-        ]
-
-        if #available(iOS 15.0, *) {
-            content.interruptionLevel = .passive
-        }
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.sleepObserver.\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-
-        do {
-            try await notificationCenter.add(request)
-            userDefaults.set(sessionEndedAt.timeIntervalSince1970, forKey: DefaultsKeys.lastNotifiedSleepEnd)
-        } catch {
-            print("SleepSessionObserver notification scheduling failed:", error.localizedDescription)
-        }
     }
 
     func ensureSleepReadAuthorization(

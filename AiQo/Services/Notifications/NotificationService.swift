@@ -3,110 +3,26 @@ import UIKit
 import Foundation
 import HealthKit
 
-final class NotificationService {
-    static let shared = NotificationService()
-    private let defaults = UserDefaults.standard
-    private let notificationPromptedKey = "aiqo.notifications.didPromptPermission"
+// MARK: - Coach Notification Language
 
-    private init() {}
+enum CoachNotificationLanguage: String, CaseIterable {
+    case arabic = "ar"
+    case english = "en"
 
-    func requestPermissions() {
-        Task {
-            _ = await ensureAuthorizationIfNeeded()
-        }
-    }
-
-    func ensureAuthorizationIfNeeded() async -> Bool {
-        let center = UNUserNotificationCenter.current()
-        configureCategories()
-
-        let settings: UNNotificationSettings = await withCheckedContinuation {
-            (continuation: CheckedContinuation<UNNotificationSettings, Never>) in
-            center.getNotificationSettings { settings in
-                continuation.resume(returning: settings)
-            }
-        }
-
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            await MainActor.run {
-                UIApplication.shared.registerForRemoteNotifications()
-            }
-            return true
-        case .notDetermined:
-            defaults.set(true, forKey: notificationPromptedKey)
-
-            let granted: Bool = await withCheckedContinuation {
-                (continuation: CheckedContinuation<Bool, Never>) in
-                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                    if let error {
-                        print("❌ Permission error: \(error)")
-                    }
-
-                    continuation.resume(returning: granted)
-                }
-            }
-
-            if granted {
-                await MainActor.run {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            }
-
-            return granted
-        case .denied:
-            print("🔔 Notifications are disabled. The app will not prompt again automatically.")
-            return false
-        @unknown default:
-            return false
-        }
-    }
-
-    func configureCategories() {
-        NotificationCategoryManager.shared.registerAllCategories()
-    }
-
-    func sendImmediateNotification(body: String, type: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "AiQo"
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["notification_type": type]
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
-    }
-    
-    // دالة جديدة لمعالجة البيانات القادمة من الخلفية (اختياري)
-    func handleRemoteNotification(userInfo: [AnyHashable: Any]) {
-        // إذا كنت تريد تنفيذ شيء معين عند وصول إشعار صامت
-        print("Handling remote data: \(userInfo)")
-    }
-
-    func handle(response: UNNotificationResponse) {
-        guard
-            let typeRaw = response.notification.request.content.userInfo["notification_type"] as? String,
-            let type = NotificationType(rawValue: typeRaw)
-        else { return }
-        routeFromNotification(type: type)
-    }
-
-    private func routeFromNotification(type: NotificationType) {
-        Task { @MainActor in
-            switch type {
-            case .dailyStepsReminder, .workoutReminder, .stepGoalProgress:
-                MainTabRouter.shared.navigate(to: .gym)
-            case .waterReminder, .mealTimeReminder:
-                MainTabRouter.shared.openKitchen()
-            case .checkInReminder, .sleepReminder:
-                MainTabRouter.shared.navigate(to: .home)
-            }
+    init(preferenceValue: String?) {
+        let normalized = preferenceValue?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        switch normalized {
+        case "en", "english":
+            self = .english
+        case "ar", "arabic":
+            self = .arabic
+        default:
+            self = .arabic
         }
     }
 }
 
-// MARK: - Captain Smart Notifications
+// MARK: - Workout Coaching Summary
 
 struct WorkoutCoachingSummary {
     let duration: TimeInterval
@@ -133,302 +49,13 @@ struct WorkoutCoachingSummary {
     }
 }
 
-final class CaptainSmartNotificationService {
-    static let shared = CaptainSmartNotificationService()
-
-    static let categoryIdentifier = "aiqo.captain.smart"
-    static var notificationCategory: UNNotificationCategory {
-        let openAction = UNNotificationAction(
-            identifier: "OPEN_CAPTAIN",
-            title: "Open Captain",
-            options: [.foreground]
-        )
-        return UNNotificationCategory(
-            identifier: Self.categoryIdentifier,
-            actions: [openAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-    }
-    private let intelligenceManager = CaptainIntelligenceManager.shared
-    private let defaults = UserDefaults.standard
-    private let lastInactivitySentAtKey = "aiqo.captain.lastInactivitySentAt"
-    private let inactivityCooldownSeconds: TimeInterval = 45 * 60
-
-    private init() {}
-
-    func registerNotificationCategories() {
-        NotificationCategoryManager.shared.registerAllCategories()
-    }
-
-    func evaluateInactivityAndNotifyIfNeeded() async {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-
-        let inactivityMinutes = InactivityTracker.shared.currentInactivityMinutes
-        guard inactivityMinutes >= 45 else { return }
-        guard canSendInactivityNow() else { return }
-
-        let currentSteps = HealthKitManager.shared.todaySteps
-        let message = await generateInactivityMessage(currentSteps: currentSteps)
-
-        sendCaptainNotification(
-            title: "Captain Hamoudi",
-            body: message,
-            type: "inactivity",
-            messageText: message
-        )
-        defaults.set(Date(), forKey: lastInactivitySentAtKey)
-    }
-
-    func handleWorkoutCompleted(summary: WorkoutCoachingSummary) async {
-        await AIWorkoutSummaryService.shared.handleWorkoutEnded(
-            workoutType: summary.workoutType,
-            duration: summary.duration,
-            keyMetrics: [
-                "calories": summary.calories,
-                "averageHeartRate": summary.averageHeartRate,
-                "distanceKm": summary.distanceMeters / 1000.0,
-                "estimatedSteps": Double(summary.estimatedSteps)
-            ],
-            endedAt: Date()
-        )
-    }
-
-    private func canSendInactivityNow() -> Bool {
-        guard let last = defaults.object(forKey: lastInactivitySentAtKey) as? Date else { return true }
-        return Date().timeIntervalSince(last) >= inactivityCooldownSeconds
-    }
-
-    private func sendCaptainNotification(title: String, body: String, type: String, messageText: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier
-        content.userInfo = [
-            "notification_type": type,
-            "source": "captain_hamoudi",
-            "messageText": messageText,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.smart.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
-    }
-
-    // MARK: - Water Reminder
-
-    func evaluateWaterAndNotifyIfNeeded(currentLiters: Double, targetLiters: Double) {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-        guard currentLiters < targetLiters * 0.5 else { return }
-
-        let currentHour = Calendar.current.component(.hour, from: Date())
-        guard (9...21).contains(currentHour) else { return }
-        guard canSendWaterReminderNow() else { return }
-
-        let remaining = targetLiters - currentLiters
-        let body = "شربت ماي؟ باقيلك \(String(format: "%.1f", remaining)) لتر عشان توصل هدفك. 💧"
-
-        sendCaptainNotification(
-            title: "كابتن حمودي",
-            body: body,
-            type: "waterReminder",
-            messageText: body
-        )
-        defaults.set(Date(), forKey: lastWaterReminderSentAtKey)
-    }
-
-    // MARK: - Meal Time Reminder
-
-    func evaluateMealTimeAndNotifyIfNeeded() {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-
-        let currentHour = Calendar.current.component(.hour, from: Date())
-        let mealInfo: (name: String, type: String)?
-
-        switch currentHour {
-        case 7...9:
-            mealInfo = ("الفطور", "breakfast")
-        case 12...14:
-            mealInfo = ("الغداء", "lunch")
-        case 18...20:
-            mealInfo = ("العشاء", "dinner")
-        default:
-            mealInfo = nil
-        }
-
-        guard let meal = mealInfo else { return }
-        guard canSendMealReminderNow(meal: meal.type) else { return }
-
-        let body = "وقت \(meal.name)، خل ناكل صحّي. 🍽️"
-
-        sendCaptainNotification(
-            title: "كابتن حمودي",
-            body: body,
-            type: "mealTimeReminder",
-            messageText: body
-        )
-        defaults.set(Date(), forKey: "\(lastMealReminderSentAtKeyPrefix).\(meal.type)")
-    }
-
-    // MARK: - Step Goal Progress
-
-    func evaluateStepGoalAndNotifyIfNeeded(currentSteps: Int, targetSteps: Int) {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-        guard targetSteps > 0 else { return }
-
-        let progress = Double(currentSteps) / Double(targetSteps)
-        let milestone: Int?
-
-        if progress >= 0.9 && progress < 1.0 {
-            milestone = 90
-        } else if progress >= 0.75 && progress < 0.9 {
-            milestone = 75
-        } else if progress >= 0.5 && progress < 0.75 {
-            milestone = 50
-        } else {
-            milestone = nil
-        }
-
-        guard let milestone else { return }
-        guard canSendStepGoalNow(milestone: milestone) else { return }
-
-        let remaining = targetSteps - currentSteps
-        let body: String
-        switch milestone {
-        case 90:
-            body = "باقيلك \(remaining) خطوة بس، يلا كمّل! 🔥"
-        case 75:
-            body = "وصلت ٧٥٪ من هدفك، كمّل لا تستسلم! 💪"
-        default:
-            body = "نص الطريق! \(currentSteps) خطوة لحد هسّه، يلا نكمّل."
-        }
-
-        sendCaptainNotification(
-            title: "كابتن حمودي",
-            body: body,
-            type: "stepGoalProgress",
-            messageText: body
-        )
-        defaults.set(Date(), forKey: "\(lastStepGoalSentAtKeyPrefix).\(milestone)")
-    }
-
-    // MARK: - Sleep Reminder
-
-    func evaluateSleepTimeAndNotifyIfNeeded(targetBedtimeHour: Int) {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-
-        let now = Date()
-        let currentHour = Calendar.current.component(.hour, from: now)
-        let currentMinute = Calendar.current.component(.minute, from: now)
-
-        // Notify 30 minutes before target bedtime
-        let isApproaching = (currentHour == targetBedtimeHour - 1 && currentMinute >= 30) ||
-                            (currentHour == targetBedtimeHour && currentMinute == 0)
-
-        guard isApproaching else { return }
-        guard canSendSleepReminderNow() else { return }
-
-        let body = "وقت النوم قرب، جهّز نفسك للنوم. جسمك يحتاج راحة عشان باچر يكون أحسن. 🌙"
-
-        sendCaptainNotification(
-            title: "كابتن حمودي",
-            body: body,
-            type: "sleepReminder",
-            messageText: body
-        )
-        defaults.set(Date(), forKey: lastSleepReminderSentAtKey)
-    }
-
-    // MARK: - Cooldown Keys
-
-    private let lastWaterReminderSentAtKey = "aiqo.captain.lastWaterReminderSentAt"
-    private let lastMealReminderSentAtKeyPrefix = "aiqo.captain.lastMealReminderSentAt"
-    private let lastStepGoalSentAtKeyPrefix = "aiqo.captain.lastStepGoalSentAt"
-    private let lastSleepReminderSentAtKey = "aiqo.captain.lastSleepReminderSentAt"
-
-    private let waterReminderCooldownSeconds: TimeInterval = 2 * 60 * 60  // 2 hours
-    private let mealReminderCooldownSeconds: TimeInterval = 4 * 60 * 60   // 4 hours
-    private let stepGoalCooldownSeconds: TimeInterval = 60 * 60           // 1 hour
-    private let sleepReminderCooldownSeconds: TimeInterval = 20 * 60 * 60 // 20 hours
-
-    private func canSendWaterReminderNow() -> Bool {
-        guard let last = defaults.object(forKey: lastWaterReminderSentAtKey) as? Date else { return true }
-        return Date().timeIntervalSince(last) >= waterReminderCooldownSeconds
-    }
-
-    private func canSendMealReminderNow(meal: String) -> Bool {
-        let key = "\(lastMealReminderSentAtKeyPrefix).\(meal)"
-        guard let last = defaults.object(forKey: key) as? Date else { return true }
-        return Date().timeIntervalSince(last) >= mealReminderCooldownSeconds
-    }
-
-    private func canSendStepGoalNow(milestone: Int) -> Bool {
-        let key = "\(lastStepGoalSentAtKeyPrefix).\(milestone)"
-        guard let last = defaults.object(forKey: key) as? Date else { return true }
-        return Date().timeIntervalSince(last) >= stepGoalCooldownSeconds
-    }
-
-    private func canSendSleepReminderNow() -> Bool {
-        guard let last = defaults.object(forKey: lastSleepReminderSentAtKey) as? Date else { return true }
-        return Date().timeIntervalSince(last) >= sleepReminderCooldownSeconds
-    }
-
-    private func generateInactivityMessage(currentSteps: Int) async -> String {
-        let prompt = """
-        User inactivity alert context:
-        - Current steps today: \(max(0, currentSteps))
-        - The user has been inactive for at least 45 minutes.
-        Provide one short Iraqi Arabic motivational line (max 14 words) with one concrete next action.
-        """
-
-        do {
-            let message = try await intelligenceManager.generateCaptainResponse(for: prompt)
-            let compact = message.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !compact.isEmpty {
-                return compact
-            }
-        } catch {
-            // Fall back to deterministic local text.
-        }
-
-        if currentSteps < 2000 {
-            return "يلا بطل، قوم هسه وخلي أول ألف خطوة باسمك اليوم."
-        } else if currentSteps < 6000 {
-            return "ممتاز، كمل نفس الهمة وخل نرفعها شوي شوي."
-        } else {
-            return "عفية عليك، تقدمك واضح اليوم، استمر وخليها عادة."
-        }
-    }
-}
-
-enum CoachNotificationLanguage: String, CaseIterable {
-    case arabic = "ar"
-    case english = "en"
-
-    init(preferenceValue: String?) {
-        let normalized = preferenceValue?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        switch normalized {
-        case "en", "english":
-            self = .english
-        case "ar", "arabic":
-            self = .arabic
-        default:
-            self = .arabic
-        }
-    }
-}
+// MARK: - AI Workout Summary Service
 
 @MainActor
 final class AIWorkoutSummaryService {
     static let shared = AIWorkoutSummaryService()
 
     private let healthStore = HKHealthStore()
-    private let notificationCenter = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
     private let intelligenceManager = CaptainIntelligenceManager.shared
 
@@ -471,8 +98,6 @@ final class AIWorkoutSummaryService {
         endedAt: Date,
         workoutID: String? = nil
     ) async {
-        guard AppSettingsStore.shared.notificationsEnabled else { return }
-
         if let workoutID {
             guard !processedWorkoutIDs.contains(workoutID) else { return }
             markProcessedWorkout(id: workoutID)
@@ -514,7 +139,8 @@ final class AIWorkoutSummaryService {
             keyMetrics: keyMetrics
         )
 
-        scheduleWorkoutSummaryNotification(message: finalMessage)
+        // Notification delivery removed — will be rewired in Phase 2 via CaptainBriefingScheduler
+        print("[AIWorkoutSummaryService] Workout summary ready: \(finalMessage)")
     }
 
     // MARK: - Workout Monitoring
@@ -564,7 +190,7 @@ final class AIWorkoutSummaryService {
                 workoutsToProcess = sorted.filter { $0.endDate >= cutoff }
                 let skippedCount = max(0, sorted.count - workoutsToProcess.count)
                 if skippedCount > 0 {
-                    print("🤖 [AIWorkoutSummaryService] Bootstrap sync skipped \(skippedCount) historical workouts.")
+                    print("[AIWorkoutSummaryService] Bootstrap sync skipped \(skippedCount) historical workouts.")
                 }
             } else {
                 workoutsToProcess = sorted
@@ -845,27 +471,6 @@ final class AIWorkoutSummaryService {
         return words.joined(separator: " ")
     }
 
-    private func scheduleWorkoutSummaryNotification(message: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "كابتن حمودي 🫡"
-        content.body = message
-        content.sound = .default
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "notification_type": "workout_complete",
-            "source": "captain_hamoudi",
-            "messageText": message,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.workout.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        notificationCenter.add(request)
-    }
-
     // MARK: - Dedup
 
     private func markProcessedWorkout(id: String) {
@@ -964,12 +569,10 @@ final class AIWorkoutSummaryService {
         if let raw = defaults.string(forKey: "notificationLanguage") {
             return CoachNotificationLanguage(preferenceValue: raw)
         }
-
-        let legacyRaw = NotificationPreferencesStore.shared.language.rawValue
-        return CoachNotificationLanguage(preferenceValue: legacyRaw)
+        return .arabic
     }
 
-    private static func workoutTitle(for type: HKWorkoutActivityType) -> String {
+    static func workoutTitle(for type: HKWorkoutActivityType) -> String {
         switch type {
         case .running: return "Running"
         case .walking: return "Walking"
