@@ -277,10 +277,6 @@ private extension PrivacySanitizer {
             sanitized.append(CaptainConversationMessage(role: .user, content: "User request."))
         }
 
-        #if DEBUG
-        print("PrivacySanitizer — Cloud payload: \(sanitized.count) messages (truncated from \(conversation.count)).")
-        #endif
-
         if sanitized.contains(where: { $0.role == .user }) {
             return sanitized
         }

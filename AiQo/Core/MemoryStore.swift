@@ -11,6 +11,9 @@ final class MemoryStore {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "MemoryStore")
     private var container: ModelContainer?
     private var context: ModelContext?
+    private var promptContextCache: [Int: String] = [:]
+    private var cloudSafeContextCache: [Int: String] = [:]
+    private var persistedMessageWriteCount = 0
     private var maxMemories: Int {
         AccessManager.shared.captainMemoryLimit
     }
@@ -32,6 +35,8 @@ final class MemoryStore {
     func configure(container: ModelContainer) {
         self.container = container
         self.context = ModelContext(container)
+        invalidateMemoryContextCaches()
+        persistedMessageWriteCount = 0
     }
 
     // MARK: - CRUD
@@ -72,6 +77,7 @@ final class MemoryStore {
             }
 
             try context.save()
+            invalidateMemoryContextCaches()
         } catch {
             logger.error("memory_store_set_error key=\(key) error=\(error.localizedDescription)")
         }
@@ -126,6 +132,9 @@ final class MemoryStore {
     /// بناء سياق الذكريات للـ system prompt
     func buildPromptContext(maxTokens: Int = 800) -> String {
         guard isEnabled, let context else { return "" }
+        if let cached = promptContextCache[maxTokens] {
+            return cached
+        }
 
         do {
             // جيب مشاريع نشطة أولاً (عددها قليل دايماً)
@@ -154,12 +163,11 @@ final class MemoryStore {
 
                 lines.append(line)
                 estimatedTokens += lineTokens
-
-                memory.accessCount += 1
             }
 
-            try context.save()
-            return lines.joined(separator: "\n")
+            let promptContext = lines.joined(separator: "\n")
+            promptContextCache[maxTokens] = promptContext
+            return promptContext
         } catch {
             logger.error("memory_store_prompt_error error=\(error.localizedDescription)")
             return ""
@@ -169,6 +177,9 @@ final class MemoryStore {
     /// Builds a privacy-safe memory context suitable for cloud (no PII, no exact measurements)
     func buildCloudSafeContext(maxTokens: Int = 400) -> String {
         guard isEnabled, let context else { return "" }
+        if let cached = cloudSafeContextCache[maxTokens] {
+            return cached
+        }
 
         let cloudSafeCategories: Set<String> = ["goal", "preference", "mood", "injury", "nutrition", "insight"]
 
@@ -193,7 +204,9 @@ final class MemoryStore {
                 lines.append(line)
             }
 
-            return lines.joined(separator: "\n")
+            let safeContext = lines.joined(separator: "\n")
+            cloudSafeContextCache[maxTokens] = safeContext
+            return safeContext
         } catch {
             logger.error("memory_store_cloud_safe_error error=\(error.localizedDescription)")
             return ""
@@ -216,6 +229,9 @@ final class MemoryStore {
                 context.delete(memory)
             }
             try context.save()
+            if !stale.isEmpty {
+                invalidateMemoryContextCaches()
+            }
             logger.info("memory_store_cleanup removed=\(stale.count)")
         } catch {
             logger.error("memory_store_cleanup_error error=\(error.localizedDescription)")
@@ -235,6 +251,9 @@ final class MemoryStore {
                 context.delete(memory)
             }
             try context.save()
+            if !results.isEmpty {
+                invalidateMemoryContextCaches()
+            }
         } catch {
             logger.error("memory_store_remove_error key=\(key) error=\(error.localizedDescription)")
         }
@@ -251,6 +270,9 @@ final class MemoryStore {
                 context.delete(memory)
             }
             try context.save()
+            if !all.isEmpty {
+                invalidateMemoryContextCaches()
+            }
             logger.info("memory_store_clear_all")
         } catch {
             logger.error("memory_store_clear_error error=\(error.localizedDescription)")
@@ -273,7 +295,7 @@ final class MemoryStore {
     // MARK: - Chat History Persistence
 
     private static let maxPersistedMessages = 200
-    private static nonisolated let chatFetchLimit = 50
+    private static let trimCheckInterval = 12
 
     /// حفظ رسالة محادثة جديدة — يُستدعى فوراً عند الإرسال أو الاستقبال
     func persistMessage(_ chatMessage: ChatMessage, sessionID: UUID) {
@@ -286,9 +308,20 @@ final class MemoryStore {
         do {
             context.insert(PersistentChatMessage(chatMessage: chatMessage, sessionID: sessionID))
             try context.save()
-            trimChatHistoryIfNeeded()
+            persistedMessageWriteCount += 1
+            if persistedMessageWriteCount >= Self.trimCheckInterval {
+                persistedMessageWriteCount = 0
+                trimChatHistoryIfNeeded()
+            }
         } catch {
             logger.error("chat_persist_error id=\(chatMessage.id) error=\(error.localizedDescription)")
+        }
+    }
+
+    /// يؤجل حفظ الرسالة إلى دورة MainActor التالية حتى ما تتعطل الواجهة وقت الإرسال.
+    func persistMessageAsync(_ chatMessage: ChatMessage, sessionID: UUID) {
+        Task(priority: .utility) { @MainActor [chatMessage, sessionID] in
+            self.persistMessage(chatMessage, sessionID: sessionID)
         }
     }
 
@@ -370,26 +403,6 @@ final class MemoryStore {
         }
     }
 
-    /// استرجاع آخر 50 رسالة مرتبة من الأقدم للأحدث — يُستدعى مرة واحدة عند فتح الشاشة
-    func fetchRecentMessages(limit: Int = chatFetchLimit) -> [ChatMessage] {
-        guard let context else { return [] }
-
-        do {
-            // نجيب آخر N رسالة مرتبة بالأحدث أولاً
-            var descriptor = FetchDescriptor<PersistentChatMessage>(
-                sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
-            )
-            descriptor.fetchLimit = limit
-
-            let recent = try context.fetch(descriptor)
-            // نقلبها عشان تصير من الأقدم للأحدث للعرض
-            return recent.reversed().map { $0.toChatMessage() }
-        } catch {
-            logger.error("chat_fetch_error error=\(error.localizedDescription)")
-            return []
-        }
-    }
-
     /// مسح كل محادثات الكابتن
     func clearChatHistory() {
         guard let context else { return }
@@ -401,6 +414,7 @@ final class MemoryStore {
                 context.delete(msg)
             }
             try context.save()
+            persistedMessageWriteCount = 0
             logger.info("chat_history_cleared count=\(all.count)")
         } catch {
             logger.error("chat_clear_error error=\(error.localizedDescription)")
@@ -435,19 +449,9 @@ final class MemoryStore {
 
     // MARK: - Private
 
-    private func priorityScore(for memory: CaptainMemory, now: Date) -> Double {
-        let hoursSinceUpdate = now.timeIntervalSince(memory.updatedAt) / 3600
-        let recencyWeight: Double
-        if hoursSinceUpdate < 24 {
-            recencyWeight = 1.0
-        } else if hoursSinceUpdate < 168 { // أسبوع
-            recencyWeight = 0.8
-        } else if hoursSinceUpdate < 720 { // شهر
-            recencyWeight = 0.6
-        } else {
-            recencyWeight = 0.4
-        }
-        return memory.confidence * recencyWeight
+    private func invalidateMemoryContextCaches() {
+        promptContextCache.removeAll()
+        cloudSafeContextCache.removeAll()
     }
 
     private func removeLowestConfidence() {

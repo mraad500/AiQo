@@ -223,14 +223,14 @@ final class CaptainViewModel: ObservableObject {
 
         // Persist the welcome message on first user interaction so the session is complete in SwiftData
         if messageCount == 0, let welcomeMessage = messages.first, !welcomeMessage.isUser {
-            MemoryStore.shared.persistMessage(welcomeMessage, sessionID: currentSessionID)
+            persistChatMessage(welcomeMessage)
         }
 
         let userMessage = ChatMessage(text: trimmedText, isUser: true)
         messages.append(userMessage)
-        MemoryStore.shared.persistMessage(userMessage, sessionID: currentSessionID)
         isLoading = true
         coachState = .readingMessage
+        persistChatMessage(userMessage)
 
         let requestID = UUID()
         activeRequestID = requestID
@@ -272,7 +272,7 @@ final class CaptainViewModel: ObservableObject {
 
         let confirmMessage = ChatMessage(text: summary, isUser: false)
         messages.append(confirmMessage)
-        MemoryStore.shared.persistMessage(confirmMessage, sessionID: currentSessionID)
+        persistChatMessage(confirmMessage)
         showCustomization = false
     }
 
@@ -467,7 +467,7 @@ final class CaptainViewModel: ObservableObject {
                 messages.append(replyMessage)
             }
 
-            MemoryStore.shared.persistMessage(replyMessage, sessionID: currentSessionID)
+            persistChatMessage(replyMessage)
             trimInMemoryMessagesIfNeeded()
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
@@ -498,7 +498,7 @@ final class CaptainViewModel: ObservableObject {
                 spotifyRecommendation: fallbackSpotifyRecommendation(for: screenContext)
             )
             messages.append(errorMessage)
-            MemoryStore.shared.persistMessage(errorMessage, sessionID: currentSessionID)
+            persistChatMessage(errorMessage)
         }
     }
 
@@ -570,25 +570,6 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
-    private func buildHybridRequest(
-        conversation: [CaptainConversationMessage],
-        screenContext: ScreenContext,
-        attachedImageData: Data?
-    ) async -> HybridBrainRequest {
-        let contextData = await contextBuilder.buildContextData()
-        let language = AppSettingsStore.shared.appLanguage
-        let profileSummary = buildUserProfileSummary()
-
-        return HybridBrainRequest(
-            conversation: conversation,
-            screenContext: screenContext,
-            language: language,
-            contextData: contextData,
-            userProfileSummary: profileSummary,
-            attachedImageData: attachedImageData
-        )
-    }
-
     private func buildUserProfileSummary() -> String {
         let profile = UserProfileStore.shared.current
         let preferredName = captainReplyUserName() ?? "not provided"
@@ -633,6 +614,11 @@ final class CaptainViewModel: ObservableObject {
 
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "not provided" : trimmed
+    }
+
+    private func persistChatMessage(_ message: ChatMessage) {
+        let sessionID = currentSessionID
+        MemoryStore.shared.persistMessageAsync(message, sessionID: sessionID)
     }
 
     private func runCognitiveTimeline(requestID: UUID) async throws {
