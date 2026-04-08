@@ -1,33 +1,83 @@
 {
   "identifier" : "B660C19F-6730-4A2F-90A8-A5F90A7D0E53",
   "nonRenewingSubscriptions" : [
+
+  ],
+  "subscriptionGroups" : [
     {
-      "displayPrice" : "5.99",
-      "internalID" : "6FBB8A9E-54A2-47A1-B014-57A2BCE7A1C1",
+      "id" : "7F4D6A12-3C95-4C2F-8B8D-1E2A53F9E100",
       "localizations" : [
         {
-          "description" : "Individual premium access for 30 days.",
-          "displayName" : "AiQo Premium Individual 30 Days",
+          "description" : "AiQo Premium subscription tiers",
+          "displayName" : "AiQo Premium",
           "locale" : "en_US"
         }
       ],
-      "productID" : "aiqo_nr_30d_individual_5_99",
-      "referenceName" : "AiQo 30 Day Individual",
-      "type" : "NonRenewingSubscription"
-    },
-    {
-      "displayPrice" : "10.00",
-      "internalID" : "CA69D9AE-8FA3-4272-9AF3-55C80A56B04A",
-      "localizations" : [
+      "name" : "AiQo Premium",
+      "subscriptions" : [
         {
-          "description" : "Family premium access for 30 days.",
-          "displayName" : "AiQo Premium Family 30 Days",
-          "locale" : "en_US"
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "D0D1D2D3-D4D5-46D7-88D9-DA0DB1DC2DD3",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "E0E1E2E3-E4E5-46E7-88E9-EA0EB1EC2ED3",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Fast Captain, Gym, Kitchen, My Vibe, challenges, and full lifestyle tracking",
+              "displayName" : "AiQo Core",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mraad500.aiqo.standard.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AiQo Core Monthly",
+          "subscriptionGroupID" : "7F4D6A12-3C95-4C2F-8B8D-1E2A53F9E100",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "F0F1F2F3-F4F5-46F7-88F9-FA0FB1FC2FD3",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "A0A1A2A3-A4A5-46A7-88A9-AA0AB1AC2AD3",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Everything in Core plus Peaks, expanded Captain memory, and deeper AI guidance",
+              "displayName" : "AiQo Intelligence Pro",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mraad500.aiqo.intelligencepro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AiQo Intelligence Pro Monthly",
+          "subscriptionGroupID" : "7F4D6A12-3C95-4C2F-8B8D-1E2A53F9E100",
+          "type" : "RecurringSubscription"
         }
-      ],
-      "productID" : "aiqo_nr_30d_family_10_00",
-      "referenceName" : "AiQo 30 Day Family",
-      "type" : "NonRenewingSubscription"
+      ]
     }
   ],
   "settings" : {

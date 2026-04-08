@@ -27,7 +27,7 @@ struct KitchenView: View {
                     .transition(.opacity.combined(with: .scale))
             }
         }
-        .navigationTitle("المطبخ")
+        .navigationTitle(L10n.t("kitchen.title"))
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isCameraPresented) {
             CameraView(
@@ -35,7 +35,7 @@ struct KitchenView: View {
                     selectedImage = image
                     isCameraPresented = false
                     globalBrain.sendMessage(
-                        text: "شنو تكدر تسويلي أكل من هاي الثلاجة؟",
+                        text: L10n.t("kitchen.vision.prompt"),
                         image: image,
                         context: .kitchen
                     )
@@ -57,12 +57,12 @@ private extension KitchenView {
 
     var cameraButtonLabel: String {
         if globalBrain.isLoading {
-            return "جاري الفحص..."
+            return L10n.t("kitchen.vision.cameraLabel.scanning")
         }
         if isCameraAvailable {
-            return "فتح الكاميرا"
+            return L10n.t("kitchen.vision.cameraLabel.open")
         }
-        return "الكاميرا غير متاحة"
+        return L10n.t("kitchen.vision.cameraLabel.unavailable")
     }
 
     var loadingOverlay: some View {
@@ -76,11 +76,11 @@ private extension KitchenView {
                     .tint(.primary)
                     .scaleEffect(1.25)
 
-                Text("الكابتن حمودي ديفحص المكونات...")
+                Text(L10n.t("kitchen.loading.title"))
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(.primary)
 
-                Text("دا نصغّر الصورة ونحلل الموجود حتى نرتبلك وجبات مناسبة.")
+                Text(L10n.t("kitchen.loading.subtitle"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -131,18 +131,18 @@ private extension KitchenView {
 
     var heroCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Kitchen Vision")
+            Text(L10n.t("kitchen.vision.badge"))
                 .font(.system(size: 13, weight: .black, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.58), in: Capsule())
 
-            Text("صوّر الثلاجة مباشرة وخلي حمّودي يرتبلك فطور وغداء وعشاء من الموجود.")
+            Text(L10n.t("kitchen.vision.headline"))
                 .font(.system(size: 28, weight: .black, design: .rounded))
                 .foregroundStyle(.primary)
 
-            Text("الكاميرا تفتح بواجهة كاملة، وبعد الالتقاط يشتغل التحليل بالخلفية بدون ما يجمّد الواجهة.")
+            Text(L10n.t("kitchen.vision.subheadline"))
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
@@ -157,7 +157,7 @@ private extension KitchenView {
                         .background(Color.white.opacity(0.55), in: Circle())
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("تصوير الثلاجة")
+                        Text(L10n.t("kitchen.vision.scanButton"))
                             .font(.system(size: 16, weight: .black, design: .rounded))
                             .foregroundStyle(.black)
 
@@ -183,7 +183,7 @@ private extension KitchenView {
             .disabled(globalBrain.isLoading || !isCameraAvailable)
 
             if !isCameraAvailable {
-                Text("الكاميرا غير متاحة على هذا الجهاز حالياً.")
+                Text(L10n.t("kitchen.vision.cameraUnavailableNote"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -204,7 +204,7 @@ private extension KitchenView {
     var fridgePreviewCard: some View {
         if let selectedImage {
             VStack(alignment: .leading, spacing: 12) {
-                Text("آخر لقطة للثلاجة")
+                Text(L10n.t("kitchen.fridge.lastCapture"))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
 
@@ -219,7 +219,7 @@ private extension KitchenView {
                             .stroke(Color.white.opacity(0.28), lineWidth: 1)
                     )
 
-                Text("هاي الصورة اللي دا يعتمد عليها التحليل الحالي.")
+                Text(L10n.t("kitchen.fridge.captureNote"))
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -237,7 +237,7 @@ private extension KitchenView {
 
     var mealPlanSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("الخطة المقترحة")
+            Text(L10n.t("kitchen.plan.title"))
                 .font(.system(size: 22, weight: .black, design: .rounded))
                 .foregroundStyle(.primary)
 
@@ -247,8 +247,8 @@ private extension KitchenView {
                 }
             } else {
                 placeholderCard(
-                    title: "ماكو خطة بعد",
-                    subtitle: "افتح الكاميرا وصوّر الثلاجة حتى يولد حمّودي وجبات Breakfast و Lunch و Dinner."
+                    title: L10n.t("kitchen.plan.emptyTitle"),
+                    subtitle: L10n.t("kitchen.plan.emptySubtitle")
                 )
             }
         }

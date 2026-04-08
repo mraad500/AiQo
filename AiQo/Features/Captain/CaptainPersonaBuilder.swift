@@ -23,15 +23,25 @@ enum CaptainPersonaBuilder {
         "I'd be happy to"
     ]
 
-    /// Strips banned phrases from a Captain response
+    /// Strips banned phrases from a Captain response.
+    ///
+    /// **Fix (2026-04-08):** Replaced `while result.contains("  ")` loop with a single
+    /// regex pass. The old loop was O(n²) — each iteration scanned the full string then
+    /// allocated a new copy. On long replies with many double-spaces it could spin for
+    /// hundreds of iterations, spiking the CPU and blocking the Main Thread.
+    /// A single `\s{2,}` regex is O(n) and handles all whitespace variants (including
+    /// non-breaking spaces that the old loop missed entirely).
     static func sanitizeResponse(_ text: String) -> String {
         var result = text
         for phrase in bannedPhrases {
             result = result.replacingOccurrences(of: phrase, with: "")
         }
-        while result.contains("  ") {
-            result = result.replacingOccurrences(of: "  ", with: " ")
-        }
+        // Single O(n) pass to collapse any run of 2+ whitespace characters (including \u{00A0})
+        result = result.replacingOccurrences(
+            of: #"[\s\u{00A0}]{2,}"#,
+            with: " ",
+            options: .regularExpression
+        )
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

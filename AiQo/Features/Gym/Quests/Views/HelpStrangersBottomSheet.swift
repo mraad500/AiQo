@@ -95,18 +95,18 @@ struct HelpStrangersBottomSheet: View {
                 .shadow(color: sapphireNeon.opacity(0.58), radius: 16, x: 0, y: 0)
                 .shadow(color: sapphireBlue.opacity(0.36), radius: 22, x: 0, y: 8)
 
-            Text(L10n.t("quests.help_sheet.title"))
+            Text(questLocalizedText("quests.help_sheet.title"))
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text(L10n.t("quests.help_sheet.subtitle"))
+            Text(questLocalizedText("quests.help_sheet.subtitle"))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
-            Text(L10n.t("quests.help_sheet.microcopy"))
+            Text(questLocalizedText("quests.help_sheet.microcopy"))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.62))
                 .multilineTextAlignment(.center)
@@ -121,7 +121,7 @@ struct HelpStrangersBottomSheet: View {
             HStack(spacing: 10) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 17, weight: .bold))
-                Text(L10n.t("quests.help_sheet.button.complete"))
+                Text(questLocalizedText("quests.help_sheet.button.complete"))
                     .font(.system(size: 18, weight: .heavy, design: .rounded))
             }
             .foregroundStyle(.white)
@@ -139,7 +139,7 @@ struct HelpStrangersBottomSheet: View {
         }
         .disabled(!canSubmit)
         .opacity(canSubmit ? 1 : 0.45)
-        .accessibilityLabel(L10n.t("quests.help_sheet.accessibility.complete_button"))
+        .accessibilityLabel(questLocalizedText("quests.help_sheet.accessibility.complete_button"))
     }
 
     private var buttonFill: AnyShapeStyle {
@@ -190,7 +190,7 @@ private struct HelpEntryInputCard: View {
         VStack(alignment: alignment.horizontal, spacing: 8) {
             Text(
                 String(
-                    format: L10n.t("quests.help_sheet.entry_label"),
+                    format: questLocalizedText("quests.help_sheet.entry_label"),
                     locale: Locale.current,
                     index
                 )
@@ -199,11 +199,11 @@ private struct HelpEntryInputCard: View {
             .foregroundStyle(Color.white.opacity(0.78))
 
             HStack(spacing: 8) {
-                Text(L10n.t("quests.help_sheet.prefix"))
+                Text(questLocalizedText("quests.help_sheet.prefix"))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.9))
 
-                TextField(L10n.t("quests.help_sheet.placeholder"), text: $entry.text, axis: .vertical)
+                TextField(questLocalizedText("quests.help_sheet.placeholder"), text: $entry.text, axis: .vertical)
                     .lineLimit(1 ... 2)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(.white)
@@ -214,7 +214,7 @@ private struct HelpEntryInputCard: View {
                     .tint(glow)
                     .accessibilityLabel(
                         String(
-                            format: L10n.t("quests.help_sheet.accessibility.note_input"),
+                            format: questLocalizedText("quests.help_sheet.accessibility.note_input"),
                             locale: Locale.current,
                             index
                         )
@@ -235,7 +235,7 @@ private struct HelpEntryInputCard: View {
 
             HStack(spacing: 10) {
                 HelpMetaPicker(
-                    title: L10n.t("quests.help_sheet.type.label"),
+                    title: questLocalizedText("quests.help_sheet.type.label"),
                     selection: $entry.type,
                     options: HelpType.allCases,
                     accent: accent,
@@ -243,14 +243,14 @@ private struct HelpEntryInputCard: View {
                 )
                 .accessibilityLabel(
                     String(
-                        format: L10n.t("quests.help_sheet.accessibility.type_picker"),
+                        format: questLocalizedText("quests.help_sheet.accessibility.type_picker"),
                         locale: Locale.current,
                         index
                     )
                 )
 
                 HelpMetaPicker(
-                    title: L10n.t("quests.help_sheet.impact.label"),
+                    title: questLocalizedText("quests.help_sheet.impact.label"),
                     selection: $entry.impact,
                     options: HelpImpact.allCases,
                     accent: accent,
@@ -258,7 +258,7 @@ private struct HelpEntryInputCard: View {
                 )
                 .accessibilityLabel(
                     String(
-                        format: L10n.t("quests.help_sheet.accessibility.impact_picker"),
+                        format: questLocalizedText("quests.help_sheet.accessibility.impact_picker"),
                         locale: Locale.current,
                         index
                     )
@@ -325,24 +325,24 @@ private struct NoorMomentSheet: View {
                     .frame(width: 54, height: 5)
                     .padding(.top, 8)
 
-                Text(L10n.t("quests.help_sheet.noor.title"))
+                Text(questLocalizedText("quests.help_sheet.noor.title"))
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
 
-                Text(L10n.t("quests.help_sheet.noor.subtitle"))
+                Text(questLocalizedText("quests.help_sheet.noor.subtitle"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.78))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 10)
 
-                Toggle(L10n.t("quests.help_sheet.noor.share_toggle"), isOn: $shareAnonymouslyToTribe)
+                Toggle(questLocalizedText("quests.help_sheet.noor.share_toggle"), isOn: $shareAnonymouslyToTribe)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .tint(sapphireBlue)
                     .padding(.horizontal, 4)
 
                 Button(action: onDone) {
-                    Text(L10n.t("quests.help_sheet.noor.done"))
+                    Text(questLocalizedText("quests.help_sheet.noor.done"))
                         .font(.system(size: 16, weight: .heavy, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -352,7 +352,7 @@ private struct NoorMomentSheet: View {
                                 .fill(sapphireBlue)
                         )
                 }
-                .accessibilityLabel(L10n.t("quests.help_sheet.accessibility.noor_done"))
+                .accessibilityLabel(questLocalizedText("quests.help_sheet.accessibility.noor_done"))
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)

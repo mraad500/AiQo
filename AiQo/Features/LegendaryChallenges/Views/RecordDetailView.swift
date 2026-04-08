@@ -43,7 +43,7 @@ struct RecordDetailView: View {
         .navigationDestination(isPresented: $navigateToAssessment) {
             FitnessAssessmentView(record: record)
         }
-        .alert(NSLocalizedString("recordDetail.activeProjectAlert", comment: ""), isPresented: $showActiveProjectAlert) {
+        .alert(NSLocalizedString("recordDetail.activeProjectAlert", comment: "Active project alert title"), isPresented: $showActiveProjectAlert) {
             Button(NSLocalizedString("recordDetail.ok", comment: ""), role: .cancel) {}
         } message: {
             Text(NSLocalizedString("recordDetail.activeProjectMessage", comment: ""))
@@ -93,8 +93,8 @@ struct RecordDetailView: View {
     private var infoCardsRow: some View {
         HStack(spacing: 10) {
             infoCard(title: NSLocalizedString("recordDetail.difficulty", comment: ""), value: record.difficulty.labelAr, color: GymTheme.beige)
-            infoCard(title: NSLocalizedString("recordDetail.estimatedDuration", comment: ""), value: "\(record.estimatedWeeks) \(NSLocalizedString("recordDetail.weeks", comment: ""))", color: GymTheme.mint)
-            infoCard(title: NSLocalizedString("recordDetail.category", comment: ""), value: record.category.rawValue, color: GymTheme.beige)
+            infoCard(title: NSLocalizedString("recordDetail.expectedDuration", comment: ""), value: "\(record.estimatedWeeks) \(NSLocalizedString("recordDetail.weeks", comment: ""))", color: GymTheme.mint)
+            infoCard(title: NSLocalizedString("recordDetail.category", comment: ""), value: record.category.localizedTitle, color: GymTheme.beige)
         }
     }
 

@@ -4,7 +4,6 @@ import Foundation
 enum SubscriptionTier: Int, Comparable {
     case none = 0
     case core = 1
-    case pro = 2
     case intelligencePro = 3
 
     static func < (lhs: SubscriptionTier, rhs: SubscriptionTier) -> Bool {
@@ -16,10 +15,9 @@ enum SubscriptionTier: Int, Comparable {
         case SubscriptionProductIDs.coreMonthly,
              SubscriptionProductIDs.legacyCoreMonthly:
             return .core
-        case SubscriptionProductIDs.proMonthly,
-             SubscriptionProductIDs.legacyProMonthly:
-            return .pro
         case SubscriptionProductIDs.intelligenceProMonthly,
+             SubscriptionProductIDs.proMonthly,
+             SubscriptionProductIDs.legacyProMonthly,
              SubscriptionProductIDs.legacyIntelligenceMonthly:
             return .intelligencePro
         default:
@@ -33,10 +31,8 @@ enum SubscriptionTier: Int, Comparable {
             return ""
         case .core:
             return "AiQo Core"
-        case .pro:
-            return "AiQo Pro"
         case .intelligencePro:
-            return "AiQo Intelligence"
+            return "AiQo Intelligence Pro"
         }
     }
 
@@ -50,8 +46,6 @@ enum SubscriptionTier: Int, Comparable {
             return ""
         case .core:
             return SubscriptionProductIDs.coreFallbackPrice
-        case .pro:
-            return SubscriptionProductIDs.proFallbackPrice
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProFallbackPrice
         }
@@ -63,8 +57,6 @@ enum SubscriptionTier: Int, Comparable {
             return ""
         case .core:
             return SubscriptionProductIDs.coreMonthly
-        case .pro:
-            return SubscriptionProductIDs.proMonthly
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProMonthly
         }

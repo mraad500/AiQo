@@ -10,7 +10,7 @@ struct PeaksRecordsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .trailing, spacing: 14) {
-                Text(L10n.t("gym.quest.records"))
+                Text(questLocalizedText("gym.quest.records"))
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.trailing, 4)
@@ -84,7 +84,7 @@ struct BattleChallengesView: View {
                     }
 
                     if selectedStage.quests.isEmpty, questEngine.isStageUnlocked(selectedStageID) {
-                        Text(L10n.t("gym.quest.stageContentSoon"))
+                        Text(questLocalizedText("gym.quest.stageContentSoon"))
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.primary.opacity(0.62))
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -195,11 +195,11 @@ struct BattleChallengesView: View {
                     .opacity(isLocked ? 0.5 : 1)
                 }
                 .disabled(isLocked)
-                .accessibilityLabel(String(format: L10n.t("gym.quest.stageLabel"), stage.id.arabicFormatted))
+                .accessibilityLabel(String(format: questLocalizedText("gym.quest.stageLabel"), stage.id.arabicFormatted))
             }
         }
         .padding(.vertical, 8)
-        .accessibilityLabel(Text(L10n.t("gym.quest.stagesLabel")))
+        .accessibilityLabel(Text(questLocalizedText("gym.quest.stagesLabel")))
     }
 
     private func stageCircleColor(isSelected: Bool, isLocked: Bool) -> Color {
@@ -216,7 +216,7 @@ struct BattleChallengesView: View {
 
     private var stageHeader: some View {
         VStack(spacing: 4) {
-            Text(String(format: L10n.t("gym.quest.stageLabel"), selectedStageID.arabicFormatted))
+            Text(String(format: questLocalizedText("gym.quest.stageLabel"), selectedStageID.arabicFormatted))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
@@ -238,11 +238,11 @@ struct BattleChallengesView: View {
                 .font(.system(size: 36, design: .rounded))
                 .foregroundStyle(Color(hex: "CCCCCC"))
 
-            Text(L10n.t("gym.quest.stageLocked"))
+            Text(questLocalizedText("gym.quest.stageLocked"))
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color(hex: "999999"))
 
-            Text(L10n.t("gym.quest.stageLockedMsg"))
+            Text(questLocalizedText("gym.quest.stageLockedMsg"))
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(Color(hex: "AAAAAA"))
                 .multilineTextAlignment(.center)
@@ -268,7 +268,7 @@ struct BattleChallengesView: View {
         let achievement = QuestEarnedAchievement(
             id: UUID(),
             questId: quest.id,
-            questName: quest.title,
+            questName: questLocalizedText(quest.localizedTitleKey),
             badgeImageName: quest.rewardImageName,
             stageNumber: quest.stageIndex,
             earnedDate: Date()
@@ -347,7 +347,7 @@ struct BattleChallengesView: View {
         guard center > 0 else { return }
         centerToastHideTask?.cancel()
         withAnimation(.easeInOut(duration: 0.22)) {
-            centerToastMessage = String(format: L10n.t("gym.quest.centerUpgrade"), center.arabicFormatted)
+            centerToastMessage = String(format: questLocalizedText("gym.quest.centerUpgrade"), center.arabicFormatted)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
@@ -374,7 +374,7 @@ struct RecordCardVertical: View {
         HStack(alignment: .center, spacing: 12) {
             // المحتوى النصي
             VStack(alignment: .trailing, spacing: 4) {
-                Text(record.category.rawValue)
+                Text(record.category.localizedTitle)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(.primary.opacity(0.7))
                     .padding(.horizontal, 8)
@@ -398,7 +398,7 @@ struct RecordCardVertical: View {
                     Text("•••")
                         .font(.system(size: 9, design: .rounded))
                         .foregroundStyle(.secondary.opacity(0.4))
-                    Text("صاحب الرقم: \(record.recordHolderAr)")
+                    Text(String(format: L10n.t("recordDetail.recordHolder"), record.recordHolderAr))
                         .font(.system(size: 11, weight: .regular, design: .rounded))
                         .foregroundStyle(.secondary)
                     Text(record.country)

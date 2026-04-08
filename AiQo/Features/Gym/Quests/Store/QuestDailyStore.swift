@@ -124,7 +124,7 @@ final class QuestDailyStore: ObservableObject {
                 locale: Locale.current,
                 current,
                 challenge.goalValue,
-                L10n.t("quests.unit.h")
+                questLocalizedText("quests.unit.h")
             )
         case .distanceKilometers:
             return String(
@@ -132,26 +132,26 @@ final class QuestDailyStore: ObservableObject {
                 locale: Locale.current,
                 current,
                 challenge.goalValue,
-                L10n.t("quests.unit.km")
+                questLocalizedText("quests.unit.km")
             )
         case .questCompletions:
-            return "\(Int(current.rounded()))/\(questCompletionsTargetCount(for: challenge)) \(L10n.t("quests.unit.quests"))"
+            return "\(Int(current.rounded()))/\(questCompletionsTargetCount(for: challenge)) \(questLocalizedText("quests.unit.quests"))"
         case .steps:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.steps"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.steps"))"
         case .activeCalories:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.kcal"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.kcal"))"
         case .plankSeconds:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.sec"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.sec"))"
         case .pushups:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.reps"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.reps"))"
         case .kindnessActs:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.helps"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.helps"))"
         case .zone2Minutes:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.min"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.min"))"
         case .mindfulnessSessions:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.sessions"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.sessions"))"
         case .sleepStreakDays:
-            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(L10n.t("quests.unit.days"))"
+            return "\(Int(current.rounded()))/\(Int(challenge.goalValue)) \(questLocalizedText("quests.unit.days"))"
         }
     }
 
@@ -480,28 +480,28 @@ final class QuestDailyStore: ObservableObject {
         case .sleepHours:
             let rounded = (achievedValue * 10).rounded() / 10
             let display = String(format: "%.1f", locale: Locale.current, rounded)
-            return "\(L10n.t("quests.metric.sleep")): \(display) \(L10n.t("quests.unit.h"))"
+            return "\(questLocalizedText("quests.metric.sleep")): \(display) \(questLocalizedText("quests.unit.h"))"
         case .steps:
-            return "\(L10n.t("quests.metric.steps")): \(Int(achievedValue.rounded()))"
+            return "\(questLocalizedText("quests.metric.steps")): \(Int(achievedValue.rounded()))"
         case .plankSeconds:
-            return "\(L10n.t("quests.metric.plank")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.sec"))"
+            return "\(questLocalizedText("quests.metric.plank")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.sec"))"
         case .pushups:
-            return "\(L10n.t("quests.metric.pushups")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.reps"))"
+            return "\(questLocalizedText("quests.metric.pushups")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.reps"))"
         case .activeCalories:
-            return "\(L10n.t("quests.metric.active")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.kcal"))"
+            return "\(questLocalizedText("quests.metric.active")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.kcal"))"
         case .distanceKilometers:
             let display = String(format: "%.1f", locale: Locale.current, achievedValue)
-            return "\(L10n.t("quests.metric.distance")): \(display) \(L10n.t("quests.unit.km"))"
+            return "\(questLocalizedText("quests.metric.distance")): \(display) \(questLocalizedText("quests.unit.km"))"
         case .questCompletions:
-            return "\(L10n.t("quests.metric.stage2")): \(Int(achievedValue.rounded()))/\(questCompletionsTargetCount(for: challenge)) \(L10n.t("quests.unit.quests"))"
+            return "\(questLocalizedText("quests.metric.stage2")): \(Int(achievedValue.rounded()))/\(questCompletionsTargetCount(for: challenge)) \(questLocalizedText("quests.unit.quests"))"
         case .kindnessActs:
-            return "\(L10n.t("quests.metric.kindness")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.helps"))"
+            return "\(questLocalizedText("quests.metric.kindness")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.helps"))"
         case .zone2Minutes:
-            return "\(L10n.t("quests.metric.zone2")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.min"))"
+            return "\(questLocalizedText("quests.metric.zone2")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.min"))"
         case .mindfulnessSessions:
-            return "\(L10n.t("quests.metric.mindfulness")): \(Int(achievedValue.rounded())) \(L10n.t("quests.unit.sessions"))"
+            return "\(questLocalizedText("quests.metric.mindfulness")): \(Int(achievedValue.rounded())) \(questLocalizedText("quests.unit.sessions"))"
         case .sleepStreakDays:
-            return "\(L10n.t("quests.metric.sleep_streak")): \(Int(achievedValue.rounded()))/\(Int(challenge.goalValue.rounded())) \(L10n.t("quests.unit.days"))"
+            return "\(questLocalizedText("quests.metric.sleep_streak")): \(Int(achievedValue.rounded()))/\(Int(challenge.goalValue.rounded())) \(questLocalizedText("quests.unit.days"))"
         }
     }
 

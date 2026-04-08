@@ -17,7 +17,7 @@ struct PaywallView: View {
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
 
-    private let supportedTiers: [SubscriptionTier] = [.core, .pro, .intelligencePro]
+    private let supportedTiers: [SubscriptionTier] = [.core, .intelligencePro]
     private let onPurchaseSuccess: (() -> Void)?
 
     init(onPurchaseSuccess: (() -> Void)? = nil) {
@@ -255,8 +255,8 @@ struct PaywallView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
                 Text(copy(
-                    ar: "اختر الباقة التي تناسب مرحلتك وابدأ التجربة المجانية قبل دخولك الكامل إلى لوحة التحكم. كل باقة تفتح طبقة مختلفة من التدريب، التحليل، وذكاء AiQo.",
-                    en: "Pick the tier that matches your level and start your free trial before entering the full dashboard. Each tier unlocks a different layer of coaching, analytics, and AiQo intelligence."
+                    ar: "خياران واضحان فقط: AiQo Core للسرعة اليومية والتتبع الكامل، أو AiQo Intelligence Pro لفتح القمم وذاكرة كابتن أوسع وتحليل أعمق.",
+                    en: "Two clear options only: AiQo Core for fast everyday coaching and full tracking, or AiQo Intelligence Pro for Peaks, expanded Captain memory, and deeper AI analysis."
                 ))
                 .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.72))
@@ -265,10 +265,10 @@ struct PaywallView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    benefitChip(title: "Captain Memory")
-                    benefitChip(title: "Kitchen Vision")
-                    benefitChip(title: "Zone 2 Live")
-                    benefitChip(title: "Legendary Challenges")
+                    benefitChip(title: copy(ar: "Captain السريع", en: "Fast Captain"))
+                    benefitChip(title: copy(ar: "Kitchen + Gym", en: "Kitchen + Gym"))
+                    benefitChip(title: copy(ar: "تتبع نمط الحياة", en: "Lifestyle Tracking"))
+                    benefitChip(title: copy(ar: "Peaks", en: "Peaks"))
                 }
                 .padding(.vertical, 2)
             }
@@ -369,8 +369,8 @@ struct PaywallView: View {
             .foregroundStyle(.white)
 
             Text(copy(
-                ar: "ابدأ من Core أو اصعد مباشرة إلى Pro أو Intelligence Pro. التغيير بين الباقات يتم داخل Apple لاحقاً متى ما احتجت.",
-                en: "Start with Core or jump straight to Pro or Intelligence Pro. You can change plans later through Apple whenever you need."
+                ar: "بطاقتان فقط: Core للسرعة والتتبع اليومي الكامل، وIntelligence Pro لكل شيء مع ميزة القمم وذاكرة ممتدة للكابتن.",
+                en: "Just two cards: Core for speed and complete everyday tracking, or Intelligence Pro for the full experience with Peaks and expanded Captain memory."
             ))
             .font(.system(size: 14, weight: .medium, design: .rounded))
             .foregroundStyle(Color.white.opacity(0.62))
@@ -552,7 +552,7 @@ struct PaywallView: View {
                 y: isSelected ? 16 : 10
             )
             .opacity(isAvailable ? 1 : 0.76)
-            .scaleEffect(isSelected ? 1.05 : (plan.details.isFeatured ? 1.015 : 1.0))
+            .scaleEffect(isSelected ? 1.05 : (plan.details.isFeatured ? 1.03 : 1.0))
             .animation(.spring(response: 0.44, dampingFraction: 0.82), value: effectiveSelectedProductID)
         }
         .buttonStyle(AiQoPressButtonStyle())
@@ -861,15 +861,16 @@ struct PaywallView: View {
         case .core:
             return PaywallPlanDetails(
                 title: "AiQo Core",
-                eyebrow: copy(ar: "الأساس اليومي للالتزام", en: "The daily foundation"),
+                eyebrow: copy(ar: "السرعة اليومية الذكية", en: "Fast everyday coaching"),
                 summary: copy(
-                    ar: "لمن يريد بداية نظيفة وواضحة: تتبع صحي أساسي، التزام يومي، ونسخة مركزة من تجربة AiQo.",
-                    en: "For a clean and focused start: essential health tracking, daily consistency, and a streamlined AiQo experience."
+                    ar: "كل الأساسيات التي يحتاجها المستخدم يومياً: سرعة أعلى، تتبع كامل لنمط الحياة، Kitchen، Gym، والكابتن الأساسي.",
+                    en: "Everything you need day to day: faster AI, full lifestyle tracking, Kitchen, Gym, and a focused basic Captain."
                 ),
                 features: [
-                    PaywallFeature(icon: "heart.text.square.fill", text: copy(ar: "Basic health tracking للحركة والنشاط اليومي", en: "Basic health tracking for movement and daily activity")),
-                    PaywallFeature(icon: "figure.strengthtraining.traditional", text: copy(ar: "Standard Gym Quests لبناء العادة", en: "Standard gym quests to build consistency")),
-                    PaywallFeature(icon: "chart.bar.fill", text: copy(ar: "لوحة تقدم بسيطة وواضحة بدون تعقيد", en: "A simple, clear progress dashboard"))
+                    PaywallFeature(icon: "bolt.fill", text: copy(ar: "مسار AI أسرع باستخدام نموذج سريع للاستجابة اليومية", en: "Faster AI routing with a speed-first model for everyday replies")),
+                    PaywallFeature(icon: "figure.strengthtraining.traditional", text: copy(ar: "Gym وKitchen كاملين لبناء العادة والتغذية اليومية", en: "Full Gym and Kitchen support for training and daily nutrition")),
+                    PaywallFeature(icon: "heart.text.square.fill", text: copy(ar: "تتبع كامل لنمط الحياة: النشاط، النوم، التحديات، ولوحة تقدم واضحة", en: "Full lifestyle tracking across activity, sleep, challenges, and a clear progress dashboard")),
+                    PaywallFeature(icon: "person.crop.circle.badge.sparkles", text: copy(ar: "Captain الأساسي للمتابعة السريعة والتوجيه اليومي", en: "Basic Captain for quick check-ins and daily guidance"))
                 ],
                 badge: nil,
                 icon: "bolt.heart.fill",
@@ -880,49 +881,27 @@ struct PaywallView: View {
                 tintIntensity: 0.18,
                 isFeatured: false
             )
-        case .pro:
-            return PaywallPlanDetails(
-                title: "AiQo Pro",
-                eyebrow: copy(ar: "ترقية الأداء والتحليل", en: "Performance and insight"),
-                summary: copy(
-                    ar: "طبقة أعمق لمَن يريد أن يرى جسده بوضوح أكثر ويحوّل البيانات إلى قرارات يومية أذكى.",
-                    en: "A deeper layer for users who want a clearer view of their body and smarter day-to-day decisions."
-                ),
-                features: [
-                    PaywallFeature(icon: "camera.macro", text: copy(ar: "Kitchen Vision لرؤية أدق للوجبات والمكونات", en: "Kitchen Vision for smarter meal and ingredient awareness")),
-                    PaywallFeature(icon: "waveform.path.ecg.rectangle", text: copy(ar: "Deeper biometric analytics لتحليل المؤشرات بشكل أوسع", en: "Deeper biometric analytics across your health signals")),
-                    PaywallFeature(icon: "bed.double.fill", text: copy(ar: "Sleep architecture لفهم مراحل النوم وجودته", en: "Sleep architecture to understand sleep stages and quality"))
-                ],
-                badge: nil,
-                icon: "waveform.path.ecg",
-                tint: Color(hex: "1D3538"),
-                secondaryTint: Color(hex: "5ECDB7"),
-                glow: Color(hex: "5ECDB7"),
-                glassStyle: .glass,
-                tintIntensity: 0.12,
-                isFeatured: false
-            )
         case .intelligencePro:
             return PaywallPlanDetails(
                 title: "AiQo Intelligence Pro",
-                eyebrow: copy(ar: "النسخة الكاملة من عقل AiQo", en: "The full AiQo intelligence stack"),
+                eyebrow: copy(ar: "الأقوى لكسر الأرقام والتحليل", en: "The full analytical stack"),
                 summary: copy(
-                    ar: "هذه الباقة تفتح أقوى نسخة من AiQo: ذاكرة أعمق، تدريب لحظي، وتوجيه AI يعطي الأولوية لك في كل لحظة.",
-                    en: "This tier unlocks the strongest AiQo experience: deeper memory, live coaching, and priority AI guidance."
+                    ar: "كل ما في Core وأكثر: ميزة القمم، ذاكرة ممتدة للكابتن، وذكاء اصطناعي تحليلي أعمق يقود التجربة بالكامل.",
+                    en: "Everything in Core and more: Peaks, extended Captain memory, and deeper analytical AI for the complete AiQo experience."
                 ),
                 features: [
-                    PaywallFeature(icon: "brain.head.profile", text: copy(ar: "Full Captain Hamoudi memory لذاكرة شخصية ممتدة", en: "Full Captain Hamoudi memory for a richer personal context")),
-                    PaywallFeature(icon: "figure.run", text: copy(ar: "Zone 2 live coaching أثناء التدريب اللحظي", en: "Zone 2 live coaching during active sessions")),
-                    PaywallFeature(icon: "crown.fill", text: copy(ar: "Legendary Challenges للوصول إلى المستوى الأسطوري", en: "Legendary Challenges for next-level progression")),
-                    PaywallFeature(icon: "point.3.connected.trianglepath.dotted", text: copy(ar: "Priority AI routing لاستجابة أسرع وأذكى", en: "Priority AI routing for faster, smarter responses"))
+                    PaywallFeature(icon: "mountain.2.fill", text: copy(ar: "ميزة القمم (Peaks) لكسر الأرقام القياسية والتحديات الأسطورية", en: "Peaks for record-breaking legendary challenges")),
+                    PaywallFeature(icon: "brain.head.profile", text: copy(ar: "ذاكرة ممتدة للكابتن لفهم تاريخك، أهدافك، وسياقك على مدى أطول", en: "Expanded Captain memory for longer-term context across your goals and history")),
+                    PaywallFeature(icon: "point.3.connected.trianglepath.dotted", text: copy(ar: "ذكاء اصطناعي تحليلي أعمق باستخدام نموذج reasoning أقوى", en: "Deeper analytical AI powered by a stronger reasoning model")),
+                    PaywallFeature(icon: "sparkles.rectangle.stack.fill", text: copy(ar: "كل مزايا Core مع كابتن أكثر فهماً وتخطيطاً", en: "All Core features plus a smarter, more strategic Captain"))
                 ],
                 badge: copy(ar: "الأكثر اختياراً", en: "Most chosen"),
-                icon: "sparkles",
+                icon: "crown.fill",
                 tint: Color(hex: "4A3E24"),
                 secondaryTint: Color(hex: "EBCF97"),
                 glow: Color(hex: "EBCF97"),
                 glassStyle: .glass,
-                tintIntensity: 0.12,
+                tintIntensity: 0.16,
                 isFeatured: true
             )
         case .none:

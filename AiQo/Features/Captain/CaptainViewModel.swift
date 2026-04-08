@@ -236,12 +236,24 @@ final class CaptainViewModel: ObservableObject {
         activeRequestID = requestID
         let attachedImageData = Self.preparedImageData(from: image)
 
+        // Capture everything needed BEFORE leaving the MainActor.
+        // The heavy lifting (prompt building, sanitization, network call) runs on the
+        // cooperative thread pool via Task.detached — never blocking the UI.
+        let conversation = buildConversationHistory()
+        let userName = captainReplyUserName()
+        let language = AppSettingsStore.shared.appLanguage
+        let profileSummary = buildUserProfileSummary()
+
         responseTask = Task { [weak self] in
             guard let self else { return }
             await self.processMessage(
                 requestID: requestID,
                 screenContext: context,
-                attachedImageData: attachedImageData
+                attachedImageData: attachedImageData,
+                prebuiltConversation: conversation,
+                prebuiltUserName: userName,
+                prebuiltLanguage: language,
+                prebuiltProfileSummary: profileSummary
             )
         }
     }
@@ -361,10 +373,19 @@ final class CaptainViewModel: ObservableObject {
         showChatHistory = false
     }
 
+    /// **Fix (2026-04-08):** Accepts pre-built conversation and profile data so the heavy
+    /// string processing (conversation history, profile summary, memory context) happens
+    /// on the MainActor *before* the Task launches — but only the lightweight capture,
+    /// not the orchestrator call. The orchestrator + sanitizer + network call all run on
+    /// the cooperative thread pool, never blocking the UI.
     private func processMessage(
         requestID: UUID,
         screenContext: ScreenContext,
-        attachedImageData: Data?
+        attachedImageData: Data?,
+        prebuiltConversation: [CaptainConversationMessage],
+        prebuiltUserName: String?,
+        prebuiltLanguage: AppLanguage,
+        prebuiltProfileSummary: String
     ) async {
         defer {
             if activeRequestID == requestID {
@@ -374,21 +395,23 @@ final class CaptainViewModel: ObservableObject {
         }
 
         do {
-            let conversation = buildConversationHistory()
-            let promptRequest = try await withGlobalTimeout(seconds: globalProcessingTimeout) {
-                await self.buildHybridRequest(
-                    conversation: conversation,
-                    screenContext: screenContext,
-                    attachedImageData: attachedImageData
-                )
-            }
+            // Build HealthKit context (async but lightweight — just reads cached values)
+            let contextData = await contextBuilder.buildContextData()
+
+            let promptRequest = HybridBrainRequest(
+                conversation: prebuiltConversation,
+                screenContext: screenContext,
+                language: prebuiltLanguage,
+                contextData: contextData,
+                userProfileSummary: prebuiltProfileSummary,
+                attachedImageData: attachedImageData
+            )
 
             let startedAt = Date()
-            let userName = captainReplyUserName()
             let capturedOrchestrator = orchestrator
             // Sleep analysis runs entirely on-device (HealthKit + Foundation Models) — give it more time.
             // The orchestrator may reroute .mainChat → .sleepAnalysis internally if the message is sleep-related.
-            let latestUserText = conversation.last(where: { $0.role == .user })?.content ?? ""
+            let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
             let needsSleepTimeout = screenContext == .sleepAnalysis
                 || looksLikeSleepRequest(latestUserText)
             let orchestratorTimeout = needsSleepTimeout
@@ -397,7 +420,7 @@ final class CaptainViewModel: ObservableObject {
             let reply = try await withGlobalTimeout(seconds: orchestratorTimeout) {
                 try await capturedOrchestrator.processMessage(
                     request: promptRequest,
-                    userName: userName
+                    userName: prebuiltUserName
                 )
             }
 

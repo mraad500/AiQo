@@ -25,8 +25,10 @@ final class AccessManager: ObservableObject {
     // MARK: — Tier helpers
 
     var activeTier: SubscriptionTier {
+        let liveTier = EntitlementStore.shared.currentTier
+        if liveTier != .none { return liveTier }
         if FreeTrialManager.shared.isTrialActive { return .intelligencePro }
-        return EntitlementStore.shared.currentTier
+        return .none
     }
 
     // MARK: — Core tier features
@@ -39,15 +41,15 @@ final class AccessManager: ObservableObject {
     var canAccessDataTracking: Bool { activeTier >= .core }
     var canReceiveCaptainNotifications: Bool { activeTier >= .core }
 
-    // MARK: — Pro tier feature gates
+    // MARK: — Feature gates that stay inside Core
 
-    var canAccessPeaks: Bool { activeTier >= .pro }
-    var canAccessHRRAssessment: Bool { activeTier >= .pro }
-    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .pro }
-    var canAccessRecordProjects: Bool { activeTier >= .pro }
+    var canAccessHRRAssessment: Bool { activeTier >= .core }
+    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .core }
+    var canAccessRecordProjects: Bool { activeTier >= .core }
 
-    // MARK: — Intelligence tier features
+    // MARK: — Intelligence Pro exclusives
 
+    var canAccessPeaks: Bool { activeTier >= .intelligencePro }
     var canAccessExtendedMemory: Bool { activeTier >= .intelligencePro }
     var canAccessIntelligenceModel: Bool { activeTier >= .intelligencePro }
 

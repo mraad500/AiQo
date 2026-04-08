@@ -189,7 +189,7 @@ private struct InteractiveFridgeCanvasCard: View {
                     entries: pickerEntries,
                     onSelect: onSelectIngredient
                 )
-                .frame(height: min(max(proxy.size.height * 0.18, 112), 142))
+                .frame(height: min(max(proxy.size.height * 0.22, 138), 168))
                 .padding(.horizontal, 14)
                 .padding(.bottom, 16)
             }
@@ -274,7 +274,8 @@ private struct FridgeShelvesOverlay: View {
                     FridgePinnedItemBadge(
                         item: item,
                         tint: section.tint,
-                        isHighlighted: highlightedItemID == item.id
+                        isHighlighted: highlightedItemID == item.id,
+                        onRemove: { onRemove(item.id) }
                     )
                     .position(layout.position(for: index, total: section.items.count, in: size))
                     .contextMenu {
@@ -344,6 +345,7 @@ private struct FridgePinnedItemBadge: View {
     let item: FridgeDisplayItem
     let tint: Color
     let isHighlighted: Bool
+    var onRemove: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -374,11 +376,24 @@ private struct FridgePinnedItemBadge: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 8)
 
-            if item.quantityValueText != "1" {
-                VStack {
-                    HStack {
-                        Spacer()
+            // Quantity badge (top-right) or Remove button (top-left)
+            VStack {
+                HStack {
+                    // X remove button — top-leading corner
+                    if let onRemove {
+                        Button(action: onRemove) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 7, weight: .black))
+                                .foregroundStyle(.white)
+                                .frame(width: 16, height: 16)
+                                .background(Circle().fill(Color.black.opacity(0.38)))
+                        }
+                        .buttonStyle(.plain)
+                    }
 
+                    Spacer()
+
+                    if item.quantityValueText != "1" {
                         Text(item.quantityValueText)
                             .font(.system(size: 9, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
@@ -389,11 +404,11 @@ private struct FridgePinnedItemBadge: View {
                                     .fill(tint)
                             )
                     }
-
-                    Spacer()
                 }
-                .padding(6)
+
+                Spacer()
             }
+            .padding(4)
         }
         .frame(width: 56, height: 76)
         .scaleEffect(isHighlighted ? 1.08 : 1)
@@ -481,9 +496,9 @@ private struct IngredientPickerCard: View {
 
                 IngredientPickerBadge(isStored: entry.isStored)
             }
-            .frame(width: 86, height: 94)
+            .frame(width: 86)
             .padding(.horizontal, 6)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color.white.opacity(0.92))

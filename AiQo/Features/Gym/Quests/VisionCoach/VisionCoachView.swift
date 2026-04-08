@@ -98,7 +98,7 @@ struct VisionCoachView: View {
                             .stroke(Color.white.opacity(0.75), lineWidth: 1)
                     )
 
-                Text(L10n.t("quests.vision.coach_name"))
+                Text(questLocalizedText("quests.vision.coach_name"))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             }
@@ -129,7 +129,7 @@ struct VisionCoachView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
 
-            Text(L10n.t("quests.vision.detected_reps"))
+            Text(questLocalizedText("quests.vision.detected_reps"))
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
 
@@ -162,7 +162,7 @@ struct VisionCoachView: View {
                 Spacer(minLength: 10)
 
                 if questsStore.isCompleted(challenge) {
-                    Text(L10n.t("quests.status.completed"))
+                    Text(questLocalizedText("quests.status.completed"))
                         .font(.system(size: 12, weight: .heavy, design: .rounded))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 10)

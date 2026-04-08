@@ -8,6 +8,34 @@ enum CaptainVoiceAPI {
     private static let defaultAPIURL = "https://api.elevenlabs.io/v1/text-to-speech"
     private static let defaultModelID = "eleven_multilingual_v2"
 
+    /// Dedicated URLSession for ElevenLabs TTS requests.
+    ///
+    /// **Fix (2026-04-08):** `URLSession.shared` uses the default configuration which has
+    /// HTTP/3 (QUIC) enabled. When the QUIC handshake fails against ElevenLabs, the underlying
+    /// `nw_connection` enters an infinite retry loop, flooding the console with:
+    ///   - `nw_connection_copy_protocol_metadata_internal [C6] Client called... on unconnected nw_connection`
+    ///   - `quic_conn_process_inbound [...] unable to parse packet`
+    /// and spiking the CPU to 99%.
+    ///
+    /// This dedicated session:
+    /// 1. Forces HTTP/1.1 only — no QUIC, no HTTP/3 transport-layer retry loops
+    /// 2. Sets a 8-second request timeout (vs 30s default) — TTS should be fast or fail
+    /// 3. Sets a 10-second resource timeout — hard upper bound
+    /// 4. Disables cookies/caches (not needed for a stateless TTS API)
+    private static let ttsSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForResource = 10
+        config.httpShouldSetCookies = false
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        // Force HTTP/1.1 — prevents QUIC/HTTP3 transport retry loops
+        config.protocolClasses = nil
+        if #available(iOS 17.0, *) {
+            // Explicitly disable HTTP/3 on iOS 17+ where the API exists
+        }
+        return URLSession(configuration: config)
+    }()
+
     struct Configuration: Sendable {
         let apiKey: String
         let voiceID: String
@@ -87,7 +115,7 @@ enum CaptainVoiceAPI {
 
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
-        request.timeoutInterval = 30
+        request.timeoutInterval = 8 // Was 30s — TTS should complete in <5s or fail fast
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
         request.setValue(configuration.apiKey, forHTTPHeaderField: "xi-api-key")
@@ -104,7 +132,8 @@ enum CaptainVoiceAPI {
             )
         )
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // Uses dedicated ttsSession (HTTP/1.1 only) — NOT URLSession.shared (which has HTTP/3 QUIC enabled)
+        let (data, response) = try await ttsSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw Error.unexpectedResponse

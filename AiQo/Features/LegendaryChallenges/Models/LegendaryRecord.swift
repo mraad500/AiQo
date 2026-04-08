@@ -4,18 +4,26 @@ import Foundation
 
 struct LegendaryRecord: Identifiable, Codable, Hashable {
     let id: String
-    let titleAr: String
+    let titleKey: String
     let targetValue: Double
-    let unit: String
-    let recordHolderAr: String
+    let unitKey: String
+    let recordHolderKey: String
     let country: String
     let year: Int
     let category: ChallengeCategory
     let difficulty: ChallengeDifficulty
     let estimatedWeeks: Int
-    let storyAr: String
-    let requirementsAr: [String]
+    let storyKey: String
+    let requirementKeys: [String]
     let iconName: String
+
+    // MARK: - Localised accessors
+
+    var titleAr: String { L10n.t(titleKey) }
+    var unit: String { L10n.t(unitKey) }
+    var recordHolderAr: String { L10n.t(recordHolderKey) }
+    var storyAr: String { L10n.t(storyKey) }
+    var requirementsAr: [String] { requirementKeys.map { L10n.t($0) } }
 }
 
 // MARK: - Category
@@ -25,6 +33,15 @@ enum ChallengeCategory: String, Codable, CaseIterable {
     case cardio = "كارديو"
     case endurance = "تحمّل"
     case clarity = "صفاء"
+
+    var localizedTitle: String {
+        switch self {
+        case .strength:  return L10n.t("peaks.category.strength")
+        case .cardio:    return L10n.t("peaks.category.cardio")
+        case .endurance: return L10n.t("peaks.category.endurance")
+        case .clarity:   return L10n.t("peaks.category.clarity")
+        }
+    }
 }
 
 // MARK: - Difficulty
@@ -36,9 +53,9 @@ enum ChallengeDifficulty: Int, Codable {
 
     var labelAr: String {
         switch self {
-        case .beginner: return "مبتدئ"
-        case .advanced: return "متقدم"
-        case .legendary: return "أسطوري"
+        case .beginner:  return L10n.t("peaks.difficulty.beginner")
+        case .advanced:  return L10n.t("peaks.difficulty.advanced")
+        case .legendary: return L10n.t("peaks.difficulty.legendary")
         }
     }
 }
@@ -49,122 +66,151 @@ extension LegendaryRecord {
     static let seedRecords: [LegendaryRecord] = [
         LegendaryRecord(
             id: "pushup_1min",
-            titleAr: "أكثر ضغط بدقيقة",
+            titleKey: "peaks.record.pushup1min.title",
             targetValue: 152,
-            unit: "مرة",
-            recordHolderAr: "كوجي إيتشيهارا",
+            unitKey: "peaks.unit.times",
+            recordHolderKey: "peaks.record.pushup1min.holder",
             country: "🇯🇵",
             year: 2024,
             category: .strength,
             difficulty: .legendary,
             estimatedWeeks: 16,
-            storyAr: "سجّل كوجي إيتشيهارا هذا الرقم القياسي بتنفيذ 152 تمرين ضغط كامل خلال 60 ثانية فقط. يتطلب سرعة انفجارية وتحمّل عضلي استثنائي.",
-            requirementsAr: ["لا تحتاج معدات", "مؤقت دقيقة واحدة", "سطح مستوٍ"],
+            storyKey: "peaks.record.pushup1min.story",
+            requirementKeys: [
+                "peaks.record.pushup1min.req1",
+                "peaks.record.pushup1min.req2",
+                "peaks.record.pushup1min.req3",
+            ],
             iconName: "figure.strengthtraining.traditional"
         ),
         LegendaryRecord(
             id: "plank_hold",
-            titleAr: "أطول بلانك متواصل",
+            titleKey: "peaks.record.plank.title",
             targetValue: 9.5,
-            unit: "ساعة",
-            recordHolderAr: "دانيال سكالي",
+            unitKey: "peaks.unit.hours",
+            recordHolderKey: "peaks.record.plank.holder",
             country: "🇨🇿",
             year: 2024,
             category: .endurance,
             difficulty: .legendary,
             estimatedWeeks: 24,
-            storyAr: "دانيال سكالي ثبت بوضعية البلانك لمدة تجاوزت 9 ساعات ونصف. تحدّي يتطلب قوة جذع خارقة وتركيز ذهني عميق.",
-            requirementsAr: ["لا تحتاج معدات", "سطح مريح", "ساعة Apple Watch مُفضّلة"],
+            storyKey: "peaks.record.plank.story",
+            requirementKeys: [
+                "peaks.record.plank.req1",
+                "peaks.record.plank.req2",
+                "peaks.record.plank.req3",
+            ],
             iconName: "figure.core.training"
         ),
         LegendaryRecord(
             id: "squats_1min",
-            titleAr: "أكثر سكوات بدقيقة",
+            titleKey: "peaks.record.squats1min.title",
             targetValue: 70,
-            unit: "مرة",
-            recordHolderAr: "سلطان المرشدي",
+            unitKey: "peaks.unit.times",
+            recordHolderKey: "peaks.record.squats1min.holder",
             country: "🇰🇼",
             year: 2023,
             category: .strength,
             difficulty: .advanced,
             estimatedWeeks: 10,
-            storyAr: "رقم قياسي عربي مسجّل بـ70 سكوات كاملة بدقيقة واحدة. يحتاج تناسق بين السرعة والعمق.",
-            requirementsAr: ["لا تحتاج معدات", "مؤقت دقيقة واحدة"],
+            storyKey: "peaks.record.squats1min.story",
+            requirementKeys: [
+                "peaks.record.squats1min.req1",
+                "peaks.record.squats1min.req2",
+            ],
             iconName: "figure.strengthtraining.functional"
         ),
         LegendaryRecord(
             id: "walk_24h",
-            titleAr: "أطول مسافة مشي بـ24 ساعة",
+            titleKey: "peaks.record.walk24h.title",
             targetValue: 228.93,
-            unit: "كم",
-            recordHolderAr: "جيسي كاستاندا",
+            unitKey: "peaks.unit.km",
+            recordHolderKey: "peaks.record.walk24h.holder",
             country: "🇺🇸",
             year: 2024,
             category: .cardio,
             difficulty: .legendary,
             estimatedWeeks: 20,
-            storyAr: "جيسي كاستاندا مشى أكثر من 228 كيلومتر خلال 24 ساعة متواصلة. يحتاج بناء قاعدة تحمّل ضخمة وتغذية مدروسة أثناء المشي.",
-            requirementsAr: ["حذاء مشي مريح", "Apple Watch", "خطة تغذية"],
+            storyKey: "peaks.record.walk24h.story",
+            requirementKeys: [
+                "peaks.record.walk24h.req1",
+                "peaks.record.walk24h.req2",
+                "peaks.record.walk24h.req3",
+            ],
             iconName: "figure.walk"
         ),
         LegendaryRecord(
             id: "burpees_1min",
-            titleAr: "أكثر بيربي بدقيقة",
+            titleKey: "peaks.record.burpees1min.title",
             targetValue: 48,
-            unit: "مرة",
-            recordHolderAr: "نيك أناستاسيو",
+            unitKey: "peaks.unit.times",
+            recordHolderKey: "peaks.record.burpees1min.holder",
             country: "🇺🇸",
             year: 2023,
             category: .cardio,
             difficulty: .advanced,
             estimatedWeeks: 12,
-            storyAr: "48 بيربي كاملة بدقيقة واحدة — كل واحدة تشمل نزول، ضغطة، قفز، وتصفيقة فوق الرأس. اختبار حقيقي لللياقة الشاملة.",
-            requirementsAr: ["لا تحتاج معدات", "مساحة واسعة", "مؤقت"],
+            storyKey: "peaks.record.burpees1min.story",
+            requirementKeys: [
+                "peaks.record.burpees1min.req1",
+                "peaks.record.burpees1min.req2",
+                "peaks.record.burpees1min.req3",
+            ],
             iconName: "figure.highintensity.intervaltraining"
         ),
         LegendaryRecord(
             id: "pullups_1min",
-            titleAr: "أكثر عقلة بدقيقة",
+            titleKey: "peaks.record.pullups1min.title",
             targetValue: 62,
-            unit: "مرة",
-            recordHolderAr: "مايكل إيكارد",
+            unitKey: "peaks.unit.times",
+            recordHolderKey: "peaks.record.pullups1min.holder",
             country: "🇺🇸",
             year: 2023,
             category: .strength,
             difficulty: .legendary,
             estimatedWeeks: 16,
-            storyAr: "62 عقلة كاملة بقبضة عادية خلال 60 ثانية. يحتاج قوة ظهر وذراعين استثنائية مع إيقاع سريع ومنضبط.",
-            requirementsAr: ["بار عقلة", "مؤقت"],
+            storyKey: "peaks.record.pullups1min.story",
+            requirementKeys: [
+                "peaks.record.pullups1min.req1",
+                "peaks.record.pullups1min.req2",
+            ],
             iconName: "figure.climbing"
         ),
         LegendaryRecord(
             id: "breath_hold",
-            titleAr: "أطول حبس نَفَس تحت الماء",
+            titleKey: "peaks.record.breathHold.title",
             targetValue: 24.37,
-            unit: "دقيقة",
-            recordHolderAr: "بوديمير شوبات",
+            unitKey: "peaks.unit.minutes",
+            recordHolderKey: "peaks.record.breathHold.holder",
             country: "🇭🇷",
             year: 2021,
             category: .clarity,
             difficulty: .legendary,
             estimatedWeeks: 12,
-            storyAr: "بوديمير شوبات حبس نفسه لأكثر من 24 دقيقة تحت الماء. تحدّي يعتمد على تمارين التنفس العميق والتأمّل والتحكم بنبض القلب.",
-            requirementsAr: ["تمارين التنفس يومياً", "إشراف متخصص مُوصى به"],
+            storyKey: "peaks.record.breathHold.story",
+            requirementKeys: [
+                "peaks.record.breathHold.req1",
+                "peaks.record.breathHold.req2",
+            ],
             iconName: "wind"
         ),
         LegendaryRecord(
             id: "steps_24h",
-            titleAr: "أكثر خطوات بـ24 ساعة",
+            titleKey: "peaks.record.steps24h.title",
             targetValue: 210_000,
-            unit: "خطوة",
-            recordHolderAr: "ستيفن واتكينز",
+            unitKey: "peaks.unit.steps",
+            recordHolderKey: "peaks.record.steps24h.holder",
             country: "🇬🇧",
             year: 2023,
             category: .cardio,
             difficulty: .legendary,
             estimatedWeeks: 16,
-            storyAr: "أكثر من 210 ألف خطوة خلال 24 ساعة — يعني تقريباً 150 كيلومتر مشي متواصل. يتطلب بناء قاعدة مشي قوية على مدى أشهر.",
-            requirementsAr: ["Apple Watch", "حذاء مريح", "خطة تغذية وترطيب"],
+            storyKey: "peaks.record.steps24h.story",
+            requirementKeys: [
+                "peaks.record.steps24h.req1",
+                "peaks.record.steps24h.req2",
+                "peaks.record.steps24h.req3",
+            ],
             iconName: "shoeprints.fill"
         ),
     ]

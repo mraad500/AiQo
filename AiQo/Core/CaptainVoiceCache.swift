@@ -45,6 +45,9 @@ actor CaptainVoiceCache {
         category: "CaptainVoiceCache"
     )
 
+    /// Prevents `preCacheAllPhrases` from running concurrently or re-firing on every screen appear.
+    private var isCachingInProgress = false
+
     init() {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         cacheDirectory = docs.appendingPathComponent("HamoudiVoiceCache", isDirectory: true)
@@ -122,15 +125,33 @@ actor CaptainVoiceCache {
 
     // MARK: - Pre-cache all phrases (call on WiFi after first login)
 
+    /// **Fix (2026-04-08):** Added `isCachingInProgress` guard to prevent concurrent runs.
+    /// `preCacheAllPhrases()` is called from `CaptainScreen.onAppear`, which fires every time
+    /// the user navigates to the chat. Without this guard, each appear launches up to 13
+    /// sequential ElevenLabs API calls — each one potentially triggering the QUIC retry loop.
     func preCacheAllPhrases() async {
+        guard !isCachingInProgress else {
+            logger.notice("voice_cache_skipped reason=already_in_progress")
+            return
+        }
+
         guard await CaptainVoiceAPI.isConfigured else {
             logger.notice("voice_cache_skipped reason=api_not_configured")
             return
         }
 
+        isCachingInProgress = true
+        defer { isCachingInProgress = false }
+
         var consecutiveFailures = 0
 
         for phrase in CachedPhrase.allCases {
+            // Respect task cancellation (e.g., user leaves the screen)
+            guard !Task.isCancelled else {
+                logger.notice("voice_cache_cancelled reason=task_cancelled")
+                break
+            }
+
             guard !isCached(phrase) else { continue }
 
             do {
@@ -141,7 +162,7 @@ actor CaptainVoiceCache {
             } catch {
                 consecutiveFailures += 1
                 logger.warning("voice_cache_failed phrase=\(phrase.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
-                // Stop trying if API keeps failing (e.g. expired subscription)
+                // Stop trying if API keeps failing (e.g. expired subscription, network down)
                 if consecutiveFailures >= 2 {
                     logger.notice("voice_cache_aborted reason=repeated_failures")
                     break

@@ -11,13 +11,13 @@ enum HelpType: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .time:
-            return L10n.t("quests.help_sheet.type.time")
+            return questLocalizedText("quests.help_sheet.type.time")
         case .kindWord:
-            return L10n.t("quests.help_sheet.type.kind_word")
+            return questLocalizedText("quests.help_sheet.type.kind_word")
         case .service:
-            return L10n.t("quests.help_sheet.type.service")
+            return questLocalizedText("quests.help_sheet.type.service")
         case .donation:
-            return L10n.t("quests.help_sheet.type.donation")
+            return questLocalizedText("quests.help_sheet.type.donation")
         }
     }
 }
@@ -33,13 +33,13 @@ enum HelpImpact: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .smile:
-            return L10n.t("quests.help_sheet.impact.smile")
+            return questLocalizedText("quests.help_sheet.impact.smile")
         case .relief:
-            return L10n.t("quests.help_sheet.impact.relief")
+            return questLocalizedText("quests.help_sheet.impact.relief")
         case .solvedProblem:
-            return L10n.t("quests.help_sheet.impact.solved_problem")
+            return questLocalizedText("quests.help_sheet.impact.solved_problem")
         case .guidance:
-            return L10n.t("quests.help_sheet.impact.guidance")
+            return questLocalizedText("quests.help_sheet.impact.guidance")
         }
     }
 }

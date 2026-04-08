@@ -71,7 +71,7 @@ struct WorkoutCategoriesView: View {
 
             // Vertical side filter — right side
             clubSideFilter
-                .frame(width: 58)
+                .frame(width: 68)
         }
         .environment(\.layoutDirection, .leftToRight)
         .onAppear {
@@ -95,8 +95,10 @@ struct WorkoutCategoriesView: View {
                 } label: {
                     Text(category.title)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                         .foregroundStyle(isSelected ? Color(.label) : Color(.secondaryLabel))
-                        .frame(width: 44, height: 62)
+                        .frame(width: 56, height: 62)
                         .background(
                             Capsule()
                                 .fill(isSelected ? Color.aiqoAccent : Color.clear)

@@ -84,7 +84,6 @@ enum HybridBrainServiceError: LocalizedError {
 // MARK: - Gemini API Configuration
 
 private enum GeminiConfig {
-    static let model = "gemini-flash-latest"
     static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
     static let requestTimeoutSeconds: TimeInterval = 35
 
@@ -105,7 +104,7 @@ private enum GeminiConfig {
         throw HybridBrainServiceError.missingAPIKey
     }
 
-    static func endpointURL() throws -> URL {
+    static func endpointURL(for model: String) throws -> URL {
         guard let url = URL(string: "\(baseEndpoint)/\(model):generateContent") else {
             throw HybridBrainServiceError.invalidEndpoint
         }
@@ -146,7 +145,7 @@ private struct GeminiResponse: Decodable {
     }
 }
 
-// MARK: - HybridBrainService (Gemini 3 Flash Cloud Transport)
+// MARK: - HybridBrainService (Gemini Cloud Transport)
 
 struct HybridBrainService: Sendable {
     private let session: URLSession
@@ -169,10 +168,16 @@ struct HybridBrainService: Sendable {
 
     // MARK: - Public API
 
-    func generateReply(request: HybridBrainRequest) async throws -> HybridBrainServiceReply {
+    func generateReply(
+        request: HybridBrainRequest,
+        model: String
+    ) async throws -> HybridBrainServiceReply {
         try validate(request)
 
-        let structuredResponse = try await requestCloudResponse(request: request)
+        let structuredResponse = try await requestCloudResponse(
+            request: request,
+            model: model
+        )
         let rawText = try encodeStructuredResponse(structuredResponse)
 
         return HybridBrainServiceReply(
@@ -185,8 +190,11 @@ struct HybridBrainService: Sendable {
         )
     }
 
-    func startStreamingReply(request: HybridBrainRequest) async throws -> HybridBrainStreamingSession {
-        let reply = try await generateReply(request: request)
+    func startStreamingReply(
+        request: HybridBrainRequest,
+        model: String
+    ) async throws -> HybridBrainStreamingSession {
+        let reply = try await generateReply(request: request, model: model)
         let fallbackResponse = CaptainStructuredResponse(
             message: reply.message,
             quickReplies: reply.quickReplies,
@@ -218,9 +226,12 @@ private extension HybridBrainService {
 
     // MARK: - Network
 
-    func requestCloudResponse(request: HybridBrainRequest) async throws -> CaptainStructuredResponse {
+    func requestCloudResponse(
+        request: HybridBrainRequest,
+        model: String
+    ) async throws -> CaptainStructuredResponse {
         let apiKey = try GeminiConfig.resolvedAPIKey()
-        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL())
+        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL(for: model))
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
@@ -231,7 +242,7 @@ private extension HybridBrainService {
             withJSONObject: makeRequestBody(request: request)
         )
 
-        logger.notice("gemini_request model=\(GeminiConfig.model, privacy: .public)")
+        logger.notice("gemini_request model=\(model, privacy: .public)")
 
         let data: Data
         let response: URLResponse

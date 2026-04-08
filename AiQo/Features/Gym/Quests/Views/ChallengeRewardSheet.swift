@@ -16,7 +16,7 @@ struct ChallengeRewardSheet: View {
                 .scaledToFit()
                 .frame(height: 150)
 
-            Text(L10n.t("quests.reward.completed"))
+            Text(questLocalizedText("quests.reward.completed"))
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
 
@@ -28,7 +28,7 @@ struct ChallengeRewardSheet: View {
                 .foregroundStyle(.secondary)
 
             Button(action: onAddToWins) {
-                Text(L10n.t("quests.reward.add_to_wins"))
+                Text(questLocalizedText("quests.reward.add_to_wins"))
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

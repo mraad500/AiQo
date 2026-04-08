@@ -19,14 +19,14 @@ struct ChallengeRunView: View {
                     if challenge.metricType.supportsManualCounter {
                         manualCounterControls
                     } else {
-                        Text(L10n.t("quests.run.automatic"))
+                        Text(questLocalizedText("quests.run.automatic"))
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 if questsStore.isCompleted(challenge) {
-                    Text(L10n.t("quests.run.completed_today"))
+                    Text(questLocalizedText("quests.run.completed_today"))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.green)
                 }
@@ -35,7 +35,7 @@ struct ChallengeRunView: View {
             .padding(.top, 14)
             .padding(.bottom, 32)
         }
-        .navigationTitle(L10n.t("quests.run.title"))
+        .navigationTitle(questLocalizedText("quests.run.title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             questsStore.startChallenge(challenge)
@@ -45,7 +45,7 @@ struct ChallengeRunView: View {
 
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.t("quests.run.progress"))
+            Text(questLocalizedText("quests.run.progress"))
                 .font(.system(size: 17, weight: .bold, design: .rounded))
 
             Text(questsStore.progressText(for: challenge))
@@ -76,20 +76,20 @@ struct ChallengeRunView: View {
 
     private var plankControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(L10n.t("quests.run.plank_session"))
+            Text(questLocalizedText("quests.run.plank_session"))
                 .font(.system(size: 18, weight: .bold, design: .rounded))
 
-            Picker(L10n.t("quests.run.preset"), selection: $questsStore.selectedPlankPresetSeconds) {
-                Text("30\(L10n.t("quests.unit.sec"))").tag(30)
-                Text("60\(L10n.t("quests.unit.sec"))").tag(60)
+            Picker(questLocalizedText("quests.run.preset"), selection: $questsStore.selectedPlankPresetSeconds) {
+                Text("30\(questLocalizedText("quests.unit.sec"))").tag(30)
+                Text("60\(questLocalizedText("quests.unit.sec"))").tag(60)
             }
             .pickerStyle(.segmented)
 
-            Text("\(L10n.t("quests.run.preset_target")): \(questsStore.selectedPlankPresetSeconds)\(L10n.t("quests.unit.sec"))")
+            Text("\(questLocalizedText("quests.run.preset_target")): \(questsStore.selectedPlankPresetSeconds)\(questLocalizedText("quests.unit.sec"))")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
 
-            Text("\(L10n.t("quests.run.current_set")): \(questsStore.currentPlankSetSeconds)\(L10n.t("quests.unit.sec"))")
+            Text("\(questLocalizedText("quests.run.current_set")): \(questsStore.currentPlankSetSeconds)\(questLocalizedText("quests.unit.sec"))")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
 
             HStack(spacing: 10) {
@@ -98,8 +98,8 @@ struct ChallengeRunView: View {
                 } label: {
                     Text(
                         questsStore.isPlankTimerRunning(for: challenge)
-                        ? L10n.t("quests.run.timer_running")
-                        : L10n.t("quests.run.start_timer")
+                        ? questLocalizedText("quests.run.timer_running")
+                        : questLocalizedText("quests.run.start_timer")
                     )
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .frame(maxWidth: .infinity)
@@ -112,7 +112,7 @@ struct ChallengeRunView: View {
                 Button {
                     questsStore.finishPlankSet(for: challenge)
                 } label: {
-                    Text(L10n.t("quests.run.finish_set"))
+                    Text(questLocalizedText("quests.run.finish_set"))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -147,7 +147,7 @@ struct ChallengeRunView: View {
             Button {
                 questsStore.undoLastManualProgress(for: challenge)
             } label: {
-                Text(L10n.t("quests.run.undo"))
+                Text(questLocalizedText("quests.run.undo"))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -183,9 +183,9 @@ struct ChallengeRunView: View {
 
     private var counterTitle: String {
         if challenge.metricType == .pushups {
-            return L10n.t("quests.run.pushups_counter")
+            return questLocalizedText("quests.run.pushups_counter")
         }
-        return L10n.t("quests.run.manual_counter")
+        return questLocalizedText("quests.run.manual_counter")
     }
 
     private var manualCounterTint: Color {

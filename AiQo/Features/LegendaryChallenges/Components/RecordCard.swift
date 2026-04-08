@@ -23,7 +23,7 @@ struct RecordCard: View {
                 Spacer()
 
                 // Category pill — Sand background
-                Text(record.category.rawValue)
+                Text(record.category.localizedTitle)
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.7))
                     .padding(.horizontal, 10)
@@ -50,7 +50,7 @@ struct RecordCard: View {
                 .lineLimit(1)
 
             // Record holder
-            Text("صاحب الرقم: \(record.recordHolderAr) \(record.country)")
+            Text(String(format: L10n.t("recordDetail.recordHolder"), record.recordHolderAr) + " \(record.country)")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.primary.opacity(0.45))
                 .lineLimit(1)

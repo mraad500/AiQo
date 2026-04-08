@@ -2,9 +2,17 @@ import Foundation
 
 enum L10n {
 
-    // نصوص
+    // نصوص — تحترم إعداد لغة التطبيق
     static func t(_ key: String, _ comment: String = "") -> String {
-        NSLocalizedString(key, comment: comment)
+        let lang = AppSettingsStore.shared.appLanguage.rawValue
+        if let path = Bundle.main.path(forResource: lang, ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+            if localized != key {
+                return localized
+            }
+        }
+        return NSLocalizedString(key, comment: comment)
     }
 
     // أرقام Int (خطوات، عدّات...)

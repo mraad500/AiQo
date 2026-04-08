@@ -29,6 +29,21 @@ struct PrivacySanitizer: Sendable {
 
     // MARK: - PII Redaction Rules
 
+    /// Pre-compiled PII redaction rules. Each regex is compiled once at static-init time.
+    ///
+    /// **Fix (2026-04-08):** Rewrote two patterns that caused catastrophic backtracking:
+    ///
+    /// 1. **Long numeric sequences** — old: `\b(?:\d[ -]?){10,}\b`
+    ///    The optional `[ -]?` inside `{10,}` created exponential backtracking states when
+    ///    the engine tried to match digit-runs that failed at the trailing `\b`. A string like
+    ///    "1234 5678 9012 abc" would cause the engine to re-partition the digit/separator
+    ///    assignments 2^n times before failing. New pattern uses possessive-style atomics:
+    ///    `\d(?:[\d \-]{8,}\d)` — requires the first and last characters to be digits with
+    ///    at least 10 total, no backtracking inside the separator group.
+    ///
+    /// 2. **Phone numbers** — old: `(?<!\d)(?:\+?\d[\d\-\s\(\)]{7,}\d)`
+    ///    Same class of issue — `[\d\-\s\(\)]{7,}` is an unbounded alternation group that
+    ///    backtracks exponentially on near-matches. New pattern anchors on digit boundaries.
     private static let piiRedactionRules: [RedactionRule] = [
         // Email addresses
         RedactionRule(
@@ -36,8 +51,9 @@ struct PrivacySanitizer: Sendable {
             template: "[REDACTED]"
         ),
         // Phone numbers (7+ digits with optional separators)
+        // Fixed: anchored start/end on digits, bounded separator group to {6,18} to prevent runaway
         RedactionRule(
-            pattern: #"(?<!\d)(?:\+?\d[\d\-\s\(\)]{7,}\d)"#,
+            pattern: #"(?<!\d)\+?\d(?:[\d\-\s()]{6,18})\d(?!\d)"#,
             template: "[REDACTED]"
         ),
         // UUIDs (8-4-4-4-12 hex pattern)
@@ -56,8 +72,10 @@ struct PrivacySanitizer: Sendable {
             template: "[REDACTED]"
         ),
         // Long numeric sequences (card numbers, etc.)
+        // Fixed: removed nested optional quantifier that caused catastrophic backtracking.
+        // Now requires first+last char = digit, middle = digits/spaces/hyphens, total ≥ 10 chars.
         RedactionRule(
-            pattern: #"\b(?:\d[ -]?){10,}\b"#,
+            pattern: #"\b\d(?:[\d \-]{8,30})\d\b"#,
             template: "[REDACTED]"
         ),
         // IP addresses
@@ -65,9 +83,9 @@ struct PrivacySanitizer: Sendable {
             pattern: #"\b(?:\d{1,3}\.){3}\d{1,3}\b"#,
             template: "[REDACTED]"
         ),
-        // Long base64-like tokens
+        // Long base64-like tokens (bounded upper limit to prevent runaway on huge strings)
         RedactionRule(
-            pattern: #"\b[a-z0-9]{24,}\b"#,
+            pattern: #"\b[a-z0-9]{24,128}\b"#,
             template: "[REDACTED]"
         )
     ]
@@ -116,12 +134,15 @@ struct PrivacySanitizer: Sendable {
         sanitized = replaceKnownUserName(in: sanitized, knownUserName: knownUserName)
 
         // Step 4: Apply PII regex redaction (emails, phones, UUIDs, IPs)
+        // Uses pre-compiled regexes to avoid NSRegularExpression init cost per message.
         for rule in Self.piiRedactionRules {
-            sanitized = replacingMatches(
+            guard let regex = rule.compiledRegex else { continue }
+            let range = NSRange(sanitized.startIndex..<sanitized.endIndex, in: sanitized)
+            sanitized = regex.stringByReplacingMatches(
                 in: sanitized,
-                pattern: rule.pattern,
-                with: rule.template,
-                options: rule.options
+                options: [],
+                range: range,
+                withTemplate: rule.template
             )
         }
 
@@ -219,6 +240,8 @@ private extension PrivacySanitizer {
         let pattern: String
         let template: String
         let options: NSRegularExpression.Options
+        /// Pre-compiled regex — avoids recompilation on every message.
+        let compiledRegex: NSRegularExpression?
 
         init(
             pattern: String,
@@ -228,6 +251,7 @@ private extension PrivacySanitizer {
             self.pattern = pattern
             self.template = template
             self.options = options
+            self.compiledRegex = try? NSRegularExpression(pattern: pattern, options: options)
         }
     }
 

@@ -39,7 +39,7 @@ struct QuestDetailSheet: View {
                     .padding(.top, 8)
 
                 // Quest name
-                Text(quest.title)
+                Text(questLocalizedText(quest.localizedTitleKey))
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -209,12 +209,12 @@ struct QuestDetailSheet: View {
             QuestShareSheetInternal(
                 items: [
                     String(
-                        format: L10n.t("quests.share.message.format"),
+                        format: questLocalizedText("quests.share.message.format"),
                         locale: Locale.current,
-                        quest.title
+                        questLocalizedText(quest.localizedTitleKey)
                     ),
                     String(
-                        format: L10n.t("quests.share.stage_quest.format"),
+                        format: questLocalizedText("quests.share.stage_quest.format"),
                         locale: Locale.current,
                         quest.stageIndex,
                         quest.questIndex

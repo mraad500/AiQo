@@ -283,7 +283,7 @@ struct CaptainScreen: View {
         ) {
             HStack {
                 Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.text)
                     .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
 

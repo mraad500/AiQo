@@ -56,10 +56,10 @@ struct QuestWinsGridView: View {
             Image(systemName: "trophy")
                 .font(.system(size: 48))
                 .foregroundStyle(Color(hex: "DDDDDD"))
-            Text(L10n.t("gym.quest.noAchievements"))
+            Text(questLocalizedText("gym.quest.noAchievements"))
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color(hex: "999999"))
-            Text(L10n.t("gym.quest.completeQuests"))
+            Text(questLocalizedText("gym.quest.completeQuests"))
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color(hex: "AAAAAA"))
         }
@@ -142,30 +142,30 @@ private struct WinAwardCard: View {
         switch challenge.metricType {
         case .sleepHours:
             let value = numericValue ?? 0
-            return "\(L10n.t("quests.metric.sleep")): \(String(format: "%.1f", locale: Locale.current, value)) \(L10n.t("quests.unit.h"))"
+            return "\(questLocalizedText("quests.metric.sleep")): \(String(format: "%.1f", locale: Locale.current, value)) \(questLocalizedText("quests.unit.h"))"
         case .steps:
-            return "\(L10n.t("quests.metric.steps")): \(Int((numericValue ?? 0).rounded()))"
+            return "\(questLocalizedText("quests.metric.steps")): \(Int((numericValue ?? 0).rounded()))"
         case .plankSeconds:
-            return "\(L10n.t("quests.metric.plank")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.sec"))"
+            return "\(questLocalizedText("quests.metric.plank")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.sec"))"
         case .pushups:
-            return "\(L10n.t("quests.metric.pushups")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.reps"))"
+            return "\(questLocalizedText("quests.metric.pushups")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.reps"))"
         case .activeCalories:
-            return "\(L10n.t("quests.metric.active")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.kcal"))"
+            return "\(questLocalizedText("quests.metric.active")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.kcal"))"
         case .distanceKilometers:
             let value = numericValue ?? 0
-            return "\(L10n.t("quests.metric.distance")): \(String(format: "%.1f", locale: Locale.current, value)) \(L10n.t("quests.unit.km"))"
+            return "\(questLocalizedText("quests.metric.distance")): \(String(format: "%.1f", locale: Locale.current, value)) \(questLocalizedText("quests.unit.km"))"
         case .questCompletions:
             let fallbackTarget = max(Challenge.nonBossChallenges(forStage: challenge.stageNumber).count, Int(challenge.goalValue.rounded()))
             let ratio = extractedRatio ?? (Int((numericValue ?? 0).rounded()), fallbackTarget)
-            return "\(L10n.t("quests.metric.stage2")): \(ratio.0)/\(ratio.1) \(L10n.t("quests.unit.quests"))"
+            return "\(questLocalizedText("quests.metric.stage2")): \(ratio.0)/\(ratio.1) \(questLocalizedText("quests.unit.quests"))"
         case .kindnessActs:
-            return "\(L10n.t("quests.metric.kindness")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.helps"))"
+            return "\(questLocalizedText("quests.metric.kindness")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.helps"))"
         case .zone2Minutes:
-            return "\(L10n.t("quests.metric.zone2")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.min"))"
+            return "\(questLocalizedText("quests.metric.zone2")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.min"))"
         case .mindfulnessSessions:
-            return "\(L10n.t("quests.metric.mindfulness")): \(Int((numericValue ?? 0).rounded())) \(L10n.t("quests.unit.sessions"))"
+            return "\(questLocalizedText("quests.metric.mindfulness")): \(Int((numericValue ?? 0).rounded())) \(questLocalizedText("quests.unit.sessions"))"
         case .sleepStreakDays:
-            return "\(L10n.t("quests.metric.sleep_streak")): \(Int((numericValue ?? 0).rounded()))/\(Int(challenge.goalValue.rounded())) \(L10n.t("quests.unit.days"))"
+            return "\(questLocalizedText("quests.metric.sleep_streak")): \(Int((numericValue ?? 0).rounded()))/\(Int(challenge.goalValue.rounded())) \(questLocalizedText("quests.unit.days"))"
         }
     }
 
@@ -212,7 +212,7 @@ private struct QuestAchievementCard: View {
                     .font(.system(size: 16, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color(hex: "1A1A1A"))
 
-                Text(String(format: L10n.t("gym.quest.stageNum"), achievement.stageNumber))
+                Text(String(format: questLocalizedText("gym.quest.stageNum"), achievement.stageNumber))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color(hex: "666666"))
 

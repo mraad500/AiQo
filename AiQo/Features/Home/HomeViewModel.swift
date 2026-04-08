@@ -327,9 +327,9 @@ final class HomeViewModel: ObservableObject {
         updateMetricCard(.steps, displayValue: Int(summary.steps).arabicFormatted)
         updateMetricCard(.calories, displayValue: Int(summary.activeKcal).arabicFormatted)
         updateMetricCard(.stand, displayValue: Int(summary.standPercent).arabicFormatted)
-        updateMetricCard(.water, displayValue: (summary.waterML / 1000.0).arabicFormatted + " L")
-        updateMetricCard(.sleep, displayValue: summary.sleepHours.arabicFormatted)
-        updateMetricCard(.distance, displayValue: (summary.distanceMeters / 1000.0).arabicFormatted)
+        updateMetricCard(.water, displayValue: (summary.waterML / 1000.0).aiqoMetricString + " L")
+        updateMetricCard(.sleep, displayValue: summary.sleepHours.aiqoMetricString)
+        updateMetricCard(.distance, displayValue: (summary.distanceMeters / 1000.0).aiqoMetricString)
 
         // تحديث الـ Streak — إذا حقق 5000+ خطوات أو 300+ سعرة
         if summary.steps >= 5000 || summary.activeKcal >= 300 {
@@ -358,9 +358,9 @@ final class HomeViewModel: ObservableObject {
         updateMetricCard(.steps, displayValue: 0.arabicFormatted)
         updateMetricCard(.calories, displayValue: 0.arabicFormatted)
         updateMetricCard(.stand, displayValue: 0.arabicFormatted)
-        updateMetricCard(.water, displayValue: Double(0.0).arabicFormatted)
-        updateMetricCard(.sleep, displayValue: Double(0.0).arabicFormatted)
-        updateMetricCard(.distance, displayValue: Double(0.0).arabicFormatted)
+        updateMetricCard(.water, displayValue: Double(0.0).aiqoMetricString)
+        updateMetricCard(.sleep, displayValue: Double(0.0).aiqoMetricString)
+        updateMetricCard(.distance, displayValue: Double(0.0).aiqoMetricString)
     }
     
     private func updateMetricCard(_ kind: MetricKind, displayValue: String) {
@@ -422,9 +422,9 @@ final class HomeViewModel: ObservableObject {
         case .steps:    return Int(summary.steps).arabicFormatted
         case .calories: return Int(summary.activeKcal).arabicFormatted
         case .stand:    return Int(summary.standPercent).arabicFormatted + "%"
-        case .water:    return (summary.waterML / 1000.0).arabicFormatted + " L"
-        case .sleep:    return summary.sleepHours.arabicFormatted + " h"
-        case .distance: return (summary.distanceMeters / 1000.0).arabicFormatted + " km"
+        case .water:    return (summary.waterML / 1000.0).aiqoMetricString + " L"
+        case .sleep:    return summary.sleepHours.aiqoMetricString + " h"
+        case .distance: return (summary.distanceMeters / 1000.0).aiqoMetricString + " km"
         }
     }
     

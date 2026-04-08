@@ -53,9 +53,8 @@ final class CaptainVoiceService: NSObject, ObservableObject {
 
             speechSynthesizer.speak(makeUtterance(for: sanitizedText))
 
-            await withCheckedContinuation { continuation in
-                playContinuation = continuation
-            }
+            // Wait for AVSpeechSynthesizer delegate with a safety timeout (max 60s for long text)
+            await awaitPlaybackCompletion(timeout: 60)
         } catch {
             if speechSequence == activeSpeechSequence {
                 logger.error("captain_voice_failed error=\(error.localizedDescription, privacy: .public)")
@@ -198,15 +197,25 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         activeSpeechSequence += 1
     }
 
+    /// Maximum time to wait for ElevenLabs TTS before falling back to AVSpeechSynthesizer.
+    /// The network call itself has an 8-second timeout in CaptainVoiceAPI; this is the outer
+    /// safety net that also covers audio decoding and playback start.
+    private static let remoteSpeechTimeout: TimeInterval = 10
+
+    /// **Fix (2026-04-08):** Added timeout race around the entire remote speech path.
+    /// Before: if ElevenLabs hung (QUIC retry loop) or the audio player delegate never fired,
+    /// the `withCheckedContinuation` would suspend forever, leaving `isSpeaking = true` and
+    /// the Main Thread blocked. Now:
+    /// 1. The ElevenLabs call races against a 10-second deadline
+    /// 2. On timeout or any error, returns `false` immediately → caller falls through to AVSpeech
+    /// 3. The continuation has a safety timeout so it can never leak
     private func playRemoteSpeechIfAvailable(for text: String, sequence: Int) async -> Bool {
         // Check voice cache first (instant, offline)
         if let cachedAudio = await voiceCache.matchedAudio(for: text) {
             guard sequence == activeSpeechSequence else { return true }
             do {
                 try playRemoteAudio(data: cachedAudio)
-                await withCheckedContinuation { continuation in
-                    playContinuation = continuation
-                }
+                await awaitPlaybackCompletion(timeout: Self.remoteSpeechTimeout)
                 return true
             } catch {
                 logger.error("captain_voice_cache_playback_failed error=\(error.localizedDescription, privacy: .public)")
@@ -216,22 +225,65 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         guard CaptainVoiceAPI.isConfigured else { return false }
 
         do {
-            let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: text)
+            // Race the network call against a strict timeout
+            let audioData = try await withThrowingTimeout(seconds: Self.remoteSpeechTimeout) {
+                try await CaptainVoiceAPI.synthesizeSpeech(for: text)
+            }
             guard sequence == activeSpeechSequence else { return true }
 
             try playRemoteAudio(data: audioData)
-
-            await withCheckedContinuation { continuation in
-                playContinuation = continuation
-            }
+            await awaitPlaybackCompletion(timeout: 30) // audio itself can play for up to 30s
 
             return true
         } catch {
             guard sequence == activeSpeechSequence else { return true }
 
             logger.error("captain_voice_remote_failed error=\(error.localizedDescription, privacy: .public)")
+            audioPlayer?.stop()
             audioPlayer = nil
+            completeCurrentPlayback()
             return false
+        }
+    }
+
+    /// Waits for the audio player delegate to fire, with a hard timeout to prevent
+    /// the continuation from leaking forever if the delegate never calls back.
+    private func awaitPlaybackCompletion(timeout: TimeInterval) async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor in
+                await withCheckedContinuation { continuation in
+                    self.playContinuation = continuation
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+            }
+
+            // Whichever finishes first wins — cancel the other
+            await group.next()
+            group.cancelAll()
+        }
+
+        // If the timeout won, clean up the leaked continuation
+        completeCurrentPlayback()
+    }
+
+    /// Races an async operation against a deadline. Throws on timeout.
+    private func withThrowingTimeout<T: Sendable>(
+        seconds: TimeInterval,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw CancellationError()
+            }
+            guard let result = try await group.next() else {
+                throw CancellationError()
+            }
+            group.cancelAll()
+            return result
         }
     }
 

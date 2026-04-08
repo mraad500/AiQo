@@ -15,7 +15,7 @@ struct QuestCard: View {
                 .frame(width: 102, height: 102)
 
             VStack(alignment: .leading, spacing: 7) {
-                Text(quest.title)
+                Text(questLocalizedText(quest.localizedTitleKey))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
                     .multilineTextAlignment(.leading)
@@ -89,7 +89,7 @@ struct QuestCard: View {
         }
 
         return String(
-            format: L10n.t("quests.common.tier_format"),
+            format: questLocalizedText("quests.common.tier_format"),
             locale: Locale.current,
             progress.tier
         )

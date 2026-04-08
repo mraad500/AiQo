@@ -12,11 +12,11 @@ struct ChallengeDetailView: View {
             VStack(alignment: .leading, spacing: 18) {
                 rewardBlock
 
-                detailRow(title: L10n.t("quests.detail.goal"), value: challenge.goalText)
-                detailRow(title: L10n.t("quests.detail.verify"), value: challenge.verifyText)
+                detailRow(title: questLocalizedText("quests.detail.goal"), value: challenge.goalText)
+                detailRow(title: questLocalizedText("quests.detail.verify"), value: challenge.verifyText)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(L10n.t("quests.detail.reward"))
+                    Text(questLocalizedText("quests.detail.reward"))
                         .font(.system(size: 17, weight: .bold, design: .rounded))
 
                     HStack(spacing: 12) {
@@ -28,7 +28,7 @@ struct ChallengeDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(challenge.title)
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                            Text(L10n.t("quests.detail.reward.hint"))
+                            Text(questLocalizedText("quests.detail.reward.hint"))
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -49,12 +49,12 @@ struct ChallengeDetailView: View {
                 .opacity(isPrimaryButtonDisabled ? 0.55 : 1)
 
                 if showAutoTrackingNote && challenge.isHealthKitBacked {
-                    Text(L10n.t("quests.detail.tracking_note"))
+                    Text(questLocalizedText("quests.detail.tracking_note"))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
 
-                Text("\(L10n.t("quests.run.progress")): \(questsStore.progressText(for: challenge))")
+                Text("\(questLocalizedText("quests.run.progress")): \(questsStore.progressText(for: challenge))")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
             }
             .padding(.horizontal, 18)
@@ -130,14 +130,14 @@ struct ChallengeDetailView: View {
 
     private var primaryButtonTitle: String {
         if questsStore.isCompleted(challenge) {
-            return L10n.t("quests.detail.completed_today")
+            return questLocalizedText("quests.detail.completed_today")
         }
 
         if challenge.isAutomatic && questsStore.isTracking(challenge) {
-            return L10n.t("quests.detail.tracking_active")
+            return questLocalizedText("quests.detail.tracking_active")
         }
 
-        return L10n.t("quests.detail.start")
+        return questLocalizedText("quests.detail.start")
     }
 
     private var isPrimaryButtonDisabled: Bool {

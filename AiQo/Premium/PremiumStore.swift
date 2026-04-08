@@ -4,7 +4,6 @@ import StoreKit
 
 enum PremiumPlan: String, CaseIterable, Identifiable {
     case core
-    case pro
     case intelligencePro
 
     var id: String { rawValue }
@@ -13,8 +12,6 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
         switch self {
         case .core:
             return SubscriptionProductIDs.coreMonthly
-        case .pro:
-            return SubscriptionProductIDs.proMonthly
         case .intelligencePro:
             return SubscriptionProductIDs.intelligenceProMonthly
         }
@@ -24,10 +21,8 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
         switch self {
         case .core:
             return "AiQo Core"
-        case .pro:
-            return "AiQo Pro"
         case .intelligencePro:
-            return "AiQo Intelligence"
+            return "AiQo Intelligence Pro"
         }
     }
 
@@ -35,18 +30,13 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
         switch self {
         case .core:
             return localized(
-                ar: "الأساس اليومي في AiQo: الكابتن، Gym، Kitchen، My Vibe، التحديات، التتبع، والإشعارات الذكية.",
-                en: "The daily AiQo foundation: Captain, Gym, Kitchen, My Vibe, challenges, tracking, and smart notifications."
-            )
-        case .pro:
-            return localized(
-                ar: "كل ما في Core مع Peaks وHRR والمراجعة الأسبوعية ومشاريع الأرقام القياسية.",
-                en: "Everything in Core plus Peaks, HRR, weekly review, and record projects."
+                ar: "الأساس اليومي في AiQo: سرعة أعلى، الكابتن الأساسي، Gym، Kitchen، My Vibe، التحديات، والتتبع الكامل.",
+                en: "The daily AiQo foundation: faster responses, basic Captain, Gym, Kitchen, My Vibe, challenges, and full lifestyle tracking."
             )
         case .intelligencePro:
             return localized(
-                ar: "كل ما في Pro مع ذاكرة كابتن أكبر وتوجيه AI أعمق.",
-                en: "Everything in Pro plus larger Captain memory and deeper AI guidance."
+                ar: "كل ما في Core مع القمم، ذاكرة ممتدة للكابتن، وتوجيه AI تحليلي أعمق.",
+                en: "Everything in Core plus Peaks, expanded Captain memory, and deeper analytical AI guidance."
             )
         }
     }
@@ -56,7 +46,7 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
         case "standard", "core", "individual":
             return .core
         case "pro":
-            return .pro
+            return .intelligencePro
         case "intelligencePro", "intelligence", "family":
             return .intelligencePro
         default:

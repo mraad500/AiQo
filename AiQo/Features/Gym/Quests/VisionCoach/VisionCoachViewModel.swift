@@ -18,7 +18,7 @@ final class VisionCoachViewModel: NSObject, ObservableObject {
     @Published private(set) var cameraState: CameraState = .idle
     @Published private(set) var repCount: Int = 0
     @Published private(set) var accuracyPercent: Double = 0
-    @Published private(set) var coachingHint: String = L10n.t("quests.vision.hint.initial")
+    @Published private(set) var coachingHint: String = questLocalizedText("quests.vision.hint.initial")
 
     let captureSession = AVCaptureSession()
 

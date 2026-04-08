@@ -1,9 +1,10 @@
 import Foundation
 
 func questLocalizedText(_ key: String) -> String {
-    if let arPath = Bundle.main.path(forResource: "ar", ofType: "lproj"),
-       let arBundle = Bundle(path: arPath) {
-        let localized = arBundle.localizedString(forKey: key, value: nil, table: nil)
+    let lang = AppSettingsStore.shared.appLanguage.rawValue
+    if let path = Bundle.main.path(forResource: lang, ofType: "lproj"),
+       let bundle = Bundle(path: path) {
+        let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
         if localized != key {
             return localized
         }

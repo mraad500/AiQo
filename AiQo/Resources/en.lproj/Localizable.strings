@@ -1989,6 +1989,79 @@
 "recordDetail.story" = "Story";
 "recordDetail.requirements" = "Requirements";
 "recordDetail.startProject" = "Start project with Captain 🚀";
+"recordDetail.activeProjectAlert" = "Active project exists";
+"recordDetail.weeks" = "weeks";
+"recordDetail.recordHolder" = "Record holder: %@";
+
+// MARK: - Peaks — Categories & Difficulty
+"peaks.category.strength" = "Strength";
+"peaks.category.cardio" = "Cardio";
+"peaks.category.endurance" = "Endurance";
+"peaks.category.clarity" = "Clarity";
+"peaks.difficulty.beginner" = "Beginner";
+"peaks.difficulty.advanced" = "Advanced";
+"peaks.difficulty.legendary" = "Legendary";
+
+// MARK: - Peaks — Seed Record Titles
+"peaks.record.pushup1min.title" = "Most push-ups in 1 minute";
+"peaks.record.pushup1min.story" = "Koji Ichihara set this record by completing 152 full push-ups in just 60 seconds. It requires explosive speed and exceptional muscular endurance.";
+"peaks.record.pushup1min.holder" = "Koji Ichihara";
+"peaks.record.pushup1min.req1" = "No equipment needed";
+"peaks.record.pushup1min.req2" = "One-minute timer";
+"peaks.record.pushup1min.req3" = "Flat surface";
+
+"peaks.record.plank.title" = "Longest continuous plank";
+"peaks.record.plank.story" = "Daniel Scali held a plank position for over 9 and a half hours. A challenge that requires extraordinary core strength and deep mental focus.";
+"peaks.record.plank.holder" = "Daniel Scali";
+"peaks.record.plank.req1" = "No equipment needed";
+"peaks.record.plank.req2" = "Comfortable surface";
+"peaks.record.plank.req3" = "Apple Watch preferred";
+
+"peaks.record.squats1min.title" = "Most squats in 1 minute";
+"peaks.record.squats1min.story" = "An Arab record of 70 full squats in one minute. Requires coordination between speed and depth.";
+"peaks.record.squats1min.holder" = "Sultan Al-Murshedi";
+"peaks.record.squats1min.req1" = "No equipment needed";
+"peaks.record.squats1min.req2" = "One-minute timer";
+
+"peaks.record.walk24h.title" = "Longest distance walked in 24 hours";
+"peaks.record.walk24h.story" = "Jesse Castaneda walked over 228 kilometers in 24 continuous hours. Requires building a massive endurance base and planned nutrition during the walk.";
+"peaks.record.walk24h.holder" = "Jesse Castaneda";
+"peaks.record.walk24h.req1" = "Comfortable walking shoes";
+"peaks.record.walk24h.req2" = "Apple Watch";
+"peaks.record.walk24h.req3" = "Nutrition plan";
+
+"peaks.record.burpees1min.title" = "Most burpees in 1 minute";
+"peaks.record.burpees1min.story" = "48 full burpees in one minute — each one includes a drop, push-up, jump, and overhead clap. A true test of total fitness.";
+"peaks.record.burpees1min.holder" = "Nick Anastasio";
+"peaks.record.burpees1min.req1" = "No equipment needed";
+"peaks.record.burpees1min.req2" = "Spacious area";
+"peaks.record.burpees1min.req3" = "Timer";
+
+"peaks.record.pullups1min.title" = "Most pull-ups in 1 minute";
+"peaks.record.pullups1min.story" = "62 full pull-ups with a standard grip in 60 seconds. Requires exceptional back and arm strength with a fast, disciplined rhythm.";
+"peaks.record.pullups1min.holder" = "Michael Eckert";
+"peaks.record.pullups1min.req1" = "Pull-up bar";
+"peaks.record.pullups1min.req2" = "Timer";
+
+"peaks.record.breathHold.title" = "Longest underwater breath hold";
+"peaks.record.breathHold.story" = "Budimir Sobat held his breath underwater for over 24 minutes. A challenge based on daily breathing exercises, meditation, and heart rate control.";
+"peaks.record.breathHold.holder" = "Budimir Sobat";
+"peaks.record.breathHold.req1" = "Daily breathing exercises";
+"peaks.record.breathHold.req2" = "Supervised practice recommended";
+
+"peaks.record.steps24h.title" = "Most steps in 24 hours";
+"peaks.record.steps24h.story" = "Over 210,000 steps in 24 hours — roughly 150 km of continuous walking. Requires building a strong walking base over months.";
+"peaks.record.steps24h.holder" = "Steven Watkins";
+"peaks.record.steps24h.req1" = "Apple Watch";
+"peaks.record.steps24h.req2" = "Comfortable shoes";
+"peaks.record.steps24h.req3" = "Nutrition and hydration plan";
+
+// MARK: - Peaks — Units
+"peaks.unit.times" = "reps";
+"peaks.unit.hours" = "hours";
+"peaks.unit.km" = "km";
+"peaks.unit.minutes" = "min";
+"peaks.unit.steps" = "steps";
 
 /* ─── Record Project ─── */
 "recordProject.endProject" = "End project";
@@ -2391,3 +2464,22 @@
 "gym.gratitude.inProgressBtn" = "Session In Progress";
 "gym.gratitude.startBtn" = "Start Gratitude Session";
 "gym.gratitude.guinness" = "GUINNESS RECORDS-AiQo";
+
+// MARK: - Kitchen
+"kitchen.title" = "Kitchen";
+"kitchen.vision.badge" = "Kitchen Vision";
+"kitchen.vision.headline" = "Snap your fridge and let Hamoudi plan your breakfast, lunch, and dinner from what's inside.";
+"kitchen.vision.subheadline" = "The camera opens full-screen, and analysis runs in the background without freezing the UI.";
+"kitchen.vision.scanButton" = "Scan the Fridge";
+"kitchen.vision.cameraLabel.scanning" = "Scanning...";
+"kitchen.vision.cameraLabel.open" = "Open Camera";
+"kitchen.vision.cameraLabel.unavailable" = "Camera Unavailable";
+"kitchen.vision.cameraUnavailableNote" = "The camera is not available on this device right now.";
+"kitchen.vision.prompt" = "What can you make me from this fridge?";
+"kitchen.fridge.lastCapture" = "Last Fridge Snapshot";
+"kitchen.fridge.captureNote" = "This is the image the current analysis is based on.";
+"kitchen.plan.title" = "Suggested Plan";
+"kitchen.plan.emptyTitle" = "No plan yet";
+"kitchen.plan.emptySubtitle" = "Open the camera and snap your fridge so Hamoudi can generate Breakfast, Lunch, and Dinner meals.";
+"kitchen.loading.title" = "Captain Hamoudi is checking ingredients...";
+"kitchen.loading.subtitle" = "We're resizing the image and analyzing what's available to plan your meals.";

@@ -50,8 +50,6 @@ struct StoreKitEntitlementProvider: EntitlementProvider {
         switch SubscriptionTier.from(productID: productId) {
         case .core:
             return .core
-        case .pro:
-            return .pro
         case .intelligencePro:
             return .intelligencePro
         case .none:

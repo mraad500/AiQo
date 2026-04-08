@@ -30,12 +30,11 @@ struct MainTabScreen: View {
             .tag(MainTabRouter.Tab.home)
             .tabItem {
                 Label(
-                    NSLocalizedString("tab.home", comment: "Home tab title"),
+                    L10n.t("tab.home"),
                     systemImage: "house.fill"
                 )
-                .accessibilityLabel("الرئيسية")
             }
-            .accessibilityHint(NSLocalizedString("tab.home.hint", value: "View daily health summary", comment: ""))
+            .accessibilityHint(L10n.t("tab.home.hint"))
 
             NavigationStack {
                 GymView()
@@ -43,12 +42,11 @@ struct MainTabScreen: View {
             .tag(MainTabRouter.Tab.gym)
             .tabItem {
                 Label(
-                    NSLocalizedString("tab.gym", comment: "Gym tab title"),
+                    L10n.t("tab.gym"),
                     systemImage: "figure.strengthtraining.traditional"
                 )
-                .accessibilityLabel("النادي الرياضي")
             }
-            .accessibilityHint(NSLocalizedString("tab.gym.hint", value: "Workouts and fitness challenges", comment: ""))
+            .accessibilityHint(L10n.t("tab.gym.hint"))
 
             NavigationStack {
                 CaptainScreen()
@@ -59,12 +57,11 @@ struct MainTabScreen: View {
             .tag(MainTabRouter.Tab.captain)
             .tabItem {
                 Label(
-                    NSLocalizedString("tab.captain", comment: "Captain tab title"),
+                    L10n.t("tab.captain"),
                     systemImage: "wand.and.stars"
                 )
-                .accessibilityLabel("الكابتن")
             }
-            .accessibilityHint(NSLocalizedString("tab.captain.hint", value: "Chat with your AI health coach", comment: ""))
+            .accessibilityHint(L10n.t("tab.captain.hint"))
         }
         .environment(\.layoutDirection, .rightToLeft)
         .tint(appTint)

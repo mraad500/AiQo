@@ -1988,6 +1988,79 @@
 "recordDetail.story" = "القصة";
 "recordDetail.requirements" = "المتطلبات";
 "recordDetail.startProject" = "ابدأ المشروع ويا الكابتن 🚀";
+"recordDetail.activeProjectAlert" = "عندك مشروع نشط";
+"recordDetail.weeks" = "أسبوع";
+"recordDetail.recordHolder" = "صاحب الرقم: %@";
+
+// MARK: - Peaks — Categories & Difficulty
+"peaks.category.strength" = "قوة";
+"peaks.category.cardio" = "كارديو";
+"peaks.category.endurance" = "تحمّل";
+"peaks.category.clarity" = "صفاء";
+"peaks.difficulty.beginner" = "مبتدئ";
+"peaks.difficulty.advanced" = "متقدم";
+"peaks.difficulty.legendary" = "أسطوري";
+
+// MARK: - Peaks — Seed Record Titles
+"peaks.record.pushup1min.title" = "أكثر ضغط بدقيقة";
+"peaks.record.pushup1min.story" = "سجّل كوجي إيتشيهارا هذا الرقم القياسي بتنفيذ 152 تمرين ضغط كامل خلال 60 ثانية فقط. يتطلب سرعة انفجارية وتحمّل عضلي استثنائي.";
+"peaks.record.pushup1min.holder" = "كوجي إيتشيهارا";
+"peaks.record.pushup1min.req1" = "لا تحتاج معدات";
+"peaks.record.pushup1min.req2" = "مؤقت دقيقة واحدة";
+"peaks.record.pushup1min.req3" = "سطح مستوٍ";
+
+"peaks.record.plank.title" = "أطول بلانك متواصل";
+"peaks.record.plank.story" = "دانيال سكالي ثبت بوضعية البلانك لمدة تجاوزت 9 ساعات ونصف. تحدّي يتطلب قوة جذع خارقة وتركيز ذهني عميق.";
+"peaks.record.plank.holder" = "دانيال سكالي";
+"peaks.record.plank.req1" = "لا تحتاج معدات";
+"peaks.record.plank.req2" = "سطح مريح";
+"peaks.record.plank.req3" = "ساعة Apple Watch مُفضّلة";
+
+"peaks.record.squats1min.title" = "أكثر سكوات بدقيقة";
+"peaks.record.squats1min.story" = "رقم قياسي عربي مسجّل بـ70 سكوات كاملة بدقيقة واحدة. يحتاج تناسق بين السرعة والعمق.";
+"peaks.record.squats1min.holder" = "سلطان المرشدي";
+"peaks.record.squats1min.req1" = "لا تحتاج معدات";
+"peaks.record.squats1min.req2" = "مؤقت دقيقة واحدة";
+
+"peaks.record.walk24h.title" = "أطول مسافة مشي بـ24 ساعة";
+"peaks.record.walk24h.story" = "جيسي كاستاندا مشى أكثر من 228 كيلومتر خلال 24 ساعة متواصلة. يحتاج بناء قاعدة تحمّل ضخمة وتغذية مدروسة أثناء المشي.";
+"peaks.record.walk24h.holder" = "جيسي كاستاندا";
+"peaks.record.walk24h.req1" = "حذاء مشي مريح";
+"peaks.record.walk24h.req2" = "Apple Watch";
+"peaks.record.walk24h.req3" = "خطة تغذية";
+
+"peaks.record.burpees1min.title" = "أكثر بيربي بدقيقة";
+"peaks.record.burpees1min.story" = "48 بيربي كاملة بدقيقة واحدة — كل واحدة تشمل نزول، ضغطة، قفز، وتصفيقة فوق الرأس. اختبار حقيقي لللياقة الشاملة.";
+"peaks.record.burpees1min.holder" = "نيك أناستاسيو";
+"peaks.record.burpees1min.req1" = "لا تحتاج معدات";
+"peaks.record.burpees1min.req2" = "مساحة واسعة";
+"peaks.record.burpees1min.req3" = "مؤقت";
+
+"peaks.record.pullups1min.title" = "أكثر عقلة بدقيقة";
+"peaks.record.pullups1min.story" = "62 عقلة كاملة بقبضة عادية خلال 60 ثانية. يحتاج قوة ظهر وذراعين استثنائية مع إيقاع سريع ومنضبط.";
+"peaks.record.pullups1min.holder" = "مايكل إيكارد";
+"peaks.record.pullups1min.req1" = "بار عقلة";
+"peaks.record.pullups1min.req2" = "مؤقت";
+
+"peaks.record.breathHold.title" = "أطول حبس نَفَس تحت الماء";
+"peaks.record.breathHold.story" = "بوديمير شوبات حبس نفسه لأكثر من 24 دقيقة تحت الماء. تحدّي يعتمد على تمارين التنفس العميق والتأمّل والتحكم بنبض القلب.";
+"peaks.record.breathHold.holder" = "بوديمير شوبات";
+"peaks.record.breathHold.req1" = "تمارين التنفس يومياً";
+"peaks.record.breathHold.req2" = "إشراف متخصص مُوصى به";
+
+"peaks.record.steps24h.title" = "أكثر خطوات بـ24 ساعة";
+"peaks.record.steps24h.story" = "أكثر من 210 ألف خطوة خلال 24 ساعة — يعني تقريباً 150 كيلومتر مشي متواصل. يتطلب بناء قاعدة مشي قوية على مدى أشهر.";
+"peaks.record.steps24h.holder" = "ستيفن واتكينز";
+"peaks.record.steps24h.req1" = "Apple Watch";
+"peaks.record.steps24h.req2" = "حذاء مريح";
+"peaks.record.steps24h.req3" = "خطة تغذية وترطيب";
+
+// MARK: - Peaks — Units
+"peaks.unit.times" = "مرة";
+"peaks.unit.hours" = "ساعة";
+"peaks.unit.km" = "كم";
+"peaks.unit.minutes" = "دقيقة";
+"peaks.unit.steps" = "خطوة";
 
 /* ─── Record Project ─── */
 "recordProject.endProject" = "إنهاء المشروع";
@@ -2390,3 +2463,22 @@
 "gym.gratitude.inProgressBtn" = "الجلسة شغالة";
 "gym.gratitude.startBtn" = "ابدأ جلسة الامتنان";
 "gym.gratitude.guinness" = "GUINNESS RECORDS-AiQo";
+
+// MARK: - Kitchen
+"kitchen.title" = "المطبخ";
+"kitchen.vision.badge" = "Kitchen Vision";
+"kitchen.vision.headline" = "صوّر الثلاجة مباشرة وخلي حمّودي يرتبلك فطور وغداء وعشاء من الموجود.";
+"kitchen.vision.subheadline" = "الكاميرا تفتح بواجهة كاملة، وبعد الالتقاط يشتغل التحليل بالخلفية بدون ما يجمّد الواجهة.";
+"kitchen.vision.scanButton" = "تصوير الثلاجة";
+"kitchen.vision.cameraLabel.scanning" = "جاري الفحص...";
+"kitchen.vision.cameraLabel.open" = "فتح الكاميرا";
+"kitchen.vision.cameraLabel.unavailable" = "الكاميرا غير متاحة";
+"kitchen.vision.cameraUnavailableNote" = "الكاميرا غير متاحة على هذا الجهاز حالياً.";
+"kitchen.vision.prompt" = "شنو تكدر تسويلي أكل من هاي الثلاجة؟";
+"kitchen.fridge.lastCapture" = "آخر لقطة للثلاجة";
+"kitchen.fridge.captureNote" = "هاي الصورة اللي دا يعتمد عليها التحليل الحالي.";
+"kitchen.plan.title" = "الخطة المقترحة";
+"kitchen.plan.emptyTitle" = "ماكو خطة بعد";
+"kitchen.plan.emptySubtitle" = "افتح الكاميرا وصوّر الثلاجة حتى يولد حمّودي وجبات Breakfast و Lunch و Dinner.";
+"kitchen.loading.title" = "الكابتن حمودي ديفحص المكونات...";
+"kitchen.loading.subtitle" = "دا نصغّر الصورة ونحلل الموجود حتى نرتبلك وجبات مناسبة.";

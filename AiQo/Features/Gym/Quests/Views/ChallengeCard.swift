@@ -86,13 +86,13 @@ struct QuestCardView: View {
     private var statusText: String {
         switch state {
         case .locked:
-            return L10n.t("quests.status.locked")
+            return questLocalizedText("quests.status.locked")
         case .ready:
-            return L10n.t("quests.status.ready")
+            return questLocalizedText("quests.status.ready")
         case .tracking:
-            return L10n.t("quests.status.tracking")
+            return questLocalizedText("quests.status.tracking")
         case .completed:
-            return L10n.t("quests.status.completed")
+            return questLocalizedText("quests.status.completed")
         }
     }
 
@@ -169,13 +169,13 @@ struct ChallengePlaceholderCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(
                     String(
-                        format: L10n.t("quests.placeholder.stage_title"),
+                        format: questLocalizedText("quests.placeholder.stage_title"),
                         locale: Locale.current,
                         stageNumber
                     )
                 )
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                Text(L10n.t("quests.placeholder.empty"))
+                Text(questLocalizedText("quests.placeholder.empty"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }

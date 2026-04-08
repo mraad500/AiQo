@@ -97,12 +97,12 @@ struct QuestDetailView: View {
             QuestShareSheet(
                 items: [
                     String(
-                        format: L10n.t("quests.share.message.format"),
+                        format: questLocalizedText("quests.share.message.format"),
                         locale: Locale.current,
-                        quest.title
+                        questLocalizedText(quest.localizedTitleKey)
                     ),
                     String(
-                        format: L10n.t("quests.share.stage_quest.format"),
+                        format: questLocalizedText("quests.share.stage_quest.format"),
                         locale: Locale.current,
                         quest.stageIndex,
                         quest.questIndex
@@ -122,14 +122,14 @@ struct QuestDetailView: View {
             guard quest.source == .healthkit else { return }
             await engine.refreshNow(reason: .manualPull)
             if quest.id == "s1q3", engine.isHealthAuthorized, !engine.hasSleepDataInOvernightWindow {
-                healthMessage = L10n.t("gym.quest.noSleepData")
+                healthMessage = questLocalizedText("gym.quest.noSleepData")
             }
         }
     }
 
     private func headerBlock(progress: QuestCardProgressModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(quest.title)
+            Text(questLocalizedText(quest.localizedTitleKey))
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.primary)
 
@@ -139,7 +139,7 @@ struct QuestDetailView: View {
 
             Text(
                 String(
-                    format: L10n.t("quests.common.tier_format"),
+                    format: questLocalizedText("quests.common.tier_format"),
                     locale: Locale.current,
                     progress.tier
                 )
@@ -153,7 +153,7 @@ struct QuestDetailView: View {
 
     private func progressBlock(progress: QuestProgressRecord, cardProgress: QuestCardProgressModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.t("gym.quest.progress"))
+            Text(questLocalizedText("gym.quest.progress"))
                 .font(.system(size: 17, weight: .bold, design: .rounded))
 
             Text(progressSummaryText(for: cardProgress))
@@ -165,7 +165,7 @@ struct QuestDetailView: View {
                 .scaleEffect(y: 1.4)
 
             if progress.isStarted {
-                Text(L10n.t("gym.quest.sessionRunning"))
+                Text(questLocalizedText("gym.quest.sessionRunning"))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Color(red: 0.10, green: 0.35, blue: 0.90))
             }
@@ -191,12 +191,12 @@ struct QuestDetailView: View {
                 .foregroundStyle(.secondary)
 
             if quest.id == "s1q3", engine.isHealthAuthorized, !engine.hasSleepDataInOvernightWindow {
-                Text(L10n.t("gym.quest.noSleepData"))
+                Text(questLocalizedText("gym.quest.noSleepData"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
 
-            Button(L10n.t("gym.quest.openSettings")) {
+            Button(questLocalizedText("gym.quest.openSettings")) {
                 guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                 UIApplication.shared.open(url)
             }
@@ -206,7 +206,7 @@ struct QuestDetailView: View {
 
     private var timerBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.t("gym.quest.sessionTime"))
+            Text(questLocalizedText("gym.quest.sessionTime"))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
 
             Text(formattedElapsed())
@@ -232,23 +232,23 @@ struct QuestDetailView: View {
     private func ctaTitle(progress: QuestProgressRecord) -> String {
         switch quest.source {
         case .manual:
-            return isActionCompleted(progress: progress) ? L10n.t("gym.quest.done") : L10n.t("gym.quest.confirmAchievement")
+            return isActionCompleted(progress: progress) ? questLocalizedText("gym.quest.done") : questLocalizedText("gym.quest.confirmAchievement")
         case .water:
-            return L10n.t("gym.quest.openWaterEntry")
+            return questLocalizedText("gym.quest.openWaterEntry")
         case .healthkit:
-            return engine.isHealthAuthorized ? L10n.t("gym.quest.refresh") : L10n.t("gym.quest.linkHealthKit")
+            return engine.isHealthAuthorized ? questLocalizedText("gym.quest.refresh") : questLocalizedText("gym.quest.linkHealthKit")
         case .timer:
-            return progress.isStarted ? L10n.t("gym.quest.endSession") : L10n.t("gym.quest.startSession")
+            return progress.isStarted ? questLocalizedText("gym.quest.endSession") : questLocalizedText("gym.quest.startSession")
         case .camera:
-            return progress.isStarted ? L10n.t("gym.quest.endSession") : L10n.t("gym.quest.startPushupChallenge")
+            return progress.isStarted ? questLocalizedText("gym.quest.endSession") : questLocalizedText("gym.quest.startPushupChallenge")
         case .workout:
-            return L10n.t("gym.quest.logCardioSession")
+            return questLocalizedText("gym.quest.logCardioSession")
         case .social:
-            return L10n.t("gym.quest.logInteraction")
+            return questLocalizedText("gym.quest.logInteraction")
         case .kitchen:
-            return isActionCompleted(progress: progress) ? L10n.t("gym.quest.done") : L10n.t("gym.quest.openKitchen")
+            return isActionCompleted(progress: progress) ? questLocalizedText("gym.quest.done") : questLocalizedText("gym.quest.openKitchen")
         case .share:
-            return L10n.t("gym.quest.shareAchievement")
+            return questLocalizedText("gym.quest.shareAchievement")
         }
     }
 
@@ -276,12 +276,12 @@ struct QuestDetailView: View {
                 await MainActor.run {
                     if granted {
                         if (quest.id == "s1q3" || quest.id == "s6q5"), !engine.hasSleepDataInOvernightWindow {
-                            healthMessage = L10n.t("gym.quest.noSleepData")
+                            healthMessage = questLocalizedText("gym.quest.noSleepData")
                         } else {
-                            healthMessage = wasAuthorized ? L10n.t("gym.quest.progressUpdated") : L10n.t("gym.quest.healthKitLinked")
+                            healthMessage = wasAuthorized ? questLocalizedText("gym.quest.progressUpdated") : questLocalizedText("gym.quest.healthKitLinked")
                         }
                     } else {
-                        healthMessage = L10n.t("gym.quest.healthKitDenied")
+                        healthMessage = questLocalizedText("gym.quest.healthKitDenied")
                     }
                 }
             }
@@ -364,7 +364,7 @@ struct StageOneQuestSheet: View {
 
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                Text(quest.title)
+                Text(questLocalizedText(quest.localizedTitleKey))
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.primary)
 
@@ -375,19 +375,19 @@ struct StageOneQuestSheet: View {
                     .padding(.vertical, 6)
                     .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
 
-                sectionTitle(L10n.t("gym.quest.challenge"))
+                sectionTitle(questLocalizedText("gym.quest.challenge"))
                 Text(content.explanation)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary.opacity(0.9))
 
-                sectionTitle(L10n.t("gym.quest.benefit"))
+                sectionTitle(questLocalizedText("gym.quest.benefit"))
                 bulletList(content.benefits)
 
-                sectionTitle(L10n.t("gym.quest.howToComplete"))
+                sectionTitle(questLocalizedText("gym.quest.howToComplete"))
                 bulletList(content.howTo)
 
                 HStack(spacing: 8) {
-                    Text(L10n.t("gym.quest.currentCenter"))
+                    Text(questLocalizedText("gym.quest.currentCenter"))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primary)
 
@@ -480,8 +480,8 @@ struct StageOneQuestSheet: View {
         .onReceive(minuteTicker) { value in
             currentTime = value
         }
-        .alert(L10n.t("gym.quest.cantOpenHealth"), isPresented: $showHealthSetupAlert) {
-            Button(L10n.t("gym.quest.ok"), role: .cancel) {}
+        .alert(questLocalizedText("gym.quest.cantOpenHealth"), isPresented: $showHealthSetupAlert) {
+            Button(questLocalizedText("gym.quest.ok"), role: .cancel) {}
         } message: {
             Text(healthSetupAlertMessage)
         }
@@ -491,72 +491,72 @@ struct StageOneQuestSheet: View {
         switch quest.id {
         case "s1q1":
             return .init(
-                explanation: L10n.t("gym.quest.s1q1.explanation"),
+                explanation: questLocalizedText("gym.quest.s1q1.explanation"),
                 benefits: [
-                    L10n.t("gym.quest.s1q1.benefit1"),
-                    L10n.t("gym.quest.s1q1.benefit2"),
-                    L10n.t("gym.quest.s1q1.benefit3")
+                    questLocalizedText("gym.quest.s1q1.benefit1"),
+                    questLocalizedText("gym.quest.s1q1.benefit2"),
+                    questLocalizedText("gym.quest.s1q1.benefit3")
                 ],
                 howTo: [
-                    L10n.t("gym.quest.s1q1.howTo1"),
-                    L10n.t("gym.quest.s1q1.howTo2"),
-                    L10n.t("gym.quest.s1q1.howTo3")
+                    questLocalizedText("gym.quest.s1q1.howTo1"),
+                    questLocalizedText("gym.quest.s1q1.howTo2"),
+                    questLocalizedText("gym.quest.s1q1.howTo3")
                 ]
             )
         case "s1q2":
             return .init(
-                explanation: L10n.t("gym.quest.s1q2.explanation"),
+                explanation: questLocalizedText("gym.quest.s1q2.explanation"),
                 benefits: [
-                    L10n.t("gym.quest.s1q2.benefit1"),
-                    L10n.t("gym.quest.s1q2.benefit2"),
-                    L10n.t("gym.quest.s1q2.benefit3")
+                    questLocalizedText("gym.quest.s1q2.benefit1"),
+                    questLocalizedText("gym.quest.s1q2.benefit2"),
+                    questLocalizedText("gym.quest.s1q2.benefit3")
                 ],
                 howTo: [
-                    L10n.t("gym.quest.s1q2.howTo1"),
-                    L10n.t("gym.quest.s1q2.howTo2"),
-                    L10n.t("gym.quest.s1q2.howTo3")
+                    questLocalizedText("gym.quest.s1q2.howTo1"),
+                    questLocalizedText("gym.quest.s1q2.howTo2"),
+                    questLocalizedText("gym.quest.s1q2.howTo3")
                 ]
             )
         case "s1q3":
             return .init(
-                explanation: L10n.t("gym.quest.s1q3.explanation"),
+                explanation: questLocalizedText("gym.quest.s1q3.explanation"),
                 benefits: [
-                    L10n.t("gym.quest.s1q3.benefit1"),
-                    L10n.t("gym.quest.s1q3.benefit2"),
-                    L10n.t("gym.quest.s1q3.benefit3")
+                    questLocalizedText("gym.quest.s1q3.benefit1"),
+                    questLocalizedText("gym.quest.s1q3.benefit2"),
+                    questLocalizedText("gym.quest.s1q3.benefit3")
                 ],
                 howTo: [
-                    L10n.t("gym.quest.s1q3.howTo1"),
-                    L10n.t("gym.quest.s1q3.howTo2"),
-                    L10n.t("gym.quest.s1q3.howTo3")
+                    questLocalizedText("gym.quest.s1q3.howTo1"),
+                    questLocalizedText("gym.quest.s1q3.howTo2"),
+                    questLocalizedText("gym.quest.s1q3.howTo3")
                 ]
             )
         case "s1q4":
             return .init(
-                explanation: L10n.t("gym.quest.s1q4.explanation"),
+                explanation: questLocalizedText("gym.quest.s1q4.explanation"),
                 benefits: [
-                    L10n.t("gym.quest.s1q4.benefit1"),
-                    L10n.t("gym.quest.s1q4.benefit2"),
-                    L10n.t("gym.quest.s1q4.benefit3")
+                    questLocalizedText("gym.quest.s1q4.benefit1"),
+                    questLocalizedText("gym.quest.s1q4.benefit2"),
+                    questLocalizedText("gym.quest.s1q4.benefit3")
                 ],
                 howTo: [
-                    L10n.t("gym.quest.s1q4.howTo1"),
-                    L10n.t("gym.quest.s1q4.howTo2"),
-                    L10n.t("gym.quest.s1q4.howTo3")
+                    questLocalizedText("gym.quest.s1q4.howTo1"),
+                    questLocalizedText("gym.quest.s1q4.howTo2"),
+                    questLocalizedText("gym.quest.s1q4.howTo3")
                 ]
             )
         case "s1q5":
             return .init(
-                explanation: L10n.t("gym.quest.s1q5.explanation"),
+                explanation: questLocalizedText("gym.quest.s1q5.explanation"),
                 benefits: [
-                    L10n.t("gym.quest.s1q5.benefit1"),
-                    L10n.t("gym.quest.s1q5.benefit2"),
-                    L10n.t("gym.quest.s1q5.benefit3")
+                    questLocalizedText("gym.quest.s1q5.benefit1"),
+                    questLocalizedText("gym.quest.s1q5.benefit2"),
+                    questLocalizedText("gym.quest.s1q5.benefit3")
                 ],
                 howTo: [
-                    L10n.t("gym.quest.s1q5.howTo1"),
-                    L10n.t("gym.quest.s1q5.howTo2"),
-                    L10n.t("gym.quest.s1q5.howTo3")
+                    questLocalizedText("gym.quest.s1q5.howTo1"),
+                    questLocalizedText("gym.quest.s1q5.howTo2"),
+                    questLocalizedText("gym.quest.s1q5.howTo3")
                 ]
             )
         default:
@@ -595,17 +595,17 @@ struct StageOneQuestSheet: View {
     private func ctaTitle(progress: QuestProgressRecord) -> String {
         switch quest.id {
         case "s1q1":
-            return isBooleanQuestCompleted(progress: progress) ? L10n.t("gym.quest.done") : L10n.t("gym.quest.confirmAchievement")
+            return isBooleanQuestCompleted(progress: progress) ? questLocalizedText("gym.quest.done") : questLocalizedText("gym.quest.confirmAchievement")
         case "s1q2":
-            return L10n.t("gym.quest.openWaterEntry")
+            return questLocalizedText("gym.quest.openWaterEntry")
         case "s1q3":
-            return engine.isHealthAuthorized ? L10n.t("gym.quest.refresh") : L10n.t("gym.quest.linkHealthKit")
+            return engine.isHealthAuthorized ? questLocalizedText("gym.quest.refresh") : questLocalizedText("gym.quest.linkHealthKit")
         case "s1q4":
-            return L10n.t("gym.quest.logCardioSession")
+            return questLocalizedText("gym.quest.logCardioSession")
         case "s1q5":
-            return isBooleanQuestCompleted(progress: progress) ? L10n.t("gym.quest.done") : L10n.t("gym.quest.openKitchen")
+            return isBooleanQuestCompleted(progress: progress) ? questLocalizedText("gym.quest.done") : questLocalizedText("gym.quest.openKitchen")
         default:
-            return L10n.t("gym.quest.refresh")
+            return questLocalizedText("gym.quest.refresh")
         }
     }
 
@@ -631,7 +631,7 @@ struct StageOneQuestSheet: View {
                 }
                 await MainActor.run {
                     if !granted {
-                        healthMessage = L10n.t("gym.quest.healthKitDenied")
+                        healthMessage = questLocalizedText("gym.quest.healthKitDenied")
                     }
                 }
 
@@ -640,7 +640,7 @@ struct StageOneQuestSheet: View {
                     await MainActor.run {
                         // Single source of truth: engine.hasSleepDataInOvernightWindow
                         if engine.hasSleepDataInOvernightWindow {
-                            healthMessage = wasAuthorized ? L10n.t("gym.quest.progressUpdated") : L10n.t("gym.quest.healthKitLinked")
+                            healthMessage = wasAuthorized ? questLocalizedText("gym.quest.progressUpdated") : questLocalizedText("gym.quest.healthKitLinked")
                         } else {
                             healthMessage = nil
                         }
@@ -668,26 +668,26 @@ struct StageOneQuestSheet: View {
     @ViewBuilder
     private var sleepDataSetupCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.t("gym.quest.noSleepData"))
+            Text(questLocalizedText("gym.quest.noSleepData"))
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary.opacity(0.82))
 
-            Text(L10n.t("gym.quest.noSleepQuestion"))
+            Text(questLocalizedText("gym.quest.noSleepQuestion"))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(L10n.t("gym.quest.sleepStep1"))
-                Text(L10n.t("gym.quest.sleepStep2"))
-                Text(L10n.t("gym.quest.sleepStep3"))
-                Text(L10n.t("gym.quest.sleepStep4"))
+                Text(questLocalizedText("gym.quest.sleepStep1"))
+                Text(questLocalizedText("gym.quest.sleepStep2"))
+                Text(questLocalizedText("gym.quest.sleepStep3"))
+                Text(questLocalizedText("gym.quest.sleepStep4"))
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .foregroundStyle(Color.primary.opacity(0.84))
             .fixedSize(horizontal: false, vertical: true)
 
             Button(action: openAppleHealthApp) {
-                Text(L10n.t("gym.quest.openHealthApp"))
+                Text(questLocalizedText("gym.quest.openHealthApp"))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.black)
                     .frame(maxWidth: .infinity)
@@ -700,7 +700,7 @@ struct StageOneQuestSheet: View {
             .buttonStyle(.plain)
 
             Button(action: { openAppSettings(showAlertOnFailure: true) }) {
-                Text(L10n.t("gym.quest.openSettings"))
+                Text(questLocalizedText("gym.quest.openSettings"))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .underline()
                     .foregroundStyle(Color.secondary)
@@ -756,7 +756,7 @@ struct StageOneQuestSheet: View {
     }
 
     private func presentHealthSetupAlert() {
-        healthSetupAlertMessage = L10n.t("gym.quest.openHealthManual")
+        healthSetupAlertMessage = questLocalizedText("gym.quest.openHealthManual")
         showHealthSetupAlert = true
     }
 }
@@ -774,14 +774,14 @@ private struct QuestWaterEntrySheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(L10n.t("gym.quest.waterEntry"))
+            Text(questLocalizedText("gym.quest.waterEntry"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
 
-            Text(L10n.t("gym.quest.waterAdd"))
+            Text(questLocalizedText("gym.quest.waterAdd"))
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
 
-            Button(L10n.t("gym.quest.waterButton")) {
+            Button(questLocalizedText("gym.quest.waterButton")) {
                 onAddWater(0.25)
                 dismiss()
             }
@@ -802,13 +802,13 @@ private struct QuestWorkoutEntrySheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(L10n.t("gym.quest.logSession"))
+            Text(questLocalizedText("gym.quest.logSession"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
 
             if !quickOptions.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(quickOptions, id: \.self) { option in
-                        Button("\(Int(option))\(L10n.t("gym.quest.minuteUnit"))") {
+                        Button("\(Int(option))\(questLocalizedText("gym.quest.minuteUnit"))") {
                             minutes = option
                         }
                         .buttonStyle(.bordered)
@@ -816,10 +816,10 @@ private struct QuestWorkoutEntrySheet: View {
                 }
             }
 
-            Stepper(String(format: L10n.t("gym.quest.minuteLabel"), Int(minutes)), value: $minutes, in: 5...180, step: 5)
+            Stepper(String(format: questLocalizedText("gym.quest.minuteLabel"), Int(minutes)), value: $minutes, in: 5...180, step: 5)
                 .font(.system(size: 17, weight: .bold, design: .rounded))
 
-            Button(L10n.t("gym.quest.save")) {
+            Button(questLocalizedText("gym.quest.save")) {
                 onSave(minutes)
                 dismiss()
             }
