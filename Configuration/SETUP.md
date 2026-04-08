@@ -17,3 +17,6 @@
    - `SPOTIFY_CLIENT_ID`
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+
+Important:
+- In `.xcconfig` files, write URLs with escaped slashes, for example `https:\/\/your-project.supabase.co`. Xcode treats raw `//` as a comment and truncates the value to `https:`.

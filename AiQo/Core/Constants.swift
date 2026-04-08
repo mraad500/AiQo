@@ -57,10 +57,17 @@ enum K {
             guard let value else { return nil }
 
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else { return nil }
+            let unquoted = if trimmed.hasPrefix("\"") && trimmed.hasSuffix("\"") {
+                String(trimmed.dropFirst().dropLast())
+            } else {
+                trimmed
+            }
+            let normalized = unquoted.replacingOccurrences(of: "\\/", with: "/")
 
-            return trimmed
+            guard !normalized.isEmpty else { return nil }
+            guard !(normalized.hasPrefix("$(") && normalized.hasSuffix(")")) else { return nil }
+
+            return normalized
         }
     }
 }
