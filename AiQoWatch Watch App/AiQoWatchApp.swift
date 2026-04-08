@@ -51,6 +51,19 @@ struct AiQoWatchApp: App {
     @StateObject private var workoutManager = WatchWorkoutManager()
     @StateObject private var connectivity = WatchConnectivityService()
 
+    private var rootTabs: some View {
+        let tabs = TabView {
+            WatchHomeView()
+            WatchWorkoutListView()
+        }
+
+        #if os(watchOS)
+        return tabs.tabViewStyle(.verticalPage)
+        #else
+        return tabs.tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+        #endif
+    }
+
     @SceneBuilder var body: some Scene {
         WindowGroup {
             Group {
@@ -60,11 +73,7 @@ struct AiQoWatchApp: App {
                         workoutType: workoutManager.currentType ?? .runOutdoor
                     )
                 } else {
-                    TabView {
-                        WatchHomeView()
-                        WatchWorkoutListView()
-                    }
-                    .tabViewStyle(.verticalPage)
+                    rootTabs
                 }
             }
             .environmentObject(healthManager)
@@ -87,10 +96,12 @@ struct AiQoWatchApp: App {
             }
         }
 
+        #if os(watchOS)
         WKNotificationScene(
             controller: WorkoutNotificationController.self,
             category: WorkoutNotificationCenter.categoryIdentifier
         )
+        #endif
     }
 }
 

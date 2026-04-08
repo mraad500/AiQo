@@ -6,10 +6,6 @@ import StoreKit
 actor ReceiptValidator {
     static let shared = ReceiptValidator()
 
-    private var validationEndpoint: URL? {
-        K.Supabase.functionsURL?.appending(path: "validate-receipt")
-    }
-
     enum ValidationResult: Sendable {
         case valid(expiresAt: Date)
         case invalid(reason: String)
@@ -34,6 +30,10 @@ actor ReceiptValidator {
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: payload.compactMapValues({ $0 })) else {
             return .invalid(reason: "Failed to encode receipt payload")
+        }
+
+        let validationEndpoint = await MainActor.run {
+            K.Supabase.functionsURL?.appending(path: "validate-receipt")
         }
 
         guard let url = validationEndpoint else {

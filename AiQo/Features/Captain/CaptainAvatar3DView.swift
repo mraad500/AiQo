@@ -29,11 +29,10 @@ struct CaptainAvatar3DView: View {
 
     @MainActor
     private func loadModel(into content: some RealityViewContentProtocol) async {
+        guard anchor.parent == nil else { return }
+
         let entity: Entity
-        if let loaded = try? await Entity.load(named: "my") {
-            entity = loaded
-        } else if let url = Bundle.main.url(forResource: "my", withExtension: "usdz"),
-                  let loaded = try? await Entity.load(contentsOf: url) {
+        if let loaded = try? await Entity(named: "my", in: .main) {
             entity = loaded
         } else {
             return
