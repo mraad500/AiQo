@@ -14,9 +14,17 @@ func localizedNotificationString(
     language: CoachNotificationLanguage,
     fallback: String
 ) -> String {
-    localizedNotificationString(
+    let appLanguage: AppLanguage
+    switch language {
+    case .english:
+        appLanguage = .english
+    case .arabic:
+        appLanguage = .arabic
+    }
+
+    return localizedNotificationString(
         key,
-        language: language == .english ? .english : .arabic,
+        language: appLanguage,
         fallback: fallback
     )
 }
