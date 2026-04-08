@@ -5,6 +5,7 @@ import HealthKit
 
 struct StartView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
+    @Environment(\.locale) private var locale
     @State private var appearAnimation = false
     
     struct WatchExercise: Identifiable {
@@ -17,48 +18,50 @@ struct StartView: View {
         let location: HKWorkoutSessionLocationType
     }
     
-    let exercises: [WatchExercise] = [
-        WatchExercise(
-            title: "Gratitude",
-            icon: "sparkles",
-            primaryColor: Color(red: 0.85, green: 0.75, blue: 0.60),
-            secondaryColor: Color(red: 0.95, green: 0.85, blue: 0.70),
-            type: .mindAndBody,
-            location: .indoor
-        ),
-        WatchExercise(
-            title: "Walk Inside",
-            icon: "figure.walk",
-            primaryColor: Color(red: 0.60, green: 0.80, blue: 0.70),
-            secondaryColor: Color(red: 0.70, green: 0.90, blue: 0.80),
-            type: .walking,
-            location: .indoor
-        ),
-        WatchExercise(
-            title: "Walk Outside",
-            icon: "figure.walk",
-            primaryColor: Color(red: 0.95, green: 0.85, blue: 0.65),
-            secondaryColor: Color(red: 1.0, green: 0.92, blue: 0.75),
-            type: .walking,
-            location: .outdoor
-        ),
-        WatchExercise(
-            title: "Run Indoor",
-            icon: "figure.run",
-            primaryColor: Color(red: 0.70, green: 0.90, blue: 0.80),
-            secondaryColor: Color(red: 0.80, green: 0.95, blue: 0.88),
-            type: .running,
-            location: .indoor
-        ),
-        WatchExercise(
-            title: "Run Outside",
-            icon: "figure.run",
-            primaryColor: Color(red: 0.95, green: 0.85, blue: 0.65),
-            secondaryColor: Color(red: 1.0, green: 0.92, blue: 0.75),
-            type: .running,
-            location: .outdoor
-        )
-    ]
+    var exercises: [WatchExercise] {
+        [
+            WatchExercise(
+                title: WatchText.localized(ar: "امتنان", en: "Gratitude", locale: locale),
+                icon: "sparkles",
+                primaryColor: Color(red: 0.85, green: 0.75, blue: 0.60),
+                secondaryColor: Color(red: 0.95, green: 0.85, blue: 0.70),
+                type: .mindAndBody,
+                location: .indoor
+            ),
+            WatchExercise(
+                title: WatchText.localized(ar: "مشي داخلي", en: "Walk Inside", locale: locale),
+                icon: "figure.walk",
+                primaryColor: Color(red: 0.60, green: 0.80, blue: 0.70),
+                secondaryColor: Color(red: 0.70, green: 0.90, blue: 0.80),
+                type: .walking,
+                location: .indoor
+            ),
+            WatchExercise(
+                title: WatchText.localized(ar: "مشي خارجي", en: "Walk Outside", locale: locale),
+                icon: "figure.walk",
+                primaryColor: Color(red: 0.95, green: 0.85, blue: 0.65),
+                secondaryColor: Color(red: 1.0, green: 0.92, blue: 0.75),
+                type: .walking,
+                location: .outdoor
+            ),
+            WatchExercise(
+                title: WatchText.localized(ar: "ركض داخلي", en: "Run Indoor", locale: locale),
+                icon: "figure.run",
+                primaryColor: Color(red: 0.70, green: 0.90, blue: 0.80),
+                secondaryColor: Color(red: 0.80, green: 0.95, blue: 0.88),
+                type: .running,
+                location: .indoor
+            ),
+            WatchExercise(
+                title: WatchText.localized(ar: "ركض خارجي", en: "Run Outside", locale: locale),
+                icon: "figure.run",
+                primaryColor: Color(red: 0.95, green: 0.85, blue: 0.65),
+                secondaryColor: Color(red: 1.0, green: 0.92, blue: 0.75),
+                type: .running,
+                location: .outdoor
+            )
+        ]
+    }
 
     // MARK: - Alternating Theme Colors (Exact Hex Match)
     
@@ -84,7 +87,7 @@ struct StartView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     // Header - comfortably below clock, not too low
-                    Text("AiQo Gym")
+                    Text(WatchText.localized(ar: "AiQo Gym", en: "AiQo Gym", locale: locale))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(
                             LinearGradient(

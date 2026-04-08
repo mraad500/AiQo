@@ -53,21 +53,22 @@ struct SessionPagingView: View {
 // This keeps the UI friendly when `selectedWorkout` is an `HKWorkoutActivityType`.
 extension HKWorkoutActivityType {
     var displayName: String {
+        let locale = Locale.autoupdatingCurrent
         switch self {
-        case .running: return NSLocalizedString("Running", comment: "Workout activity")
-        case .walking: return NSLocalizedString("Walking", comment: "Workout activity")
-        case .cycling: return NSLocalizedString("Cycling", comment: "Workout activity")
-        case .hiking: return NSLocalizedString("Hiking", comment: "Workout activity")
-        case .swimming: return NSLocalizedString("Swimming", comment: "Workout activity")
-        case .yoga: return NSLocalizedString("Yoga", comment: "Workout activity")
-        case .functionalStrengthTraining: return NSLocalizedString("Functional Strength", comment: "Workout activity")
-        case .traditionalStrengthTraining: return NSLocalizedString("Strength Training", comment: "Workout activity")
-        case .coreTraining: return NSLocalizedString("Core Training", comment: "Workout activity")
-        case .dance: return NSLocalizedString("Dance", comment: "Workout activity")
-        case .rowing: return NSLocalizedString("Rowing", comment: "Workout activity")
-        case .elliptical: return NSLocalizedString("Elliptical", comment: "Workout activity")
-        case .stairClimbing: return NSLocalizedString("Stair Climbing", comment: "Workout activity")
-        default: return NSLocalizedString("Workout", comment: "Default workout activity name")
+        case .running: return WatchText.localized(ar: "ركض", en: "Running", locale: locale)
+        case .walking: return WatchText.localized(ar: "مشي", en: "Walking", locale: locale)
+        case .cycling: return WatchText.localized(ar: "دراجة", en: "Cycling", locale: locale)
+        case .hiking: return WatchText.localized(ar: "هايكنغ", en: "Hiking", locale: locale)
+        case .swimming: return WatchText.localized(ar: "سباحة", en: "Swimming", locale: locale)
+        case .yoga: return WatchText.localized(ar: "يوغا", en: "Yoga", locale: locale)
+        case .functionalStrengthTraining: return WatchText.localized(ar: "قوة وظيفية", en: "Functional Strength", locale: locale)
+        case .traditionalStrengthTraining: return WatchText.localized(ar: "تمارين القوة", en: "Strength Training", locale: locale)
+        case .coreTraining: return WatchText.localized(ar: "تمارين الوسط", en: "Core Training", locale: locale)
+        case .dance: return WatchText.localized(ar: "رقص", en: "Dance", locale: locale)
+        case .rowing: return WatchText.localized(ar: "تجديف", en: "Rowing", locale: locale)
+        case .elliptical: return WatchText.localized(ar: "إليبتيكال", en: "Elliptical", locale: locale)
+        case .stairClimbing: return WatchText.localized(ar: "صعود الدرج", en: "Stair Climbing", locale: locale)
+        default: return WatchText.localized(ar: "تمرين", en: "Workout", locale: locale)
         }
     }
 }

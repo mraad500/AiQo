@@ -14,17 +14,26 @@ enum WatchWorkoutType: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var nameArabic: String {
+    func localizedName(locale: Locale) -> String {
         switch self {
-        case .walkOutdoor: return "مشي خارجي"
-        case .runOutdoor: return "ركض خارجي"
-        case .walkIndoor: return "مشي داخلي"
-        case .runIndoor: return "ركض داخلي"
-        case .cycling: return "دراجة"
-        case .hiit: return "تمرين HIIT"
-        case .strengthTraining: return "تمارين القوة"
-        case .yoga: return "يوغا"
-        case .swimming: return "سباحة"
+        case .walkOutdoor:
+            return WatchText.localized(ar: "مشي خارجي", en: "Outdoor Walk", locale: locale)
+        case .runOutdoor:
+            return WatchText.localized(ar: "ركض خارجي", en: "Outdoor Run", locale: locale)
+        case .walkIndoor:
+            return WatchText.localized(ar: "مشي داخلي", en: "Indoor Walk", locale: locale)
+        case .runIndoor:
+            return WatchText.localized(ar: "ركض داخلي", en: "Indoor Run", locale: locale)
+        case .cycling:
+            return WatchText.localized(ar: "دراجة", en: "Cycling", locale: locale)
+        case .hiit:
+            return WatchText.localized(ar: "تمرين HIIT", en: "HIIT", locale: locale)
+        case .strengthTraining:
+            return WatchText.localized(ar: "تمارين القوة", en: "Strength", locale: locale)
+        case .yoga:
+            return WatchText.localized(ar: "يوغا", en: "Yoga", locale: locale)
+        case .swimming:
+            return WatchText.localized(ar: "سباحة", en: "Swimming", locale: locale)
         }
     }
 

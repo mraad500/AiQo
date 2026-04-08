@@ -1,3 +1,4 @@
 "NSCameraUsageDescription" = "يستخدم AiQo الكاميرا لتحليل دقة الأداء وسلامة الوضعية.";
+"NSAlarmKitUsageDescription" = "يستخدم AiQo صلاحية المنبه لحفظ وقت الاستيقاظ الذكي كمنبه على جهازك.";
 "NSHealthShareUsageDescription" = "يقرأ AiQo بيانات صحية مختارة مثل الخطوات والنوم والماء لتجهيز ملخصاتك اليومية والأسبوعية.";
 "NSHealthUpdateUsageDescription" = "يكتب AiQo الإدخالات الصحية التي تختارها، مثل تسجيل شرب الماء والتمارين، داخل تطبيق الصحة.";

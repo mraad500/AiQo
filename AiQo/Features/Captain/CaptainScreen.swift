@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import RealityKit
 
 // MARK: - User Customization Model
 
@@ -209,7 +210,7 @@ struct CaptainScreen: View {
                         VStack {
                             Spacer()
 
-                            CaptainAvatarView()
+                            CaptainAvatar3DView()
                                 .frame(height: layout.avatarHeight)
                                 .offset(y: layout.avatarOffset)
                                 .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.avatarOffset)
@@ -702,12 +703,12 @@ private struct CoachOrbitingGlassOrbView: View {
             let progress = time / max(1.8, state.rotationDuration)
             let primaryAngle = progress * Double.pi * 2
             let secondaryAngle = progress * Double.pi * -2.7
-            let pulse = CGFloat(
-                0.92 + (((sin(primaryAngle) + 1) * 0.5) * Double(state.pulseScale - 0.92))
-            )
-            let haloScale = CGFloat(
-                1.04 + (((cos(primaryAngle * 0.8) + 1) * 0.5) * 0.18)
-            )
+            let sinVal: Double = sin(primaryAngle)
+            let pulseDouble: Double = 0.92 + (((sinVal + 1) * 0.5) * Double(state.pulseScale - 0.92))
+            let pulse: CGFloat = CGFloat(pulseDouble)
+            let cosVal: Double = cos(primaryAngle * 0.8)
+            let haloDouble: Double = 1.04 + (((cosVal + 1) * 0.5) * 0.18)
+            let haloScale: CGFloat = CGFloat(haloDouble)
             let leadingColor = state.accentColors.first ?? Color.white.opacity(0.25)
             let trailingColor = state.accentColors.last ?? Color.white.opacity(0.18)
 

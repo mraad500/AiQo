@@ -21,10 +21,11 @@ struct WorkoutNotificationPayload {
     let weeklyMonthText: String
 
     static var placeholder: WorkoutNotificationPayload {
-        WorkoutNotificationPayload(
+        let locale = Locale.autoupdatingCurrent
+        return WorkoutNotificationPayload(
             kind: .milestone,
             title: "AiQo",
-            subtitle: "Weekly update",
+            subtitle: WatchText.localized(ar: "تحديث أسبوعي", en: "Weekly update", locale: locale),
             caloriesText: "857/1,600CAL",
             minutesText: "70/45MIN",
             distanceText: "10/13HRS",

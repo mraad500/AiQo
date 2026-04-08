@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ControlsView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
+    @Environment(\.locale) private var locale
 
     var body: some View {
         HStack {
@@ -21,7 +22,11 @@ struct ControlsView: View {
                 .tint(.red)
                 .font(.title2)
                 .disabled(workoutManager.workoutPhase == .stopping)
-                Text(workoutManager.workoutPhase == .stopping ? "Ending" : "End")
+                Text(
+                    workoutManager.workoutPhase == .stopping
+                        ? WatchText.localized(ar: "إنهاء", en: "Ending", locale: locale)
+                        : WatchText.localized(ar: "إنهاء", en: "End", locale: locale)
+                )
             }
             VStack {
                 Button {
@@ -32,7 +37,11 @@ struct ControlsView: View {
                 .tint(.yellow)
                 .font(.title2)
                 .disabled(workoutManager.workoutPhase == .stopping)
-                Text(workoutManager.running ? "Pause" : "Resume")
+                Text(
+                    workoutManager.running
+                        ? WatchText.localized(ar: "إيقاف", en: "Pause", locale: locale)
+                        : WatchText.localized(ar: "متابعة", en: "Resume", locale: locale)
+                )
             }
         }
     }

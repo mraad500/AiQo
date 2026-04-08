@@ -5,12 +5,15 @@ import HealthKit
 @MainActor
 class WatchHealthKitManager: ObservableObject {
     private let store = HKHealthStore()
+    private let sharedDefaults = UserDefaults(suiteName: "group.aiqo")
 
     @Published var todaySteps: Int = 0
     @Published var todayCalories: Int = 0
     @Published var todayDistanceKm: Double = 0.0
     @Published var todaySleepHours: Double = 0.0
     @Published var todayWaterLiters: Double = 0.0
+    @Published var stepsGoal: Int = 8000
+    @Published var caloriesGoal: Double = 400
 
     func requestAuthorization() {
         let read: Set<HKObjectType> = [
@@ -32,6 +35,7 @@ class WatchHealthKitManager: ObservableObject {
     }
 
     func refresh() {
+        refreshGoals()
         refreshSharedHydration()
         fetchSum(.stepCount, unit: .count()) { [weak self] v in self?.todaySteps = Int(v) }
         fetchSum(.activeEnergyBurned, unit: .kilocalorie()) { [weak self] v in self?.todayCalories = Int(v) }
@@ -39,9 +43,16 @@ class WatchHealthKitManager: ObservableObject {
         fetchSleep()
     }
 
+    private func refreshGoals() {
+        let storedStepsGoal = sharedDefaults?.integer(forKey: "widget_steps_goal") ?? 0
+        let storedCaloriesGoal = sharedDefaults?.double(forKey: "widget_calories_goal") ?? 0
+
+        stepsGoal = max(storedStepsGoal, 8000)
+        caloriesGoal = max(storedCaloriesGoal, 400)
+    }
+
     private func refreshSharedHydration() {
-        let defaults = UserDefaults(suiteName: "group.aiqo")
-        let waterML = defaults?.double(forKey: "aiqo_water_ml") ?? 0
+        let waterML = sharedDefaults?.double(forKey: "aiqo_water_ml") ?? 0
         todayWaterLiters = waterML / 1000.0
     }
 

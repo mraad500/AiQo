@@ -1059,10 +1059,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "يحتاج AiQo إلى قراءة بيانات صحية مختارة مثل الخطوات والنوم والماء لبناء ملخصاتك اليومية والأسبوعية.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "يحتاج AiQo إلى كتابة بيانات صحية تختارها مثل تسجيل شرب الماء والتمارين داخل تطبيق الصحة.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
@@ -1127,10 +1125,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "يحتاج AiQo إلى قراءة بيانات صحية مختارة مثل الخطوات والنوم والماء لبناء ملخصاتك اليومية والأسبوعية.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "يحتاج AiQo إلى كتابة بيانات صحية تختارها مثل تسجيل شرب الماء والتمارين داخل تطبيق الصحة.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";

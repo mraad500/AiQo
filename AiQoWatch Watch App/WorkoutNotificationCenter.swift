@@ -7,9 +7,10 @@ enum WorkoutNotificationCenter {
     static let summaryIdentifier = "AIQO_WORKOUT_SUMMARY"
 
     static func configure() {
+        let locale = Locale.autoupdatingCurrent
         let openAction = UNNotificationAction(
             identifier: "OPEN_WORKOUT",
-            title: "Open AiQoWatch",
+            title: WatchText.localized(ar: "افتح AiQoWatch", en: "Open AiQoWatch", locale: locale),
             options: [.foreground]
         )
 
@@ -39,10 +40,11 @@ enum WorkoutNotificationCenter {
         distanceMeters: Double
     ) {
         guard km > 0 else { return }
+        let locale = Locale.autoupdatingCurrent
 
         let content = UNMutableNotificationContent()
-        content.title = "AiQoWatch Milestone"
-        content.body = "You completed \(km) km"
+        content.title = WatchText.localized(ar: "إنجاز AiQoWatch", en: "AiQoWatch Milestone", locale: locale)
+        content.body = WatchText.localized(ar: "أكملت \(km) كم", en: "You completed \(km) km", locale: locale)
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier
         content.threadIdentifier = "aiqo.workout"
@@ -74,9 +76,15 @@ enum WorkoutNotificationCenter {
         calories: Int
     ) {
         let distanceKm = max(0, distanceMeters) / 1000
+        let locale = Locale.autoupdatingCurrent
         let content = UNMutableNotificationContent()
-        content.title = "AiQoWatch Workout Saved"
-        content.body = String(format: "%.2f km • %@ • %d kcal", distanceKm, elapsedString(elapsedSeconds), max(0, calories))
+        content.title = WatchText.localized(ar: "تم حفظ تمرين AiQoWatch", en: "AiQoWatch Workout Saved", locale: locale)
+        content.body = String(
+            format: locale.aiqoUsesArabicCopy ? "%.2f كم • %@ • %d سعرة" : "%.2f km • %@ • %d kcal",
+            distanceKm,
+            elapsedString(elapsedSeconds),
+            max(0, calories)
+        )
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier
         content.threadIdentifier = "aiqo.workout"

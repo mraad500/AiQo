@@ -6,8 +6,9 @@ import StoreKit
 actor ReceiptValidator {
     static let shared = ReceiptValidator()
 
-    /// عنوان الـ API — يحتاج يتغير حسب السيرفر الحقيقي
-    private let validationEndpoint = "https://zidbsrepqpbucqzxnwgk.supabase.co/functions/v1/validate-receipt"
+    private var validationEndpoint: URL? {
+        K.Supabase.functionsURL?.appending(path: "validate-receipt")
+    }
 
     enum ValidationResult: Sendable {
         case valid(expiresAt: Date)
@@ -35,7 +36,7 @@ actor ReceiptValidator {
             return .invalid(reason: "Failed to encode receipt payload")
         }
 
-        guard let url = URL(string: validationEndpoint) else {
+        guard let url = validationEndpoint else {
             return .invalid(reason: "Invalid validation URL")
         }
 

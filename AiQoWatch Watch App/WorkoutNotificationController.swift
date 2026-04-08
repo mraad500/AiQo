@@ -12,6 +12,7 @@ class WKUserNotificationHostingController<Content: View>: NSObject {
 
 final class WorkoutNotificationController: WKUserNotificationHostingController<WorkoutNotificationView> {
     private var payload: WorkoutNotificationPayload = .placeholder
+    private let locale = Locale.autoupdatingCurrent
 
     override var body: WorkoutNotificationView {
         WorkoutNotificationView(payload: payload)
@@ -32,14 +33,14 @@ final class WorkoutNotificationController: WKUserNotificationHostingController<W
             payload = WorkoutNotificationPayload(
                 kind: .summary,
                 title: "AiQo",
-                subtitle: "Workout summary",
+                subtitle: WatchText.localized(ar: "ملخص التمرين", en: "Workout summary", locale: locale),
                 caloriesText: "\(max(0, calories))/\(calorieGoal)CAL",
                 minutesText: "\(max(0, minutes))/\(minuteGoal)MIN",
                 distanceText: "\(standHours(from: minutes))/13HRS",
                 caloriesProgress: progress(current: Double(calories), goal: Double(calorieGoal)),
                 minutesProgress: progress(current: Double(minutes), goal: Double(minuteGoal)),
                 distanceProgress: progress(current: Double(standHours(from: minutes)), goal: 13),
-                footerText: "TIME \(elapsedString(elapsed))",
+                footerText: "\(WatchText.localized(ar: "الوقت", en: "TIME", locale: locale)) \(elapsedString(elapsed))",
                 weeklyDistanceText: String(format: "%.2fKM", max(0, km)),
                 weeklyProgressPoints: weeklyTrend(fromTotalKm: km),
                 weeklyMonthText: monthShort(from: .now)
@@ -59,7 +60,7 @@ final class WorkoutNotificationController: WKUserNotificationHostingController<W
         payload = WorkoutNotificationPayload(
             kind: .milestone,
             title: "AiQo",
-            subtitle: "Live workout",
+            subtitle: WatchText.localized(ar: "تمرين مباشر", en: "Live workout", locale: locale),
             caloriesText: "\(max(0, calories))/\(calorieGoal)CAL",
             minutesText: "\(max(0, minutes))/\(minuteGoal)MIN",
             distanceText: "\(standHours(from: minutes))/13HRS",

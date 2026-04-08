@@ -22,16 +22,20 @@ protocol ChallengeRepositoryProtocol {
 
 enum TribeRepositoryFactory {
     static func makeTribeRepository() -> any TribeRepositoryProtocol {
+#if DEBUG
         if TribeFeatureFlags.backendEnabled {
             return SupabaseTribeRepository()
         }
+#endif
         return MockTribeRepository()
     }
 
     static func makeChallengeRepository() -> any ChallengeRepositoryProtocol {
+#if DEBUG
         if TribeFeatureFlags.backendEnabled {
             return SupabaseChallengeRepository()
         }
+#endif
         return MockChallengeRepository()
     }
 }
@@ -282,6 +286,7 @@ struct MockChallengeRepository: ChallengeRepositoryProtocol {
     }
 }
 
+#if DEBUG
 struct SupabaseTribeRepository: TribeRepositoryProtocol {
     private let service = SupabaseArenaService.shared
 
@@ -318,6 +323,7 @@ struct SupabaseChallengeRepository: ChallengeRepositoryProtocol {
         }
     }
 }
+#endif
 
 @MainActor
 extension TribeStore {

@@ -20,13 +20,21 @@ struct CaptainBackgroundNotificationComposer: Sendable {
         language: AppLanguage,
         level: Int
     ) async -> String {
-        let prompt = """
-        اكتب نص إشعار محلي قصير باللهجة العراقية، جملة أو جملتين فقط، بدون إيموجي.
-        المستخدم تحرك بعد الاستيقاظ.
-        وقت الاستيقاظ: \(wakeDate.ISO8601Format())
-        الخطوات بعد الاستيقاظ: \(stepsSinceWake)
-        حلل آخر نوم مسجل وادعُ المستخدم يفتح Captain Hamoudi.
-        """
+        let prompt = String(
+            format: localizedNotificationString(
+                "notification.background.sleep.morning.prompt",
+                language: language,
+                fallback: """
+                Write a short local notification in English, one or two sentences only, no emoji.
+                The user moved after waking up.
+                Wake time: %@
+                Steps after waking: %d
+                Analyze the latest recorded sleep and invite the user to open Captain Hamoudi.
+                """
+            ),
+            wakeDate.ISO8601Format(),
+            stepsSinceWake
+        )
 
         let request = makeRequest(
             prompt: prompt,
@@ -52,12 +60,19 @@ struct CaptainBackgroundNotificationComposer: Sendable {
         language: AppLanguage,
         level: Int
     ) async -> String {
-        let prompt = """
-        اكتب نص إشعار محلي قصير باللهجة العراقية، جملة أو جملتين فقط، بدون إيموجي.
-        انتهت جلسة النوم للتو.
-        وقت نهاية النوم: \(sessionEndedAt.ISO8601Format())
-        حلل آخر نوم مسجل وادعُ المستخدم يفتح Captain Hamoudi لتحليل أعمق.
-        """
+        let prompt = String(
+            format: localizedNotificationString(
+                "notification.background.sleep.completed.prompt",
+                language: language,
+                fallback: """
+                Write a short local notification in English, one or two sentences only, no emoji.
+                The sleep session just ended.
+                Sleep end time: %@
+                Analyze the latest recorded sleep and invite the user to open Captain Hamoudi for deeper insight.
+                """
+            ),
+            sessionEndedAt.ISO8601Format()
+        )
 
         let request = makeRequest(
             prompt: prompt,
@@ -86,12 +101,21 @@ struct CaptainBackgroundNotificationComposer: Sendable {
     ) async -> String {
         let hour = Calendar.current.component(.hour, from: now)
         let minute = Calendar.current.component(.minute, from: now)
-        let prompt = """
-        اكتب إشعاراً محلياً قصيراً جداً باللهجة العراقية، سطر واحد فقط، بدون إيموجي.
-        الوقت الحالي \(hour):\(String(format: "%02d", minute)).
-        المستخدم متوقف بمنتصف اليوم وخطواته \(metrics.stepCount).
-        اذكر فعل واحد واضح يسويه الآن حتى يرجع للزخم.
-        """
+        let prompt = String(
+            format: localizedNotificationString(
+                "notification.background.inactivity.prompt",
+                language: language,
+                fallback: """
+                Write a very short local notification in English, one line only, no emoji.
+                Current time: %02d:%02d.
+                The user has slowed down in the middle of the day and has %d steps.
+                Mention one clear action they can do right now to regain momentum.
+                """
+            ),
+            hour,
+            minute,
+            metrics.stepCount
+        )
 
         let request = makeRequest(
             prompt: prompt,
@@ -135,7 +159,11 @@ private extension CaptainBackgroundNotificationComposer {
             language: language,
             systemPrompt: systemPrompt.rawValue,
             contextData: contextData,
-            userProfileSummary: "Background notification",
+            userProfileSummary: localizedNotificationString(
+                "notification.background.profile.summary",
+                language: language,
+                fallback: "Background notification"
+            ),
             hasAttachedImage: false
         )
     }

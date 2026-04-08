@@ -1156,37 +1156,40 @@ private extension WorkoutManager {
     }
 
     func resolvedWorkoutName(for activityType: HKWorkoutActivityType?) -> String {
-        guard let activityType else { return "Workout" }
+        let locale = Locale.autoupdatingCurrent
+        guard let activityType else {
+            return WatchText.localized(ar: "تمرين", en: "Workout", locale: locale)
+        }
 
         switch activityType {
         case .running:
-            return "Running"
+            return WatchText.localized(ar: "ركض", en: "Running", locale: locale)
         case .walking:
-            return "Walking"
+            return WatchText.localized(ar: "مشي", en: "Walking", locale: locale)
         case .cycling:
-            return "Cycling"
+            return WatchText.localized(ar: "دراجة", en: "Cycling", locale: locale)
         case .hiking:
-            return "Hiking"
+            return WatchText.localized(ar: "هايكنغ", en: "Hiking", locale: locale)
         case .swimming:
-            return "Swimming"
+            return WatchText.localized(ar: "سباحة", en: "Swimming", locale: locale)
         case .yoga:
-            return "Yoga"
+            return WatchText.localized(ar: "يوغا", en: "Yoga", locale: locale)
         case .functionalStrengthTraining:
-            return "Functional Strength"
+            return WatchText.localized(ar: "قوة وظيفية", en: "Functional Strength", locale: locale)
         case .traditionalStrengthTraining:
-            return "Strength Training"
+            return WatchText.localized(ar: "تمارين القوة", en: "Strength Training", locale: locale)
         case .coreTraining:
-            return "Core Training"
+            return WatchText.localized(ar: "تمارين الوسط", en: "Core Training", locale: locale)
         case .dance:
-            return "Dance"
+            return WatchText.localized(ar: "رقص", en: "Dance", locale: locale)
         case .rowing:
-            return "Rowing"
+            return WatchText.localized(ar: "تجديف", en: "Rowing", locale: locale)
         case .elliptical:
-            return "Elliptical"
+            return WatchText.localized(ar: "إليبتيكال", en: "Elliptical", locale: locale)
         case .stairClimbing:
-            return "Stair Climbing"
+            return WatchText.localized(ar: "صعود الدرج", en: "Stair Climbing", locale: locale)
         default:
-            return "Workout"
+            return WatchText.localized(ar: "تمرين", en: "Workout", locale: locale)
         }
     }
 

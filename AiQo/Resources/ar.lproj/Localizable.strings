@@ -2481,4 +2481,26 @@
 "kitchen.plan.emptyTitle" = "ماكو خطة بعد";
 "kitchen.plan.emptySubtitle" = "افتح الكاميرا وصوّر الثلاجة حتى يولد حمّودي وجبات Breakfast و Lunch و Dinner.";
 "kitchen.loading.title" = "الكابتن حمودي ديفحص المكونات...";
+
+/* Notifications */
+"notification.captain.openAction" = "افتح الكابتن";
+"notification.captain.title" = "كابتن حمودي";
+"notification.captain.workout.title" = "كابتن حمودي 🫡";
+"notification.water.body" = "شربت ماي؟ باقيلك %@ لتر عشان توصل هدفك. 💧";
+"notification.meal.breakfast" = "الفطور";
+"notification.meal.lunch" = "الغداء";
+"notification.meal.dinner" = "العشاء";
+"notification.meal.body" = "وقت %@، خل ناكل صحّي. 🍽️";
+"notification.step.body.90" = "باقيلك %@ خطوة بس، يلا كمّل! 🔥";
+"notification.step.body.75" = "وصلت ٧٥%% من هدفك، كمّل لا تستسلم! 💪";
+"notification.step.body.50" = "نص الطريق! %@ خطوة لحد هسّه، يلا نكمّل.";
+"notification.sleep.body" = "وقت النوم قرب، جهّز نفسك للنوم. جسمك يحتاج راحة عشان باچر يكون أحسن. 🌙";
+"notification.inactivity.prompt" = "سياق إشعار الخمول:\n- خطوات المستخدم اليوم: %d\n- المستخدم متوقف من 45 دقيقة على الأقل.\nاكتب سطر تحفيزي قصير جداً باللهجة العراقية، بحد أقصى 14 كلمة، ويتضمن خطوة واضحة واحدة.";
+"notification.inactivity.fallback.low" = "يلا بطل، قوم هسه وخلي أول ألف خطوة باسمك اليوم.";
+"notification.inactivity.fallback.mid" = "ممتاز، كمل نفس الهمة وخل نرفعها شوي شوي.";
+"notification.inactivity.fallback.high" = "عفية عليك، تقدمك واضح اليوم، استمر وخليها عادة.";
+"notification.background.sleep.morning.prompt" = "اكتب نص إشعار محلي قصير باللهجة العراقية، جملة أو جملتين فقط، بدون إيموجي.\nالمستخدم تحرك بعد الاستيقاظ.\nوقت الاستيقاظ: %@\nالخطوات بعد الاستيقاظ: %d\nحلل آخر نوم مسجل وادعُ المستخدم يفتح Captain Hamoudi.";
+"notification.background.sleep.completed.prompt" = "اكتب نص إشعار محلي قصير باللهجة العراقية، جملة أو جملتين فقط، بدون إيموجي.\nانتهت جلسة النوم للتو.\nوقت نهاية النوم: %@\nحلل آخر نوم مسجل وادعُ المستخدم يفتح Captain Hamoudi لتحليل أعمق.";
+"notification.background.inactivity.prompt" = "اكتب إشعاراً محلياً قصيراً جداً باللهجة العراقية، سطر واحد فقط، بدون إيموجي.\nالوقت الحالي %02d:%02d.\nالمستخدم متوقف بمنتصف اليوم وخطواته %d.\nاذكر فعل واحد واضح يسويه الآن حتى يرجع للزخم.";
+"notification.background.profile.summary" = "إشعار بالخلفية";
 "kitchen.loading.subtitle" = "دا نصغّر الصورة ونحلل الموجود حتى نرتبلك وجبات مناسبة.";

@@ -44,12 +44,16 @@
 		<string>instagram</string>
 	</array>
 	<key>NSAlarmKitUsageDescription</key>
-	<string>يستخدم AiQo صلاحية المنبه لحفظ وقت الاستيقاظ الذكي كمنبه على جهازك.</string>
+	<string>AiQo uses alarm access to save your smart wake time as an alarm on your device.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.aiqo.startWalk</string>
@@ -63,6 +67,10 @@
 	</array>
 	<key>SPOTIFY_CLIENT_ID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
 	<false/>
 	<key>TRIBE_FEATURE_VISIBLE</key>

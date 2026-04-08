@@ -2482,4 +2482,26 @@
 "kitchen.plan.emptyTitle" = "No plan yet";
 "kitchen.plan.emptySubtitle" = "Open the camera and snap your fridge so Hamoudi can generate Breakfast, Lunch, and Dinner meals.";
 "kitchen.loading.title" = "Captain Hamoudi is checking ingredients...";
+
+/* Notifications */
+"notification.captain.openAction" = "Open Captain";
+"notification.captain.title" = "Captain Hamoudi";
+"notification.captain.workout.title" = "Captain Hamoudi 🫡";
+"notification.water.body" = "Had water yet? You still need %@ liters to reach your goal. 💧";
+"notification.meal.breakfast" = "breakfast";
+"notification.meal.lunch" = "lunch";
+"notification.meal.dinner" = "dinner";
+"notification.meal.body" = "It’s %@ time. Let’s eat well. 🍽️";
+"notification.step.body.90" = "Only %@ steps left. Finish strong! 🔥";
+"notification.step.body.75" = "You’ve reached 75%% of your goal. Keep going! 💪";
+"notification.step.body.50" = "Halfway there. %@ steps so far, keep moving.";
+"notification.sleep.body" = "Bedtime is close. Get ready to sleep. Your body needs rest so tomorrow feels better. 🌙";
+"notification.inactivity.prompt" = "User inactivity alert context:\n- Current steps today: %d\n- The user has been inactive for at least 45 minutes.\nProvide one short English motivational line (max 14 words) with one concrete next action.";
+"notification.inactivity.fallback.low" = "Get up and claim your first thousand steps today.";
+"notification.inactivity.fallback.mid" = "Great start. Keep the momentum going and add a little more.";
+"notification.inactivity.fallback.high" = "Strong progress today. Stay consistent and keep the habit alive.";
+"notification.background.sleep.morning.prompt" = "Write a short local notification in English, one or two sentences only, no emoji.\nThe user moved after waking up.\nWake time: %@\nSteps after waking: %d\nAnalyze the latest recorded sleep and invite the user to open Captain Hamoudi.";
+"notification.background.sleep.completed.prompt" = "Write a short local notification in English, one or two sentences only, no emoji.\nThe sleep session just ended.\nSleep end time: %@\nAnalyze the latest recorded sleep and invite the user to open Captain Hamoudi for deeper insight.";
+"notification.background.inactivity.prompt" = "Write a very short local notification in English, one line only, no emoji.\nCurrent time: %02d:%02d.\nThe user has slowed down in the middle of the day and has %d steps.\nMention one clear action they can do right now to regain momentum.";
+"notification.background.profile.summary" = "Background notification";
 "kitchen.loading.subtitle" = "We're resizing the image and analyzing what's available to plan your meals.";

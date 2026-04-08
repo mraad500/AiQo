@@ -1,7 +1,20 @@
 // Shared build settings for the main AiQo app target.
 // Secrets.xcconfig can override these defaults locally when needed.
 
+CAPTAIN_API_KEY =
+CAPTAIN_ARABIC_API_URL =
+COACH_BRAIN_LLM_API_KEY =
+COACH_BRAIN_LLM_API_URL =
+CAPTAIN_VOICE_API_KEY =
+CAPTAIN_VOICE_API_URL =
+CAPTAIN_VOICE_MODEL_ID =
+CAPTAIN_VOICE_VOICE_ID =
+SPOTIFY_CLIENT_ID =
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+
 // Work around Xcode explicit-module failures from SDWebImageSwiftUI.
 CLANG_ENABLE_EXPLICIT_MODULES = NO
 SWIFT_ENABLE_EXPLICIT_MODULES = NO
 
+#include? "Secrets.xcconfig"

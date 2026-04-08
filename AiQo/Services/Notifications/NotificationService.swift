@@ -144,7 +144,11 @@ final class CaptainSmartNotificationService {
     static var notificationCategory: UNNotificationCategory {
         let openAction = UNNotificationAction(
             identifier: "OPEN_CAPTAIN",
-            title: "Open Captain",
+            title: NSLocalizedString(
+                "notification.captain.openAction",
+                value: "Open Captain",
+                comment: ""
+            ),
             options: [.foreground]
         )
         return UNNotificationCategory(
@@ -172,11 +176,19 @@ final class CaptainSmartNotificationService {
         guard inactivityMinutes >= 45 else { return }
         guard canSendInactivityNow() else { return }
 
+        let language = resolvedCoachNotificationLanguage(defaults: defaults)
         let currentSteps = HealthKitManager.shared.todaySteps
-        let message = await generateInactivityMessage(currentSteps: currentSteps)
+        let message = await generateInactivityMessage(
+            currentSteps: currentSteps,
+            language: language
+        )
 
         sendCaptainNotification(
-            title: "Captain Hamoudi",
+            title: localizedNotificationString(
+                "notification.captain.title",
+                language: language,
+                fallback: "Captain Hamoudi"
+            ),
             body: message,
             type: "inactivity",
             messageText: message
@@ -238,11 +250,23 @@ final class CaptainSmartNotificationService {
         guard (9...21).contains(currentHour) else { return }
         guard canSendWaterReminderNow() else { return }
 
+        let language = resolvedCoachNotificationLanguage(defaults: defaults)
         let remaining = targetLiters - currentLiters
-        let body = "شربت ماي؟ باقيلك \(String(format: "%.1f", remaining)) لتر عشان توصل هدفك. 💧"
+        let body = String(
+            format: localizedNotificationString(
+                "notification.water.body",
+                language: language,
+                fallback: "Had water yet? You still need %@ liters to reach your goal. 💧"
+            ),
+            String(format: "%.1f", remaining)
+        )
 
         sendCaptainNotification(
-            title: "كابتن حمودي",
+            title: localizedNotificationString(
+                "notification.captain.title",
+                language: language,
+                fallback: "Captain Hamoudi"
+            ),
             body: body,
             type: "waterReminder",
             messageText: body
@@ -256,15 +280,16 @@ final class CaptainSmartNotificationService {
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let currentHour = Calendar.current.component(.hour, from: Date())
-        let mealInfo: (name: String, type: String)?
+        let language = resolvedCoachNotificationLanguage(defaults: defaults)
+        let mealInfo: (nameKey: String, type: String)?
 
         switch currentHour {
         case 7...9:
-            mealInfo = ("الفطور", "breakfast")
+            mealInfo = ("notification.meal.breakfast", "breakfast")
         case 12...14:
-            mealInfo = ("الغداء", "lunch")
+            mealInfo = ("notification.meal.lunch", "lunch")
         case 18...20:
-            mealInfo = ("العشاء", "dinner")
+            mealInfo = ("notification.meal.dinner", "dinner")
         default:
             mealInfo = nil
         }
@@ -272,10 +297,26 @@ final class CaptainSmartNotificationService {
         guard let meal = mealInfo else { return }
         guard canSendMealReminderNow(meal: meal.type) else { return }
 
-        let body = "وقت \(meal.name)، خل ناكل صحّي. 🍽️"
+        let mealName = localizedNotificationString(
+            meal.nameKey,
+            language: language,
+            fallback: meal.type
+        )
+        let body = String(
+            format: localizedNotificationString(
+                "notification.meal.body",
+                language: language,
+                fallback: "It’s %@ time. Let’s eat well. 🍽️"
+            ),
+            mealName
+        )
 
         sendCaptainNotification(
-            title: "كابتن حمودي",
+            title: localizedNotificationString(
+                "notification.captain.title",
+                language: language,
+                fallback: "Captain Hamoudi"
+            ),
             body: body,
             type: "mealTimeReminder",
             messageText: body
@@ -305,19 +346,42 @@ final class CaptainSmartNotificationService {
         guard let milestone else { return }
         guard canSendStepGoalNow(milestone: milestone) else { return }
 
+        let language = resolvedCoachNotificationLanguage(defaults: defaults)
         let remaining = targetSteps - currentSteps
         let body: String
         switch milestone {
         case 90:
-            body = "باقيلك \(remaining) خطوة بس، يلا كمّل! 🔥"
+            body = String(
+                format: localizedNotificationString(
+                    "notification.step.body.90",
+                    language: language,
+                    fallback: "Only %@ steps left. Finish strong! 🔥"
+                ),
+                "\(remaining)"
+            )
         case 75:
-            body = "وصلت ٧٥٪ من هدفك، كمّل لا تستسلم! 💪"
+            body = localizedNotificationString(
+                "notification.step.body.75",
+                language: language,
+                fallback: "You’ve reached 75% of your goal. Keep going! 💪"
+            )
         default:
-            body = "نص الطريق! \(currentSteps) خطوة لحد هسّه، يلا نكمّل."
+            body = String(
+                format: localizedNotificationString(
+                    "notification.step.body.50",
+                    language: language,
+                    fallback: "Halfway there. %@ steps so far, keep moving."
+                ),
+                "\(currentSteps)"
+            )
         }
 
         sendCaptainNotification(
-            title: "كابتن حمودي",
+            title: localizedNotificationString(
+                "notification.captain.title",
+                language: language,
+                fallback: "Captain Hamoudi"
+            ),
             body: body,
             type: "stepGoalProgress",
             messageText: body
@@ -341,10 +405,19 @@ final class CaptainSmartNotificationService {
         guard isApproaching else { return }
         guard canSendSleepReminderNow() else { return }
 
-        let body = "وقت النوم قرب، جهّز نفسك للنوم. جسمك يحتاج راحة عشان باچر يكون أحسن. 🌙"
+        let language = resolvedCoachNotificationLanguage(defaults: defaults)
+        let body = localizedNotificationString(
+            "notification.sleep.body",
+            language: language,
+            fallback: "Bedtime is close. Get ready to sleep. Your body needs rest so tomorrow feels better. 🌙"
+        )
 
         sendCaptainNotification(
-            title: "كابتن حمودي",
+            title: localizedNotificationString(
+                "notification.captain.title",
+                language: language,
+                fallback: "Captain Hamoudi"
+            ),
             body: body,
             type: "sleepReminder",
             messageText: body
@@ -386,13 +459,23 @@ final class CaptainSmartNotificationService {
         return Date().timeIntervalSince(last) >= sleepReminderCooldownSeconds
     }
 
-    private func generateInactivityMessage(currentSteps: Int) async -> String {
-        let prompt = """
-        User inactivity alert context:
-        - Current steps today: \(max(0, currentSteps))
-        - The user has been inactive for at least 45 minutes.
-        Provide one short Iraqi Arabic motivational line (max 14 words) with one concrete next action.
-        """
+    private func generateInactivityMessage(
+        currentSteps: Int,
+        language: CoachNotificationLanguage
+    ) async -> String {
+        let prompt = String(
+            format: localizedNotificationString(
+                "notification.inactivity.prompt",
+                language: language,
+                fallback: """
+                User inactivity alert context:
+                - Current steps today: %d
+                - The user has been inactive for at least 45 minutes.
+                Provide one short English motivational line (max 14 words) with one concrete next action.
+                """
+            ),
+            max(0, currentSteps)
+        )
 
         do {
             let message = try await intelligenceManager.generateCaptainResponse(for: prompt)
@@ -405,11 +488,23 @@ final class CaptainSmartNotificationService {
         }
 
         if currentSteps < 2000 {
-            return "يلا بطل، قوم هسه وخلي أول ألف خطوة باسمك اليوم."
+            return localizedNotificationString(
+                "notification.inactivity.fallback.low",
+                language: language,
+                fallback: "Get up and claim your first thousand steps today."
+            )
         } else if currentSteps < 6000 {
-            return "ممتاز، كمل نفس الهمة وخل نرفعها شوي شوي."
+            return localizedNotificationString(
+                "notification.inactivity.fallback.mid",
+                language: language,
+                fallback: "Great start. Keep the momentum going and add a little more."
+            )
         } else {
-            return "عفية عليك، تقدمك واضح اليوم، استمر وخليها عادة."
+            return localizedNotificationString(
+                "notification.inactivity.fallback.high",
+                language: language,
+                fallback: "Strong progress today. Stay consistent and keep the habit alive."
+            )
         }
     }
 }
@@ -854,8 +949,13 @@ final class AIWorkoutSummaryService {
     }
 
     private func scheduleWorkoutSummaryNotification(message: String) {
+        let language = preferredLanguage()
         let content = UNMutableNotificationContent()
-        content.title = "كابتن حمودي 🫡"
+        content.title = localizedNotificationString(
+            "notification.captain.workout.title",
+            language: language,
+            fallback: "Captain Hamoudi 🫡"
+        )
         content.body = message
         content.sound = .default
         content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
@@ -969,12 +1069,7 @@ final class AIWorkoutSummaryService {
     // MARK: - Utilities
 
     private func preferredLanguage() -> CoachNotificationLanguage {
-        if let raw = defaults.string(forKey: "notificationLanguage") {
-            return CoachNotificationLanguage(preferenceValue: raw)
-        }
-
-        let legacyRaw = NotificationPreferencesStore.shared.language.rawValue
-        return CoachNotificationLanguage(preferenceValue: legacyRaw)
+        resolvedCoachNotificationLanguage(defaults: defaults)
     }
 
     private static func workoutTitle(for type: HKWorkoutActivityType) -> String {

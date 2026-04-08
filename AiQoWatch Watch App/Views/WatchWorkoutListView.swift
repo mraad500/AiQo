@@ -2,14 +2,15 @@ import SwiftUI
 
 struct WatchWorkoutListView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AiQoWatch.gridSpacing) {
-                    Text("التمارين")
+                    Text(WatchText.localized(ar: "التمارين", en: "Workouts", locale: locale))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(AiQoWatch.textPrimary)
+                        .foregroundColor(AiQoWatch.darkTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 4)
 
@@ -26,40 +27,48 @@ struct WatchWorkoutListView: View {
                 .padding(.horizontal, 6)
                 .padding(.bottom, 12)
             }
-            .background(AiQoWatch.background)
-            .environment(\.layoutDirection, .rightToLeft)
+            .background(
+                LinearGradient(
+                    colors: [AiQoWatch.darkBackgroundTop, AiQoWatch.darkBackgroundBottom],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .environment(\.layoutDirection, WatchText.layoutDirection(for: locale))
         }
     }
 }
 
 struct WatchWorkoutRow: View {
     let workout: WatchWorkoutType
+    @Environment(\.locale) private var locale
 
     var body: some View {
         HStack(spacing: 8) {
-            // Icon
             Image(systemName: workout.sfSymbol)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AiQoWatch.textSecondary)
+                .foregroundColor(AiQoWatch.darkTextPrimary)
                 .frame(width: 30, height: 30)
-                .background(workout.iconBgColor)
+                .background(workout.iconBgColor.opacity(0.9))
                 .clipShape(Circle())
 
-            // Name
-            Text(workout.nameArabic)
+            Text(workout.localizedName(locale: locale))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(AiQoWatch.textPrimary)
+                .foregroundColor(AiQoWatch.darkTextPrimary)
 
             Spacer()
 
-            // RTL chevron
-            Image(systemName: "chevron.left")
+            Image(systemName: "chevron.forward")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(AiQoWatch.textLight)
+                .foregroundColor(AiQoWatch.darkTextLight)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
-        .background(workout.cardColor)
+        .background(AiQoWatch.darkSurface)
+        .overlay(
+            RoundedRectangle(cornerRadius: AiQoWatch.cardRadius, style: .continuous)
+                .stroke(workout.cardColor.opacity(0.28), lineWidth: 1)
+        )
         .cornerRadius(AiQoWatch.cardRadius)
     }
 }
