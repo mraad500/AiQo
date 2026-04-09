@@ -1,13 +1,14 @@
 import Foundation
 
-/// 6-Layer System Prompt Generator for Captain Hamoudi.
+/// 7-Layer System Prompt Generator for Captain Hamoudi.
 ///
 /// Layer 1 (Identity): Elite AI mentor speaking in Iraqi Arabic dialect
-/// Layer 2 (Memory): Long-term memory context from prior sessions
-/// Layer 3 (Bio-state): Current HealthKit metrics (masked — never shown to user)
-/// Layer 4 (Circadian Tone): Tone adapts to time of day
-/// Layer 5 (Screen Context): Where the user is in the app
-/// Layer 6 (Output Contract): MUST return strict JSON
+/// Layer 2 (Stable Profile): Durable user profile and preferences
+/// Layer 3 (Working Memory): Relevant memories activated for this message
+/// Layer 4 (Bio-state): Current HealthKit metrics (masked — never shown to user)
+/// Layer 5 (Circadian Tone): Tone adapts to time of day
+/// Layer 6 (Screen Context): Where the user is in the app
+/// Layer 7 (Output Contract): MUST return strict JSON
 struct CaptainPromptBuilder: Sendable {
 
     func build(for request: HybridBrainRequest) -> String {
@@ -15,7 +16,11 @@ struct CaptainPromptBuilder: Sendable {
 
         return [
             layerIdentity(language: request.language, firstName: firstName),
-            layerMemory(profileSummary: request.userProfileSummary),
+            layerStableProfile(profileSummary: request.userProfileSummary),
+            layerWorkingMemory(
+                workingMemorySummary: request.workingMemorySummary,
+                intentSummary: request.intentSummary
+            ),
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
             layerScreenContext(request: request),
@@ -132,21 +137,60 @@ struct CaptainPromptBuilder: Sendable {
         return persona
     }
 
-    // MARK: - Layer 2: Memory (Long-Term Context)
+    // MARK: - Layer 2: Stable Profile
 
-    private func layerMemory(profileSummary: String) -> String {
+    private func layerStableProfile(profileSummary: String) -> String {
         let trimmed = profileSummary.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != "Unavailable" else { return "" }
 
         return """
-        === BACKGROUND KNOWLEDGE (from prior conversations) ===
-        Use this to personalize your tone and advice. Do NOT recite these facts back unless directly relevant.
+        === STABLE USER PROFILE ===
+        These are durable truths and preferences about the user.
+        Use them to personalize tone and recommendations, but don't dump them back unless relevant.
 
         \(trimmed)
         """
     }
 
-    // MARK: - Layer 3: Bio-State (Current HealthKit Metrics — Masked)
+    // MARK: - Layer 3: Working Memory
+
+    private func layerWorkingMemory(
+        workingMemorySummary: String,
+        intentSummary: String
+    ) -> String {
+        let trimmedIntent = intentSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedWorkingMemory = workingMemorySummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedIntent.isEmpty || !trimmedWorkingMemory.isEmpty else { return "" }
+
+        var sections: [String] = []
+
+        if !trimmedIntent.isEmpty {
+            sections.append(
+                """
+                Current reply objective:
+                \(trimmedIntent)
+                """
+            )
+        }
+
+        if !trimmedWorkingMemory.isEmpty {
+            sections.append(
+                """
+                Activated long-term memory for this message:
+                Use only what helps this exact reply. Relevance beats quantity.
+
+                \(trimmedWorkingMemory)
+                """
+            )
+        }
+
+        return """
+        === ACTIVE WORKING MEMORY ===
+        \(sections.joined(separator: "\n\n"))
+        """
+    }
+
+    // MARK: - Layer 4: Bio-State (Current HealthKit Metrics — Masked)
 
     private func layerBioState(data: CaptainContextData, language: AppLanguage) -> String {
         var lines: [String] = []
@@ -187,7 +231,7 @@ struct CaptainPromptBuilder: Sendable {
         """
     }
 
-    // MARK: - Layer 4: Circadian Tone (Adapts to Time)
+    // MARK: - Layer 5: Circadian Tone (Adapts to Time)
 
     private func layerCircadianTone(data: CaptainContextData, language: AppLanguage) -> String {
         if language == .english {
@@ -205,7 +249,7 @@ struct CaptainPromptBuilder: Sendable {
         """
     }
 
-    // MARK: - Layer 5: Screen Context
+    // MARK: - Layer 6: Screen Context
 
     private func layerScreenContext(request: HybridBrainRequest) -> String {
         let ctx = request.screenContext

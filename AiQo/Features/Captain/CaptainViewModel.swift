@@ -108,6 +108,7 @@ final class CaptainViewModel: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let orchestrator: BrainOrchestrator
     private let contextBuilder: CaptainContextBuilder
+    private let cognitivePipeline: CaptainCognitivePipeline
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
@@ -136,10 +137,12 @@ final class CaptainViewModel: ObservableObject {
     init(
         orchestrator: BrainOrchestrator? = nil,
         contextBuilder: CaptainContextBuilder? = nil,
+        cognitivePipeline: CaptainCognitivePipeline? = nil,
         morningHabitOrchestrator: MorningHabitOrchestrator? = nil
     ) {
         self.orchestrator = orchestrator ?? BrainOrchestrator()
         self.contextBuilder = contextBuilder ?? .shared
+        self.cognitivePipeline = cognitivePipeline ?? .shared
         self.morningHabitOrchestrator = morningHabitOrchestrator ?? .shared
         loadCustomization()
         loadPersistedHistory()
@@ -242,7 +245,12 @@ final class CaptainViewModel: ObservableObject {
         let conversation = buildConversationHistory()
         let userName = captainReplyUserName()
         let language = AppSettingsStore.shared.appLanguage
-        let profileSummary = buildUserProfileSummary()
+        let promptContext = cognitivePipeline.buildPromptContext(
+            userMessage: trimmedText,
+            screenContext: context,
+            customization: customization,
+            preferredName: userName
+        )
 
         responseTask = Task { [weak self] in
             guard let self else { return }
@@ -253,7 +261,7 @@ final class CaptainViewModel: ObservableObject {
                 prebuiltConversation: conversation,
                 prebuiltUserName: userName,
                 prebuiltLanguage: language,
-                prebuiltProfileSummary: profileSummary
+                prebuiltPromptContext: promptContext
             )
         }
     }
@@ -385,7 +393,7 @@ final class CaptainViewModel: ObservableObject {
         prebuiltConversation: [CaptainConversationMessage],
         prebuiltUserName: String?,
         prebuiltLanguage: AppLanguage,
-        prebuiltProfileSummary: String
+        prebuiltPromptContext: CaptainPromptContext
     ) async {
         defer {
             if activeRequestID == requestID {
@@ -403,7 +411,9 @@ final class CaptainViewModel: ObservableObject {
                 screenContext: screenContext,
                 language: prebuiltLanguage,
                 contextData: contextData,
-                userProfileSummary: prebuiltProfileSummary,
+                userProfileSummary: prebuiltPromptContext.profileSummary,
+                intentSummary: prebuiltPromptContext.intentSummary,
+                workingMemorySummary: prebuiltPromptContext.workingMemorySummary,
                 attachedImageData: attachedImageData
             )
 
@@ -568,52 +578,6 @@ final class CaptainViewModel: ObservableObject {
                 content: trimmedText
             )
         }
-    }
-
-    private func buildUserProfileSummary() -> String {
-        let profile = UserProfileStore.shared.current
-        let preferredName = captainReplyUserName() ?? "not provided"
-
-        var summary = """
-        - Preferred name: \(preferredName)
-        - Profile name: \(summaryValue(profile.name))
-        - Username: \(summaryValue(profile.username))
-        - Age: \(summaryValue(customization.age))
-        - Height cm: \(summaryValue(customization.height))
-        - Weight kg: \(summaryValue(customization.weight))
-        - Preferred tone: \(customization.tone.rawValue)
-        """
-
-        // إضافة سياق الذاكرة
-        let memoryContext = MemoryStore.shared.buildPromptContext(maxTokens: 800)
-        if !memoryContext.isEmpty {
-            summary += "\n\n<user_context>\n\(memoryContext)\n</user_context>"
-        }
-
-        // إضافة سياق المشروع النشط
-        if let project = RecordProjectManager.shared.activeProject() {
-            summary += """
-
-            \n<active_record_project>
-            المستخدم عنده مشروع كسر رقم قياسي نشط:
-            - الرقم: \(project.recordTitle)
-            - الهدف: \(project.targetValue) \(project.unit)
-            - أفضل أداء حالي: \(project.bestPerformance) \(project.unit)
-            - الأسبوع الحالي: \(project.currentWeek) من \(project.totalWeeks)
-            - آخر مراجعة: \(project.lastReviewDate?.formatted() ?? "ما صارت بعد")
-            قواعد: تابع تقدمه وحمّسه. إذا سأل عن خطته اليوم ربطها بالمشروع.
-            </active_record_project>
-            """
-        }
-
-        return summary
-    }
-
-    private func summaryValue(_ value: String?) -> String {
-        guard let value else { return "not provided" }
-
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "not provided" : trimmed
     }
 
     private func persistChatMessage(_ message: ChatMessage) {

@@ -105,6 +105,8 @@ private extension BrainOrchestrator {
             language: request.language,
             contextData: request.contextData,
             userProfileSummary: request.userProfileSummary,
+            intentSummary: request.intentSummary,
+            workingMemorySummary: request.workingMemorySummary,
             attachedImageData: nil
         )
     }
@@ -254,6 +256,8 @@ private extension BrainOrchestrator {
             language: originalRequest.language,
             contextData: originalRequest.contextData,
             userProfileSummary: originalRequest.userProfileSummary,
+            intentSummary: originalRequest.intentSummary,
+            workingMemorySummary: originalRequest.workingMemorySummary,
             attachedImageData: nil
         )
 

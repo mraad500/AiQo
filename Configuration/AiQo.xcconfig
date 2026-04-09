@@ -1,7 +1,7 @@
 // Shared build settings for the main AiQo app target.
 // Secrets.xcconfig can override these defaults locally when needed.
 
-CAPTAIN_API_KEY = AIzaSyBJIxtdMe_wqGlJEdXHTL9FyZPY3kKu8Uow
+CAPTAIN_API_KEY =
 CAPTAIN_ARABIC_API_URL =
 COACH_BRAIN_LLM_API_KEY =
 COACH_BRAIN_LLM_API_URL =
@@ -10,9 +10,8 @@ CAPTAIN_VOICE_API_URL =
 CAPTAIN_VOICE_MODEL_ID =
 CAPTAIN_VOICE_VOICE_ID =
 SPOTIFY_CLIENT_ID =
-// Escape URL slashes in xcconfig so Xcode does not treat // as a comment.
-SUPABASE_URL = https:\/\/zidbsrepqpbucqzxnwgk.supabase.co
-SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
 
 // Work around Xcode explicit-module failures from SDWebImageSwiftUI.
 CLANG_ENABLE_EXPLICIT_MODULES = NO

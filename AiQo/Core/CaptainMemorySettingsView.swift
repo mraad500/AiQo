@@ -108,7 +108,7 @@ struct CaptainMemorySettingsView: View {
                     .foregroundStyle(Color.primary)
             }
 
-            Text(memory.value)
+            Text(valueLabel(memory))
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color.primary.opacity(0.7))
                 .multilineTextAlignment(.trailing)
@@ -193,8 +193,12 @@ struct CaptainMemorySettingsView: View {
         case "mood": return NSLocalizedString("memory.key.mood", comment: "")
         case "diet_preference": return NSLocalizedString("memory.key.dietPreference", comment: "")
         case "preferred_workout": return NSLocalizedString("memory.key.preferredWorkout", comment: "")
+        case "preferred_training_time": return NSLocalizedString("memory.key.preferredTrainingTime", comment: "")
         case "available_equipment": return NSLocalizedString("memory.key.equipment", comment: "")
         case "water_intake": return NSLocalizedString("memory.key.waterIntake", comment: "")
+        case "bedtime_preference": return NSLocalizedString("memory.key.bedtimePreference", comment: "")
+        case "wake_time_preference": return NSLocalizedString("memory.key.wakeTimePreference", comment: "")
+        case "smart_wake_recommended_time": return NSLocalizedString("memory.key.smartWakeRecommendedTime", comment: "")
         case "active_project_record_id": return NSLocalizedString("memory.key.projectId", comment: "")
         case "active_project_title": return NSLocalizedString("memory.key.projectTitle", comment: "")
         case "steps_avg": return NSLocalizedString("memory.key.stepsAvg", comment: "")
@@ -204,6 +208,19 @@ struct CaptainMemorySettingsView: View {
         default:
             if key.hasPrefix("injury_") { return NSLocalizedString("memory.key.injury", comment: "") }
             return key
+        }
+    }
+
+    private func valueLabel(_ memory: CaptainMemory) -> String {
+        switch memory.key {
+        case "goal":
+            return CaptainPrimaryGoal.localizedValue(forStoredValue: memory.value) ?? memory.value
+        case "preferred_workout":
+            return CaptainSportPreference.localizedValue(forStoredValue: memory.value) ?? memory.value
+        case "preferred_training_time":
+            return CaptainWorkoutTimePreference.localizedValue(forStoredValue: memory.value) ?? memory.value
+        default:
+            return memory.value
         }
     }
 }

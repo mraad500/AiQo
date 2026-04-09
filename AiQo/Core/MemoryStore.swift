@@ -129,6 +129,90 @@ final class MemoryStore {
         }
     }
 
+    /// يرجّع الذكريات الأكثر صلة برسالة المستخدم الحالية بدل ضخ كل الذاكرة دفعة وحدة
+    func retrieveRelevantMemories(
+        for message: String,
+        screenContext: ScreenContext,
+        limit: Int = 8,
+        allowedCategories: Set<String>? = nil
+    ) -> [CaptainMemorySnapshot] {
+        guard isEnabled, let context else { return [] }
+
+        let intent = CaptainMessageIntent.detect(message: message, screenContext: screenContext)
+        let messageTokens = CaptainCognitiveTextAnalyzer.tokens(from: message)
+
+        do {
+            let descriptor = FetchDescriptor<CaptainMemory>(
+                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+            let memories = try context.fetch(descriptor)
+            let filtered = memories.filter { memory in
+                guard let allowedCategories else { return true }
+                return allowedCategories.contains(memory.category)
+            }
+
+            let ranked = filtered
+                .compactMap { memory -> (CaptainMemory, Double)? in
+                    let score = relevanceScore(
+                        for: memory,
+                        messageTokens: messageTokens,
+                        intent: intent,
+                        screenContext: screenContext
+                    )
+                    guard score > 0 else { return nil }
+                    return (memory, score)
+                }
+                .sorted { lhs, rhs in
+                    if lhs.1 == rhs.1 {
+                        return lhs.0.updatedAt > rhs.0.updatedAt
+                    }
+                    return lhs.1 > rhs.1
+                }
+
+            let selected = Array(ranked.prefix(limit))
+            guard !selected.isEmpty else { return [] }
+
+            selected.forEach { item in
+                item.0.accessCount += 1
+            }
+            try? context.save()
+
+            return selected.map { CaptainMemorySnapshot(memory: $0.0) }
+        } catch {
+            logger.error("memory_store_relevant_error error=\(error.localizedDescription)")
+            return []
+        }
+    }
+
+    func buildCloudSafeRelevantContext(
+        for message: String,
+        screenContext: ScreenContext,
+        maxTokens: Int = 400
+    ) -> String {
+        let allowedCategories: Set<String> = ["goal", "preference", "mood", "injury", "nutrition", "insight"]
+        let memories = retrieveRelevantMemories(
+            for: message,
+            screenContext: screenContext,
+            limit: 10,
+            allowedCategories: allowedCategories
+        )
+
+        guard !memories.isEmpty else { return "" }
+
+        var lines: [String] = []
+        var budget = maxTokens
+
+        for memory in memories {
+            let line = "- \(memory.key): \(memory.value)"
+            let cost = max(1, line.count / 4)
+            guard budget - cost > 0 else { break }
+            budget -= cost
+            lines.append(line)
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
     /// بناء سياق الذكريات للـ system prompt
     func buildPromptContext(maxTokens: Int = 800) -> String {
         guard isEnabled, let context else { return "" }
@@ -452,6 +536,132 @@ final class MemoryStore {
     private func invalidateMemoryContextCaches() {
         promptContextCache.removeAll()
         cloudSafeContextCache.removeAll()
+    }
+
+    func relevanceScore(
+        for memory: CaptainMemory,
+        messageTokens: Set<String>,
+        intent: CaptainMessageIntent,
+        screenContext: ScreenContext
+    ) -> Double {
+        let normalizedMemory = CaptainCognitiveTextAnalyzer.normalizedText(
+            "\(memory.key) \(memory.value) \(memory.category)"
+        )
+
+        let overlappingTokenCount = messageTokens.reduce(into: 0) { partialResult, token in
+            if normalizedMemory.contains(token) {
+                partialResult += 1
+            }
+        }
+
+        var score = memory.confidence * 3.0
+        score += intent.retrievalCategoryWeights[memory.category] ?? 0
+        score += screenMemoryWeight(for: memory.category, screenContext: screenContext)
+        score += directCategoryBoost(for: memory.category, intent: intent)
+        score += Double(overlappingTokenCount) * 2.6
+        score += sourceWeight(for: memory.source)
+        score += recencyWeight(for: memory.updatedAt)
+        score -= min(Double(memory.accessCount) * 0.08, 1.2)
+
+        if overlappingTokenCount == 0,
+           memory.source != "user_explicit",
+           (intent.retrievalCategoryWeights[memory.category] ?? 0) < 2.5 {
+            score -= 1.2
+        }
+
+        if memory.category == "active_record_project",
+           (intent == .challenge || screenContext == .peaks) {
+            score += 4.0
+        }
+
+        return score
+    }
+
+    func directCategoryBoost(
+        for category: String,
+        intent: CaptainMessageIntent
+    ) -> Double {
+        switch (intent, category) {
+        case (.sleep, "sleep"):
+            return 4.5
+        case (.workout, "injury"), (.recovery, "injury"):
+            return 4.0
+        case (.workout, "goal"), (.nutrition, "goal"), (.challenge, "goal"):
+            return 2.5
+        case (.nutrition, "nutrition"):
+            return 4.0
+        case (.vibe, "mood"), (.emotionalSupport, "mood"):
+            return 3.5
+        case (.challenge, "active_record_project"):
+            return 5.0
+        default:
+            return 0
+        }
+    }
+
+    func screenMemoryWeight(
+        for category: String,
+        screenContext: ScreenContext
+    ) -> Double {
+        switch screenContext {
+        case .gym:
+            switch category {
+            case "injury": return 2.8
+            case "goal": return 2.2
+            case "preference": return 1.8
+            case "sleep": return 1.1
+            default: return 0
+            }
+        case .kitchen:
+            switch category {
+            case "nutrition": return 2.8
+            case "goal": return 1.8
+            case "body": return 1.5
+            default: return 0
+            }
+        case .sleepAnalysis:
+            return category == "sleep" ? 3.2 : 0
+        case .peaks:
+            switch category {
+            case "active_record_project": return 3.5
+            case "goal": return 1.8
+            default: return 0
+            }
+        case .myVibe:
+            return category == "mood" ? 2.8 : 0
+        case .mainChat:
+            switch category {
+            case "goal", "preference", "insight": return 1.0
+            default: return 0
+            }
+        }
+    }
+
+    func sourceWeight(for source: String) -> Double {
+        switch source {
+        case "user_explicit":
+            return 1.8
+        case "llm_extracted":
+            return 0.9
+        case "extracted":
+            return 0.6
+        default:
+            return 0.2
+        }
+    }
+
+    func recencyWeight(for updatedAt: Date) -> Double {
+        let days = max(0, Date().timeIntervalSince(updatedAt) / 86_400)
+        switch days {
+        case ..<1:
+            return 1.5
+        case ..<7:
+            return 1.0
+        case ..<30:
+            return 0.5
+        default:
+            return 0
+        }
     }
 
     private func removeLowestConfidence() {

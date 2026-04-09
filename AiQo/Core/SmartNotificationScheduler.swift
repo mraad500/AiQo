@@ -286,6 +286,9 @@ final class SmartNotificationScheduler {
     private func scheduleWorkoutMotivation() {
         cancelCategory("workout_motivation")
 
+        let reminderTime = CaptainPersonalizationStore.shared.workoutReminderTime()
+            ?? CaptainWorkoutTimePreference.evening.reminderTime
+
         let messages = [
             "يلا يا بطل! وقت التمرين 💪 جسمك ينتظرك",
             "كابتن حمّودي جاهز! يلا نتمرن 🔥",
@@ -302,13 +305,16 @@ final class SmartNotificationScheduler {
             body: messages.randomElement() ?? messages[0],
             categoryIdentifier: "workout_motivation",
             threadIdentifier: "aiqo.workout",
-            hour: 17,
-            minute: 0
+            hour: reminderTime.hour,
+            minute: reminderTime.minute
         )
     }
 
     private func scheduleSleepReminder() {
         cancelCategory("sleep_reminder")
+
+        let reminderTime = CaptainPersonalizationStore.shared.sleepReminderTime(calendar: calendar)
+            ?? CaptainReminderTime(hour: 22, minute: 30)
 
         scheduleRecurringRequest(
             identifier: "sleep_reminder_nightly",
@@ -316,8 +322,8 @@ final class SmartNotificationScheduler {
             body: "كابتن حمّودي يقول: النوم أهم من التمرين! خلّي جسمك ينتعش الليلة. تصبح على خير 🌙",
             categoryIdentifier: "sleep_reminder",
             threadIdentifier: "aiqo.sleep",
-            hour: 22,
-            minute: 30
+            hour: reminderTime.hour,
+            minute: reminderTime.minute
         )
     }
 

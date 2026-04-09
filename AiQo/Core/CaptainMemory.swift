@@ -40,3 +40,23 @@ final class CaptainMemory {
         self.accessCount = 0
     }
 }
+
+struct CaptainMemorySnapshot: Equatable, Sendable {
+    let key: String
+    let value: String
+    let category: String
+    let confidence: Double
+    let source: String
+    let updatedAt: Date
+    let accessCount: Int
+
+    init(memory: CaptainMemory) {
+        self.key = memory.key
+        self.value = memory.value
+        self.category = memory.category
+        self.confidence = memory.confidence
+        self.source = memory.source
+        self.updatedAt = memory.updatedAt
+        self.accessCount = memory.accessCount
+    }
+}
