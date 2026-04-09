@@ -158,6 +158,18 @@ private extension BrainOrchestrator {
                 logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
                 return makeComputedSleepReply(session: session, language: request.language)
             }
+        case .lowQualityResponse(let sleepSummary, let session, let message):
+            logger.notice("sleep_agent_low_quality_fallback message=\(message, privacy: .public)")
+            do {
+                return try await generateCloudSleepReply(
+                    originalRequest: request,
+                    sleepSummary: sleepSummary,
+                    userName: userName
+                )
+            } catch {
+                logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
+                return makeComputedSleepReply(session: session, language: request.language)
+            }
         }
     }
 
@@ -231,14 +243,11 @@ private extension BrainOrchestrator {
         sleepSummary: String,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
-        let sleepUserMessage = """
-        حلل نومي.
-
-        بيانات نومي:
-        \(sleepSummary)
-
-        اكتب 3 جمل بس بالعراقي. استخدم الأرقام الدقيقة من البيانات. لا تكتب أكثر من 3 جمل.
-        """
+        let sleepUserMessage = buildCloudSleepPrompt(
+            language: originalRequest.language,
+            lastUserMessage: latestUserMessage(in: originalRequest),
+            sleepSummary: sleepSummary
+        )
 
         var modifiedConversation = originalRequest.conversation
         if let lastUserIndex = modifiedConversation.lastIndex(where: { $0.role == .user }) {
@@ -252,7 +261,7 @@ private extension BrainOrchestrator {
 
         let cloudRequest = HybridBrainRequest(
             conversation: modifiedConversation,
-            screenContext: .mainChat,
+            screenContext: .sleepAnalysis,
             language: originalRequest.language,
             contextData: originalRequest.contextData,
             userProfileSummary: originalRequest.userProfileSummary,
@@ -413,6 +422,58 @@ private extension BrainOrchestrator {
 
     func latestUserMessage(in request: HybridBrainRequest) -> String {
         request.conversation.last(where: { $0.role == .user })?.content ?? ""
+    }
+
+    func buildCloudSleepPrompt(
+        language: AppLanguage,
+        lastUserMessage: String,
+        sleepSummary: String
+    ) -> String {
+        let userQuestion = lastUserMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? (language == .arabic ? "حلل نومي." : "Analyze my sleep.")
+            : lastUserMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if language == .english {
+            return """
+            Analyze the user's sleep using ONLY the following aggregated data.
+
+            User question:
+            \(userQuestion)
+
+            Sleep data:
+            \(sleepSummary)
+
+            Write exactly 3 short English sentences:
+            1. Give a clear verdict: good, average, or poor sleep, and say why.
+            2. Mention the most important number or sleep stage and what it means for recovery, focus, or energy.
+            3. Give one practical action for tonight.
+
+            Rules:
+            - Use only the provided numbers.
+            - Be direct and useful, not vague.
+            - If total sleep is under 7 hours, say clearly that it is not enough.
+            """
+        }
+
+        return """
+        حلل نوم المستخدم اعتماداً على البيانات التالية فقط.
+
+        سؤال المستخدم:
+        \(userQuestion)
+
+        بيانات النوم:
+        \(sleepSummary)
+
+        اكتب 3 جمل قصيرة بالعراقي:
+        1. احكم بصراحة إذا النوم زين لو متوسط لو مو زين وليش.
+        2. اذكر أهم رقم أو مرحلة نوم وشنو معناها على التعافي أو التركيز أو الطاقة.
+        3. أعطِ خطوة وحدة عملية يسويها الليلة.
+
+        قواعد:
+        - استخدم الأرقام الموجودة فقط.
+        - لا تكن عام ولا ضبابي.
+        - إذا النوم أقل من 7 ساعات كولها بوضوح إنه مو كافي.
+        """
     }
 
     func encode(_ response: CaptainStructuredResponse) throws -> String {

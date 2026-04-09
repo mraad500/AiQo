@@ -58,15 +58,7 @@ struct AiQoApp: App {
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
 
-        // تنظيف الذكريات القديمة
-        MemoryStore.shared.removeStale()
-
-        // مزامنة HealthKit مع الذاكرة — فقط بعد اكتمال الأونبوردنق
-        if UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation") {
-            Task {
-                await HealthKitMemoryBridge.syncHealthDataToMemory()
-            }
-        }
+        schedulePostLaunchWarmup()
     }
 
     var body: some Scene {
@@ -115,7 +107,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ = CrashReporter.shared
         _ = NetworkMonitor.shared
         AnalyticsService.shared.track(.appLaunched)
-        FreeTrialManager.shared.refreshState()
+        _ = FreeTrialManager.shared
 
         LocalizationManager.shared.applySavedLanguage()
 
@@ -159,11 +151,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             AiQoWorkoutShortcuts.updateAppShortcutParameters()
         }
 
-        // تسجيل Siri Shortcuts
-        SiriShortcutsManager.shared.donateAllShortcuts()
-
-        // تحقق من الـ Streak
-        StreakManager.shared.checkStreakContinuity()
+        Task { @MainActor in
+            await Task.yield()
+            SiriShortcutsManager.shared.donateAllShortcuts()
+            StreakManager.shared.checkStreakContinuity()
+        }
 
         return true
     }
@@ -294,6 +286,22 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         }
 
         completionHandler()
+    }
+}
+
+private extension AiQoApp {
+    func schedulePostLaunchWarmup() {
+        Task(priority: .utility) { @MainActor in
+            await Task.yield()
+
+            // Cleanup can touch a large local store, so defer until the first frame is shown.
+            MemoryStore.shared.removeStale()
+
+            // Health sync is useful but not required for the very first screen render.
+            if UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation") {
+                await HealthKitMemoryBridge.syncHealthDataToMemory()
+            }
+        }
     }
 }
 

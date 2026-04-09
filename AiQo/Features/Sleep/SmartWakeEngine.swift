@@ -9,9 +9,17 @@ enum SmartWakeMode: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .fromBedtime:
-            return "من وقت النوم"
+            return smartWakeLocalized(
+                "smartwake.mode.fromBedtime",
+                arabic: "من وقت النوم",
+                english: "From bedtime"
+            )
         case .fromWakeTime:
-            return "من وقت الاستيقاظ"
+            return smartWakeLocalized(
+                "smartwake.mode.fromWakeTime",
+                arabic: "من وقت الاستيقاظ",
+                english: "From wake time"
+            )
         }
     }
 }
@@ -28,7 +36,14 @@ enum SmartWakeWindow: Int, CaseIterable, Identifiable, Sendable {
     }
 
     var title: String {
-        "\(rawValue) د"
+        String(
+            format: smartWakeLocalized(
+                "smartwake.window.minutesFormat",
+                arabic: "%d د",
+                english: "%d min"
+            ),
+            rawValue
+        )
     }
 }
 
@@ -46,13 +61,29 @@ struct SmartWakeRecommendation: Identifiable, Equatable, Sendable {
     var confidenceLabel: String {
         switch confidenceScore {
         case 0.9...:
-            return "ثقة عالية"
+            return smartWakeLocalized(
+                "smartwake.confidenceLevel.high",
+                arabic: "ثقة عالية",
+                english: "High confidence"
+            )
         case 0.75...:
-            return "ثقة جيدة"
+            return smartWakeLocalized(
+                "smartwake.confidenceLevel.good",
+                arabic: "ثقة جيدة",
+                english: "Good confidence"
+            )
         case 0.55...:
-            return "ثقة متوسطة"
+            return smartWakeLocalized(
+                "smartwake.confidenceLevel.medium",
+                arabic: "ثقة متوسطة",
+                english: "Moderate confidence"
+            )
         default:
-            return "ثقة محدودة"
+            return smartWakeLocalized(
+                "smartwake.confidenceLevel.limited",
+                arabic: "ثقة محدودة",
+                english: "Limited confidence"
+            )
         }
     }
 }
@@ -190,9 +221,17 @@ struct SmartWakeEngine: Sendable {
                     isWithinSmartWindow: true,
                     isFallback: true
                 ),
-                badge: "متوازن",
+                badge: smartWakeLocalized(
+                    "smartwake.badge.balanced",
+                    arabic: "متوازن",
+                    english: "Balanced"
+                ),
                 isBest: false,
-                explanation: "ما لقينا نهاية دورة مناسبة داخل النافذة المحددة، لذلك اعتمدنا آخر وقت مسموح.",
+                explanation: smartWakeLocalized(
+                    "smartwake.explanation.fallback",
+                    arabic: "ما لقينا نهاية دورة مناسبة داخل النافذة المحددة، لذلك اعتمدنا آخر وقت مسموح.",
+                    english: "No full sleep-cycle finish landed inside your chosen window, so we used your latest allowed wake time."
+                ),
                 isWithinSmartWindow: true
             )
         }
@@ -273,27 +312,55 @@ struct SmartWakeEngine: Sendable {
 
     private func badge(for cycleCount: Int, isBest: Bool) -> String {
         if isBest {
-            return "الأفضل"
+            return smartWakeLocalized(
+                "smartwake.badge.best",
+                arabic: "الأفضل",
+                english: "Best"
+            )
         }
 
         switch cycleCount {
         case 5, 6:
-            return "متوازن"
+            return smartWakeLocalized(
+                "smartwake.badge.balanced",
+                arabic: "متوازن",
+                english: "Balanced"
+            )
         default:
-            return "أخف"
+            return smartWakeLocalized(
+                "smartwake.badge.light",
+                arabic: "أخف",
+                english: "Lighter"
+            )
         }
     }
 
     private func bedtimeExplanation(for cycleCount: Int) -> String {
         switch cycleCount {
         case 6:
-            return "هذا الوقت أقرب لنهاية دورة نوم متوقعة ويمنحك مدة نوم مريحة."
+            return smartWakeLocalized(
+                "smartwake.explanation.bedtime.best",
+                arabic: "هذا الوقت أقرب لنهاية دورة نوم متوقعة ويمنحك مدة نوم مريحة.",
+                english: "This time lands closest to the end of a full sleep cycle and gives you a more comfortable sleep duration."
+            )
         case 5:
-            return "هذا الخيار يوازن بين مدة النوم والالتزام بموعد صباحي عملي."
+            return smartWakeLocalized(
+                "smartwake.explanation.bedtime.balanced",
+                arabic: "هذا الخيار يوازن بين مدة النوم والالتزام بموعد صباحي عملي.",
+                english: "This option balances sleep duration with a realistic morning schedule."
+            )
         case 4:
-            return "خيار مقبول إذا كنت تحتاج الاستيقاظ أبكر من المعتاد."
+            return smartWakeLocalized(
+                "smartwake.explanation.bedtime.early",
+                arabic: "خيار مقبول إذا كنت تحتاج الاستيقاظ أبكر من المعتاد.",
+                english: "A decent option if you need to wake up earlier than usual."
+            )
         default:
-            return "مدة أقصر من المثالي، لذلك يفضّل استخدامه عند الضرورة فقط."
+            return smartWakeLocalized(
+                "smartwake.explanation.bedtime.short",
+                arabic: "مدة أقصر من المثالي، لذلك يفضّل استخدامه عند الضرورة فقط.",
+                english: "This sleep duration is shorter than ideal, so it is best used only when necessary."
+            )
         }
     }
 
@@ -302,14 +369,26 @@ struct SmartWakeEngine: Sendable {
         withinWindow: Bool
     ) -> String {
         if withinWindow {
-            return "ضمن نافذة الاستيقاظ الذكي واعتمادًا على دورات النوم التقديرية."
+            return smartWakeLocalized(
+                "smartwake.explanation.wake.withinWindow",
+                arabic: "ضمن نافذة الاستيقاظ الذكي واعتمادًا على دورات النوم التقديرية.",
+                english: "This option falls inside your smart wake window and aligns with the estimated sleep cycles."
+            )
         }
 
         if cycleCount < 4 {
-            return "خيار أخف زمنيًا لكنه أقل مثالية من ناحية التعافي."
+            return smartWakeLocalized(
+                "smartwake.explanation.wake.light",
+                arabic: "خيار أخف زمنيًا لكنه أقل مثالية من ناحية التعافي.",
+                english: "This is a lighter timing option, but it is less ideal for recovery."
+            )
         }
 
-        return "نهاية دورة متوقعة لكنها تقع خارج نافذة الاستيقاظ الحالية."
+        return smartWakeLocalized(
+            "smartwake.explanation.wake.outsideWindow",
+            arabic: "نهاية دورة متوقعة لكنها تقع خارج نافذة الاستيقاظ الحالية.",
+            english: "This wake time matches a likely cycle ending, but it sits outside your current wake window."
+        )
     }
 
     private func alignedWakeTime(_ latestWakeTime: Date, after bedtime: Date) -> Date {
@@ -404,4 +483,14 @@ struct SmartWakeEngine: Sendable {
     ) -> String {
         "\(suffix)-\(cycleCount)-\(Int(wakeDate.timeIntervalSince1970))"
     }
+}
+
+private func smartWakeLocalized(
+    _ key: String,
+    arabic: String,
+    english: String
+) -> String {
+    let fallback = AppSettingsStore.shared.appLanguage == .arabic ? arabic : english
+    let localized = NSLocalizedString(key, tableName: "Localizable", bundle: .main, value: fallback, comment: "")
+    return localized == key ? fallback : localized
 }

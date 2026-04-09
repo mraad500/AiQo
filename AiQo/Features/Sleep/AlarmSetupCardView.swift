@@ -31,7 +31,7 @@ struct AlarmSetupCardView: View {
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(helperForeground)
 
-                        Text(recommendation.wakeDate.formatted(date: .omitted, time: .shortened))
+                        Text(CaptainPersonalizationTimeFormatter.localizedString(recommendation.wakeDate))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(primaryForeground)
                             .contentTransition(.numericText())
@@ -88,9 +88,9 @@ struct AlarmSetupCardView: View {
     private var helperText: String {
         switch saveState {
         case .idle:
-            return NSLocalizedString("alarm.helper.idle", comment: "")
+            return NSLocalizedString("alarm.helper.ready", comment: "")
         case .requestingPermission:
-            return NSLocalizedString("alarm.helper.requestingPermission", comment: "")
+            return NSLocalizedString("alarm.helper.requesting", comment: "")
         case .saving:
             return NSLocalizedString("alarm.helper.saving", comment: "")
         case .saved:
@@ -105,17 +105,17 @@ struct AlarmSetupCardView: View {
     private var buttonTitle: String {
         switch saveState {
         case .idle:
-            return NSLocalizedString("alarm.button.idle", comment: "")
+            return NSLocalizedString("alarm.button.save", comment: "")
         case .requestingPermission:
-            return NSLocalizedString("alarm.button.requestingPermission", comment: "")
+            return NSLocalizedString("alarm.button.requesting", comment: "")
         case .saving:
             return NSLocalizedString("alarm.button.saving", comment: "")
         case .saved:
             return NSLocalizedString("alarm.button.saved", comment: "")
         case .denied:
-            return NSLocalizedString("alarm.button.denied", comment: "")
+            return NSLocalizedString("alarm.button.settings", comment: "")
         case .failed:
-            return NSLocalizedString("alarm.button.failed", comment: "")
+            return NSLocalizedString("alarm.button.retry", comment: "")
         }
     }
 
@@ -131,32 +131,19 @@ struct AlarmSetupCardView: View {
     }
 
     private var buttonAccessibilityLabel: String {
-        switch saveState {
-        case .idle:
-            return "احفظ المنبه الذكي"
-        case .requestingPermission:
-            return "جار طلب إذن المنبه"
-        case .saving:
-            return "جار حفظ المنبه"
-        case .saved:
-            return "تم حفظ المنبه"
-        case .denied:
-            return "افتح إعدادات المنبه"
-        case .failed:
-            return "أعد محاولة حفظ المنبه"
-        }
+        buttonTitle
     }
 
     private var badgeTitle: String? {
         switch saveState {
         case .saved:
-            return NSLocalizedString("alarm.badge.saved", comment: "")
+            return NSLocalizedString("alarm.badge.set", comment: "")
         case .requestingPermission:
-            return NSLocalizedString("alarm.badge.requestingPermission", comment: "")
+            return NSLocalizedString("alarm.badge.request", comment: "")
         case .saving:
             return NSLocalizedString("alarm.badge.saving", comment: "")
         case .denied:
-            return NSLocalizedString("alarm.badge.denied", comment: "")
+            return NSLocalizedString("alarm.badge.required", comment: "")
         case .failed:
             return NSLocalizedString("alarm.badge.failed", comment: "")
         case .idle:

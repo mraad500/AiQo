@@ -1692,6 +1692,24 @@
 "smartwake.result" = "النتيجة";
 "smartwake.bestBalance" = "الأقرب للتوازن";
 "smartwake.cyclesFormat" = "%d دورات";
+"smartwake.mode.fromBedtime" = "من وقت النوم";
+"smartwake.mode.fromWakeTime" = "من وقت الاستيقاظ";
+"smartwake.window.minutesFormat" = "%d د";
+"smartwake.confidenceLevel.high" = "ثقة عالية";
+"smartwake.confidenceLevel.good" = "ثقة جيدة";
+"smartwake.confidenceLevel.medium" = "ثقة متوسطة";
+"smartwake.confidenceLevel.limited" = "ثقة محدودة";
+"smartwake.badge.best" = "الأفضل";
+"smartwake.badge.balanced" = "متوازن";
+"smartwake.badge.light" = "أخف";
+"smartwake.explanation.bedtime.best" = "هذا الوقت أقرب لنهاية دورة نوم متوقعة ويمنحك مدة نوم مريحة.";
+"smartwake.explanation.bedtime.balanced" = "هذا الخيار يوازن بين مدة النوم والالتزام بموعد صباحي عملي.";
+"smartwake.explanation.bedtime.early" = "خيار مقبول إذا كنت تحتاج الاستيقاظ أبكر من المعتاد.";
+"smartwake.explanation.bedtime.short" = "مدة أقصر من المثالي، لذلك يفضّل استخدامه عند الضرورة فقط.";
+"smartwake.explanation.wake.withinWindow" = "ضمن نافذة الاستيقاظ الذكي واعتمادًا على دورات النوم التقديرية.";
+"smartwake.explanation.wake.light" = "خيار أخف زمنيًا لكنه أقل مثالية من ناحية التعافي.";
+"smartwake.explanation.wake.outsideWindow" = "نهاية دورة متوقعة لكنها تقع خارج نافذة الاستيقاظ الحالية.";
+"smartwake.explanation.fallback" = "ما لقينا نهاية دورة مناسبة داخل النافذة المحددة، لذلك اعتمدنا آخر وقت مسموح.";
 
 /* ─── Alarm Setup ─── */
 "alarm.setWake" = "ضبط منبه للاستيقاظ";
@@ -2230,6 +2248,15 @@
 "captainPersonalization.continue" = "متابعة";
 "captainPersonalization.errorTitle" = "تعذر الحفظ";
 "captainPersonalization.saveError" = "صار خطأ أثناء حفظ تفضيلاتك. حاول مرة ثانية.";
+"captainPersonalization.stepCounter" = "الخطوة %d من %d";
+"captainPersonalization.progress.preferences" = "الأهداف والتفضيلات";
+"captainPersonalization.progress.sleep" = "النوم والمنبه";
+"captainPersonalization.sleepStepTitle" = "اضبط نومك الذكي";
+"captainPersonalization.sleepStepSubtitle" = "ثبت وقت النوم والاستيقاظ حتى يقترح AiQo أفضل نافذة تصحى بيها ويحفظلك المنبه.";
+"captainPersonalization.sleepStepHelper" = "كل ما تضبط نومك من البداية، يصير الكابتن أدق بالتذكيرات والتعافي والتنبيهات الصباحية.";
+"captainPersonalization.next" = "التالي";
+"captainPersonalization.back" = "رجوع";
+"captainPersonalization.finish" = "حفظ ومتابعة";
 "captainPersonalization.goal.loseWeight" = "ينزل وزنه";
 "captainPersonalization.goal.gainWeight" = "يصعد وزنه";
 "captainPersonalization.goal.cutFat" = "ينشف دهون";

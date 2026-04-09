@@ -269,15 +269,15 @@ final class CaptainCognitivePipeline {
     private let personalizationStore: CaptainPersonalizationStore
 
     init(
-        memoryStore: MemoryStore = .shared,
-        recordProjectManager: RecordProjectManager = .shared,
-        profileStore: UserProfileStore = .shared,
-        personalizationStore: CaptainPersonalizationStore = .shared
+        memoryStore: MemoryStore? = nil,
+        recordProjectManager: RecordProjectManager? = nil,
+        profileStore: UserProfileStore? = nil,
+        personalizationStore: CaptainPersonalizationStore? = nil
     ) {
-        self.memoryStore = memoryStore
-        self.recordProjectManager = recordProjectManager
-        self.profileStore = profileStore
-        self.personalizationStore = personalizationStore
+        self.memoryStore = memoryStore ?? .shared
+        self.recordProjectManager = recordProjectManager ?? .shared
+        self.profileStore = profileStore ?? .shared
+        self.personalizationStore = personalizationStore ?? .shared
     }
 
     func buildPromptContext(

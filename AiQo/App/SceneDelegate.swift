@@ -10,6 +10,7 @@ enum OnboardingKeys {
     static let didCompleteCaptainPersonalization = "didCompleteCaptainPersonalization"
     static let didCompleteFeatureIntro = "didCompleteFeatureIntro"
     static let didShowFirstAuthScreen = "didShowFirstAuthScreen"
+    static let didContinueWithoutAccount = "didContinueWithoutAccount"
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
     static let didSelectLanguage = "didSelectLanguage"
 }
@@ -34,7 +35,10 @@ final class AppFlowController: ObservableObject {
     private let protectionModel = ProtectionModel.shared
 
     private init() {
-        QuestPersistenceController.shared.installQuestPersistence()
+        Task { @MainActor in
+            await Task.yield()
+            QuestPersistenceController.shared.installQuestPersistence()
+        }
         currentScreen = Self.resolveCurrentScreen()
     }
 
@@ -45,9 +49,17 @@ final class AppFlowController: ObservableObject {
 
     func didLoginSuccessfully() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didShowFirstAuthScreen)
+        UserDefaults.standard.set(false, forKey: OnboardingKeys.didContinueWithoutAccount)
         if let userID = SupabaseService.shared.currentUserID {
             CrashReportingService.shared.setUser(id: userID)
         }
+        transition(to: Self.nextScreenAfterLogin())
+    }
+
+    func didContinueWithoutAccount() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didShowFirstAuthScreen)
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didContinueWithoutAccount)
+        CrashReportingService.shared.clearUser()
         transition(to: Self.nextScreenAfterLogin())
     }
 
@@ -152,12 +164,14 @@ final class AppFlowController: ObservableObject {
     func logout() {
         Task { @MainActor in
             try? await SupabaseService.shared.client.auth.signOut()
+            CrashReportingService.shared.clearUser()
 
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteLegacyCalculation)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteFeatureIntro)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteDatingProfile)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didShowFirstAuthScreen)
+            UserDefaults.standard.set(false, forKey: OnboardingKeys.didContinueWithoutAccount)
 
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .login)
@@ -183,6 +197,7 @@ final class AppFlowController: ObservableObject {
 
         let didSelectLanguage = UserDefaults.standard.bool(forKey: OnboardingKeys.didSelectLanguage)
         let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
+        let didContinueWithoutAccount = UserDefaults.standard.bool(forKey: OnboardingKeys.didContinueWithoutAccount)
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
@@ -192,6 +207,7 @@ final class AppFlowController: ObservableObject {
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
             if SupabaseService.shared.client.auth.currentUser != nil { return true }
+            if didContinueWithoutAccount { return true }
             // If user completed full onboarding but session expired, let them through
             // to main screen. Supabase will refresh the token on next API call.
             if didCompleteLegacyCalculation && didCompleteDatingProfile && didShowFirstAuthScreen {

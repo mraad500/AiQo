@@ -295,7 +295,11 @@ enum CaptainPersonalizationTimeFormatter {
     }
 
     static func localizedString(_ date: Date) -> String {
-        date.formatted(date: .omitted, time: .shortened)
+        let localeIdentifier = AppSettingsStore.shared.appLanguage == .arabic ? "ar" : "en_US"
+        return date.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened)
+                .locale(Locale(identifier: localeIdentifier))
+        )
     }
 }
 

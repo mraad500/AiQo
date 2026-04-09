@@ -3,10 +3,23 @@ import XCTest
 
 @MainActor
 final class SmartWakeEngineTests: XCTestCase {
+    private var originalLanguage: AppLanguage!
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         return calendar
+    }
+
+    override func setUp() {
+        super.setUp()
+        originalLanguage = AppSettingsStore.shared.appLanguage
+        LocalizationManager.shared.setLanguage(.arabic)
+    }
+
+    override func tearDown() {
+        LocalizationManager.shared.setLanguage(originalLanguage)
+        super.tearDown()
     }
 
     func testBedtimeRecommendationsUseNinetyMinuteCyclesWithSleepOnsetDelay() {
@@ -58,6 +71,18 @@ final class SmartWakeEngineTests: XCTestCase {
         XCTAssertEqual(recommendations.first?.badge, "الأفضل")
         XCTAssertEqual(recommendations.first?.isBest, true)
         XCTAssertEqual(recommendations.first?.isWithinSmartWindow, true)
+    }
+
+    func testRecommendationsUseEnglishLabelsWhenAppLanguageIsEnglish() throws {
+        LocalizationManager.shared.setLanguage(.english)
+
+        let engine = SmartWakeEngine(calendar: calendar)
+        let bedtime = date(year: 2026, month: 3, day: 7, hour: 22, minute: 30)
+
+        let recommendation = try XCTUnwrap(engine.recommendations(fromBedtime: bedtime).first)
+
+        XCTAssertEqual(recommendation.badge, "Best")
+        XCTAssertEqual(recommendation.confidenceLabel, "High confidence")
     }
 
     private func date(year: Int, month: Int, day: Int, hour: Int, minute: Int) -> Date {

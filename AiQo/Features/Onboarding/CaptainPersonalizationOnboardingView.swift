@@ -4,12 +4,14 @@ import UserNotifications
 
 struct CaptainPersonalizationOnboardingView: View {
     @Environment(\.openURL) private var openURL
+    @Environment(\.layoutDirection) private var layoutDirection
 
     @State private var selectedGoal: CaptainPrimaryGoal?
     @State private var selectedSport: CaptainSportPreference?
     @State private var selectedWorkoutTime: CaptainWorkoutTimePreference?
     @State private var bedtime: Date
     @State private var wakeTime: Date
+    @State private var currentStep: CaptainPersonalizationStep = .preferences
     @State private var appeared = false
     @State private var isSaving = false
     @State private var saveErrorMessage: String?
@@ -39,11 +41,18 @@ struct CaptainPersonalizationOnboardingView: View {
         sleepViewModel.selectedRecommendation ?? sleepViewModel.featuredRecommendation
     }
 
-    private var isFormValid: Bool {
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var canAdvanceToSleep: Bool {
         selectedGoal != nil
             && selectedSport != nil
             && selectedWorkoutTime != nil
-            && selectedRecommendation != nil
+    }
+
+    private var isFormValid: Bool {
+        canAdvanceToSleep && selectedRecommendation != nil
     }
 
     var body: some View {
@@ -56,6 +65,7 @@ struct CaptainPersonalizationOnboardingView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
                         headerCard
+                        progressCard
                         formCard
                     }
                     .padding(.horizontal, 24)
@@ -89,24 +99,24 @@ struct CaptainPersonalizationOnboardingView: View {
                         .fill(AuthFlowTheme.mint.opacity(0.2))
                         .frame(width: 44, height: 44)
 
-                    Image(systemName: "person.crop.circle.badge.checkmark")
+                    Image(systemName: currentStep.headerIcon)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(AuthFlowTheme.mint)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localized("captainPersonalization.title", fallback: "خلّ الكابتن يعرفك أكثر"))
+                    Text(currentStep.title(view: self))
                         .font(.aiqoDisplay(28))
                         .foregroundStyle(.primary)
 
-                    Text(localized("captainPersonalization.subtitle", fallback: "جوابك هنا يساعد Captain Hamoudi يرتّب التمارين والتنبيهات والنوم على مزاجك الحقيقي."))
+                    Text(currentStep.subtitle(view: self))
                         .font(.aiqoBody(15))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            Text(localized("captainPersonalization.helper", fallback: "كل شيء تقدر تعدله لاحقاً، لكن هذي البداية تخلي التجربة أذكى من أول يوم."))
+            Text(currentStep.helper(view: self))
                 .font(.aiqoBody(14))
                 .foregroundStyle(Color.primary.opacity(0.72))
                 .padding(.horizontal, 14)
@@ -125,7 +135,91 @@ struct CaptainPersonalizationOnboardingView: View {
         .glassCard(cornerRadius: 28)
     }
 
+    private var progressCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(
+                        String(
+                            format: localized(
+                                "captainPersonalization.stepCounter",
+                                arabicFallback: "الخطوة %d من %d",
+                                englishFallback: "Step %d of %d"
+                            ),
+                            currentStep.position,
+                            CaptainPersonalizationStep.allCases.count
+                        )
+                    )
+                    .font(.aiqoLabel(13))
+                    .foregroundStyle(.primary)
+
+                    Text(currentStep.progressLabel(view: self))
+                        .font(.aiqoBody(13))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 8) {
+                    ForEach(CaptainPersonalizationStep.allCases, id: \.self) { step in
+                        Capsule()
+                            .fill(step == currentStep ? AuthFlowTheme.mint : Color.black.opacity(0.08))
+                            .frame(width: step == currentStep ? 34 : 12, height: 8)
+                    }
+                }
+            }
+
+            HStack(spacing: 10) {
+                ForEach(CaptainPersonalizationStep.allCases, id: \.self) { step in
+                    let isEnabled = step == .preferences || canAdvanceToSleep || currentStep == .sleep
+
+                    Button {
+                        guard isEnabled else { return }
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                            currentStep = step
+                        }
+                    } label: {
+                        Text(step.progressLabel(view: self))
+                            .font(.aiqoBody(13))
+                            .foregroundStyle(step == currentStep ? Color(hex: "0E3A2B") : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(step == currentStep ? AuthFlowTheme.mint.opacity(0.22) : Color.white.opacity(0.78))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(
+                                                step == currentStep ? AuthFlowTheme.mint.opacity(0.9) : Color.black.opacity(0.08),
+                                                lineWidth: 1
+                                            )
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!isEnabled)
+                    .opacity(isEnabled ? 1 : 0.55)
+                }
+            }
+        }
+        .padding(18)
+        .glassCard(cornerRadius: 24)
+    }
+
     private var formCard: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            if currentStep == .preferences {
+                preferencesStepContent
+            } else {
+                sleepStepContent
+            }
+        }
+        .padding(24)
+        .glassCard(cornerRadius: 28)
+        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: currentStep)
+    }
+
+    private var preferencesStepContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             optionSection(
                 title: localized("captainPersonalization.primaryGoalTitle", fallback: "الهدف الأساسي"),
@@ -178,6 +272,25 @@ struct CaptainPersonalizationOnboardingView: View {
                 }
             }
 
+            AuthPrimaryButton(
+                title: localized(
+                    "captainPersonalization.next",
+                    arabicFallback: "التالي",
+                    englishFallback: "Next"
+                ),
+                isEnabled: canAdvanceToSleep && !isSaving,
+                action: {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                        currentStep = .sleep
+                    }
+                },
+                icon: isRTL ? "arrow.left" : "arrow.right"
+            )
+        }
+    }
+
+    private var sleepStepContent: some View {
+        VStack(alignment: .leading, spacing: 22) {
             optionSection(
                 title: localized("captainPersonalization.sleepTitle", fallback: "وقت النوم / وقت الاستيقاظ"),
                 subtitle: localized("captainPersonalization.sleepSubtitle", fallback: "اختر وقتك الطبيعي، وAiQo يقترح لك استيقاظاً أهدأ ونهاية دورة نوم أذكى.")
@@ -201,14 +314,59 @@ struct CaptainPersonalizationOnboardingView: View {
                 }
             }
 
-            AuthPrimaryButton(
-                title: localized("captainPersonalization.continue", fallback: "متابعة"),
-                isEnabled: isFormValid && !isSaving,
-                action: continueTapped
+            VStack(spacing: 12) {
+                secondaryActionButton(
+                    title: localized(
+                        "captainPersonalization.back",
+                        arabicFallback: "رجوع",
+                        englishFallback: "Back"
+                    ),
+                    icon: isRTL ? "arrow.right" : "arrow.left",
+                    action: {
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                            currentStep = .preferences
+                        }
+                    }
+                )
+
+                AuthPrimaryButton(
+                    title: localized(
+                        "captainPersonalization.finish",
+                        arabicFallback: "حفظ ومتابعة",
+                        englishFallback: "Save & Continue"
+                    ),
+                    isEnabled: isFormValid && !isSaving,
+                    action: continueTapped,
+                    icon: isRTL ? "arrow.left" : "arrow.right"
+                )
+            }
+        }
+    }
+
+    private func secondaryActionButton(
+        title: String,
+        icon: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                Text(title)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(Color(hex: "18313D"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(0.84))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
             )
         }
-        .padding(24)
-        .glassCard(cornerRadius: 28)
+        .buttonStyle(.plain)
     }
 
     private func recommendationSection(_ recommendation: SmartWakeRecommendation) -> some View {
@@ -620,8 +778,18 @@ struct CaptainPersonalizationOnboardingView: View {
         }
     }
 
-    private func localized(_ key: String, fallback: String) -> String {
+    fileprivate func localized(_ key: String, fallback: String) -> String {
         NSLocalizedString(key, tableName: "Localizable", bundle: .main, value: fallback, comment: "")
+    }
+
+    fileprivate func localized(
+        _ key: String,
+        arabicFallback: String,
+        englishFallback: String
+    ) -> String {
+        let fallback = AppSettingsStore.shared.appLanguage == .arabic ? arabicFallback : englishFallback
+        let value = NSLocalizedString(key, tableName: "Localizable", bundle: .main, value: fallback, comment: "")
+        return value == key ? fallback : value
     }
 
     private static func defaultTime(hour: Int, minute: Int) -> Date {
@@ -685,12 +853,119 @@ struct CaptainPersonalizationOnboardingView: View {
     }
 }
 
+private enum CaptainPersonalizationStep: Int, CaseIterable {
+    case preferences
+    case sleep
+
+    var position: Int {
+        rawValue + 1
+    }
+
+    var headerIcon: String {
+        switch self {
+        case .preferences:
+            return "person.crop.circle.badge.checkmark"
+        case .sleep:
+            return "moon.stars.fill"
+        }
+    }
+
+    func title(view: CaptainPersonalizationOnboardingView) -> String {
+        switch self {
+        case .preferences:
+            return view.localized(
+                "captainPersonalization.title",
+                fallback: "خلّ الكابتن يعرفك أكثر"
+            )
+        case .sleep:
+            return view.localized(
+                "captainPersonalization.sleepStepTitle",
+                arabicFallback: "اضبط نومك الذكي",
+                englishFallback: "Set Up Smart Sleep"
+            )
+        }
+    }
+
+    func subtitle(view: CaptainPersonalizationOnboardingView) -> String {
+        switch self {
+        case .preferences:
+            return view.localized(
+                "captainPersonalization.subtitle",
+                fallback: "جوابك هنا يساعد Captain Hamoudi يرتّب التمارين والتنبيهات والنوم على مزاجك الحقيقي."
+            )
+        case .sleep:
+            return view.localized(
+                "captainPersonalization.sleepStepSubtitle",
+                arabicFallback: "ثبت وقت النوم والاستيقاظ حتى يقترح AiQo أفضل نافذة تصحى بيها ويحفظلك المنبه.",
+                englishFallback: "Set your bedtime and wake time so AiQo can recommend the best wake window and save your alarm."
+            )
+        }
+    }
+
+    func helper(view: CaptainPersonalizationOnboardingView) -> String {
+        switch self {
+        case .preferences:
+            return view.localized(
+                "captainPersonalization.helper",
+                fallback: "كل شيء تقدر تعدله لاحقاً، لكن هذي البداية تخلي التجربة أذكى من أول يوم."
+            )
+        case .sleep:
+            return view.localized(
+                "captainPersonalization.sleepStepHelper",
+                arabicFallback: "كل ما تضبط نومك من البداية، يصير الكابتن أدق بالتذكيرات والتعافي والتنبيهات الصباحية.",
+                englishFallback: "The earlier you set your sleep rhythm, the smarter Captain becomes with recovery, reminders, and morning nudges."
+            )
+        }
+    }
+
+    func progressLabel(view: CaptainPersonalizationOnboardingView) -> String {
+        switch self {
+        case .preferences:
+            return view.localized(
+                "captainPersonalization.progress.preferences",
+                arabicFallback: "الأهداف والتفضيلات",
+                englishFallback: "Goals & Preferences"
+            )
+        case .sleep:
+            return view.localized(
+                "captainPersonalization.progress.sleep",
+                arabicFallback: "النوم والمنبه",
+                englishFallback: "Sleep & Alarm"
+            )
+        }
+    }
+}
+
 private extension TimeInterval {
     var formattedSleepDuration: String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = self >= 3600 ? [.hour, .minute] : [.minute]
-        formatter.unitsStyle = .abbreviated
-        formatter.maximumUnitCount = 2
-        return formatter.string(from: self) ?? "0m"
+        let totalMinutes = max(Int((self / 60).rounded()), 0)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        let isArabic = AppSettingsStore.shared.appLanguage == .arabic
+        let locale = Locale(identifier: isArabic ? "ar" : "en_US")
+
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .none
+
+        func localizedNumber(_ value: Int) -> String {
+            formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        }
+
+        if hours > 0 && minutes > 0 {
+            return isArabic
+                ? "\(localizedNumber(hours)) س \(localizedNumber(minutes)) د"
+                : "\(localizedNumber(hours))h \(localizedNumber(minutes))m"
+        }
+
+        if hours > 0 {
+            return isArabic
+                ? "\(localizedNumber(hours)) س"
+                : "\(localizedNumber(hours))h"
+        }
+
+        return isArabic
+            ? "\(localizedNumber(minutes)) د"
+            : "\(localizedNumber(minutes))m"
     }
 }

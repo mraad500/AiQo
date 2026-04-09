@@ -54,6 +54,7 @@ enum AppleIntelligenceSleepAgentError: LocalizedError {
     case emptyResponse(session: SleepSession)
     /// Apple Intelligence مو متاح — يصعد للـ orchestrator عشان يحوّله للـ cloud
     case modelUnavailable(sleepSummary: String, session: SleepSession)
+    case lowQualityResponse(sleepSummary: String, session: SleepSession, message: String)
 
     var errorDescription: String? {
         switch self {
@@ -61,6 +62,8 @@ enum AppleIntelligenceSleepAgentError: LocalizedError {
             return "The on-device sleep agent returned an empty response."
         case .modelUnavailable:
             return "Apple Intelligence is not available on this device."
+        case .lowQualityResponse:
+            return "The on-device sleep agent returned a low-quality sleep analysis."
         }
     }
 }
@@ -70,6 +73,7 @@ struct AppleIntelligenceSleepAgent: Sendable {
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "AppleIntelligenceSleepAgent"
     )
+    private let qualityEvaluator = SleepAnalysisQualityEvaluator()
 
     func analyze(session sleepSession: SleepSession) async throws -> String {
 #if canImport(FoundationModels)
@@ -107,6 +111,15 @@ struct AppleIntelligenceSleepAgent: Sendable {
 
                 guard !generated.isEmpty else {
                     throw AppleIntelligenceSleepAgentError.emptyResponse(session: sleepSession)
+                }
+
+                guard qualityEvaluator.isUseful(message: generated, session: sleepSession) else {
+                    logger.notice("sleep_agent_low_quality_response")
+                    throw AppleIntelligenceSleepAgentError.lowQualityResponse(
+                        sleepSummary: buildArabicSummary(for: sleepSession),
+                        session: sleepSession,
+                        message: generated
+                    )
                 }
 
                 logger.notice("sleep_agent_succeeded")

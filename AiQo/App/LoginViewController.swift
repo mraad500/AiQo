@@ -4,6 +4,7 @@ import CryptoKit
 import Supabase
 import Auth
 import Combine
+import os.log
 
 struct LoginScreenView: View {
     @StateObject private var viewModel = LoginScreenViewModel()
@@ -42,11 +43,14 @@ struct LoginScreenView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 8)
 
-                        Text(localized("login.apple.hint", fallback: "التسجيل يتم فقط باستخدام Apple"))
+                        Text(localized(
+                            "login.apple.hint",
+                            fallback: "اربط حسابك باستخدام Apple أو كمل بدون حساب مؤقتاً."
+                        ))
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(AuthFlowTheme.mint)
 
-                        SignInWithAppleButton(.signUp) { request in
+                        SignInWithAppleButton(.continue) { request in
                             viewModel.prepareAppleSignInRequest(request)
                         } onCompletion: { result in
                             viewModel.handleAppleAuthorizationResult(result)
@@ -68,6 +72,21 @@ struct LoginScreenView: View {
                                 .foregroundStyle(.red.opacity(0.9))
                                 .multilineTextAlignment(.center)
                         }
+
+                        AuthSecondaryButton(
+                            title: localized("login.guest.cta", fallback: "المتابعة بدون حساب"),
+                            action: viewModel.continueWithoutAccount
+                        )
+                        .disabled(viewModel.isLoading)
+                        .opacity(viewModel.isLoading ? 0.55 : 1.0)
+
+                        Text(localized(
+                            "login.guest.hint",
+                            fallback: "تقدر تستخدم التطبيق الآن، وتربط حساب Apple لاحقاً إذا احتجت المزامنة."
+                        ))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -83,6 +102,9 @@ struct LoginScreenView: View {
             viewModel.onLoginSuccess = {
                 AppFlowController.shared.didLoginSuccessfully()
             }
+            viewModel.onContinueWithoutAccount = {
+                AppFlowController.shared.didContinueWithoutAccount()
+            }
             withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                 appeared = true
             }
@@ -95,11 +117,17 @@ struct LoginScreenView: View {
 }
 
 final class LoginScreenViewModel: ObservableObject {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "LoginScreenViewModel"
+    )
+
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private var currentNonce: String?
     var onLoginSuccess: (() -> Void)?
+    var onContinueWithoutAccount: (() -> Void)?
 
     func prepareAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
         let nonce = randomNonceString()
@@ -120,6 +148,12 @@ final class LoginScreenViewModel: ObservableObject {
         }
     }
 
+    func continueWithoutAccount() {
+        errorMessage = nil
+        isLoading = false
+        onContinueWithoutAccount?()
+    }
+
     private func handleSuccessfulAuthorization(_ authorization: ASAuthorization) {
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
               let nonce = currentNonce,
@@ -136,24 +170,56 @@ final class LoginScreenViewModel: ObservableObject {
             return
         }
 
-        Task {
+        let profileMetadata = appleProfileMetadata(from: credential.fullName)
+
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 _ = try await SupabaseService.shared.client.auth.signInWithIdToken(
                     credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
                 )
 
+                if !profileMetadata.isEmpty {
+                    do {
+                        _ = try await SupabaseService.shared.client.auth.update(
+                            user: UserAttributes(data: profileMetadata)
+                        )
+                    } catch {
+                        await MainActor.run {
+                            CrashReportingService.shared.record(
+                                error,
+                                context: "apple_profile_metadata_update_failed"
+                            )
+                        }
+                        Self.logger.error(
+                            "apple_profile_metadata_update_failed message=\(error.localizedDescription, privacy: .public)"
+                        )
+                    }
+                }
+
                 await MainActor.run {
+                    self.currentNonce = nil
                     self.isLoading = false
                     self.onLoginSuccess?()
                 }
             } catch {
+                let message = self.messageForLoginError(error)
+                let errorCode = self.errorCodeDescription(for: error)
+
                 await MainActor.run {
-                    self.isLoading = false
-                    self.errorMessage = NSLocalizedString(
-                        "login.error.supabase",
-                        value: "فشل تسجيل الدخول. حاول مرة ثانية.",
-                        comment: ""
+                    CrashReportingService.shared.record(error, context: "apple_supabase_sign_in_failed")
+                    CrashReportingService.shared.log(
+                        "apple_supabase_sign_in_failed code=\(errorCode) message=\(error.localizedDescription)"
                     )
+                }
+                Self.logger.error(
+                    "apple_supabase_sign_in_failed code=\(errorCode, privacy: .public) message=\(error.localizedDescription, privacy: .public)"
+                )
+
+                await MainActor.run {
+                    self.currentNonce = nil
+                    self.isLoading = false
+                    self.errorMessage = message
                 }
             }
         }
@@ -161,13 +227,96 @@ final class LoginScreenViewModel: ObservableObject {
 
     private func handleAuthorizationError(_ error: Error) {
         DispatchQueue.main.async {
+            self.currentNonce = nil
             self.isLoading = false
             if let authError = error as? ASAuthorizationError, authError.code == .canceled {
                 self.errorMessage = nil
             } else {
-                self.errorMessage = error.localizedDescription
+                self.errorMessage = NSLocalizedString(
+                    "login.error.appleAuthorization",
+                    value: "تعذر إكمال تسجيل Apple. حاول مرة ثانية.",
+                    comment: ""
+                )
             }
         }
+    }
+
+    private func appleProfileMetadata(from components: PersonNameComponents?) -> [String: AnyJSON] {
+        guard let components else { return [:] }
+
+        var metadata: [String: AnyJSON] = [:]
+        let formatter = PersonNameComponentsFormatter()
+        let fullName = formatter.string(from: components).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !fullName.isEmpty {
+            metadata["full_name"] = .string(fullName)
+        }
+
+        if let givenName = trimmed(components.givenName) {
+            metadata["given_name"] = .string(givenName)
+        }
+
+        if let familyName = trimmed(components.familyName) {
+            metadata["family_name"] = .string(familyName)
+        }
+
+        return metadata
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func messageForLoginError(_ error: Error) -> String {
+        if let authError = error as? AuthError {
+            switch authError.errorCode {
+            case .unexpectedAudience:
+                return NSLocalizedString(
+                    "login.error.unexpectedAudience",
+                    value: "تعذر ربط تسجيل Apple بالخدمة حالياً. تقدر تكمل بدون حساب مؤقتاً.",
+                    comment: ""
+                )
+            case .requestTimeout, .hookTimeout, .hookTimeoutAfterRetry:
+                return NSLocalizedString(
+                    "login.error.timeout",
+                    value: "صار تأخير بالاتصال. حاول مرة ثانية أو كمل بدون حساب مؤقتاً.",
+                    comment: ""
+                )
+            case .providerDisabled:
+                return NSLocalizedString(
+                    "login.error.providerDisabled",
+                    value: "تسجيل Apple غير متاح حالياً. تقدر تكمل بدون حساب مؤقتاً.",
+                    comment: ""
+                )
+            default:
+                break
+            }
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            return NSLocalizedString(
+                "login.error.network",
+                value: "ما قدرنا نوصل للخدمة. تأكد من الإنترنت أو كمل بدون حساب مؤقتاً.",
+                comment: ""
+            )
+        }
+
+        return NSLocalizedString(
+            "login.error.supabase",
+            value: "فشل تسجيل الدخول. حاول مرة ثانية أو كمل بدون حساب مؤقتاً.",
+            comment: ""
+        )
+    }
+
+    private func errorCodeDescription(for error: Error) -> String {
+        guard let authError = error as? AuthError else {
+            return "unknown"
+        }
+
+        return authError.errorCode.rawValue
     }
 }
 

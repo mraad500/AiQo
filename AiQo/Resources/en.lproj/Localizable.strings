@@ -1693,6 +1693,24 @@
 "smartwake.result" = "Result";
 "smartwake.bestBalance" = "Best balance";
 "smartwake.cyclesFormat" = "%d cycles";
+"smartwake.mode.fromBedtime" = "From bedtime";
+"smartwake.mode.fromWakeTime" = "From wake time";
+"smartwake.window.minutesFormat" = "%d min";
+"smartwake.confidenceLevel.high" = "High confidence";
+"smartwake.confidenceLevel.good" = "Good confidence";
+"smartwake.confidenceLevel.medium" = "Moderate confidence";
+"smartwake.confidenceLevel.limited" = "Limited confidence";
+"smartwake.badge.best" = "Best";
+"smartwake.badge.balanced" = "Balanced";
+"smartwake.badge.light" = "Lighter";
+"smartwake.explanation.bedtime.best" = "This time lands closest to the end of a full sleep cycle and gives you a more comfortable sleep duration.";
+"smartwake.explanation.bedtime.balanced" = "This option balances sleep duration with a realistic morning schedule.";
+"smartwake.explanation.bedtime.early" = "A decent option if you need to wake up earlier than usual.";
+"smartwake.explanation.bedtime.short" = "This sleep duration is shorter than ideal, so it is best used only when necessary.";
+"smartwake.explanation.wake.withinWindow" = "This option falls inside your smart wake window and aligns with the estimated sleep cycles.";
+"smartwake.explanation.wake.light" = "This is a lighter timing option, but it is less ideal for recovery.";
+"smartwake.explanation.wake.outsideWindow" = "This wake time matches a likely cycle ending, but it sits outside your current wake window.";
+"smartwake.explanation.fallback" = "No full sleep-cycle finish landed inside your chosen window, so we used your latest allowed wake time.";
 
 /* ─── Alarm Setup ─── */
 "alarm.setWake" = "Set wake alarm";
@@ -2231,6 +2249,15 @@
 "captainPersonalization.continue" = "Continue";
 "captainPersonalization.errorTitle" = "Couldn’t Save";
 "captainPersonalization.saveError" = "Something went wrong while saving your preferences. Please try again.";
+"captainPersonalization.stepCounter" = "Step %d of %d";
+"captainPersonalization.progress.preferences" = "Goals & Preferences";
+"captainPersonalization.progress.sleep" = "Sleep & Alarm";
+"captainPersonalization.sleepStepTitle" = "Set Up Smart Sleep";
+"captainPersonalization.sleepStepSubtitle" = "Set your bedtime and wake time so AiQo can recommend the best wake window and save your alarm.";
+"captainPersonalization.sleepStepHelper" = "The earlier you set your sleep rhythm, the smarter Captain becomes with recovery, reminders, and morning nudges.";
+"captainPersonalization.next" = "Next";
+"captainPersonalization.back" = "Back";
+"captainPersonalization.finish" = "Save & Continue";
 "captainPersonalization.goal.loseWeight" = "Lose Weight";
 "captainPersonalization.goal.gainWeight" = "Gain Weight";
 "captainPersonalization.goal.cutFat" = "Cut Fat";
