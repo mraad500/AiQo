@@ -462,7 +462,7 @@ final class CaptainViewModel: ObservableObject {
 
             currentWorkoutPlan = validated.workoutPlan
             currentMealPlan = validated.mealPlan
-            quickReplies = validated.quickReplies ?? []
+            quickReplies = screenContext == .sleepAnalysis ? [] : (validated.quickReplies ?? [])
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
             let assistantReply = validated.message
@@ -889,6 +889,19 @@ private extension CaptainViewModel {
                 #if DEBUG
                 print("⚠️ CaptainViewModel.validateResponse — English ratio \(String(format: "%.0f", ratio * 100))% in Arabic mode. Triggering generic fallback.")
                 #endif
+                if screenContext == .sleepAnalysis {
+                    return CaptainStructuredResponse(
+                        message: localizedFallbackMessage(
+                            arabic: "ما طلع تحليل النوم مضبوط هالمرة. أعدها حتى أطلعلك حكم أوضح على نومك.",
+                            english: "The sleep analysis did not come back cleanly this time. Try again and I will give you a clearer read."
+                        ),
+                        quickReplies: nil,
+                        workoutPlan: nil,
+                        mealPlan: nil,
+                        spotifyRecommendation: nil
+                    )
+                }
+
                 return CaptainStructuredResponse(
                     message: CaptainFallbackPolicy.genericArabicFallback(),
                     quickReplies: ["شنو هدفك اليوم؟", "حلل نومي", "سوّيلي وجبة"],

@@ -18,6 +18,20 @@ final class SleepAnalysisQualityEvaluatorTests: XCTestCase {
         XCTAssertFalse(evaluator.isUseful(message: message, session: session))
     }
 
+    func testRejectsGenericWellnessReplyWithoutSleepEvidence() {
+        let session = SleepSession(
+            totalSleep: 5 * 60 * 60 + 53 * 60,
+            deepSleep: 44 * 60,
+            remSleep: 51 * 60,
+            coreSleep: 238 * 60,
+            awake: 21 * 60
+        )
+
+        let message = "محمد، النوم كلش مهم حتى جسمك يرتاح ويسترجع طاقته."
+
+        XCTAssertFalse(evaluator.isUseful(message: message, session: session))
+    }
+
     func testAcceptsSpecificSleepReplyWithVerdictImpactAndAction() {
         let session = SleepSession(
             totalSleep: 5 * 60 * 60 + 53 * 60,

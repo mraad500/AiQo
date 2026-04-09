@@ -13,6 +13,7 @@ struct BrainOrchestrator: Sendable {
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "BrainOrchestrator"
     )
+    private let sleepQualityEvaluator = SleepAnalysisQualityEvaluator()
 
     private let localService: LocalBrainService
     private let cloudService: CloudBrainService
@@ -48,7 +49,11 @@ struct BrainOrchestrator: Sendable {
             baseReply = await processCloudRoute(request: routedRequest, userName: userName)
         }
 
-        return personalizeReply(baseReply, userName: userName)
+        return personalizeReply(
+            baseReply,
+            userName: userName,
+            screenContext: routedRequest.screenContext
+        )
     }
 
     func startStreamingReply(
@@ -133,12 +138,12 @@ private extension BrainOrchestrator {
         userName: String?
     ) async -> HybridBrainServiceReply {
         switch error {
-        case .modelUnavailable(let sleepSummary, let session):
+        case .modelUnavailable(_, let session):
             // Apple Intelligence unavailable → try cloud with aggregated summary → computed fallback
             do {
                 return try await generateCloudSleepReply(
                     originalRequest: request,
-                    sleepSummary: sleepSummary,
+                    session: session,
                     userName: userName
                 )
             } catch {
@@ -148,22 +153,21 @@ private extension BrainOrchestrator {
 
         case .emptyResponse(let session):
             do {
-                let summary = sleepAgent.buildArabicSummary(for: session)
                 return try await generateCloudSleepReply(
                     originalRequest: request,
-                    sleepSummary: summary,
+                    session: session,
                     userName: userName
                 )
             } catch {
                 logger.error("cloud_sleep_fallback_failed error=\(error.localizedDescription, privacy: .public)")
                 return makeComputedSleepReply(session: session, language: request.language)
             }
-        case .lowQualityResponse(let sleepSummary, let session, let message):
+        case .lowQualityResponse(_, let session, let message):
             logger.notice("sleep_agent_low_quality_fallback message=\(message, privacy: .public)")
             do {
                 return try await generateCloudSleepReply(
                     originalRequest: request,
-                    sleepSummary: sleepSummary,
+                    session: session,
                     userName: userName
                 )
             } catch {
@@ -240,27 +244,66 @@ private extension BrainOrchestrator {
 
     func generateCloudSleepReply(
         originalRequest: HybridBrainRequest,
-        sleepSummary: String,
+        session: SleepSession,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
-        let sleepUserMessage = buildCloudSleepPrompt(
+        let sleepSummary = buildCloudSleepSummary(
+            for: session,
+            language: originalRequest.language
+        )
+        let primaryPrompt = buildCloudSleepPrompt(
             language: originalRequest.language,
             lastUserMessage: latestUserMessage(in: originalRequest),
-            sleepSummary: sleepSummary
+            sleepSummary: sleepSummary,
+            isRetry: false
+        )
+        let primaryReply = try await cloudService.generateReply(
+            request: makeCloudSleepRequest(
+                originalRequest: originalRequest,
+                prompt: primaryPrompt
+            ),
+            userName: userName
         )
 
-        var modifiedConversation = originalRequest.conversation
-        if let lastUserIndex = modifiedConversation.lastIndex(where: { $0.role == .user }) {
-            modifiedConversation[lastUserIndex] = CaptainConversationMessage(
-                role: .user,
-                content: sleepUserMessage
+        guard sleepQualityEvaluator.isUseful(message: primaryReply.message, session: session) else {
+            logger.notice("cloud_sleep_low_quality_primary")
+
+            let retryPrompt = buildCloudSleepPrompt(
+                language: originalRequest.language,
+                lastUserMessage: latestUserMessage(in: originalRequest),
+                sleepSummary: sleepSummary,
+                isRetry: true
             )
-        } else {
-            modifiedConversation.append(CaptainConversationMessage(role: .user, content: sleepUserMessage))
+            let retryReply = try await cloudService.generateReply(
+                request: makeCloudSleepRequest(
+                    originalRequest: originalRequest,
+                    prompt: retryPrompt
+                ),
+                userName: userName
+            )
+
+            guard sleepQualityEvaluator.isUseful(message: retryReply.message, session: session) else {
+                logger.notice("cloud_sleep_low_quality_retry")
+                return makeComputedSleepReply(session: session, language: originalRequest.language)
+            }
+
+            return retryReply
         }
 
-        let cloudRequest = HybridBrainRequest(
-            conversation: modifiedConversation,
+        return primaryReply
+    }
+
+    func makeCloudSleepRequest(
+        originalRequest: HybridBrainRequest,
+        prompt: String
+    ) -> HybridBrainRequest {
+        HybridBrainRequest(
+            conversation: [
+                CaptainConversationMessage(
+                    role: .user,
+                    content: prompt
+                )
+            ],
             screenContext: .sleepAnalysis,
             language: originalRequest.language,
             contextData: originalRequest.contextData,
@@ -269,8 +312,6 @@ private extension BrainOrchestrator {
             workingMemorySummary: originalRequest.workingMemorySummary,
             attachedImageData: nil
         )
-
-        return try await cloudService.generateReply(request: cloudRequest, userName: userName)
     }
 
     // MARK: - Computed Sleep Reply (fully on-device, no AI)
@@ -281,7 +322,8 @@ private extension BrainOrchestrator {
     ) -> HybridBrainServiceReply {
         let message = sleepAgent.availabilityFallback(
             for: session,
-            reasonDescription: "cloud_and_local_unavailable"
+            reasonDescription: "cloud_and_local_unavailable",
+            language: language
         )
         let sanitizedMessage = CaptainPersonaBuilder.sanitizeResponse(message)
         let structuredResponse = CaptainStructuredResponse(message: sanitizedMessage)
@@ -382,10 +424,13 @@ private extension BrainOrchestrator {
 
     func personalizeReply(
         _ reply: HybridBrainServiceReply,
-        userName: String?
+        userName: String?,
+        screenContext: ScreenContext
     ) -> HybridBrainServiceReply {
         let personalizedMessage: String
-        if let userName, !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if screenContext == .sleepAnalysis {
+            personalizedMessage = reply.message
+        } else if let userName, !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             personalizedMessage = sanitizer.injectUserName(into: reply.message, userName: userName)
         } else {
             personalizedMessage = reply.message
@@ -393,7 +438,7 @@ private extension BrainOrchestrator {
 
         let structuredResponse = CaptainStructuredResponse(
             message: personalizedMessage,
-            quickReplies: reply.quickReplies,
+            quickReplies: screenContext == .sleepAnalysis ? nil : reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation
@@ -427,7 +472,8 @@ private extension BrainOrchestrator {
     func buildCloudSleepPrompt(
         language: AppLanguage,
         lastUserMessage: String,
-        sleepSummary: String
+        sleepSummary: String,
+        isRetry: Bool
     ) -> String {
         let userQuestion = lastUserMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? (language == .arabic ? "حلل نومي." : "Analyze my sleep.")
@@ -436,44 +482,107 @@ private extension BrainOrchestrator {
         if language == .english {
             return """
             Analyze the user's sleep using ONLY the following aggregated data.
+            \(isRetry ? "Your previous analysis was too generic. Rewrite it with concrete evidence from the data below." : "")
 
-            User question:
+            Original user question:
             \(userQuestion)
 
             Sleep data:
             \(sleepSummary)
 
-            Write exactly 3 short English sentences:
-            1. Give a clear verdict: good, average, or poor sleep, and say why.
-            2. Mention the most important number or sleep stage and what it means for recovery, focus, or energy.
-            3. Give one practical action for tonight.
+            Return JSON only in this exact shape:
+            {"message":"...","quickReplies":null,"workoutPlan":null,"mealPlan":null,"spotifyRecommendation":null}
+
+            Message rules:
+            1. Write exactly 4 short English sentences.
+            2. Sentence 1: clear verdict (good, average, or poor) and why.
+            3. Sentence 2: explain deep sleep % and core sleep % using the real numbers, and what they mean for physical recovery.
+            4. Sentence 3: explain REM sleep % using the real number, and mention awake time only if it adds value for focus, mood, or mental recovery.
+            5. Sentence 4: end with one practical action for tonight specifically to improve sleep-stage quality.
 
             Rules:
             - Use only the provided numbers.
-            - Be direct and useful, not vague.
+            - Be direct, specific, and useful.
             - If total sleep is under 7 hours, say clearly that it is not enough.
+            - Generic replies like "sleep is important" or "your body needs rest" are failures.
+            - Mention stage percentages explicitly when stage data exists.
+            - Do not mention any number that is not present in the data.
             """
         }
 
         return """
         حلل نوم المستخدم اعتماداً على البيانات التالية فقط.
+        \(isRetry ? "تحليلك السابق كان عام وضعيف. أعد كتابته بصورة أدق واعتمد على الأرقام نفسها فقط." : "")
 
-        سؤال المستخدم:
+        سؤال المستخدم الأصلي:
         \(userQuestion)
 
         بيانات النوم:
         \(sleepSummary)
 
-        اكتب 3 جمل قصيرة بالعراقي:
-        1. احكم بصراحة إذا النوم زين لو متوسط لو مو زين وليش.
-        2. اذكر أهم رقم أو مرحلة نوم وشنو معناها على التعافي أو التركيز أو الطاقة.
-        3. أعطِ خطوة وحدة عملية يسويها الليلة.
+        أرجع JSON فقط بهذا الشكل:
+        {"message":"...","quickReplies":null,"workoutPlan":null,"mealPlan":null,"spotifyRecommendation":null}
+
+        قواعد حقل message:
+        1. اكتب بالضبط 4 جمل قصيرة بالعراقي.
+        2. الجملة الأولى: احكم بصراحة إذا النوم زين لو متوسط لو مو زين وليش.
+        3. الجملة الثانية: اشرح نسبة النوم العميق ونسبة النوم الأساسي من البيانات وشنو تعني على التعافي الجسدي.
+        4. الجملة الثالثة: اشرح نسبة REM من البيانات، واذكر الاستيقاظ إذا كان مؤثر على التركيز أو المزاج.
+        5. الجملة الرابعة: اختم بنصيحة وحدة عملية مخصوصة لتحسين جودة مراحل النوم الليلة.
 
         قواعد:
         - استخدم الأرقام الموجودة فقط.
-        - لا تكن عام ولا ضبابي.
+        - كن واضح ومحدد، مو عام.
         - إذا النوم أقل من 7 ساعات كولها بوضوح إنه مو كافي.
+        - الردود العامة مثل "النوم مهم" أو "جسمك يحتاج راحة" تعتبر فشل.
+        - إذا موجودة بيانات مراحل النوم، لازم تذكر نسب المراحل بشكل صريح.
+        - ممنوع تذكر أي رقم مو موجود بالبيانات.
         """
+    }
+
+    func buildCloudSleepSummary(
+        for session: SleepSession,
+        language: AppLanguage
+    ) -> String {
+        let totalHours = session.totalMinutes / 60
+        let totalMinutes = session.totalMinutes % 60
+        let deepPercent = String(format: "%.1f", session.deepPercentage)
+        let corePercent = String(format: "%.1f", session.corePercentage)
+        let remPercent = String(format: "%.1f", session.remPercentage)
+
+        if language == .english {
+            var parts = [
+                "Total sleep: \(totalHours)h \(totalMinutes)m. Recommended range: 7-9h."
+            ]
+
+            if session.deepMinutes > 0 || session.remMinutes > 0 || session.coreMinutes > 0 {
+                parts.append("Deep sleep: \(session.deepMinutes) minutes (\(deepPercent)%). Recommended: 15-25%.")
+                parts.append("Core sleep: \(session.coreMinutes) minutes (\(corePercent)%). Typical range: about 45-55%.")
+                parts.append("REM sleep: \(session.remMinutes) minutes (\(remPercent)%). Recommended: 20-25%.")
+            }
+
+            if session.awakeMinutes > 0 {
+                parts.append("Awake during the night: \(session.awakeMinutes) minutes.")
+            }
+
+            return parts.joined(separator: "\n")
+        }
+
+        var parts = [
+            "إجمالي النوم: \(totalHours) ساعة و\(totalMinutes) دقيقة. المدى الموصى به: 7-9 ساعات."
+        ]
+
+        if session.deepMinutes > 0 || session.remMinutes > 0 || session.coreMinutes > 0 {
+            parts.append("النوم العميق: \(session.deepMinutes) دقيقة (\(deepPercent)٪). الموصى به: 15-25٪.")
+            parts.append("النوم الأساسي: \(session.coreMinutes) دقيقة (\(corePercent)٪). الطبيعي تقريباً 45-55٪.")
+            parts.append("نوم REM: \(session.remMinutes) دقيقة (\(remPercent)٪). الموصى به: 20-25٪.")
+        }
+
+        if session.awakeMinutes > 0 {
+            parts.append("الاستيقاظ أثناء الليل: \(session.awakeMinutes) دقيقة.")
+        }
+
+        return parts.joined(separator: "\n")
     }
 
     func encode(_ response: CaptainStructuredResponse) throws -> String {

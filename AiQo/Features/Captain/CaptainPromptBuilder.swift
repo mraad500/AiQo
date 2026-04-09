@@ -15,7 +15,7 @@ struct CaptainPromptBuilder: Sendable {
         let firstName = extractFirstName(from: request.userProfileSummary)
 
         return [
-            layerIdentity(language: request.language, firstName: firstName),
+            layerIdentity(language: request.language, firstName: firstName, screenContext: request.screenContext),
             layerStableProfile(profileSummary: request.userProfileSummary),
             layerWorkingMemory(
                 workingMemorySummary: request.workingMemorySummary,
@@ -32,7 +32,11 @@ struct CaptainPromptBuilder: Sendable {
 
     // MARK: - Layer 1: Identity (Elite AI Mentor — Iraqi Arabic Dialect)
 
-    private func layerIdentity(language: AppLanguage, firstName: String?) -> String {
+    private func layerIdentity(
+        language: AppLanguage,
+        firstName: String?,
+        screenContext: ScreenContext
+    ) -> String {
         if language == .english {
             var persona = """
             === IDENTITY ===
@@ -51,6 +55,7 @@ struct CaptainPromptBuilder: Sendable {
             4. When coaching, be specific and actionable — not vague. "Do 3 sets of squats" beats "try some exercise."
             5. Use humor when it lands naturally. Iraqi sarcasm is welcome. Forced positivity is not.
             6. If you don't know something, say so. Authenticity > appearing omniscient.
+            \(screenContext == .sleepAnalysis ? "7. In sleep analysis mode, concrete evidence beats vibe. Mention a real sleep number or stage when available. Generic lines like \"sleep is important\" are failures." : "")
 
             === VARIABLE MASKING ===
             You receive internal system variables (bio-phases, vibe names, stage titles, step counts, HR zones, etc.) for context calibration ONLY.
@@ -106,6 +111,7 @@ struct CaptainPromptBuilder: Sendable {
         4. لمّا تنصح، كن محدد وعملي — "سوّي 3 جولات سكوات" أحسن من "جرّب تتمرن."
         5. استخدم الفكاهة لمّا تجي طبيعية. السخرية العراقية مرحّب بيها.
         6. إذا ما تدري شي، كول ما أدري.
+        \(screenContext == .sleepAnalysis ? "7. إذا الطلب تحليل نوم، لازم تبني الرد على رقم نوم حقيقي أو مرحلة نوم حقيقية إذا موجودة. الرد العام مثل \"النوم مهم\" يعتبر فشل." : "")
 
         === حجب المتغيرات ===
         تستلم متغيرات نظام داخلية (مراحل بيولوجية، عناوين vibe، مستويات نمو، خطوات، مناطق قلب).
@@ -292,9 +298,19 @@ struct CaptainPromptBuilder: Sendable {
             """
         case .sleepAnalysis:
             return language == .arabic ? """
-            المستخدم يراجع نومه. ميّل للاستشفاء ونبرة هادئة.
+            هذا وضع تحليل نوم صارم.
+            ابنِ الرد على بيانات النوم الموجودة بالمحادثة فقط.
+            لازم تذكر نسبة النوم العميق ونسبة النوم الأساسي ونسبة REM إذا كانت موجودة.
+            الرد العام أو النصائح الضبابية بدون دليل تعتبر فشل.
+            اختم دائماً بنصيحة لتحسين جودة مراحل النوم.
+            ميّل للاستشفاء ونبرة هادئة.
             """ : """
-            Sleep review. Bias toward recovery, wind-down advice, and gentle tone.
+            This is strict sleep analysis mode.
+            Base the reply only on the sleep data already present in the conversation.
+            You must mention deep, core, and REM sleep percentages when available.
+            Generic recovery advice without evidence is a failure.
+            Always end with one action to improve sleep-stage quality.
+            Bias toward recovery, wind-down advice, and a gentle tone.
             """
         case .peaks:
             return language == .arabic ? """
@@ -319,6 +335,12 @@ struct CaptainPromptBuilder: Sendable {
         let myVibeRule = screenContext == .myVibe
             ? "\n- spotifyRecommendation MUST NOT be null when user asks for music/playlist/vibe."
             : ""
+        let sleepRuleArabic = screenContext == .sleepAnalysis
+            ? "\n- في sleepAnalysis: quickReplies لازم تكون null وmessage لازم تكون 4 جمل قصيرة بالضبط: حكم عام، نسب العميق/الأساسي، نسبة REM وتأثيرها، وبعدها نصيحة لتحسين جودة مراحل النوم."
+            : ""
+        let sleepRuleEnglish = screenContext == .sleepAnalysis
+            ? "\n- In sleepAnalysis: quickReplies must be null and message must be exactly 4 short sentences: overall verdict, deep/core percentages, REM impact, then one sleep-stage quality action."
+            : ""
 
         if language == .arabic {
             return """
@@ -335,7 +357,7 @@ struct CaptainPromptBuilder: Sendable {
 
             قواعد:
             - message: ردك الطبيعي بالعراقي. لازم يكون بشري ١٠٠٪ عراقي.
-            - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.
+            - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.\(sleepRuleArabic)
             - workoutPlan: null إلا إذا طلب تمرين.
             - mealPlan: null إلا إذا طلب أكل.
             - spotifyRecommendation: null إلا إذا طلب موسيقى.\(myVibeRule)
@@ -360,7 +382,7 @@ struct CaptainPromptBuilder: Sendable {
 
         Rules:
         - message: Natural reply in English. Human and conversational.
-        - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.
+        - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.\(sleepRuleEnglish)
         - workoutPlan: null unless user asks for training.
         - mealPlan: null unless user asks for food.
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
