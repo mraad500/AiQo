@@ -28,7 +28,7 @@ struct LegacyCalculationScreenView: View {
                 .padding(.vertical, 20)
             }
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
     }
 
     // MARK: - Intro (Screen 3)

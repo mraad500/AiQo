@@ -134,7 +134,7 @@ struct ProfileSetupView: View {
                 }
             }
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                 appeared = true

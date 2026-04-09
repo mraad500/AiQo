@@ -4,7 +4,7 @@ struct LanguageSelectionView: View {
     let onContinue: () -> Void
 
     @State private var selectedLanguage: AppLanguage = .arabic
-    @State private var appeared = false
+    @State private var appeared = true
 
     var body: some View {
         GeometryReader { geo in
@@ -109,11 +109,7 @@ struct LanguageSelectionView: View {
             }
         }
         .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.2)) {
-                appeared = true
-            }
-        }
+        .onAppear { }
     }
 
 }

@@ -388,7 +388,7 @@ private struct DJCaptainAvatarView: View {
     let size: CGFloat
 
     private var captainImage: UIImage? {
-        UIImage(named: "imageKitchenHamoudi")
+        UIImage(named: "Hammoudi5")
     }
 
     var body: some View {

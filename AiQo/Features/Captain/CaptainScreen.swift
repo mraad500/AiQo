@@ -210,7 +210,7 @@ struct CaptainScreen: View {
                         VStack {
                             Spacer()
 
-                            CaptainAvatar3DView()
+                            CaptainAvatarView()
                                 .frame(height: layout.avatarHeight)
                                 .offset(y: layout.avatarOffset)
                                 .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.avatarOffset)

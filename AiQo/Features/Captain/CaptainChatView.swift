@@ -504,7 +504,7 @@ private struct CaptainChatAvatarView: View {
     let size: CGFloat
 
     private var captainImage: UIImage? {
-        UIImage(named: "imageKitchenHamoudi")
+        UIImage(named: "Hammoudi5")
     }
 
     var body: some View {

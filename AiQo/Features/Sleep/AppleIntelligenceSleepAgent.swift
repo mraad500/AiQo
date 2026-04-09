@@ -293,7 +293,6 @@ extension AppleIntelligenceSleepAgent {
 
         // تحليل المراحل
         if hasStages {
-            let deepRating = stageRating(percentage: session.deepPercentage, ideal: 15...25)
             let remRating = stageRating(percentage: session.remPercentage, ideal: 20...25)
             let coreRating = coreStageRating(percentage: session.corePercentage)
             lines.append("العميق عندك \(formattedPercentage(session.deepPercentage)) من النوم (\(session.deepMinutes) دقيقة) وياه الأساسي \(formattedPercentage(session.corePercentage)) (\(session.coreMinutes) دقيقة)، وهذا يخلي تعافيك \(session.deepPercentage < 15 ? "أضعف من المطلوب" : "أقرب للاستقرار") والأساسي \(coreRating).")

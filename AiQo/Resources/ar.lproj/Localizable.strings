@@ -2293,6 +2293,38 @@
 "lang.arabic" = "عربي";
 "lang.english" = "English";
 "lang.explore" = "استكشف مستواك الحقيقي";
+"lang.exploreSubtitle" = "تتابع الطاقة والذكاء";
+
+/* ─── Login ─── */
+"login.welcome.title" = "أهلاً بيك في AiQo";
+"login.welcome.subtitle" = "أنشئ حسابك حتى نحفظ تقدمك الصحي ونزامن بياناتك بأمان.";
+"login.apple.hint" = "اربط حسابك باستخدام Apple أو كمل بدون حساب مؤقتاً.";
+"login.guest.cta" = "المتابعة بدون حساب";
+"login.guest.hint" = "تقدر تستخدم التطبيق الآن، وتربط حساب Apple لاحقاً إذا احتجت المزامنة.";
+"login.or" = "أو";
+"login.error.invalidAppleToken" = "تعذر قراءة بيانات تسجيل الدخول من Apple.";
+"login.error.appleAuthorization" = "تعذر إكمال تسجيل Apple. حاول مرة ثانية.";
+"login.error.unexpectedAudience" = "تعذر ربط تسجيل Apple بالخدمة حالياً. تقدر تكمل بدون حساب مؤقتاً.";
+"login.error.timeout" = "صار تأخير بالاتصال. حاول مرة ثانية أو كمل بدون حساب مؤقتاً.";
+"login.error.providerDisabled" = "تسجيل Apple غير متاح حالياً. تقدر تكمل بدون حساب مؤقتاً.";
+"login.error.network" = "ما قدرنا نوصل للخدمة. تأكد من الإنترنت أو كمل بدون حساب مؤقتاً.";
+"login.error.supabase" = "فشل تسجيل الدخول. حاول مرة ثانية أو كمل بدون حساب مؤقتاً.";
+
+/* ─── Feature Intro (missing keys) ─── */
+"featureIntro.captainHamoudi" = "كابتن حمّودي";
+"featureIntro.captainSubtitle" = "مدربك الذكي. يعرف جسمك، يفهم أهدافك، ويوجّهك كل يوم بأسلوب يناسبك.";
+"featureIntro.workoutsSubtitle" = "تمارين مصممة لك. تحديات يومية وأسبوعية. ومشاريع لكسر الأرقام القياسية — كلها مع الكابتن.";
+"featureIntro.kitchenSubtitle" = "خطط وجبات ذكية، تصوير الأكل وتحليله، ومتابعة السعرات والبروتين — كل يوم.";
+"featureIntro.workoutsAccessibility" = "رسم توضيحي لتمارين وتحديات وقمم";
+"featureIntro.kitchenAccessibility" = "رسم توضيحي لميزة المطبخ";
+"featureIntro.pageOf" = "صفحة %d من ٣";
+
+/* ─── Smart Wake (missing keys) ─── */
+"smartwake.cycles" = "عدد الدورات";
+"smartwake.expectedDuration" = "مدة النوم المتوقعة";
+"smartwake.confidence" = "مستوى الثقة";
+"smartwake.latestAllowed" = "آخر وقت مسموح";
+"smartwake.cyclesFormat" = "%d دورات";
 
 /* ─── App Settings ─── */
 "settings.coachLang.arabic" = "العربية";

@@ -84,6 +84,7 @@ struct CaptainPersonalizationOnboardingView: View {
         } message: {
             Text(saveErrorMessage ?? "")
         }
+        .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.84)) {
                 appeared = true

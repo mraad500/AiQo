@@ -2294,6 +2294,38 @@
 "lang.arabic" = "Arabic";
 "lang.english" = "English";
 "lang.explore" = "Explore your real level";
+"lang.exploreSubtitle" = "Track your energy and intelligence";
+
+/* ─── Login ─── */
+"login.welcome.title" = "Welcome to AiQo";
+"login.welcome.subtitle" = "Create your account so we can save your health progress and sync your data securely.";
+"login.apple.hint" = "Link your account with Apple or continue without an account temporarily.";
+"login.guest.cta" = "Continue without account";
+"login.guest.hint" = "You can use the app now and link an Apple account later if you need syncing.";
+"login.or" = "or";
+"login.error.invalidAppleToken" = "Could not read Apple sign-in data.";
+"login.error.appleAuthorization" = "Could not complete Apple sign-in. Please try again.";
+"login.error.unexpectedAudience" = "Could not link Apple sign-in to the service right now. You can continue without an account temporarily.";
+"login.error.timeout" = "Connection delayed. Try again or continue without an account temporarily.";
+"login.error.providerDisabled" = "Apple sign-in is currently unavailable. You can continue without an account temporarily.";
+"login.error.network" = "Could not reach the service. Check your internet or continue without an account temporarily.";
+"login.error.supabase" = "Sign-in failed. Try again or continue without an account temporarily.";
+
+/* ─── Feature Intro (missing keys) ─── */
+"featureIntro.captainHamoudi" = "Captain Hamoudi";
+"featureIntro.captainSubtitle" = "Your AI coach. He knows your body, understands your goals, and guides you daily — in a style that fits you.";
+"featureIntro.workoutsSubtitle" = "Workouts designed for you. Daily and weekly challenges. Record-breaking projects — all with the Captain.";
+"featureIntro.kitchenSubtitle" = "Smart meal plans, food photo analysis, and daily calorie & protein tracking.";
+"featureIntro.workoutsAccessibility" = "Workouts, Challenges and Peaks illustration";
+"featureIntro.kitchenAccessibility" = "Kitchen feature illustration";
+"featureIntro.pageOf" = "Page %d of 3";
+
+/* ─── Smart Wake (missing keys) ─── */
+"smartwake.cycles" = "Cycles";
+"smartwake.expectedDuration" = "Expected sleep duration";
+"smartwake.confidence" = "Confidence level";
+"smartwake.latestAllowed" = "Latest allowed";
+"smartwake.cyclesFormat" = "%d cycles";
 
 /* ─── App Settings ─── */
 "settings.coachLang.arabic" = "Arabic";

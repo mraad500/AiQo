@@ -29,7 +29,7 @@ struct LoginScreenView: View {
 
                 // Card
                 AuthFlowCard {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
                         Text(localized("login.welcome.title", fallback: "أهلاً بيك في AiQo"))
                             .font(.system(size: 26, weight: .black, design: .rounded))
                             .multilineTextAlignment(.center)
@@ -42,13 +42,6 @@ struct LoginScreenView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 8)
-
-                        Text(localized(
-                            "login.apple.hint",
-                            fallback: "اربط حسابك باستخدام Apple أو كمل بدون حساب مؤقتاً."
-                        ))
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(AuthFlowTheme.mint)
 
                         SignInWithAppleButton(.continue) { request in
                             viewModel.prepareAppleSignInRequest(request)
@@ -73,10 +66,36 @@ struct LoginScreenView: View {
                                 .multilineTextAlignment(.center)
                         }
 
-                        AuthSecondaryButton(
-                            title: localized("login.guest.cta", fallback: "المتابعة بدون حساب"),
-                            action: viewModel.continueWithoutAccount
-                        )
+                        // ── Divider ──
+                        HStack(spacing: 12) {
+                            Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
+                            Text(localized("login.or", fallback: "أو"))
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
+                        }
+
+                        // ── Guest button — prominent ──
+                        Button(action: viewModel.continueWithoutAccount) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text(localized("login.guest.cta", fallback: "المتابعة بدون حساب"))
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                            }
+                            .foregroundStyle(Color(hex: "0E3A2B"))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(AuthFlowTheme.mint.opacity(0.25))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(AuthFlowTheme.mint.opacity(0.5), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
                         .disabled(viewModel.isLoading)
                         .opacity(viewModel.isLoading ? 0.55 : 1.0)
 
@@ -97,7 +116,7 @@ struct LoginScreenView: View {
                 Spacer()
             }
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
         .onAppear {
             viewModel.onLoginSuccess = {
                 AppFlowController.shared.didLoginSuccessfully()
