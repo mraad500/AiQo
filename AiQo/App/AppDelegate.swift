@@ -18,6 +18,7 @@ struct AiQoApp: App {
     private let captainContainer: ModelContainer = {
         let schema = Schema([
             CaptainMemory.self,
+            CaptainPersonalizationProfile.self,
             PersistentChatMessage.self,
             RecordProject.self,
             WeeklyLog.self
@@ -54,6 +55,7 @@ struct AiQoApp: App {
     init() {
         // ربط الـ stores بالـ container
         MemoryStore.shared.configure(container: captainContainer)
+        CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
 
         // تنظيف الذكريات القديمة
@@ -132,6 +134,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             && UserDefaults.standard.bool(forKey: "didShowFirstAuthScreen")
             && UserDefaults.standard.bool(forKey: "didCompleteDatingProfile")
             && UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation")
+            && (UserDefaults.standard.bool(forKey: "didCompleteCaptainPersonalization")
+                || UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro"))
             && UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro")
         if didCompleteOnboarding {
             HealthKitService.permissionFlowEnabled = true
@@ -179,6 +183,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             && UserDefaults.standard.bool(forKey: "didShowFirstAuthScreen")
             && UserDefaults.standard.bool(forKey: "didCompleteDatingProfile")
             && UserDefaults.standard.bool(forKey: "didCompleteLegacyCalculation")
+            && (UserDefaults.standard.bool(forKey: "didCompleteCaptainPersonalization")
+                || UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro"))
             && UserDefaults.standard.bool(forKey: "didCompleteFeatureIntro")
         if allOnboardingDone {
             HealthKitService.permissionFlowEnabled = true

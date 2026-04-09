@@ -7,7 +7,7 @@ final class IngredientAssetLibraryTests: XCTestCase {
 
         XCTAssertTrue(
             missing.isEmpty,
-            "Missing Food_photos imagesets for ingredient mappings: \(missing.joined(separator: \", \"))"
+            "Missing Food_photos imagesets for ingredient mappings: \(missing.joined(separator: ", "))"
         )
     }
 }

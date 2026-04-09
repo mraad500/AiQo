@@ -106,14 +106,17 @@ struct PrivacySanitizer: Sendable {
             ? sanitizeKitchenImageData(request.attachedImageData)
             : nil
 
-        let safeProfile = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeIntent = sanitizeText(request.intentSummary, knownUserName: knownUserName)
+        let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return HybridBrainRequest(
             conversation: sanitizedConversation,
             screenContext: request.screenContext,
             language: request.language,
             contextData: sanitizedContext,
-            userProfileSummary: safeProfile,
+            userProfileSummary: "",
+            intentSummary: safeIntent,
+            workingMemorySummary: safeWorkingMemory,
             attachedImageData: sanitizedImageData
         )
     }

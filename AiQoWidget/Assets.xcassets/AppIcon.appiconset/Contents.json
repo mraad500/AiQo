@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "WidgetAppIcon-1024.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "1x",

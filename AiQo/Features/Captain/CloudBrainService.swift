@@ -41,11 +41,17 @@ struct CloudBrainService: Sendable {
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
+        let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
+
         // Single MainActor hop — fetch both values at once to minimize main-thread contention
         let (activeTier, cloudSafeMemories) = await MainActor.run {
             let tier = AccessManager.shared.activeTier
             let budget = tier == .intelligencePro ? 700 : 400
-            let memories = MemoryStore.shared.buildCloudSafeContext(maxTokens: budget)
+            let memories = MemoryStore.shared.buildCloudSafeRelevantContext(
+                for: latestUserMessage,
+                screenContext: request.screenContext,
+                maxTokens: budget
+            )
             return (tier, memories)
         }
 

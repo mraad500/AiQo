@@ -303,8 +303,8 @@ struct LegacyCalculationScreenView: View {
                 // Go home button
                 Button { viewModel.goHome() } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: "house.fill")
-                        Text(NSLocalizedString("legacy.goHome", value: "الذهاب إلى الرئيسية", comment: ""))
+                        Image(systemName: "arrow.left.circle.fill")
+                        Text(NSLocalizedString("legacy.result.continue", value: "كمّل إعدادك", comment: ""))
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(.white)

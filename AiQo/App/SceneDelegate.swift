@@ -5,12 +5,13 @@ import Auth
 import HealthKit
 import Combine
 
-private enum OnboardingKeys {
+enum OnboardingKeys {
     static let didCompleteLegacyCalculation = "didCompleteLegacyCalculation"
+    static let didCompleteCaptainPersonalization = "didCompleteCaptainPersonalization"
     static let didCompleteFeatureIntro = "didCompleteFeatureIntro"
     static let didShowFirstAuthScreen = "didShowFirstAuthScreen"
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
-static let didSelectLanguage = "didSelectLanguage"
+    static let didSelectLanguage = "didSelectLanguage"
 }
 
 @MainActor
@@ -22,6 +23,7 @@ final class AppFlowController: ObservableObject {
         case login
         case profileSetup
         case legacy
+        case captainPersonalization
         case featureIntro
         case main
     }
@@ -61,7 +63,7 @@ final class AppFlowController: ObservableObject {
     func finishOnboardingWithoutAdditionalPermissions() {
         Task { @MainActor in
             // User chose to skip — don't prompt for FamilyControls or HealthKit permissions
-            finalizeOnboarding()
+            finalizeLegacyStep()
         }
     }
 
@@ -71,7 +73,7 @@ final class AppFlowController: ObservableObject {
             await requestFullHealthKitPermissions()
             requestNotificationAuthorizationIfNeeded()
             await protectionModel.requestAuthorization()
-            finalizeOnboarding()
+            finalizeLegacyStep()
 
             // Start HealthKit-dependent services now that onboarding is complete
             // and permissions have been granted (deferred from AppDelegate for new users).
@@ -88,10 +90,15 @@ final class AppFlowController: ObservableObject {
         finishOnboardingRequestingPermissions()
     }
 
-    private func finalizeOnboarding() {
-            UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
-            FreeTrialManager.shared.startTrialIfNeeded()
-            transition(to: .featureIntro)
+    private func finalizeLegacyStep() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
+        FreeTrialManager.shared.startTrialIfNeeded()
+        transition(to: .captainPersonalization)
+    }
+
+    func didCompleteCaptainPersonalization() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
+        transition(to: .featureIntro)
     }
 
     func didCompleteFeatureIntro() {
@@ -147,6 +154,7 @@ final class AppFlowController: ObservableObject {
             try? await SupabaseService.shared.client.auth.signOut()
 
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteLegacyCalculation)
+            UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteFeatureIntro)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteDatingProfile)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didShowFirstAuthScreen)
@@ -177,6 +185,9 @@ final class AppFlowController: ObservableObject {
         let didShowFirstAuthScreen = UserDefaults.standard.bool(forKey: OnboardingKeys.didShowFirstAuthScreen)
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
+        let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
+        let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
+            || didCompleteFeatureIntro
 
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
@@ -201,7 +212,10 @@ final class AppFlowController: ObservableObject {
             return .legacy
         }
 
-        let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
+        if !didCompleteCaptainPersonalization {
+            return .captainPersonalization
+        }
+
         if !didCompleteFeatureIntro {
             return .featureIntro
         }
@@ -213,6 +227,8 @@ final class AppFlowController: ObservableObject {
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
+        let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
+            || didCompleteFeatureIntro
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -220,6 +236,10 @@ final class AppFlowController: ObservableObject {
 
         if !didCompleteLegacyCalculation {
             return .legacy
+        }
+
+        if !didCompleteCaptainPersonalization {
+            return .captainPersonalization
         }
 
         if !didCompleteFeatureIntro {
@@ -277,6 +297,9 @@ struct AppRootView: View {
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .legacy:
             LegacyCalculationScreenView()
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .captainPersonalization:
+            CaptainPersonalizationOnboardingView()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .featureIntro:
             FeatureIntroView {

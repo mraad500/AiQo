@@ -22,6 +22,8 @@ struct HybridBrainRequest: Sendable {
     let language: AppLanguage
     let contextData: CaptainContextData
     let userProfileSummary: String
+    let intentSummary: String
+    let workingMemorySummary: String
     let attachedImageData: Data?
 
     var hasAttachedImage: Bool { attachedImageData != nil }
