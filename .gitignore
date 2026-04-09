@@ -2,10 +2,22 @@
 **/.DS_Store
 AiQo.xcodeproj/**/xcuserdata/
 build/
+DerivedData/
 
-# Local build secrets
+# Local build secrets — never commit real API keys
 Configuration/Secrets.xcconfig
 *.xcconfig.local
+.env
+.env.*
+
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
 
 # Local Codex/Claude worktrees should not be tracked by the app repo.
 .claude/worktrees/
