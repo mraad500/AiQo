@@ -249,7 +249,6 @@ struct CaptainScreen: View {
         }
         .fontDesign(.rounded)
         .onTapGesture { hideKeyboard() }
-        .gesture(DragGesture().onChanged { _ in hideKeyboard() })
         .aiqoProfileSheet(isPresented: $viewModel.showProfile)
         .sheet(isPresented: $viewModel.showCustomization) {
             CustomizationSheetView(viewModel: viewModel)

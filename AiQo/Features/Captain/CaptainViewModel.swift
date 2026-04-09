@@ -173,7 +173,6 @@ final class CaptainViewModel: ObservableObject {
 
         let stopSteps = perMessageDrop > 0 ? ceil(maxAvatarOffset / perMessageDrop) : 0
         let effectiveSteps = min(messageSteps, stopSteps)
-        let hasStopped = messageSteps >= stopSteps
 
         let chatHeight = min(availableHeight * 0.62, availableHeight * (0.27 + (0.085 * effectiveSteps)))
         let chatStartOffset = -availableHeight * 0.02
@@ -191,7 +190,7 @@ final class CaptainViewModel: ObservableObject {
             chatOffset: chatOffset,
             avatarHeight: avatarHeight,
             avatarOffset: avatarOffset,
-            chatScrollEnabled: hasStopped
+            chatScrollEnabled: true
         )
     }
 
