@@ -71,6 +71,8 @@
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>CAPTAIN_BRAIN_V2_ENABLED</key>
+	<true/>
 	<key>TRIBE_BACKEND_ENABLED</key>
 	<false/>
 	<key>TRIBE_FEATURE_VISIBLE</key>

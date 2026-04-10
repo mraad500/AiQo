@@ -490,6 +490,29 @@ final class SmartNotificationScheduler {
         guard await hasNotificationAuthorization() else { return true }
         guard canSendAutomatedNotificationNow() else { return true }
 
+        // Brain V2: Consult ProactiveEngine for smarter decision
+        if let context = await buildProactiveContext() {
+            let decision = ProactiveEngine.shared.evaluate(context: context)
+            switch decision {
+            case .sendNotification(let content, _, _):
+                do {
+                    try await scheduleLocalNotification(
+                        title: "كابتن حمودي",
+                        body: content,
+                        timeInterval: 2,
+                        notificationType: "coach_nudge"
+                    )
+                    return true
+                } catch {
+                    logger.error("coach_nudge_proactive_failed error=\(error.localizedDescription, privacy: .public)")
+                    // Fall through to legacy path
+                }
+            case .doNothing:
+                return true
+            }
+        }
+
+        // Legacy fallback: if ProactiveContext couldn't be built
         let englishMessage = await simulatedCoachContext()
         guard !Task.isCancelled else { return false }
 
@@ -577,6 +600,30 @@ final class SmartNotificationScheduler {
         guard metrics.stepCount < 3_000 else { return true }
         guard !Task.isCancelled else { return false }
 
+        // Brain V2: Consult ProactiveEngine before sending
+        if let context = await buildProactiveContext() {
+            let decision = ProactiveEngine.shared.evaluate(context: context)
+            switch decision {
+            case .sendNotification(let content, _, _):
+                do {
+                    try await scheduleLocalNotification(
+                        title: "كابتن حمودي",
+                        body: content,
+                        timeInterval: 1,
+                        notificationType: "midday_inactivity"
+                    )
+                    defaults.set(now, forKey: lastBackgroundInactivitySentAtKey)
+                    return true
+                } catch {
+                    logger.error("background_inactivity_proactive_failed error=\(error.localizedDescription, privacy: .public)")
+                    // Fall through to legacy path
+                }
+            case .doNothing:
+                return true
+            }
+        }
+
+        // Legacy fallback
         let body = await notificationComposer.composeInactivityNotification(
             metrics: metrics,
             now: now,
@@ -775,5 +822,126 @@ final class SmartNotificationScheduler {
         let notification = pendingDeveloperNotification
         pendingDeveloperNotification = nil
         return notification
+    }
+
+    // MARK: - Brain V2: ProactiveContext Builder
+
+    private func buildProactiveContext() async -> ProactiveContext? {
+        let metrics: CaptainDailyHealthMetrics
+        do {
+            metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
+        } catch {
+            return nil
+        }
+
+        // Emotional state
+        let emotionalState = EmotionalStateEngine.shared.evaluate(
+            stepsToday: metrics.stepCount,
+            steps7DayAvg: metrics.stepCount,
+            sleepLastNightHours: metrics.sleepHours > 0 ? metrics.sleepHours : nil,
+            sleep7DayAvgHours: nil,
+            restingHeartRate: metrics.averageOrCurrentHeartRateBPM.map { Double($0) },
+            hrvLatest: nil,
+            hrv7DayAvg: nil,
+            lastWorkoutDate: nil,
+            messageLength: nil,
+            messageTimestamp: Date(),
+            userPreferredBedtime: nil,
+            userPreferredWakeTime: nil
+        )
+
+        // User profile from personalization
+        var userName = ""
+        var bedtimeStr = "23:00"
+        var wakeTimeStr = "07:00"
+        var primaryGoal = ""
+        var favoriteSport = ""
+        var preferredWorkoutTime = ""
+
+        let personalization = CaptainPersonalizationStore.shared.currentSnapshot()
+        if let p = personalization {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            bedtimeStr = formatter.string(from: p.bedtime)
+            wakeTimeStr = formatter.string(from: p.wakeTime)
+            primaryGoal = p.primaryGoalRaw
+            favoriteSport = p.favoriteSportRaw
+            preferredWorkoutTime = p.preferredWorkoutTimeRaw
+        }
+
+        // User name from UserDefaults (same key CaptainViewModel uses)
+        userName = UserDefaults.standard.string(forKey: "aiqo.captain.customization.calling")
+            ?? UserDefaults.standard.string(forKey: "aiqo.captain.customization.name")
+            ?? ""
+        if userName.isEmpty {
+            userName = UserProfileStore.shared.current.name
+        }
+
+        // Subscription tier
+        let subscriptionTier: String
+        let trialDay: Int?
+        let trialManager = await MainActor.run { FreeTrialManager.shared }
+        let currentTrialDay = await MainActor.run { trialManager.currentTrialDay }
+
+        if let day = currentTrialDay {
+            subscriptionTier = "trial"
+            trialDay = day
+        } else {
+            trialDay = nil
+            let entitlement = await MainActor.run {
+                StoreKitEntitlementProvider().snapshot()
+            }
+            if entitlement.hasIntelligenceProAccess {
+                subscriptionTier = "intelligence_pro"
+            } else if entitlement.hasTribeAccess {
+                subscriptionTier = "core"
+            } else {
+                subscriptionTier = "none"
+            }
+        }
+
+        // Notification history from ConversationThread
+        let (sentToday, lastTime, lastOpened, dismissedCount) = await MainActor.run {
+            let manager = ConversationThreadManager.shared
+            let todayNotifs = manager.recentNotifications(withinHours: 24)
+            let sentCount = todayNotifs.filter { $0.entryType == ThreadEntryType.notification.rawValue }.count
+            let lastNotifTime = todayNotifs.first?.timestamp
+            let lastWasOpened: Bool? = {
+                guard let last = todayNotifs.first else { return nil }
+                return last.entryType == ThreadEntryType.notificationOpened.rawValue
+            }()
+            let recentEntries = manager.recentEntries(limit: 5)
+            let dismissed = recentEntries.filter { $0.entryType == ThreadEntryType.notificationDismissed.rawValue }.count
+            return (sentCount, lastNotifTime, lastWasOpened, dismissed)
+        }
+
+        // Step goal from daily record or default
+        let stepGoal = 10_000
+
+        return ProactiveContext(
+            emotionalState: emotionalState,
+            trendSnapshot: nil,
+            notificationsSentToday: sentToday,
+            lastNotificationTime: lastTime,
+            lastNotificationWasOpened: lastOpened,
+            recentDismissedCount: dismissedCount,
+            stepsToday: metrics.stepCount,
+            stepGoal: stepGoal,
+            caloriesBurnedToday: metrics.activeEnergyKilocalories,
+            calorieGoal: 500,
+            waterIntakePercent: 0.5,
+            ringCompletion: Double(metrics.stepCount) / Double(stepGoal),
+            isCurrentlyWorkingOut: false,
+            lastWorkoutEndedAt: nil,
+            userName: userName,
+            primaryGoal: primaryGoal,
+            favoriteSport: favoriteSport,
+            preferredWorkoutTime: preferredWorkoutTime,
+            bedtime: bedtimeStr,
+            wakeTime: wakeTimeStr,
+            trialDay: trialDay,
+            subscriptionTier: subscriptionTier,
+            currentTime: Date()
+        )
     }
 }

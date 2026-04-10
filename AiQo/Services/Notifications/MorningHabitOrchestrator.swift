@@ -93,6 +93,12 @@ final class MorningHabitOrchestrator: NSObject {
 
             guard !hasScheduledNotification(for: wakeDate) else { return }
 
+            // Brain V2: Check notification budget before sending morning notification
+            let todayNotifCount = ConversationThreadManager.shared.recentNotifications(withinHours: 24)
+                .filter { $0.entryType == ThreadEntryType.notification.rawValue }
+                .count
+            guard todayNotifCount < 4 else { return }
+
             await scheduleMorningNotification(
                 for: wakeDate,
                 stepsSinceWake: stepsSinceWake,
@@ -331,6 +337,9 @@ private extension MorningHabitOrchestrator {
 
         do {
             try await notificationCenter.add(request)
+            await MainActor.run {
+                ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
+            }
             userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
         } catch {
             print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)

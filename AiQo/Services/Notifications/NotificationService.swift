@@ -192,6 +192,14 @@ final class CaptainSmartNotificationService {
         guard inactivityMinutes >= 45 else { return }
         guard canSendInactivityNow() else { return }
 
+        // Brain V2: Check notification budget before sending
+        let todayNotifCount = await MainActor.run {
+            ConversationThreadManager.shared.recentNotifications(withinHours: 24)
+                .filter { $0.entryType == ThreadEntryType.notification.rawValue }
+                .count
+        }
+        guard todayNotifCount < 4 else { return }
+
         let language = resolvedCoachNotificationLanguage(defaults: defaults)
         let currentSteps = HealthKitManager.shared.todaySteps
         let message = await generateInactivityMessage(
@@ -254,6 +262,9 @@ final class CaptainSmartNotificationService {
             )
         )
         UNUserNotificationCenter.current().add(request)
+        Task { @MainActor in
+            ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
+        }
     }
 
     // MARK: - Water Reminder
@@ -988,6 +999,9 @@ final class AIWorkoutSummaryService {
             trigger: nil
         )
         notificationCenter.add(request)
+        Task { @MainActor in
+            ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")
+        }
     }
 
     // MARK: - Dedup

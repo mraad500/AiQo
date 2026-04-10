@@ -26,6 +26,9 @@ final class CaptainNotificationHandler: ObservableObject {
               !messageText.isEmpty else { return }
 
         UserDefaults.standard.set(messageText, forKey: pendingMessageKey)
+        Task { @MainActor in
+            ConversationThreadManager.shared.logNotificationOpened(content: messageText)
+        }
 
         DispatchQueue.main.async {
             self.pendingNotificationMessage = messageText

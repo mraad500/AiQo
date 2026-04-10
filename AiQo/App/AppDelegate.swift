@@ -16,7 +16,7 @@ struct AiQoApp: App {
 
     /// ModelContainer منفصل لذاكرة الكابتن ومشاريع كسر الأرقام — store مخصص عشان ما يتعارض مع الـ containers الثانية
     private let captainContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: CaptainSchemaV2.self)
+        let schema = Schema(versionedSchema: CaptainSchemaV3.self)
 
         // مسار مخصص منفصل عن default.store
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
@@ -59,6 +59,8 @@ struct AiQoApp: App {
         RecordProjectManager.shared.configure(container: captainContainer)
         WeeklyMetricsBufferStore.shared.configure(container: captainContainer)
         WeeklyMemoryConsolidator.shared.configure(container: captainContainer)
+        ConversationThreadManager.shared.configure(modelContext: captainContainer.mainContext)
+        ConversationThreadManager.shared.pruneOldEntries()
 
         schedulePostLaunchWarmup()
     }

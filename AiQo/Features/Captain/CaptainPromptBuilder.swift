@@ -19,7 +19,8 @@ struct CaptainPromptBuilder: Sendable {
             layerStableProfile(profileSummary: request.userProfileSummary),
             layerWorkingMemory(
                 workingMemorySummary: request.workingMemorySummary,
-                intentSummary: request.intentSummary
+                intentSummary: request.intentSummary,
+                recentInteractions: request.contextData.recentInteractions
             ),
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
@@ -162,7 +163,8 @@ struct CaptainPromptBuilder: Sendable {
 
     private func layerWorkingMemory(
         workingMemorySummary: String,
-        intentSummary: String
+        intentSummary: String,
+        recentInteractions: String?
     ) -> String {
         let trimmedIntent = intentSummary.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedWorkingMemory = workingMemorySummary.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -189,6 +191,18 @@ struct CaptainPromptBuilder: Sendable {
                 """
             )
         }
+
+        // Brain V2: Recent interaction timeline
+        let interactions = recentInteractions ?? "لا توجد تفاعلات سابقة"
+        sections.append(
+            """
+            --- آخر التفاعلات ---
+            \(interactions)
+            ---
+            إذا المستخدم فتح إشعار قبل ما يراسلك، اربط ردك بموضوع الإشعار. لا تتجاهل السياق.
+            إذا دزيت إشعار وما انفتح، لا تكرر نفس الموضوع.
+            """
+        )
 
         return """
         === ACTIVE WORKING MEMORY ===
@@ -217,34 +231,82 @@ struct CaptainPromptBuilder: Sendable {
             lines.append("growth_progress: \(data.level)/50")
         }
 
+        let header: String
+        let warning: String
         if language == .english {
-            return """
-            === INTERNAL BIO-STATE (calibration only — NEVER output to user) ===
+            header = "=== INTERNAL BIO-STATE (calibration only — NEVER output to user) ==="
+            warning = """
             WARNING: For internal calibration ONLY. NEVER mention variable names or exact numbers.
             NEVER say "your steps are X" unless the user explicitly asks.
             Use this data silently to adjust energy, advice intensity, and coaching direction.
-
-            \(lines.joined(separator: "\n"))
+            """
+        } else {
+            header = "=== بيانات بيولوجية داخلية (للضبط فقط — ممنوع تطلّعها بالرد) ==="
+            warning = """
+            تحذير: لضبطك الداخلي فقط. ممنوع تذكر أسماء المتغيرات أو الأرقام الدقيقة.
+            ممنوع تكول "خطواتك اليوم ٣٠٠٠" إلا إذا المستخدم صراحةً سأل.
             """
         }
 
-        return """
-        === بيانات بيولوجية داخلية (للضبط فقط — ممنوع تطلّعها بالرد) ===
-        تحذير: لضبطك الداخلي فقط. ممنوع تذكر أسماء المتغيرات أو الأرقام الدقيقة.
-        ممنوع تكول "خطواتك اليوم ٣٠٠٠" إلا إذا المستخدم صراحةً سأل.
+        var result = """
+        \(header)
+        \(warning)
 
         \(lines.joined(separator: "\n"))
         """
+
+        // Brain V2: 7-day trends
+        if let trend = data.trendSnapshot {
+            result += """
+
+            \n--- اتجاهات 7 أيام ---
+            الخطوات: \(trend.stepsTrend.rawValue) (\(trend.stepsChangePct)%)
+            النوم: \(trend.sleepTrend.rawValue) (\(trend.sleepChangePct)%)
+            التمارين: \(trend.workoutFrequencyTrend.rawValue) (هالأسبوع \(trend.workoutsThisWeek) مقابل الأسبوع الماضي \(trend.workoutsLastWeek))
+            الالتزام: \(Int(trend.consistencyScore * 100))%
+            الحلقة اليومية (معدل): \(Int(trend.ringCompletionAvg7d * 100))%
+            الـ streak: \(trend.streakMomentum.rawValue)
+            """
+        }
+
+        // Brain V2: Emotional state
+        if let emotional = data.emotionalState {
+            result += """
+
+            ---
+            الحالة العاطفية المقدرة: \(emotional.estimatedMood.rawValue) (ثقة: \(String(format: "%.0f", emotional.confidence * 100))%)
+            الإشارات: \(emotional.signals.joined(separator: "، "))
+            ---
+            تعليمات:
+            - إذا الاتجاه "declining" لأكثر من مؤشر: ركز على خطوة صغيرة واحدة فقط. لا تعطي خطة كبيرة.
+            - إذا الاتجاه "improving": احتفل بالتقدم بشكل طبيعي ضمن ردك.
+            - إذا streak_momentum هو "breaking": حاول تحفز المستخدم بلطف.
+            - لا تذكر هذه الأرقام والنسب مباشرة للمستخدم أبداً. استخدمها لتعديل أسلوبك فقط.
+            """
+        }
+
+        return result
     }
 
     // MARK: - Layer 5: Circadian Tone (Adapts to Time)
 
     private func layerCircadianTone(data: CaptainContextData, language: AppLanguage) -> String {
+        let emotionalToneRaw = data.emotionalState?.recommendedTone.rawValue ?? "neutral"
+
         if language == .english {
             return """
             === TONE CALIBRATION (internal — do NOT mention to user) ===
             \(data.bioPhase.toneDirective)
             Adapt energy, sentence length, and emotional register. NEVER say "phase", "bio-phase", or "circadian".
+
+            --- Emotional Tone Override ---
+            Recommended tone: \(emotionalToneRaw)
+            - If "gentle": be kind and supportive. Don't push. Short sentences.
+            - If "energetic": be enthusiastic and direct. Encourage action.
+            - If "celebratory": celebrate their achievements.
+            - If "neutral": act normally based on context.
+            The emotional tone overrides the circadian tone when they conflict.
+            If time says energetic but user is tired (gentle) → use gentle.
             """
         }
 
@@ -252,6 +314,15 @@ struct CaptainPromptBuilder: Sendable {
         === ضبط النبرة (داخلي — لا تذكره للمستخدم) ===
         \(data.bioPhase.toneDirectiveArabic)
         عدّل طاقتك وطول جملك ونبرتك. ممنوع تكول "مرحلة" أو "bio-phase" أو "circadian".
+
+        --- نبرة عاطفية ---
+        النبرة الموصى بها: \(emotionalToneRaw)
+        - إذا "gentle": كن لطيف وداعم. لا تشد على المستخدم. جمل قصيرة.
+        - إذا "energetic": كن حماسي ومباشر. شجعه يتحرك.
+        - إذا "celebratory": احتفل بإنجازاته.
+        - إذا "neutral": تصرف عادي حسب السياق.
+        النبرة العاطفية تتغلب على النبرة الزمنية إذا تعارضوا.
+        يعني لو الوقت عصر (نبرة حماسية) بس المستخدم تعبان (نبرة لطيفة) → استخدم اللطيفة.
         """
     }
 
@@ -270,6 +341,16 @@ struct CaptainPromptBuilder: Sendable {
         }
 
         section += "\n\(screenBehavior(for: ctx, language: request.language))"
+
+        // Brain V2: Music bridge — available on all screens
+        section += """
+
+        \n--- جسر الموسيقى ---
+        إذا حسيت من سياق المحادثة أو حالة المستخدم إنه ممكن يستفاد من موسيقى، تكدر ترجع spotifyRecommendation حتى لو مو بشاشة My Vibe.
+        حالات مناسبة: المستخدم بدأ أو خلص تمرين، المستخدم قال تعبان أو ملّيت، قبل النوم، المستخدم طلب شي يحمسه.
+        لا تقترح موسيقى كل رسالة — فقط إذا ناسب السياق.
+        """
+
         return section
     }
 

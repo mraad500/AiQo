@@ -233,6 +233,7 @@ final class CaptainViewModel: ObservableObject {
         isLoading = true
         coachState = .readingMessage
         persistChatMessage(userMessage)
+        ConversationThreadManager.shared.logUserMessage(content: trimmedText)
 
         let requestID = UUID()
         activeRequestID = requestID
@@ -403,7 +404,13 @@ final class CaptainViewModel: ObservableObject {
 
         do {
             // Build HealthKit context (async but lightweight — just reads cached values)
-            let contextData = await contextBuilder.buildContextData()
+            var contextData = await contextBuilder.buildContextData()
+
+            // Brain V2: Detect sentiment from user's message
+            if CaptainContextBuilder.isBrainV2Enabled,
+               let lastUserText = prebuiltConversation.last(where: { $0.role == .user })?.content {
+                contextData.messageSentiment = SentimentDetector.shared.detect(message: lastUserText)
+            }
 
             let promptRequest = HybridBrainRequest(
                 conversation: prebuiltConversation,
@@ -477,6 +484,7 @@ final class CaptainViewModel: ObservableObject {
             }
 
             persistChatMessage(replyMessage)
+            ConversationThreadManager.shared.logCaptainResponse(content: validated.message)
             trimInMemoryMessagesIfNeeded()
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)

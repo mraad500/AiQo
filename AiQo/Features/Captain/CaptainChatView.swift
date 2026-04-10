@@ -30,6 +30,21 @@ struct CaptainChatView: View {
                                 } : nil
                             )
                             .id(message.id)
+
+                            if !message.isUser, let spotifyRec = message.spotifyRecommendation {
+                                VibeMiniBubble(
+                                    vibeName: spotifyRec.vibeName,
+                                    description: spotifyRec.description
+                                ) {
+                                    SpotifyVibeManager.shared.playVibe(
+                                        uri: spotifyRec.spotifyURI,
+                                        vibeTitle: spotifyRec.vibeName
+                                    )
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.top, 4)
+                                .padding(.leading, 38)
+                            }
                         }
 
                         if let plan = globalBrain.currentWorkoutPlan {

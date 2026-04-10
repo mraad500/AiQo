@@ -91,6 +91,12 @@ struct CaptainContextData: Sendable {
     let stageTitle: String
     let bioPhase: BioTimePhase
 
+    // Brain V2 additions
+    var emotionalState: EmotionalState?
+    var trendSnapshot: TrendSnapshot?
+    var messageSentiment: SentimentResult?
+    var recentInteractions: String?
+
     init(
         steps: Int,
         calories: Int,
@@ -133,6 +139,9 @@ struct CaptainSystemContextSnapshot: Sendable {
 @MainActor
 final class CaptainContextBuilder {
     static let shared = CaptainContextBuilder()
+
+    /// Kill switch for Brain V2 features. Set CAPTAIN_BRAIN_V2_ENABLED in Info.plist.
+    static let isBrainV2Enabled: Bool = Bundle.main.infoDictionary?["CAPTAIN_BRAIN_V2_ENABLED"] as? Bool ?? false
 
     private let intelligenceManager: CaptainIntelligenceManager
     private let levelStore: LevelStore
@@ -197,7 +206,7 @@ final class CaptainContextBuilder {
             steps: snapshot.steps
         )
 
-        return CaptainContextData(
+        var contextData = CaptainContextData(
             steps: snapshot.steps,
             calories: snapshot.calories,
             vibe: snapshot.vibeTitle,
@@ -209,6 +218,38 @@ final class CaptainContextBuilder {
             stageTitle: snapshot.stageTitle,
             bioPhase: bioPhase
         )
+
+        // Brain V2: Gate behind feature flag
+        if Self.isBrainV2Enabled {
+            var bedtimeStr: String?
+            var wakeTimeStr: String?
+            if let personalization = CaptainPersonalizationStore.shared.currentSnapshot() {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                bedtimeStr = formatter.string(from: personalization.bedtime)
+                wakeTimeStr = formatter.string(from: personalization.wakeTime)
+            }
+
+            contextData.emotionalState = EmotionalStateEngine.shared.evaluate(
+                stepsToday: snapshot.steps,
+                steps7DayAvg: snapshot.steps,
+                sleepLastNightHours: snapshot.sleepHours > 0 ? snapshot.sleepHours : nil,
+                sleep7DayAvgHours: nil,
+                restingHeartRate: snapshot.heartRate.map { Double($0) },
+                hrvLatest: nil,
+                hrv7DayAvg: nil,
+                lastWorkoutDate: nil,
+                messageLength: nil,
+                messageTimestamp: Date(),
+                userPreferredBedtime: bedtimeStr,
+                userPreferredWakeTime: wakeTimeStr
+            )
+
+            contextData.trendSnapshot = nil
+            contextData.recentInteractions = ConversationThreadManager.shared.buildPromptSummary(maxEntries: 5)
+        }
+
+        return contextData
     }
 
     private func loadMetrics() async -> CaptainDailyHealthMetrics {
