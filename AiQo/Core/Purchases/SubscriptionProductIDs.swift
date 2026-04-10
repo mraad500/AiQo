@@ -35,7 +35,7 @@ enum SubscriptionProductIDs {
     ]
 
     static let coreFallbackPrice = "$9.99"
-    static let intelligenceProFallbackPrice = "$29.99"
+    static let intelligenceProFallbackPrice = "$19.99"
 
     static let standardFallbackPrice = coreFallbackPrice
 

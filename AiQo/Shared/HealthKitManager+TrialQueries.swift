@@ -186,7 +186,13 @@ extension HealthKitManager {
                     continuation.resume(returning: nil)
                     return
                 }
-                let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0
+                let calories: Double
+                if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+                   let quantity = workout.statistics(for: energyType)?.sumQuantity() {
+                    calories = quantity.doubleValue(for: .kilocalorie())
+                } else {
+                    calories = 0
+                }
                 continuation.resume(returning: WorkoutQuickSummary(
                     activityType: workout.workoutActivityType,
                     calories: calories,

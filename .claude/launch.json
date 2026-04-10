@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aiqo-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/mohammedraad/Desktop/AiQo/aiqo-web"],
+      "port": 3000
+    }
+  ]
+}
