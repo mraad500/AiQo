@@ -89,8 +89,24 @@ final class NotificationService {
     }
 
     func handle(response: UNNotificationResponse) {
+        let userInfo = response.notification.request.content.userInfo
+
+        // Track trial notification opens
+        if let trialKind = userInfo["trialKind"] as? String {
+            AnalyticsService.shared.track(.trialNotificationOpened(kind: trialKind))
+        }
+
+        // Handle deep link routing from trial notifications
+        if let deepLink = userInfo["deepLink"] as? String,
+           let url = URL(string: deepLink) {
+            Task { @MainActor in
+                _ = DeepLinkRouter.shared.handle(url: url)
+            }
+            return
+        }
+
         guard
-            let typeRaw = response.notification.request.content.userInfo["notification_type"] as? String,
+            let typeRaw = userInfo["notification_type"] as? String,
             let type = NotificationType(rawValue: typeRaw)
         else { return }
         routeFromNotification(type: type)

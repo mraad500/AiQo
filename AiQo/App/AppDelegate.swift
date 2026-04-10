@@ -16,13 +16,7 @@ struct AiQoApp: App {
 
     /// ModelContainer منفصل لذاكرة الكابتن ومشاريع كسر الأرقام — store مخصص عشان ما يتعارض مع الـ containers الثانية
     private let captainContainer: ModelContainer = {
-        let schema = Schema([
-            CaptainMemory.self,
-            CaptainPersonalizationProfile.self,
-            PersistentChatMessage.self,
-            RecordProject.self,
-            WeeklyLog.self
-        ])
+        let schema = Schema(versionedSchema: CaptainSchemaV2.self)
 
         // مسار مخصص منفصل عن default.store
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
@@ -35,17 +29,23 @@ struct AiQoApp: App {
                     schema: schema,
                     url: storeURL
                 )
-                return try ModelContainer(for: schema, configurations: [config])
+                return try ModelContainer(
+                    for: schema,
+                    migrationPlan: CaptainSchemaMigrationPlan.self,
+                    configurations: [config]
+                )
             } catch {
                 #if DEBUG
                 print("[AppDelegate] Failed to create CaptainMemory ModelContainer: \(error). Falling back to in-memory store.")
                 #endif
+                CrashReporter.shared.recordError(error, context: "captain_container_migration_failed")
             }
         }
 
         // Fallback to in-memory container to prevent crash
         do {
-            return try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
+            let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            return try ModelContainer(for: schema, configurations: [memoryConfig])
         } catch {
             // Last resort — this should never fail for an in-memory store
             fatalError("Failed to create even an in-memory ModelContainer: \(error)")
@@ -57,6 +57,8 @@ struct AiQoApp: App {
         MemoryStore.shared.configure(container: captainContainer)
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
+        WeeklyMetricsBufferStore.shared.configure(container: captainContainer)
+        WeeklyMemoryConsolidator.shared.configure(container: captainContainer)
 
         schedulePostLaunchWarmup()
     }
@@ -134,6 +136,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             NotificationService.shared.requestPermissions()
             application.registerForRemoteNotifications()
             MorningHabitOrchestrator.shared.start()
+            TrialJourneyOrchestrator.shared.start()
             SleepSessionObserver.shared.start()
 
             Task {

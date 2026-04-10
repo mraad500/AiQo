@@ -2208,6 +2208,7 @@
 "memory.category.sleep" = "Sleep";
 "memory.category.notes" = "Notes";
 "memory.category.recordProject" = "Record-breaking project";
+"memory.cat.weekly" = "Weekly memory";
 "memory.key.name" = "Name";
 "memory.key.weight" = "Weight";
 "memory.key.height" = "Height";

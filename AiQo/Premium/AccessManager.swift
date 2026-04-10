@@ -47,6 +47,21 @@ final class AccessManager: ObservableObject {
     var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .core }
     var canAccessRecordProjects: Bool { activeTier >= .core }
 
+    // MARK: — Legendary Challenges access
+
+    enum LegendaryChallengeAccess {
+        case full      // can browse and start projects
+        case viewOnly  // can browse, but starting a project triggers the paywall
+        case none      // hidden entirely
+    }
+
+    var legendaryChallengeAccess: LegendaryChallengeAccess {
+        switch activeTier {
+        case .none, .core:        return .viewOnly
+        case .intelligencePro:    return .full
+        }
+    }
+
     // MARK: — Intelligence Pro exclusives
 
     var canAccessPeaks: Bool { activeTier >= .intelligencePro }

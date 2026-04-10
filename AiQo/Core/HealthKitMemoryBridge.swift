@@ -60,6 +60,26 @@ struct HealthKitMemoryBridge {
         }
 
         logger.info("healthkit_memory_sync_complete")
+
+        // Buffer today's metrics for weekly consolidation
+        Task { @MainActor in
+            let todaySteps = (await HealthKitManager.shared.todayStepCount()) ?? 0
+            let todayCalories = (await HealthKitManager.shared.todayActiveCalories()) ?? 0
+            let rhr = await HealthKitManager.shared.latestRestingHeartRate()
+            let sleep = await HealthKitManager.shared.lastNightSleepHours()
+            let workoutSummary = await HealthKitManager.shared.todayWorkoutSummary()
+
+            WeeklyMetricsBufferStore.shared.upsertToday(
+                steps: todaySteps,
+                activeCalories: todayCalories,
+                restingHeartRate: rhr,
+                sleepHours: sleep,
+                workoutMinutes: workoutSummary.minutes,
+                workoutCount: workoutSummary.count
+            )
+
+            WeeklyMemoryConsolidator.shared.consolidateIfDue()
+        }
     }
 
     // MARK: - Private Helpers

@@ -5,6 +5,7 @@ struct CaptainMemorySettingsView: View {
     @State private var memories: [CaptainMemory] = []
     @State private var isEnabled: Bool = MemoryStore.shared.isEnabled
     @State private var showClearConfirmation = false
+    @State private var weeklyReports: [WeeklyReportEntry] = []
 
     private var groupedMemories: [(String, [CaptainMemory])] {
         let grouped = Dictionary(grouping: memories, by: { $0.category })
@@ -17,6 +18,17 @@ struct CaptainMemorySettingsView: View {
             toggleSection
 
             if isEnabled {
+                if !weeklyReports.isEmpty {
+                    Section {
+                        ForEach(weeklyReports, id: \.id) { report in
+                            WeeklyReportRow(report: report)
+                        }
+                    } header: {
+                        Text(NSLocalizedString("memory.cat.weekly", comment: ""))
+                            .font(.system(.headline, design: .rounded).weight(.bold))
+                    }
+                }
+
                 ForEach(groupedMemories, id: \.0) { category, items in
                     Section(categoryLabel(category)) {
                         ForEach(items, id: \.id) { memory in
@@ -34,7 +46,10 @@ struct CaptainMemorySettingsView: View {
         .navigationTitle(NSLocalizedString("memory.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.layoutDirection, .rightToLeft)
-        .onAppear { loadMemories() }
+        .onAppear {
+            loadMemories()
+            weeklyReports = WeeklyMemoryConsolidator.shared.allReports()
+        }
         .alert(NSLocalizedString("memory.clearAll", comment: ""), isPresented: $showClearConfirmation) {
             Button(NSLocalizedString("memory.cancel", comment: ""), role: .cancel) {}
             Button(NSLocalizedString("memory.clearAllButton", comment: ""), role: .destructive) {
@@ -64,7 +79,7 @@ struct CaptainMemorySettingsView: View {
                     .multilineTextAlignment(.center)
 
                 if !memories.isEmpty {
-                    Text("\(memories.count) / 200")
+                    Text("\(memories.count) / \(AccessManager.shared.captainMemoryLimit)")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(GymTheme.mint)
                         .padding(.horizontal, 8)
@@ -176,6 +191,7 @@ struct CaptainMemorySettingsView: View {
         case "sleep": return NSLocalizedString("memory.cat.sleep", comment: "")
         case "insight": return NSLocalizedString("memory.cat.insight", comment: "")
         case "active_record_project": return NSLocalizedString("memory.cat.recordProject", comment: "")
+        case "weekly": return NSLocalizedString("memory.cat.weekly", comment: "")
         default: return category
         }
     }
@@ -222,5 +238,84 @@ struct CaptainMemorySettingsView: View {
         default:
             return memory.value
         }
+    }
+}
+
+// MARK: - Weekly Report Row
+
+private struct WeeklyReportRow: View {
+    let report: WeeklyReportEntry
+    @State private var expanded = false
+
+    private var isArabic: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    private var titleText: String {
+        isArabic ? "تقرير الأسبوع \(report.weekNumber)" : "Week \(report.weekNumber) report"
+    }
+
+    private var summaryText: String {
+        isArabic ? report.summaryAr : report.summaryEn
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 12) {
+            HStack {
+                Text(titleText)
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                metricChip(value: "\(report.avgSteps)", label: isArabic ? "خطوة" : "steps")
+                metricChip(value: String(format: "%.1f", report.avgSleepHours), label: isArabic ? "ساعة" : "hours")
+                metricChip(value: "\(report.workoutCount)", label: isArabic ? "تمرين" : "workouts")
+            }
+
+            if expanded {
+                Text(summaryText)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                expanded.toggle()
+            }
+        }
+        .environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)
+    }
+
+    @ViewBuilder
+    private func metricChip(value: String, label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+            Text(label)
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule().fill(Color(red: 0.718, green: 0.898, blue: 0.824).opacity(0.25))
+        )
     }
 }

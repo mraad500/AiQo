@@ -90,7 +90,7 @@ struct TribeExperienceFlowView: View {
             }
         }
         .sheet(isPresented: $showPremiumSheet) {
-            PaywallView()
+            PaywallView(source: .tribeGate)
         }
         .onAppear(perform: seedScreenshotStateIfNeeded)
     }

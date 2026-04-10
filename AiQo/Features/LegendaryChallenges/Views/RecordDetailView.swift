@@ -8,6 +8,7 @@ struct RecordDetailView: View {
     @State private var navigateToProject = false
     @State private var navigateToRecordProject = false
     @State private var showActiveProjectAlert = false
+    @State private var showLegendaryPaywall = false
     @State private var isGeneratingPlan = false
     @State private var newRecordProject: RecordProject?
     // CHANGED: New state for fitness assessment navigation
@@ -47,6 +48,9 @@ struct RecordDetailView: View {
             Button(NSLocalizedString("recordDetail.ok", comment: ""), role: .cancel) {}
         } message: {
             Text(NSLocalizedString("recordDetail.activeProjectMessage", comment: ""))
+        }
+        .sheet(isPresented: $showLegendaryPaywall) {
+            PaywallView(source: .legendaryChallenges)
         }
         .environment(\.layoutDirection, .rightToLeft)
     }
@@ -172,6 +176,12 @@ struct RecordDetailView: View {
     private var ctaButton: some View {
         // CHANGED: CTA now navigates to FitnessAssessmentView instead of creating project directly
         Button {
+            // viewOnly gate: Core tier can browse but not start
+            guard AccessManager.shared.legendaryChallengeAccess == .full else {
+                showLegendaryPaywall = true
+                return
+            }
+
             // التحقق: هل في مشروع نشط
             if !RecordProjectManager.shared.canStartNewProject() {
                 showActiveProjectAlert = true

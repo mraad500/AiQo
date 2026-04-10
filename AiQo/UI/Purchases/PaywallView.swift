@@ -19,8 +19,10 @@ struct PaywallView: View {
 
     private let supportedTiers: [SubscriptionTier] = [.core, .intelligencePro]
     private let onPurchaseSuccess: (() -> Void)?
+    let source: PaywallSource
 
-    init(onPurchaseSuccess: (() -> Void)? = nil) {
+    init(source: PaywallSource = .manual, onPurchaseSuccess: (() -> Void)? = nil) {
+        self.source = source
         self.onPurchaseSuccess = onPurchaseSuccess
     }
 
@@ -111,6 +113,7 @@ struct PaywallView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
+                    contextBanner
                     heroSection
                     credibilityStrip
 
@@ -176,6 +179,7 @@ struct PaywallView: View {
         }
         .task {
             await reloadProducts()
+            AnalyticsService.shared.track(.paywallShown(source: source.rawValue))
         }
         .sheet(isPresented: $showPrivacyPolicy) {
             LegalView(type: .privacyPolicy)
@@ -924,6 +928,34 @@ struct PaywallView: View {
 
     private func copy(ar: String, en: String) -> String {
         isArabic ? ar : en
+    }
+
+    // MARK: - Trial Context Banner
+
+    @ViewBuilder
+    private var contextBanner: some View {
+        switch source {
+        case .day6Preview:
+            bannerText(isArabic ? "بعد يوم وراح تنتهي تجربتك" : "One day left in your trial")
+        case .trialEnded:
+            bannerText(isArabic ? "تجربتك انتهت — كمّل وية الكابتن" : "Your trial ended — keep going with Captain")
+        default:
+            EmptyView()
+        }
+    }
+
+    private func bannerText(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(red: 0.718, green: 0.898, blue: 0.824).opacity(0.4))
+            )
+            .padding(.horizontal)
     }
 }
 

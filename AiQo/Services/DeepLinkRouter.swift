@@ -16,6 +16,8 @@ final class DeepLinkRouter: ObservableObject {
         case settings
         case referral(code: String)
         case premium
+        case paywall(source: PaywallSource)
+        case memory(section: String?)
     }
 
     @Published var pendingDeepLink: DeepLink?
@@ -54,6 +56,10 @@ final class DeepLinkRouter: ObservableObject {
             ReferralManager.shared.applyReferralCode(code)
         case .premium:
             pendingDeepLink = .premium
+        case .paywall(let source):
+            pendingDeepLink = .paywall(source: source)
+        case .memory(let section):
+            pendingDeepLink = .memory(section: section)
         }
     }
 
@@ -89,6 +95,12 @@ final class DeepLinkRouter: ObservableObject {
             }
             return nil
         case "premium": return .premium
+        case "paywall":
+            let sourceRaw = queryItems.first(where: { $0.name == "source" })?.value ?? "manual"
+            return .paywall(source: PaywallSource(rawValue: sourceRaw) ?? .manual)
+        case "memory":
+            let section = queryItems.first(where: { $0.name == "section" })?.value
+            return .memory(section: section)
         default: return nil
         }
     }

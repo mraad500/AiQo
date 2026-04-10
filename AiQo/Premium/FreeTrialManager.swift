@@ -65,6 +65,28 @@ final class FreeTrialManager: ObservableObject {
         return 0
     }
 
+    /// 1-based trial day (1 through 7). nil before the trial starts or after expiry.
+    /// Day 1 = the calendar day the user signed up (in their local timezone).
+    var currentTrialDay: Int? {
+        guard let start = trialStartDate else { return nil }
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: start)
+        let nowDay = calendar.startOfDay(for: nowProvider())
+        let diff = (calendar.dateComponents([.day], from: startDay, to: nowDay).day ?? 0) + 1
+        guard (1...Self.trialDurationDays).contains(diff) else { return nil }
+        return diff
+    }
+
+    /// True only during days 1-7 inclusive.
+    var isInsideTrialWindow: Bool {
+        currentTrialDay != nil
+    }
+
+    /// تاريخ بداية التجربة — مكشوف للقراءة فقط لاستخدام WeeklyMemoryConsolidator
+    var trialStartDatePublic: Date? {
+        trialStartDate
+    }
+
     /// تاريخ انتهاء التجربة
     var trialEndDate: Date? {
         guard let startDate = trialStartDate else {

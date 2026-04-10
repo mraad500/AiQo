@@ -20,8 +20,8 @@ struct LegendaryChallengesSection: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.horizontal, 4)
 
-            if AccessManager.shared.canAccessPeaks {
-                // DESIGN: Horizontal ScrollView of record cards
+            if AccessManager.shared.canAccessPeaks || AccessManager.shared.legendaryChallengeAccess == .viewOnly {
+                // DESIGN: Horizontal ScrollView of record cards (viewOnly for Core tier)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(Array(viewModel.records.enumerated()), id: \.element.id) { index, record in
@@ -90,7 +90,7 @@ private struct PeaksUpgradePromptView: View {
                 )
         )
         .sheet(isPresented: $showPaywall) {
-            PremiumPaywallView()
+            PremiumPaywallView(source: .legendaryChallenges)
         }
     }
 }

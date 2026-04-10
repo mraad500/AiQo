@@ -105,6 +105,7 @@ final class AppFlowController: ObservableObject {
     private func finalizeLegacyStep() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
         FreeTrialManager.shared.startTrialIfNeeded()
+        TrialJourneyOrchestrator.shared.refresh()
         transition(to: .captainPersonalization)
     }
 

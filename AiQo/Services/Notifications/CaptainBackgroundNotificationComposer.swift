@@ -148,7 +148,19 @@ private extension CaptainBackgroundNotificationComposer {
         language: AppLanguage,
         contextData: CaptainContextData
     ) -> LocalBrainRequest {
-        LocalBrainRequest(
+        let baseSummary = localizedNotificationString(
+            "notification.background.profile.summary",
+            language: language,
+            fallback: "Background notification"
+        )
+
+        // Enrich with personalization context from CaptainPersonalizationStore
+        let personalizationPreamble = Self.buildPersonalizationPreamble()
+        let enrichedSummary = personalizationPreamble.isEmpty
+            ? baseSummary
+            : baseSummary + "\n" + personalizationPreamble
+
+        return LocalBrainRequest(
             conversation: [
                 LocalConversationMessage(
                     role: .user,
@@ -159,13 +171,26 @@ private extension CaptainBackgroundNotificationComposer {
             language: language,
             systemPrompt: systemPrompt.rawValue,
             contextData: contextData,
-            userProfileSummary: localizedNotificationString(
-                "notification.background.profile.summary",
-                language: language,
-                fallback: "Background notification"
-            ),
+            userProfileSummary: enrichedSummary,
             hasAttachedImage: false
         )
+    }
+
+    static func buildPersonalizationPreamble() -> String {
+        guard let snapshot = CaptainPersonalizationStore.shared.currentSnapshot() else { return "" }
+
+        var lines: [String] = ["User personalization context:"]
+        lines.append("- Primary goal: \(snapshot.primaryGoal.localizedTitle)")
+        lines.append("- Favorite sport: \(snapshot.favoriteSport.localizedTitle)")
+        lines.append("- Preferred workout time: \(snapshot.preferredWorkoutTime.localizedTitle)")
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let bedtimeStr = timeFormatter.string(from: snapshot.bedtime)
+        let wakeStr = timeFormatter.string(from: snapshot.wakeTime)
+        lines.append("- Sleep window: \(bedtimeStr) to \(wakeStr)")
+
+        return lines.joined(separator: "\n")
     }
 
     func generateBody(

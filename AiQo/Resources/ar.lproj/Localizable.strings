@@ -2207,6 +2207,7 @@
 "memory.category.sleep" = "النوم";
 "memory.category.notes" = "ملاحظات";
 "memory.category.recordProject" = "مشروع كسر الرقم";
+"memory.cat.weekly" = "ذاكرة الأسبوع";
 "memory.key.name" = "الاسم";
 "memory.key.weight" = "الوزن";
 "memory.key.height" = "الطول";

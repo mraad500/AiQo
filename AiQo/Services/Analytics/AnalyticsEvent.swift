@@ -147,6 +147,21 @@ extension AnalyticsEvent {
     }
     static let memoryCleared = AnalyticsEvent("memory_cleared")
 
+    // MARK: Trial Journey
+    static let trialJourneyStarted = AnalyticsEvent("trial_journey_started")
+    static func trialNotificationFired(kind: String) -> AnalyticsEvent {
+        AnalyticsEvent("trial_notification_fired", properties: ["kind": kind])
+    }
+    static func trialNotificationOpened(kind: String) -> AnalyticsEvent {
+        AnalyticsEvent("trial_notification_opened", properties: ["kind": kind])
+    }
+    static func weeklyReportGenerated(weekNumber: Int) -> AnalyticsEvent {
+        AnalyticsEvent("weekly_report_generated", properties: ["week_number": weekNumber])
+    }
+    static func paywallShown(source: String) -> AnalyticsEvent {
+        AnalyticsEvent("paywall_shown", properties: ["source": source])
+    }
+
     // MARK: Errors
     static func errorOccurred(domain: String, message: String) -> AnalyticsEvent {
         AnalyticsEvent("error_occurred", properties: [

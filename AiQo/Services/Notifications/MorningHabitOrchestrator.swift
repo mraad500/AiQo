@@ -299,6 +299,10 @@ private extension MorningHabitOrchestrator {
         stepsSinceWake: Int,
         body: String
     ) async {
+        guard !FreeTrialManager.shared.isInsideTrialWindow else {
+            // Trial Journey owns the morning narrative during the first 7 days.
+            return
+        }
         let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
         let content = UNMutableNotificationContent()
         content.title = "Captain Hamoudi"
