@@ -145,13 +145,20 @@ final class EmotionalStateEngine: Sendable {
         }
 
         // Tone mapping
-        let tone: RecommendedTone
+        var tone: RecommendedTone
         switch mood {
         case .highEnergy:  tone = .energetic
         case .neutral:     tone = .neutral
         case .lowEnergy:   tone = .gentle
         case .stressed:    tone = .gentle
         case .recovering:  tone = .neutral
+        }
+
+        // Celebratory override: 3+ strong positive signals = exceptional day
+        let strongPositiveSignals = ["good_sleep", "above_avg_steps", "high_hrv", "recently_active"]
+        let strongPositiveCount = signals.filter { strongPositiveSignals.contains($0) }.count
+        if strongPositiveCount >= 3 {
+            tone = .celebratory
         }
 
         // Confidence calculation

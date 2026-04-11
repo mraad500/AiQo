@@ -11,7 +11,7 @@ import Foundation
 struct CloudBrainService: Sendable {
     private enum GeminiModel {
         static let fast = "gemini-2.5-flash"
-        static let reasoning = "gemini-3.1-pro"
+        static let reasoning = "gemini-3-flash-preview"
     }
 
     private let transport: HybridBrainService

@@ -96,6 +96,9 @@ struct CaptainChatView: View {
                     .padding(.bottom, 20)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onTapGesture {
+                    isInputFocused = false
+                }
                 .safeAreaPadding(.bottom, 8)
                 .onAppear {
                     scrollToBottom(using: proxy, animated: false)

@@ -141,7 +141,12 @@ final class CaptainContextBuilder {
     static let shared = CaptainContextBuilder()
 
     /// Kill switch for Brain V2 features. Set CAPTAIN_BRAIN_V2_ENABLED in Info.plist.
-    static let isBrainV2Enabled: Bool = Bundle.main.infoDictionary?["CAPTAIN_BRAIN_V2_ENABLED"] as? Bool ?? false
+    static var isBrainV2Enabled: Bool = Bundle.main.infoDictionary?["CAPTAIN_BRAIN_V2_ENABLED"] as? Bool ?? false
+
+    // Brain V2: Cached trend data (refreshed every 30 minutes)
+    private static var cachedTrendSnapshot: TrendSnapshot?
+    private static var trendCacheTimestamp: Date?
+    private static let trendCacheDuration: TimeInterval = 1800
 
     private let intelligenceManager: CaptainIntelligenceManager
     private let levelStore: LevelStore
@@ -245,12 +250,70 @@ final class CaptainContextBuilder {
                 userPreferredWakeTime: wakeTimeStr
             )
 
-            contextData.trendSnapshot = nil
+            contextData.trendSnapshot = getOrComputeTrendSnapshot()
             contextData.recentInteractions = ConversationThreadManager.shared.buildPromptSummary(maxEntries: 5)
         }
 
         return contextData
     }
+
+    // MARK: - Brain V2: Trend Snapshot
+
+    private func getOrComputeTrendSnapshot() -> TrendSnapshot? {
+        if let cached = Self.cachedTrendSnapshot,
+           let cacheTime = Self.trendCacheTimestamp,
+           Date().timeIntervalSince(cacheTime) < Self.trendCacheDuration {
+            print("[BrainV2] TrendSnapshot cache hit")
+            return cached
+        }
+
+        let buffers = WeeklyMetricsBufferStore.shared.allBuffered()
+        guard !buffers.isEmpty else {
+            print("[BrainV2] TrendSnapshot: no buffered daily data")
+            return nil
+        }
+
+        let dailyPoints = buffers.map { buffer in
+            DailyHealthPoint(
+                date: buffer.dayStart,
+                steps: buffer.steps,
+                sleepHours: buffer.sleepHours ?? 0,
+                caloriesBurned: Int(buffer.activeCalories),
+                workoutCount: buffer.workoutCount,
+                workoutMinutes: buffer.workoutMinutes,
+                waterIntakePercent: 0,
+                ringCompletion: 0,
+                restingHeartRate: buffer.restingHeartRate
+            )
+        }
+
+        let streak = StreakManager.shared.currentStreak
+        let yesterdayWasActive: Bool
+        if let lastActive = StreakManager.shared.lastActiveDate {
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.startOfDay(for: Date()))
+            yesterdayWasActive = yesterday.map { Calendar.current.isDate(lastActive, inSameDayAs: $0) } ?? false
+        } else {
+            yesterdayWasActive = false
+        }
+
+        let snapshot = TrendAnalyzer.shared.compute(
+            dailyPoints: dailyPoints,
+            currentStreak: streak,
+            yesterdayStreak: yesterdayWasActive
+        )
+
+        Self.cachedTrendSnapshot = snapshot
+        Self.trendCacheTimestamp = Date()
+        print("[BrainV2] TrendSnapshot computed: steps=\(snapshot.stepsTrend.rawValue), sleep=\(snapshot.sleepTrend.rawValue), streak=\(snapshot.streakMomentum.rawValue)")
+        return snapshot
+    }
+
+    static func invalidateTrendCache() {
+        cachedTrendSnapshot = nil
+        trendCacheTimestamp = nil
+    }
+
+    // MARK: - Metrics
 
     private func loadMetrics() async -> CaptainDailyHealthMetrics {
         do {

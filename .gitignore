@@ -21,3 +21,6 @@ Packages/
 
 # Local Codex/Claude worktrees should not be tracked by the app repo.
 .claude/worktrees/
+
+# Local web app lives in its own Git repo; ignore it in the iOS app repo.
+/aiqo-web/
