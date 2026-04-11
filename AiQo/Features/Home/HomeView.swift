@@ -130,7 +130,7 @@ struct HomeView: View {
     private var topChrome: some View {
         AiQoScreenTopChrome(
             horizontalInset: 10,
-            profileVerticalOffset: -16,
+            profileVerticalOffset: -12,
             onProfileTap: { isProfileSheetPresented = true }
         ) {
             HStack {

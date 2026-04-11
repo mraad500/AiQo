@@ -37,13 +37,13 @@
       "size" : "40x40"
     },
     {
-      "filename" : "aiqo_icon_120.png",
+      "filename" : "aiqo_icon_120_ultra.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "60x60"
     },
     {
-      "filename" : "aiqo_icon_180.png",
+      "filename" : "aiqo_icon_180_ultra.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "60x60"
