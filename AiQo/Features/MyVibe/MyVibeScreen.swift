@@ -30,9 +30,11 @@ struct MyVibeScreen: View {
             djSearchBar
         }
         .background {
-            MyVibeBackground(state: viewModel.currentState)
+            MyVibeBackground(state: viewModel.currentState, isDJModeActive: viewModel.isDJModeActive)
                 .allowsHitTesting(false)
         }
+        .preferredColorScheme(viewModel.isDJModeActive ? .dark : nil)
+        .animation(.easeInOut(duration: 0.6), value: viewModel.isDJModeActive)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showDJChat) {
@@ -130,7 +132,7 @@ private extension MyVibeScreen {
             Text(NSLocalizedString("vibe.bioTimeline", comment: ""))
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
                 .tracking(1.6)
-                .foregroundStyle(Color.white.opacity(0.4))
+                .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.4) : .secondary)
                 .padding(.leading, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -182,11 +184,11 @@ private extension MyVibeScreen {
                     Text(NSLocalizedString("vibe.bioFrequency", comment: ""))
                         .font(.system(size: 10, weight: .heavy, design: .monospaced))
                         .tracking(1.2)
-                        .foregroundStyle(Color.white.opacity(0.46))
+                        .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.46) : .secondary)
 
                     Text(viewModel.currentState.frequencyLabel.replacingOccurrences(of: "_", with: " "))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(viewModel.isDJModeActive ? .white : .primary)
                 }
 
                 Spacer()
@@ -221,7 +223,7 @@ private extension MyVibeScreen {
             // Status detail
             Text(viewModel.bioFrequencyStatus)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.5))
+                .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.5) : .secondary)
                 .lineLimit(2)
 
             // Waveform visualizer placeholder
@@ -235,7 +237,7 @@ private extension MyVibeScreen {
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
+                .environment(\.colorScheme, viewModel.isDJModeActive ? .dark : .light)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -273,7 +275,7 @@ private extension MyVibeScreen {
                         Text(NSLocalizedString("vibe.spotifyLabel", comment: ""))
                             .font(.system(size: 10, weight: .heavy, design: .monospaced))
                             .tracking(1.2)
-                            .foregroundStyle(Color.white.opacity(0.46))
+                            .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.46) : .secondary)
 
                         if viewModel.isSpotifyConnected {
                             Text(NSLocalizedString("vibe.connected", comment: ""))
@@ -291,11 +293,11 @@ private extension MyVibeScreen {
                     if let overrideName = viewModel.spotifyOverrideName {
                         Text(overrideName)
                             .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(viewModel.isDJModeActive ? .white : .primary)
                     } else {
                         Text(viewModel.spotifyTrackName)
                             .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(viewModel.isDJModeActive ? .white : .primary)
                             .lineLimit(1)
                     }
                 }
@@ -308,7 +310,7 @@ private extension MyVibeScreen {
                 } label: {
                     Image(systemName: "arrow.up.forward")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.6))
+                        .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.6) : .secondary)
                         .frame(width: 36, height: 36)
                         .background(
                             Circle().fill(Color.white.opacity(0.08))
@@ -320,7 +322,7 @@ private extension MyVibeScreen {
             if !viewModel.spotifyArtistName.isEmpty {
                 Text(viewModel.spotifyArtistName)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.46))
+                    .foregroundStyle(viewModel.isDJModeActive ? Color.white.opacity(0.46) : .secondary)
             }
 
             if viewModel.spotifyOverrideName != nil {
@@ -343,7 +345,7 @@ private extension MyVibeScreen {
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
+                .environment(\.colorScheme, viewModel.isDJModeActive ? .dark : .light)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -365,7 +367,7 @@ private extension MyVibeScreen {
 
             TextField(NSLocalizedString("vibe.djPlaceholder", comment: ""), text: $viewModel.djSearchText)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(viewModel.isDJModeActive ? .white : .primary)
                 .submitLabel(.send)
                 .onSubmit {
                     let text = viewModel.djSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -401,11 +403,11 @@ private extension MyVibeScreen {
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
+                .environment(\.colorScheme, viewModel.isDJModeActive ? .dark : .light)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke((viewModel.isDJModeActive ? Color.white : Color.black).opacity(0.10), lineWidth: 1)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)

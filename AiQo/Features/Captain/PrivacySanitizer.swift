@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import os.log
 import UniformTypeIdentifiers
 
 /// Privacy-first sanitizer that enforces Apple's privacy guidelines before any data leaves the device.
@@ -415,5 +416,24 @@ private extension PrivacySanitizer {
                 return false
             }
         }
+    }
+}
+
+// MARK: - Sanitized Logging
+
+extension PrivacySanitizer {
+    private static let vibeLogger = Logger(subsystem: "com.mraad500.aiqo", category: "MyVibe")
+
+    static func log(_ message: String, sensitive: [String] = []) {
+        var sanitized = message
+        for value in sensitive {
+            sanitized = sanitized.replacingOccurrences(of: value, with: "<redacted>")
+        }
+        sanitized = sanitized.replacingOccurrences(
+            of: #"spotify:[a-z]+:[A-Za-z0-9]+"#,
+            with: "spotify:<redacted>",
+            options: .regularExpression
+        )
+        vibeLogger.log("\(sanitized, privacy: .public)")
     }
 }

@@ -14,6 +14,7 @@ final class MyVibeViewModel: ObservableObject {
     @Published private(set) var spotifyArtistName: String = ""
     @Published private(set) var isSpotifyConnected = false
     @Published private(set) var spotifyOverrideName: String?
+    @Published private(set) var isDJModeActive = false
     @Published var showDJChat = false
     @Published var djSearchText = ""
 
@@ -80,6 +81,10 @@ final class MyVibeViewModel: ObservableObject {
         orchestrator.$overridePlaylistName
             .receive(on: RunLoop.main)
             .assign(to: &$spotifyOverrideName)
+
+        orchestrator.$spotifyOverrideActive
+            .receive(on: RunLoop.main)
+            .assign(to: &$isDJModeActive)
     }
 
     private func bindSpotify() {

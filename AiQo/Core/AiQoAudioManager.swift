@@ -101,7 +101,7 @@ final class AiQoAudioManager: ObservableObject {
         do {
             try audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
         } catch {
-            print("AiQo Audio: Failed to deactivate audio session - \(error.localizedDescription)")
+            PrivacySanitizer.log("AiQo Audio: Failed to deactivate audio session - \(error.localizedDescription)")
         }
     }
 
@@ -254,7 +254,7 @@ final class AiQoAudioManager: ObservableObject {
 
             return fileURL
         } catch {
-            print("AiQo Audio: Failed to load \(trackName) data asset - \(error.localizedDescription)")
+            PrivacySanitizer.log("AiQo Audio: Failed to load \(trackName) data asset - \(error.localizedDescription)")
             return nil
         }
     }
@@ -332,7 +332,7 @@ final class AiQoAudioManager: ObservableObject {
     }
 
     private func reportError(_ message: String, code: String) {
-        print(message)
+        PrivacySanitizer.log("AiQo Audio: \(message)")
         volumeRampTask?.cancel()
         lastErrorMessage = message
         lastErrorCode = code

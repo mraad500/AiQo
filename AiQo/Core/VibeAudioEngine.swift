@@ -169,7 +169,13 @@ final class VibeAudioEngine: NSObject, ObservableObject {
     }
 
     private override init() {
-        if let data = UserDefaults.standard.data(forKey: Self.profileDefaultsKey),
+        // Migrate legacy UserDefaults → Keychain (one-time)
+        if let legacyData = UserDefaults.standard.data(forKey: Self.profileDefaultsKey) {
+            KeychainStore.setData(legacyData, for: Self.profileKeychainKey)
+            UserDefaults.standard.removeObject(forKey: Self.profileDefaultsKey)
+        }
+
+        if let data = KeychainStore.getData(Self.profileKeychainKey),
            let decoded = try? JSONDecoder().decode(VibeDayProfile.self, from: data) {
             currentProfile = decoded
         } else {
@@ -766,7 +772,7 @@ final class VibeAudioEngine: NSObject, ObservableObject {
 
     private func persistProfile(_ profile: VibeDayProfile) {
         if let data = try? JSONEncoder().encode(profile) {
-            UserDefaults.standard.set(data, forKey: Self.profileDefaultsKey)
+            KeychainStore.setData(data, for: Self.profileKeychainKey)
         }
     }
 
@@ -825,5 +831,6 @@ final class VibeAudioEngine: NSObject, ObservableObject {
         lastErrorCode = code
     }
 
-    private static let profileDefaultsKey = "com.aiqo.vibeAudio.profile"
+    private static let profileDefaultsKey = "com.aiqo.vibeAudio.profile" // legacy, kept for migration
+    private static let profileKeychainKey = "com.aiqo.vibeAudio.profile"
 }

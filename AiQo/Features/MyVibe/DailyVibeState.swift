@@ -29,8 +29,8 @@ enum DailyVibeState: String, CaseIterable, Identifiable, Codable {
         case .awakening:  return "SerotoninFlow"
         case .deepFocus:  return "GammaFlow"
         case .peakEnergy: return "SoundOfEnergy"
-        case .recovery:   return "ThetaTrance"
-        case .egoDeath:   return "Hypnagogic_state"
+        case .recovery:   return "Hypnagogic_state"
+        case .egoDeath:   return "ThetaTrance"
         }
     }
 

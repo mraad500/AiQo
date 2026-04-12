@@ -40,6 +40,7 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>
+		<string>spotify-action</string>
 		<string>instagram-stories</string>
 		<string>instagram</string>
 	</array>
@@ -79,6 +80,11 @@
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
+	<key>HAMOUDI_BLEND_ENABLED</key>
+	<!-- Flip to false before App Store submission if not ready for public release -->
+	<true/>
+	<key>HAMOUDI_BLEND_RATIO</key>
+	<real>0.6</real>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

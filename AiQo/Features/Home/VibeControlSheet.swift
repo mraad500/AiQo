@@ -7,6 +7,7 @@ struct VibeControlSheet: View {
     @EnvironmentObject private var captainBrain: CaptainViewModel
     @State var isDetailsSheetPresented = false
     @State var showDJChat = false
+    @State var showBlendPlaylist = false
 
     var body: some View {
         GeometryReader { _ in
@@ -71,6 +72,12 @@ struct VibeControlSheet: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(.clear)
+        }
+        .sheet(isPresented: $showBlendPlaylist) {
+            HamoudiDJPlaylistView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial)
         }
     }
 }

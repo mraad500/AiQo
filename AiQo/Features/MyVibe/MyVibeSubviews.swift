@@ -4,15 +4,25 @@ import SwiftUI
 
 struct MyVibeBackground: View {
     let state: DailyVibeState
+    var isDJModeActive: Bool = false
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            if isDJModeActive {
+                Color.black.ignoresSafeArea()
+            } else {
+                LinearGradient(
+                    colors: [Color(hex: "FAFAF7"), Color(hex: "F3F4F1")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
 
             // Primary gradient glow — shifts hue per state
             RadialGradient(
                 gradient: Gradient(colors: [
-                    stateAccent.opacity(0.18),
+                    stateAccent.opacity(isDJModeActive ? 0.18 : 0.10),
                     Color.clear
                 ]),
                 center: .topTrailing,
@@ -23,11 +33,12 @@ struct MyVibeBackground: View {
 
             // Secondary ambient glow
             Circle()
-                .fill(Color(hex: "8AE3D1").opacity(0.07))
+                .fill(Color(hex: "8AE3D1").opacity(isDJModeActive ? 0.07 : 0.04))
                 .frame(width: 340, height: 340)
                 .blur(radius: 100)
                 .offset(x: -140, y: 320)
         }
+        .animation(.easeInOut(duration: 0.6), value: isDJModeActive)
         .animation(.easeInOut(duration: 1.2), value: state)
     }
 

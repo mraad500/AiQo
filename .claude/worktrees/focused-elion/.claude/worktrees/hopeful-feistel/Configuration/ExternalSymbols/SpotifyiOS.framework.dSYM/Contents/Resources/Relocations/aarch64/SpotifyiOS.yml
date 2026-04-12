@@ -1,5 +1,0 @@
----
-triple:          'arm64-apple-darwin'
-binary-path:     'AiQo/Frameworks/SpotifyiOS.framework/SpotifyiOS'
-relocations:     []
-...

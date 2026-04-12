@@ -29,27 +29,57 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     let sessionManager: SPTSessionManager
     let appRemote: SPTAppRemote
 
-    private let clientID: String
-    private static let redirectURI: URL = {
+    let clientID: String
+    static let redirectURI: URL = {
         guard let url = URL(string: "aiqo://spotify-login-callback") else {
             assertionFailure("Invalid Spotify redirect URI")
             return URL(fileURLWithPath: "/")
         }
         return url
     }()
-    private let scopes: SPTScope = .appRemoteControl
+    let scopes: SPTScope = [
+        .appRemoteControl,
+        .playlistReadPrivate,
+        .userTopRead,
+        .userReadPlaybackState,
+        .userModifyPlaybackState
+    ]
 
-    private var pendingVibeURI: String?
-    private var shouldReconnectWhenActive = false
-    private var shouldResumePlaybackWhenConnected = false
-    private var currentTrackURI: String?
-    private var wasStoppedManually = false
+    @Published var isGeneratingBlend: Bool = false
+    @Published var blendError: String?
+
+    // Blend Engine (in-memory queue, no playlist creation)
+    @Published var currentBlendSource: BlendSourceTag?
+    @Published var currentBlendQueue: [BlendTrackItem] = []
+    var blendSourceLookup: [String: BlendSourceTag] = [:]
+
+    private static let keychainTokenKey = "aiqo.spotify.webapi.token"
+
+    @Published var webAPIToken: String? {
+        didSet {
+            if let webAPIToken {
+                KeychainStore.set(webAPIToken, for: Self.keychainTokenKey)
+            } else {
+                KeychainStore.delete(Self.keychainTokenKey)
+            }
+        }
+    }
+    @Published var isWebAPIAuthorized: Bool = false
+    var pkceCodeVerifier: String?
+
+    static let webAPIScopes = "playlist-read-private user-top-read user-read-playback-state user-modify-playback-state"
+
+    var pendingVibeURI: String?
+    var shouldReconnectWhenActive = false
+    var shouldResumePlaybackWhenConnected = false
+    var currentTrackURI: String?
+    var wasStoppedManually = false
 
     private override init() {
         guard let resolvedClientID = Bundle.main.infoDictionary?["SPOTIFY_CLIENT_ID"] as? String,
               !resolvedClientID.isEmpty,
               !resolvedClientID.hasPrefix("$(") else {
-            print("SpotifyVibeManager: SPOTIFY_CLIENT_ID missing from Info.plist — Spotify features disabled.")
+            PrivacySanitizer.log("SpotifyVibeManager: SPOTIFY_CLIENT_ID missing from Info.plist — Spotify features disabled.")
             self.clientID = ""
             let dummyConfig = SPTConfiguration(clientID: "", redirectURL: Self.redirectURI)
             self.configuration = dummyConfig
@@ -73,6 +103,19 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         appRemote.connectionParameters.accessToken = sessionManager.session?.accessToken
         refreshSpotifyAvailability()
 
+        // One-time migration: UserDefaults → Keychain
+        if let legacyToken = UserDefaults.standard.string(forKey: "spotify_web_api_token"), !legacyToken.isEmpty {
+            KeychainStore.set(legacyToken, for: Self.keychainTokenKey)
+            UserDefaults.standard.removeObject(forKey: "spotify_web_api_token")
+            log("Migrated Web API token from UserDefaults to Keychain.")
+        }
+
+        if let savedToken = KeychainStore.get(Self.keychainTokenKey), !savedToken.isEmpty {
+            webAPIToken = savedToken
+            isWebAPIAuthorized = true
+            log("Restored Web API token from Keychain.")
+        }
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(applicationDidBecomeActive),
@@ -92,6 +135,8 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         NotificationCenter.default.removeObserver(self)
     }
 
+    // MARK: - Availability
+
     var canAttemptAuthorization: Bool {
         !clientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -100,144 +145,73 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         isSpotifyAppInstalled && canAttemptAuthorization
     }
 
+    var connectionRetryCount = 0
+    let maxConnectionRetries = 3
+
+    // MARK: - Connection
+
     func connect() {
-        if prepareForConnection() {
+        connectionRetryCount = 0
+
+        if appRemote.isConnected {
+            setConnectionState(true)
             log("Already connected to Spotify.")
-        }
-    }
-
-    func playVibe(uri: String, vibeTitle: String? = nil) {
-        let trimmedURI = uri.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedURI.isEmpty else {
-            reportError("Choose a Spotify playlist before trying to play a vibe.", code: "spotify_uri_missing")
             return
         }
 
-        if let vibeTitle {
-            setCurrentVibeTitle(vibeTitle)
-        }
-        shouldResumePlaybackWhenConnected = false
-        pendingVibeURI = trimmedURI
-        wasStoppedManually = false
-
-        if prepareForConnection() {
-            playPendingVibeIfNeeded()
-        }
-    }
-
-    func playVibe() {
-        resumeVibe()
-    }
-
-    func resumeVibe() {
-        shouldResumePlaybackWhenConnected = true
-        wasStoppedManually = false
-
-        if prepareForConnection() {
-            resumePlaybackIfPossible()
-        }
-    }
-
-    func pauseVibe() {
-        guard appRemote.isConnected else {
-            reportError("Connect Spotify before trying to pause playback.", code: "spotify_disconnected")
-            return
-        }
-
+        log("Starting Spotify authentication.")
+        refreshSpotifyAvailability()
         clearError()
-        appRemote.playerAPI?.pause({ [weak self] _, error in
-            guard let self else { return }
 
-            if let error {
-                self.reportError(
-                    "Couldn't pause Spotify playback: \(error.localizedDescription)",
-                    code: "spotify_pause_failed"
-                )
-                return
-            }
-
-            self.wasStoppedManually = false
-            self.shouldResumePlaybackWhenConnected = false
-            self.setPausedState(true)
-            self.setPlaybackState(.paused)
-            self.log("Playback paused.")
-        })
-    }
-
-    func stopVibe() {
-        pendingVibeURI = nil
-        shouldResumePlaybackWhenConnected = false
-        shouldReconnectWhenActive = false
-        wasStoppedManually = true
-
-        guard appRemote.isConnected else {
-            setPausedState(true)
-            setPlaybackState(.stopped)
-            log("Playback marked as stopped while Spotify was disconnected.")
+        guard isPlaybackAvailable else {
+            presentAvailabilityError()
             return
         }
 
-        clearError()
-        appRemote.playerAPI?.pause({ [weak self] _, error in
-            guard let self else { return }
-
-            if let error {
-                self.reportError(
-                    "Couldn't stop Spotify playback: \(error.localizedDescription)",
-                    code: "spotify_stop_failed"
-                )
-                return
-            }
-
-            self.setPausedState(true)
-            self.setPlaybackState(.stopped)
-            self.log("Playback stopped.")
-        })
+        shouldReconnectWhenActive = true
+        sessionManager.initiateSession(with: scopes, options: .default, campaign: nil)
     }
 
-    func skipNext() {
-        guard appRemote.isConnected else {
-            reportError("Connect Spotify before skipping tracks.", code: "spotify_disconnected")
-            return
+    // MARK: - Silent Reconnect
+
+    /// Attempts to reconnect to Spotify without prompting the user for auth.
+    /// Returns `true` if we have a cached session and App Remote connects within 3s.
+    /// Returns `false` immediately if no Keychain token or no cached session exists.
+    func reconnectSilentlyIfPossible() async -> Bool {
+        // 1. Check Keychain for saved Web API token
+        guard let savedToken = KeychainStore.get("aiqo.spotify.webapi.token"),
+              !savedToken.isEmpty else {
+            log("Silent reconnect: no Keychain token found.")
+            return false
         }
 
-        clearError()
-        appRemote.playerAPI?.skip(toNext: { [weak self] _, error in
-            guard let self else { return }
-
-            if let error {
-                self.reportError(
-                    "Couldn't skip to the next Spotify track: \(error.localizedDescription)",
-                    code: "spotify_skip_next_failed"
-                )
-                return
-            }
-
-            self.log("Skipped to next track.")
-        })
-    }
-
-    func skipPrevious() {
-        guard appRemote.isConnected else {
-            reportError("Connect Spotify before skipping tracks.", code: "spotify_disconnected")
-            return
+        // 2. Already connected — nothing to do
+        if appRemote.isConnected {
+            log("Silent reconnect: already connected.")
+            return true
         }
 
-        clearError()
-        appRemote.playerAPI?.skip(toPrevious: { [weak self] _, error in
-            guard let self else { return }
+        // 3. Check for a cached SPT session with a valid access token
+        guard let session = sessionManager.session, !session.isExpired else {
+            log("Silent reconnect: no valid cached session — user must auth interactively.")
+            return false
+        }
 
-            if let error {
-                self.reportError(
-                    "Couldn't go back to the previous Spotify track: \(error.localizedDescription)",
-                    code: "spotify_skip_previous_failed"
-                )
-                return
+        // 4. Attempt App Remote connection (non-interactive)
+        shouldReconnectWhenActive = true
+        connectAppRemote(with: session.accessToken)
+
+        // 5. Poll for connection (max 3 seconds, 100ms intervals)
+        for _ in 0..<30 {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            if appRemote.isConnected {
+                log("Silent reconnect: App Remote connected successfully.")
+                return true
             }
+        }
 
-            self.log("Skipped to previous track.")
-        })
+        log("Silent reconnect: timed out after 3s.")
+        return false
     }
 
     @discardableResult
@@ -257,6 +231,8 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         return handled
     }
 
+    // MARK: - App Lifecycle
+
     @objc
     private func applicationDidBecomeActive() {
         refreshSpotifyAvailability()
@@ -268,8 +244,15 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
             return
         }
 
-        log("App became active. Reconnecting App Remote.")
-        connectAppRemote(with: session.accessToken)
+        log("App became active. Will reconnect App Remote after delay...")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self,
+                  !self.appRemote.isConnected,
+                  let session = self.sessionManager.session,
+                  !session.isExpired else { return }
+            self.log("Reconnecting App Remote now.")
+            self.connectAppRemote(with: session.accessToken)
+        }
     }
 
     @objc
@@ -282,7 +265,9 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         setConnectionState(false)
     }
 
-    private func connectAppRemote(with accessToken: String) {
+    // MARK: - Connection Helpers
+
+    func connectAppRemote(with accessToken: String) {
         guard !accessToken.isEmpty else {
             reportError("Spotify couldn't reconnect because the access token is missing.", code: "spotify_access_token_missing")
             return
@@ -308,7 +293,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     }
 
     @discardableResult
-    private func prepareForConnection() -> Bool {
+    func prepareForConnection() -> Bool {
         refreshSpotifyAvailability()
         clearError()
 
@@ -335,54 +320,9 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         return false
     }
 
-    private func playPendingVibeIfNeeded() {
-        guard appRemote.isConnected, let pendingVibeURI else { return }
+    // MARK: - State Management
 
-        clearError()
-        appRemote.playerAPI?.play(pendingVibeURI, callback: { [weak self] _, error in
-            guard let self else { return }
-
-            if let error {
-                self.reportError(
-                    "Couldn't start the selected Spotify playlist: \(error.localizedDescription)",
-                    code: "spotify_play_failed"
-                )
-                return
-            }
-
-            self.pendingVibeURI = nil
-            self.shouldResumePlaybackWhenConnected = false
-            self.wasStoppedManually = false
-            self.setPausedState(false)
-            self.setPlaybackState(.playing)
-            self.log("Playing vibe URI: \(pendingVibeURI)")
-        })
-    }
-
-    private func resumePlaybackIfPossible() {
-        guard appRemote.isConnected else { return }
-
-        clearError()
-        appRemote.playerAPI?.resume({ [weak self] _, error in
-            guard let self else { return }
-
-            if let error {
-                self.reportError(
-                    "Couldn't resume Spotify playback: \(error.localizedDescription)",
-                    code: "spotify_resume_failed"
-                )
-                return
-            }
-
-            self.wasStoppedManually = false
-            self.shouldResumePlaybackWhenConnected = false
-            self.setPausedState(false)
-            self.setPlaybackState(.playing)
-            self.log("Playback resumed.")
-        })
-    }
-
-    private func setConnectionState(_ connected: Bool) {
+    func setConnectionState(_ connected: Bool) {
         if Thread.isMainThread {
             isConnected = connected
         } else {
@@ -392,7 +332,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
     }
 
-    private func setPausedState(_ paused: Bool) {
+    func setPausedState(_ paused: Bool) {
         if Thread.isMainThread {
             isPaused = paused
         } else {
@@ -402,7 +342,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
     }
 
-    private func setPlaybackState(_ state: VibePlaybackState) {
+    func setPlaybackState(_ state: VibePlaybackState) {
         if Thread.isMainThread {
             playbackState = state
         } else {
@@ -412,7 +352,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
     }
 
-    private func setCurrentVibeTitle(_ title: String?) {
+    func setCurrentVibeTitle(_ title: String?) {
         if Thread.isMainThread {
             currentVibeTitle = title
         } else {
@@ -421,6 +361,8 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
             }
         }
     }
+
+    // MARK: - Error Handling
 
     func clearError() {
         if Thread.isMainThread {
@@ -445,7 +387,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
     }
 
-    private func reportError(_ message: String, code: String? = nil) {
+    func reportError(_ message: String, code: String? = nil) {
         if Thread.isMainThread {
             lastErrorMessage = message
             lastErrorCode = code
@@ -459,7 +401,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         log("Error [\(code ?? "unknown")]: \(message)")
     }
 
-    private func refreshSpotifyAvailability() {
+    func refreshSpotifyAvailability() {
         let installed = sessionManager.isSpotifyAppInstalled
 
         if Thread.isMainThread {
@@ -471,178 +413,79 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
     }
 
-    private func requestPlayerState() {
-        guard appRemote.isConnected else { return }
+    // MARK: - Spotify Logout
 
-        appRemote.playerAPI?.getPlayerState({ [weak self] result, error in
-            guard let self else { return }
+    func logoutSpotify() {
+        stopVibe()
 
-            if let error {
-                self.reportError(
-                    "Couldn't refresh Spotify player state: \(error.localizedDescription)",
-                    code: "spotify_state_fetch_failed"
-                )
-                return
-            }
-
-            guard let playerState = result as? SPTAppRemotePlayerState else {
-                self.reportError(
-                    "Spotify returned an unexpected player state payload.",
-                    code: "spotify_state_invalid"
-                )
-                return
-            }
-
-            self.updatePlayerState(from: playerState)
-        })
-    }
-
-    private func updatePlayerState(from playerState: SPTAppRemotePlayerState) {
-        let track = playerState.track
-        let trackName = track.name
-        let artistName = track.artist.name
-        let trackURI = track.uri
-        let shouldFetchArtwork = currentTrackURI != trackURI || currentAlbumArt == nil
-        let resolvedPlaybackState: VibePlaybackState
-
-        currentTrackURI = trackURI
-
-        if wasStoppedManually && playerState.isPaused {
-            resolvedPlaybackState = .stopped
-        } else if playerState.isPaused {
-            resolvedPlaybackState = .paused
-        } else {
-            wasStoppedManually = false
-            resolvedPlaybackState = .playing
+        if appRemote.isConnected {
+            appRemote.disconnect()
         }
+
+        appRemote.connectionParameters.accessToken = nil
+        shouldReconnectWhenActive = false
+        connectionRetryCount = 0
+
+        blendError = nil
+        currentBlendSource = nil
+        currentBlendQueue = []
+        blendSourceLookup = [:]
+        webAPIToken = nil
+        isWebAPIAuthorized = false
+
+        setConnectionState(false)
+        setPausedState(true)
+        setPlaybackState(.stopped)
 
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.currentTrackName = trackName
-            self.currentArtistName = artistName
-            self.isPaused = playerState.isPaused
-            self.playbackState = resolvedPlaybackState
+            self?.currentTrackName = "Not Playing"
+            self?.currentArtistName = ""
+            self?.currentAlbumArt = nil
+            self?.currentVibeTitle = nil
+        }
 
-            if shouldFetchArtwork {
-                self.currentAlbumArt = nil
+        log("Spotify fully reset. Session + Keychain cleared.")
+    }
+
+    // MARK: - Web API Helpers
+
+    var accessToken: String? {
+        sessionManager.session?.accessToken
+    }
+
+    func spotifyAPIError(from data: Data?, response: URLResponse?, fallback: String) -> NSError {
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        var message = "HTTP \(statusCode)"
+
+        if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let error = json["error"] as? [String: Any] {
+                message = error["message"] as? String ?? message
+            } else if let errorStr = json["error"] as? String {
+                message = errorStr
             }
         }
 
-        guard shouldFetchArtwork else { return }
-
-        appRemote.imageAPI?.fetchImage(
-            forItem: track,
-            with: CGSize(width: 100, height: 100),
-            callback: { [weak self] result, error in
-                guard let self else { return }
-
-                if let error {
-                    self.reportError(
-                        "Couldn't load Spotify album art: \(error.localizedDescription)",
-                        code: "spotify_art_fetch_failed"
-                    )
-                    return
-                }
-
-                guard let image = result as? UIImage else {
-                    self.reportError(
-                        "Spotify returned an unexpected album art payload.",
-                        code: "spotify_art_invalid"
-                    )
-                    return
-                }
-
-                DispatchQueue.main.async { [weak self] in
-                    guard let self, self.currentTrackURI == trackURI else { return }
-                    self.currentAlbumArt = image
-                }
+        if statusCode == 401 || statusCode == 403 {
+            DispatchQueue.main.async { [weak self] in
+                self?.webAPIToken = nil
+                self?.isWebAPIAuthorized = false
+                self?.log("Web API token expired/invalid — cleared. User must re-auth.")
             }
-        )
-    }
-
-    private func log(_ message: String) {
-        print("Aura Vibe: \(message)")
-    }
-}
-
-extension SpotifyVibeManager: SPTSessionManagerDelegate {
-    func sessionManager(manager: SPTSessionManager, didInitiate session: SPTSession) {
-        log("Spotify session initiated.")
-        connectAppRemote(with: session.accessToken)
-    }
-
-    func sessionManager(manager: SPTSessionManager, didFailWith error: Error) {
-        setConnectionState(false)
-        reportError(
-            "Spotify authentication failed: \(error.localizedDescription)",
-            code: "spotify_auth_failed"
-        )
-    }
-
-    func sessionManager(manager: SPTSessionManager, didRenew session: SPTSession) {
-        log("Spotify session renewed.")
-        connectAppRemote(with: session.accessToken)
-    }
-}
-
-extension SpotifyVibeManager: SPTAppRemoteDelegate {
-    func appRemoteDidEstablishConnection(_ appRemote: SPTAppRemote) {
-        setConnectionState(true)
-        clearError()
-        log("Connected to Spotify.")
-
-        appRemote.playerAPI?.delegate = self
-        appRemote.playerAPI?.subscribe(toPlayerState: { [weak self] _, error in
-            guard let self else { return }
-
-            if let error {
-                self.reportError(
-                    "Couldn't subscribe to Spotify player updates: \(error.localizedDescription)",
-                    code: "spotify_subscribe_failed"
-                )
-                return
-            }
-
-            self.log("Subscribed to Spotify player state.")
-        })
-
-        requestPlayerState()
-
-        if let pendingVibeURI {
-            log("Playback request is ready after reconnect: \(pendingVibeURI)")
-            playPendingVibeIfNeeded()
-        } else if shouldResumePlaybackWhenConnected {
-            resumePlaybackIfPossible()
         }
+
+        let fullMessage = "\(fallback): \(message)"
+        log("Spotify API error: \(fullMessage)")
+        return NSError(domain: "SpotifyAPI", code: statusCode, userInfo: [NSLocalizedDescriptionKey: fullMessage])
     }
 
-    func appRemote(_ appRemote: SPTAppRemote, didFailConnectionAttemptWithError error: Error?) {
-        setConnectionState(false)
-        let message = error?.localizedDescription ?? "Unknown connection error."
-        reportError("Couldn't connect to Spotify: \(message)", code: "spotify_connection_failed")
-    }
-
-    func appRemote(_ appRemote: SPTAppRemote, didDisconnectWithError error: Error?) {
-        setConnectionState(false)
-
-        if let error {
-            reportError(
-                "Spotify disconnected: \(error.localizedDescription)",
-                code: "spotify_disconnected"
-            )
-        } else {
-            log("Disconnected from Spotify.")
-        }
+    func log(_ message: String) {
+        PrivacySanitizer.log("Aura Vibe: \(message)")
     }
 }
 
-extension SpotifyVibeManager: SPTAppRemotePlayerStateDelegate {
-    func playerStateDidChange(_ playerState: SPTAppRemotePlayerState) {
-        updatePlayerState(from: playerState)
-        log("Player state updated. Track URI: \(playerState.track.uri)")
-    }
-}
 #else
+
+// MARK: - Simulator Stub
 
 enum VibePlaybackState: String {
     case stopped = "Stopped"
@@ -664,6 +507,14 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     @Published var lastErrorMessage: String?
     @Published var lastErrorCode: String?
 
+    @Published var isGeneratingBlend: Bool = false
+    @Published var blendError: String?
+    @Published var currentBlendSource: BlendSourceTag?
+    @Published var currentBlendQueue: [BlendTrackItem] = []
+    var blendSourceLookup: [String: BlendSourceTag] = [:]
+    @Published var webAPIToken: String?
+    @Published var isWebAPIAuthorized: Bool = false
+
     var canAttemptAuthorization: Bool { false }
     var isPlaybackAvailable: Bool { false }
 
@@ -671,6 +522,10 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         super.init()
         lastErrorMessage = "Spotify is disabled on the iOS Simulator. Run on a real iPhone to use Spotify playback."
         lastErrorCode = "spotify_simulator_unavailable"
+    }
+
+    func reconnectSilentlyIfPossible() async -> Bool {
+        false
     }
 
     func connect() {
@@ -706,6 +561,35 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
 
     func handleURL(_ url: URL) -> Bool {
         false
+    }
+
+    func logoutSpotify() {
+        presentAvailabilityError()
+    }
+
+    func authorizeWebAPI() {
+        presentAvailabilityError()
+    }
+
+    func buildBlendQueue(userRatio: Double = 0.6, completion: @escaping (Result<[BlendTrackItem], Error>) -> Void) {
+        presentAvailabilityError()
+        completion(.failure(NSError(domain: "BlendEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "Simulator"])))
+    }
+
+    func playBlendQueue(_ queue: [BlendTrackItem]) {
+        presentAvailabilityError()
+    }
+
+    func resolveBlendSource(for trackURI: String) -> BlendSourceTag? {
+        nil
+    }
+
+    func fetchTopTrackURIs(limit: Int = 10) async throws -> [String] {
+        throw BlendError.unknown("Simulator")
+    }
+
+    func fetchMasterPlaylistURIs(playlistId: String) async throws -> [String] {
+        throw BlendError.unknown("Simulator")
     }
 
     func clearError() {

@@ -99,18 +99,7 @@ enum VibeMode: String, CaseIterable, Identifiable, Codable {
     }
 
     var spotifyURI: String {
-        switch self {
-        case .awakening:
-            return "spotify:playlist:37i9dQZF1DX3rxVfibe1L0"
-        case .deepFocus:
-            return "spotify:playlist:37i9dQZF1DWZeKCadgRdKQ"
-        case .egoDeath:
-            return "spotify:playlist:37i9dQZF1DWU0ScTcjJBdj"
-        case .energy:
-            return "spotify:playlist:37i9dQZF1DX76Wlfdnj7AP"
-        case .recovery:
-            return "spotify:playlist:37i9dQZF1DX4sWSpwq3LiO"
-        }
+        VibeSpotifyConfig.playlistURI(for: self)
     }
 }
 

@@ -50,6 +50,75 @@ extension VibeControlSheet {
                 .buttonStyle(.plain)
                 .accessibilityLabel(vibeManager.isConnected ? "افتح سبوتيفاي" : "وصّل سبوتيفاي")
 
+                // Hamoudi+you+DJ Blend button
+                if AiQoFeatureFlags.hamoudiBlendEnabled {
+                Button {
+                    showBlendPlaylist = true
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.32),
+                                            Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.22)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 42, height: 42)
+
+                            Text("🎧")
+                                .font(.system(size: 18))
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Hamoudi+you+DJ 🎧")
+                                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white)
+
+                            Text("امزج ذوقك مع حمودي")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.white.opacity(0.72))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.12, green: 0.85, blue: 0.38))
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.14),
+                                                Color(red: 0.46, green: 0.90, blue: 0.78).opacity(0.08)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .strokeBorder(Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.32), lineWidth: 1.2)
+                            }
+                            .shadow(color: Color(red: 0.12, green: 0.85, blue: 0.38).opacity(0.12), radius: 14, x: 0, y: 6)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("افتح مزيج حمودي+انت+دي جي")
+                } // end hamoudiBlendEnabled
+
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("DJ Hamoudi's Playlists")
@@ -62,6 +131,33 @@ extension VibeControlSheet {
                     }
                 }
                 .frame(maxHeight: 260)
+
+                // Spotify Logout
+                if vibeManager.isConnected {
+                    Button {
+                        vibeManager.logoutSpotify()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 12, weight: .semibold))
+
+                            Text("سجل خروج من سبوتيفاي")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(Color.white.opacity(0.55))
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.white.opacity(0.06))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.8)
+                                }
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("سجل خروج من سبوتيفاي")
+                }
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 112)
