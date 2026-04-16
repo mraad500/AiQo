@@ -10,9 +10,11 @@ struct ProfileSetupView: View {
     @State private var isProfilePublic = true
     @State private var appeared = false
 
+    // Name is optional — Apple Sign In may have already provided it, and
+    // Apple Review Guideline 4 prohibits forcing re-entry of data Apple supplies.
+    // Weight + height remain required for health calculations.
     private var isFormValid: Bool {
-        return !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !normalizedUsername.isEmpty
+        return !normalizedUsername.isEmpty
             && !weightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !heightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -155,13 +157,15 @@ struct ProfileSetupView: View {
         let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedWeight = weightText.replacingOccurrences(of: ",", with: ".")
         guard let weight = Double(normalizedWeight),
-              let height = Int(heightText),
-              !trimmedName.isEmpty else { return }
+              let height = Int(heightText) else { return }
+
+        // Name is optional per Guideline 4 — use a fallback if empty
+        let displayName = trimmedName.isEmpty ? normalizedUsername : trimmedName
 
         let age = Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 0
 
         var profile = UserProfileStore.shared.current
-        profile.name = trimmedName
+        profile.name = displayName
         profile.age = max(age, 0)
         profile.heightCm = height
         profile.weightKg = Int(weight.rounded())

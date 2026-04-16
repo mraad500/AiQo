@@ -36,13 +36,13 @@
           "localizations" : [
             {
               "description" : "Fast Captain, Gym, Kitchen, My Vibe, challenges, and full lifestyle tracking",
-              "displayName" : "AiQo Core",
+              "displayName" : "AiQo Max",
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.standard.monthly",
+          "productID" : "com.mraad500.aiqo.max",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "AiQo Core Monthly",
+          "referenceName" : "AiQo Max Monthly",
           "subscriptionGroupID" : "7F4D6A12-3C95-4C2F-8B8D-1E2A53F9E100",
           "type" : "RecurringSubscription"
         },
@@ -53,7 +53,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "29.99",
+          "displayPrice" : "19.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "F0F1F2F3-F4F5-46F7-88F9-FA0FB1FC2FD3",
@@ -66,12 +66,12 @@
           },
           "localizations" : [
             {
-              "description" : "Everything in Core plus Peaks, expanded Captain memory, and deeper AI guidance",
+              "description" : "Everything in Max plus Peaks, expanded Captain memory, and deeper AI guidance",
               "displayName" : "AiQo Intelligence Pro",
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.intelligencepro.monthly",
+          "productID" : "com.mraad500.aiqo.intelligence.pro",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "AiQo Intelligence Pro Monthly",
           "subscriptionGroupID" : "7F4D6A12-3C95-4C2F-8B8D-1E2A53F9E100",

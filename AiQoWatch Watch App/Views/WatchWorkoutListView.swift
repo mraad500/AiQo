@@ -14,10 +14,13 @@ struct WatchWorkoutListView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 4)
 
+                    // Tapping a row starts the workout immediately.
+                    // AiQoWatchApp's root switches to WatchActiveWorkoutView
+                    // when workoutManager.isActive becomes true, so no
+                    // NavigationLink is needed (avoids duplicate view instances).
                     ForEach(WatchWorkoutType.allCases) { workout in
-                        NavigationLink {
-                            WatchActiveWorkoutView(workoutType: workout)
-                                .environmentObject(workoutManager)
+                        Button {
+                            workoutManager.startWorkout(type: workout)
                         } label: {
                             WatchWorkoutRow(workout: workout)
                         }

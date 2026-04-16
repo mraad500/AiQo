@@ -2,14 +2,17 @@ import Foundation
 
 enum SubscriptionProductIDs {
     // Live App Store Connect catalog.
-    // The existing StoreKit "standard" SKU now maps to the Core tier.
-    static let coreMonthly = "com.mraad500.aiqo.standard.monthly"
-    static let intelligenceProMonthly = "com.mraad500.aiqo.intelligencepro.monthly"
+    static let coreMonthly = "com.mraad500.aiqo.max"
+    static let intelligenceProMonthly = "com.mraad500.aiqo.intelligence.pro"
 
     // Retired middle-tier SKU kept only to grandfather older entitlements.
     static let proMonthly = "com.mraad500.aiqo.pro.monthly"
 
-    // Legacy product IDs kept only to preserve entitlement decoding for older installs.
+    // Previous-generation SKUs kept to preserve entitlement decoding.
+    static let legacyStandardMonthly = "com.mraad500.aiqo.standard.monthly"
+    static let legacyIntelligenceProMonthly = "com.mraad500.aiqo.intelligencepro.monthly"
+
+    // Oldest legacy product IDs kept for the same reason.
     static let legacyCoreMonthly = "aiqo_core_monthly_9_99"
     static let legacyProMonthly = "aiqo_pro_monthly_19_99"
     static let legacyIntelligenceMonthly = "aiqo_intelligence_monthly_39_99"
@@ -24,6 +27,8 @@ enum SubscriptionProductIDs {
 
     static let allKnownIDs: Set<String> = allCurrentIDs.union([
         proMonthly,
+        legacyStandardMonthly,
+        legacyIntelligenceProMonthly,
         legacyCoreMonthly,
         legacyProMonthly,
         legacyIntelligenceMonthly
@@ -45,6 +50,7 @@ enum SubscriptionProductIDs {
         switch productID {
         case intelligenceProMonthly,
              proMonthly,
+             legacyIntelligenceProMonthly,
              legacyProMonthly,
              legacyIntelligenceMonthly:
             return true
@@ -68,10 +74,11 @@ enum SubscriptionProductIDs {
 
     static func displayName(for productID: String) -> String {
         switch productID {
-        case coreMonthly, legacyCoreMonthly:
-            return "AiQo Core"
+        case coreMonthly, legacyCoreMonthly, legacyStandardMonthly:
+            return "AiQo Max"
         case intelligenceProMonthly,
              proMonthly,
+             legacyIntelligenceProMonthly,
              legacyProMonthly,
              legacyIntelligenceMonthly:
             return "AiQo Intelligence Pro"
@@ -82,10 +89,11 @@ enum SubscriptionProductIDs {
 
     static func fallbackDisplayPrice(for productID: String) -> String {
         switch productID {
-        case coreMonthly, legacyCoreMonthly:
+        case coreMonthly, legacyCoreMonthly, legacyStandardMonthly:
             return coreFallbackPrice
         case intelligenceProMonthly,
              proMonthly,
+             legacyIntelligenceProMonthly,
              legacyProMonthly,
              legacyIntelligenceMonthly:
             return intelligenceProFallbackPrice

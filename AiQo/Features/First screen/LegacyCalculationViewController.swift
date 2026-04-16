@@ -111,7 +111,7 @@ struct LegacyCalculationScreenView: View {
                                 .foregroundStyle(.primary)
 
                             if !hasGrantedPermissions {
-                                Text(NSLocalizedString("legacy.permissions.subtitle", value: "مطلوب للمتابعة", comment: ""))
+                                Text(NSLocalizedString("legacy.permissions.subtitle", value: "لتفعيل التتبع الصحي", comment: ""))
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
@@ -161,12 +161,8 @@ struct LegacyCalculationScreenView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .disabled(!hasGrantedPermissions)
-                .opacity(hasGrantedPermissions ? 1 : 0.5)
-                .animation(.easeInOut(duration: 0.3), value: hasGrantedPermissions)
-
-                // "Not Now" button removed per Apple Review Guideline 5.1.1(iv):
-                // Users must always proceed to the system permission request.
+                // Guideline 5.1.1(iv): Continue must always be available.
+                // HealthKit permission is encouraged but not required to proceed.
             }
             .padding(28)
             .glassCard()

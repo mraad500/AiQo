@@ -82,7 +82,7 @@ struct AIDataConsentView: View {
                             ),
                             detail: NSLocalizedString(
                                 "ai.consent.who.detail",
-                                value: "خدمة Google Gemini AI لمعالجة اللغة وتقديم النصائح الصحية المخصصة.",
+                                value: "Google Gemini AI لمعالجة اللغة وتقديم النصائح الصحية المخصصة. ElevenLabs لتحويل النص إلى صوت عند تفعيل صوت الكابتن.",
                                 comment: ""
                             )
                         )
@@ -96,7 +96,7 @@ struct AIDataConsentView: View {
                             ),
                             detail: NSLocalizedString(
                                 "ai.consent.why.detail",
-                                value: "لتوفير ردود مخصصة ونصائح صحية تناسب حالتك. لا يتم تخزين بياناتك الشخصية لدى مزود الخدمة.",
+                                value: "لتوفير ردود مخصصة ونصائح صحية تناسب حالتك. البيانات الصحية تُلخَّص وتُموَّه قبل الإرسال. لا يتم تخزين بياناتك الشخصية لدى مزودي الخدمة.",
                                 comment: ""
                             )
                         )

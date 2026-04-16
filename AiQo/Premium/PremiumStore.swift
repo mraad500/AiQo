@@ -20,7 +20,7 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .core:
-            return "AiQo Core"
+            return "AiQo Max"
         case .intelligencePro:
             return "AiQo Intelligence Pro"
         }

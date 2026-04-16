@@ -13,10 +13,12 @@ enum SubscriptionTier: Int, Comparable {
     static func from(productID: String) -> SubscriptionTier {
         switch productID {
         case SubscriptionProductIDs.coreMonthly,
-             SubscriptionProductIDs.legacyCoreMonthly:
+             SubscriptionProductIDs.legacyCoreMonthly,
+             SubscriptionProductIDs.legacyStandardMonthly:
             return .core
         case SubscriptionProductIDs.intelligenceProMonthly,
              SubscriptionProductIDs.proMonthly,
+             SubscriptionProductIDs.legacyIntelligenceProMonthly,
              SubscriptionProductIDs.legacyProMonthly,
              SubscriptionProductIDs.legacyIntelligenceMonthly:
             return .intelligencePro
@@ -30,7 +32,7 @@ enum SubscriptionTier: Int, Comparable {
         case .none:
             return ""
         case .core:
-            return "AiQo Core"
+            return "AiQo Max"
         case .intelligencePro:
             return "AiQo Intelligence Pro"
         }

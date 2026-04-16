@@ -36,13 +36,13 @@
           "localizations" : [
             {
               "description" : "Captain Hamoudi, Gym, Kitchen, My Vibe, Challenges, health tracking, and smart notifications",
-              "displayName" : "AiQo Core",
+              "displayName" : "AiQo Max",
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.standard.monthly",
+          "productID" : "com.mraad500.aiqo.max",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "AiQo Core Monthly",
+          "referenceName" : "AiQo Max Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
           "type" : "RecurringSubscription"
         },
@@ -66,12 +66,12 @@
           },
           "localizations" : [
             {
-              "description" : "Everything in Core plus Peaks, expanded Captain memory, and deeper AI guidance",
+              "description" : "Everything in Max plus Peaks, expanded Captain memory, and deeper AI guidance",
               "displayName" : "AiQo Intelligence Pro",
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.intelligencepro.monthly",
+          "productID" : "com.mraad500.aiqo.intelligence.pro",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "AiQo Intelligence Pro Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",

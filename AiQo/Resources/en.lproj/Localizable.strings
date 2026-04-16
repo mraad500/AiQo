@@ -46,8 +46,8 @@
 "legal.section" = "Legal";
 "legal.privacy.title" = "Privacy Policy";
 "legal.terms.title" = "Terms of Service";
-"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: March 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party Sharing\nWe do not share your personal data with any third party without your explicit consent.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
-"legal.terms.content" = "AiQo Terms of Service\n\nLast updated: March 2026\n\n1. Acceptance\nBy using AiQo, you agree to these terms.\n\n2. Service\nAiQo provides health tracking and AI-powered coaching. Content is not a substitute for professional medical advice.\n\n3. Subscriptions\n- Free trial: 7 days\n- Individual plan: $5.99/month\n- Family plan: $10.00/month (up to 5 people)\nSubscriptions do not auto-renew. Each cycle is 30 days.\n\n4. User Conduct\nYou are responsible for your use of the app and any content you post in the Tribe feature.\n\n5. Disclaimer\nAiQo does not provide medical advice. Consult your doctor before making health decisions based on app data.\n\n6. Changes\nWe reserve the right to modify these terms at any time.";
+"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: April 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party AI Services\nWith your explicit consent, AiQo may send summarized and anonymized data to the following third-party services:\n- Google Gemini: Your conversation messages and a summarized daily health snapshot (steps, calories, sleep duration, heart rate) are sent for AI-powered coaching responses. Personal identifiers are redacted before transmission.\n- ElevenLabs: When voice playback is enabled, Captain's text responses are sent to ElevenLabs for text-to-speech synthesis. No health or personal data is included.\n- Spotify: If connected, AiQo communicates with the Spotify app on your device for music playback. No data is sent to Spotify through AiQo servers.\nYou can grant or revoke AI data sharing consent at any time from Settings > Privacy.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings. You can revoke AI data sharing consent from Settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
+"legal.terms.content" = "AiQo Terms of Service\n\nLast updated: April 2026\n\n1. Acceptance\nBy using AiQo, you agree to these terms.\n\n2. Service\nAiQo provides health tracking and AI-powered coaching. Content is not a substitute for professional medical advice.\n\n3. Subscriptions\n- Free trial: 7 days\n- AiQo Max: $9.99/month\n- AiQo Intelligence Pro: $19.99/month\nSubscriptions auto-renew monthly until cancelled. You can manage or cancel your subscription at any time through your Apple ID settings. Payment is charged to your Apple ID account at confirmation of purchase. The subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current billing period.\n\n4. User Conduct\nYou are responsible for your use of the app and any content you post in the Tribe feature.\n\n5. Disclaimer\nAiQo does not provide medical advice. Consult your doctor before making health decisions based on app data.\n\n6. Changes\nWe reserve the right to modify these terms at any time.";
 
 /* Referral */
 "referral.section" = "Invite Friends";
@@ -470,7 +470,7 @@
 "gym.exercise.cinematic_grind" = "Cinematic Grind";
 "gym.exercise.cinematic_grind.subtitle" = "Zone 2 cardio while Netflix or YouTube keeps your brain locked in";
 "gym.exercise.cardio_captain_hamoudi" = "Cardio with Captain Hamoudi";
-"gym.exercise.cardio_captain_hamoudi.subtitle" = "Zone 2 heart rate for optimal fat burning";
+"gym.exercise.cardio_captain_hamoudi.subtitle" = "Zone 2 heart rate for steady-state cardio (ACSM Guidelines)";
 "gym.exercise.running" = "Running";
 "gym.exercise.walking" = "Walking";
 "gym.exercise.cycling" = "Cycling";
@@ -1296,9 +1296,9 @@
 "premium.subtitle" = "Monthly subscription. Manage or cancel anytime from Apple.";
 "premium.restore" = "Restore";
 "premium.buy" = "Buy";
-"premium.plan.individual" = "AiQo Core";
+"premium.plan.individual" = "AiQo Max";
 "premium.plan.family" = "AiQo Intelligence";
-"premium.plan.individual.description" = "Unlock the Core AiQo experience.";
+"premium.plan.individual.description" = "Unlock the full AiQo Max experience.";
 "premium.plan.family.description" = "Unlock AiQo Intelligence features, including tribe creation.";
 "premium.error.productMissing" = "This product is unavailable right now.";
 "premium.status.activeUntil" = "Active until %@";
@@ -1407,7 +1407,7 @@
 "paywall.status.currentPlan" = "Current plan: %@. Expires on %@.";
 "paywall.status.canCreateTribe" = "You can create a tribe now.";
 "paywall.plan.familyDescription" = "AiQo Intelligence unlocks tribe creation, deeper AI guidance, and the highest AiQo feature set.";
-"paywall.plan.individualDescription" = "AiQo Core unlocks the essential AiQo app experience.";
+"paywall.plan.individualDescription" = "AiQo Max unlocks the essential AiQo app experience.";
 "paywall.debug.testing" = "Testing";
 "paywall.debug.resetPremium" = "Reset premium data";
 "paywall.debug.resetDone" = "Premium data has been reset locally for testing subscription expiry.";
@@ -1592,7 +1592,7 @@
 "legacy.intro.tagline" = "You're not starting from zero — you're coming with a history.";
 "legacy.permissions.granted" = "Permissions granted";
 "legacy.permissions.title" = "Health & Notification Access";
-"legacy.permissions.subtitle" = "Required to continue";
+"legacy.permissions.subtitle" = "To enable health tracking";
 "legacy.permissions.a11y" = "Health & Notification Access";
 "legacy.continue" = "Continue";
 "legacy.skip" = "Not Now";
@@ -2348,7 +2348,7 @@
 "gym.category.startSession" = "Start Session";
 "gym.category.startSessionFor" = "Start session: %@";
 "gym.workout.cardioCaptain" = "Cardio with Captain Hamoudi";
-"gym.workout.cardioCaptain.sub" = "Zone 2 heart rate for optimal fat burn";
+"gym.workout.cardioCaptain.sub" = "Zone 2 heart rate for steady-state cardio (ACSM Guidelines)";
 "gym.workout.running" = "Running";
 "gym.workout.walking" = "Walking";
 "gym.workout.cycling" = "Cycling";
@@ -2434,7 +2434,7 @@
 "gym.quest.s1q3.howTo2" = "Aim for 7.0h then 7.5h then 8.0h.";
 "gym.quest.s1q3.howTo3" = "Use the \"Refresh\" button after waking up.";
 "gym.quest.s1q4.explanation" = "A cumulative Zone 2 quest within Stage 1, the more minutes the higher your center up to center 1.";
-"gym.quest.s1q4.benefit1" = "Enhances long-term fat burning efficiency.";
+"gym.quest.s1q4.benefit1" = "May support cardiovascular endurance over time (ACSM).";
 "gym.quest.s1q4.benefit2" = "Strengthens heart and endurance without excessive strain.";
 "gym.quest.s1q4.benefit3" = "Supports nervous calm and stress regulation.";
 "gym.quest.s1q4.howTo1" = "Log Zone 2 sessions regularly.";
@@ -2532,7 +2532,7 @@
 
 /* ─── Gym: Recovery ─── */
 "gym.recovery.title" = "Measure Heart Rate Recovery";
-"gym.recovery.description" = "Heart rate recovery is how fast your heart rate drops after exercise. If it drops quickly within the first two minutes, it indicates better heart health and fitness.";
+"gym.recovery.description" = "Heart rate recovery measures how quickly your heart rate decreases after exercise. A faster recovery may be associated with cardiovascular fitness (American Heart Association).";
 "gym.recovery.yes" = "Yes";
 "gym.recovery.no" = "No thanks";
 "gym.recovery.inhalePrompt" = "Champ, take a deep breath and let your chest open up.";
@@ -2671,3 +2671,8 @@
 "blend.error.no_network" = "No internet connection";
 "blend.error.rate_limited" = "Too many requests. Try again in a minute.";
 "blend.error.retry" = "Try again";
+
+/* Health Disclaimer (Apple Guideline 1.4.1) */
+"health.disclaimer.general" = "AiQo provides general wellness guidance, not medical diagnosis or treatment. Consult a qualified healthcare professional before making medical decisions.";
+"health.disclaimer.sources" = "Sources";
+"health.disclaimer.learnMore" = "Learn more";

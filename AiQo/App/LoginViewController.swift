@@ -199,6 +199,19 @@ final class LoginScreenViewModel: ObservableObject {
                 )
 
                 if !profileMetadata.isEmpty {
+                    // Pre-fill UserProfileStore with Apple-provided name so
+                    // ProfileSetupView shows it automatically (Guideline 4).
+                    if let appleFullName = profileMetadata["full_name"]?.value as? String,
+                       !appleFullName.isEmpty {
+                        await MainActor.run {
+                            var profile = UserProfileStore.shared.current
+                            if profile.name.isEmpty || profile.name == "Captain" {
+                                profile.name = appleFullName
+                                UserProfileStore.shared.current = profile
+                            }
+                        }
+                    }
+
                     do {
                         _ = try await SupabaseService.shared.client.auth.update(
                             user: UserAttributes(data: profileMetadata)

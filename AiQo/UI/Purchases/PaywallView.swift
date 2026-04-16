@@ -259,8 +259,8 @@ struct PaywallView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
                 Text(copy(
-                    ar: "خياران واضحان فقط: AiQo Core للسرعة اليومية والتتبع الكامل، أو AiQo Intelligence Pro لفتح القمم وذاكرة كابتن أوسع وتحليل أعمق.",
-                    en: "Two clear options only: AiQo Core for fast everyday coaching and full tracking, or AiQo Intelligence Pro for Peaks, expanded Captain memory, and deeper AI analysis."
+                    ar: "خياران واضحان فقط: AiQo Max للسرعة اليومية والتتبع الكامل، أو AiQo Intelligence Pro لفتح القمم وذاكرة كابتن أوسع وتحليل أعمق.",
+                    en: "Two clear options only: AiQo Max for fast everyday coaching and full tracking, or AiQo Intelligence Pro for Peaks, expanded Captain memory, and deeper AI analysis."
                 ))
                 .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.72))
@@ -864,7 +864,7 @@ struct PaywallView: View {
         switch tier {
         case .core:
             return PaywallPlanDetails(
-                title: "AiQo Core",
+                title: "AiQo Max",
                 eyebrow: copy(ar: "السرعة اليومية الذكية", en: "Fast everyday coaching"),
                 summary: copy(
                     ar: "كل الأساسيات التي يحتاجها المستخدم يومياً: سرعة أعلى، تتبع كامل لنمط الحياة، Kitchen، Gym، والكابتن الأساسي.",
