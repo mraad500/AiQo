@@ -85,6 +85,7 @@
       "size" : "1024x1024"
     },
     {
+      "filename" : "WatchIcon-NotificationCenter-38mm@2x.png",
       "idiom" : "watch",
       "role" : "notificationCenter",
       "scale" : "2x",
@@ -92,6 +93,7 @@
       "subtype" : "38mm"
     },
     {
+      "filename" : "WatchIcon-NotificationCenter-42mm@2x.png",
       "idiom" : "watch",
       "role" : "notificationCenter",
       "scale" : "2x",
@@ -99,6 +101,7 @@
       "subtype" : "42mm"
     },
     {
+      "filename" : "WatchIcon-CompanionSettings@2x.png",
       "idiom" : "watch",
       "role" : "companionSettings",
       "scale" : "2x",
