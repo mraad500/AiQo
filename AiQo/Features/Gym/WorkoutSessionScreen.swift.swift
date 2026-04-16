@@ -29,25 +29,25 @@ struct WorkoutSessionScreen: View {
 
     var body: some View {
         ZStack {
-            // الخلفية (ثابتة)
+            // Static background
             StarryBackground()
             
-            // 🔥 استخدمنا GeometryReader لضبط التخطيط
+            // Use GeometryReader to keep the sheet layout stable.
             GeometryReader { geometry in
                 VStack(spacing: 0) {
                     
-                    // 1. منطقة المحتوى القابلة للتمرير (ScrollView)
+                    // 1. Scrollable content area
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 20) {
                             
-                            // --- Header ---
+                            // Header
                             Text(session.title.uppercased())
                                 .font(.system(.headline, design: .rounded).weight(.heavy))
                                 .foregroundStyle(WorkoutTheme.pastelBeige)
                                 .italic()
-                                .padding(.top, 40) // مسافة علوية مناسبة للكارت
+                                .padding(.top, 40)
                             
-                            // --- Timer ---
+                            // Timer
                             Text(formatTime(session.elapsedSeconds))
                                 .font(.system(size: 54, weight: .black, design: .rounded))
                                 .monospacedDigit()
@@ -70,19 +70,43 @@ struct WorkoutSessionScreen: View {
                                 .padding(.horizontal, 20)
                             }
                             
-                            // --- Stats Grid ---
+                            // Stats grid
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                                 StatCard(
-                                    title: "HEART RATE", value: "\(Int(session.heartRate))", unit: "BPM", icon: "heart.fill", color: WorkoutTheme.pastelBeige, textColor: .black, shouldPulse: session.phase == .running
+                                    title: L10n.t("gym.metrics.heartRate"),
+                                    value: "\(Int(session.heartRate))",
+                                    unit: L10n.t("heart.bpmUnit"),
+                                    icon: "heart.fill",
+                                    color: WorkoutTheme.pastelBeige,
+                                    textColor: .black,
+                                    shouldPulse: session.phase == .running
                                 )
                                 StatCard(
-                                    title: "CALORIES", value: "\(Int(session.activeEnergy))", unit: "KCAL", icon: "flame.fill", color: WorkoutTheme.pastelBeige, textColor: .black, shouldPulse: false
+                                    title: L10n.t("gym.metrics.activeEnergy"),
+                                    value: "\(Int(session.activeEnergy))",
+                                    unit: L10n.t("gym.metrics.kcalShort"),
+                                    icon: "flame.fill",
+                                    color: WorkoutTheme.pastelBeige,
+                                    textColor: .black,
+                                    shouldPulse: false
                                 )
                                 StatCard(
-                                    title: "DISTANCE", value: formatDist(session.distanceMeters).val, unit: formatDist(session.distanceMeters).unit, icon: "figure.run", color: WorkoutTheme.pastelMint, textColor: .black, shouldPulse: false
+                                    title: L10n.t("gym.metrics.distance"),
+                                    value: formatDist(session.distanceMeters).val,
+                                    unit: formatDist(session.distanceMeters).unit,
+                                    icon: "figure.run",
+                                    color: WorkoutTheme.pastelMint,
+                                    textColor: .black,
+                                    shouldPulse: false
                                 )
                                 StatCard(
-                                    title: "STATUS", value: session.statusText, unit: "LIVE", icon: "waveform.path.ecg", color: WorkoutTheme.pastelMint, textColor: .black, shouldPulse: session.phase == .running
+                                    title: L10n.t("gym.metrics.status"),
+                                    value: session.statusText,
+                                    unit: L10n.t("gym.metrics.live"),
+                                    icon: "waveform.path.ecg",
+                                    color: WorkoutTheme.pastelMint,
+                                    textColor: .black,
+                                    shouldPulse: session.phase == .running
                                 )
                             }
                             .padding(.horizontal, 20)
@@ -95,19 +119,19 @@ struct WorkoutSessionScreen: View {
                                     .padding(.horizontal, 28)
                             }
                             
-                            // --- Music / Spotify Section ---
+                            // Music / Spotify section
                             SpotifyWorkoutPlayerView {
                                 showSpotifyLibrary = true
                             }
                                 .padding(.horizontal, 20)
                                 .padding(.top, 10)
                             
-                            // 🔥 مسافة فارغة في النهاية حتى لا يغطي الزر المحتوى عند السكرول
+                            // Bottom spacing so the fixed controls do not cover content while scrolling.
                             Spacer().frame(height: 110)
                         }
                     }
                     
-                    // 2. منطقة التحكم (مثبتة بالأسفل)
+                    // 2. Fixed controls at the bottom
                     VStack(spacing: AiQoSpacing.md) {
                         WatchConnectionStatusButton(status: viewModel.watchConnectionStatus) {
                             viewModel.refreshWatchConnectionStatus()
@@ -144,12 +168,12 @@ struct WorkoutSessionScreen: View {
                         }
                     }
                     .padding(.horizontal, 30)
-                    .padding(.bottom, 30) // مسافة من حافة الشاشة
+                    .padding(.bottom, 30)
                     .padding(.top, 15)
                     .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.watchConnectionStatus)
                     .animation(.spring(response: 0.32, dampingFraction: 0.88), value: session.phase)
                     .background(
-                        // تدرج لوني خلف الأزرار لدمجها مع الخلفية
+                        // Gradient behind the controls to blend them with the background.
                         LinearGradient(
                             colors: [Color.black.opacity(0), Color.black.opacity(0.6)],
                             startPoint: .top,
@@ -160,7 +184,7 @@ struct WorkoutSessionScreen: View {
                 }
             }
             
-            // Milestone Alert (فوق كل شيء)
+            // Milestone alert
             if session.showMilestoneAlert {
                 VStack {
                     Text(session.milestoneAlertText)
@@ -276,8 +300,13 @@ struct WorkoutSessionScreen: View {
     }
     
     private func formatDist(_ m: Double) -> (val: String, unit: String) {
-        if m >= 1000 { return (String(format: "%.2f", m/1000), "KM") }
-        return ("\(Int(m))", "M")
+        if m >= 1000 {
+            return (
+                String(format: "%.2f", locale: questAppLocale(), m / 1000),
+                L10n.t("gym.metrics.kmShort")
+            )
+        }
+        return ("\(Int(m))", L10n.t("gym.metrics.meterShort"))
     }
 
     private func handleStopTap() {
@@ -639,7 +668,7 @@ struct Zone2AuraCard: View {
                     .font(.system(.headline, design: .rounded).weight(.bold))
                     .foregroundStyle(.white)
                 Spacer()
-                Text("\(Int(heartRate.rounded())) BPM")
+                Text("\(Int(heartRate.rounded())) \(L10n.t("heart.bpmUnit"))")
                     .font(.system(.subheadline, design: .rounded).weight(.bold))
                     .foregroundStyle(.white.opacity(0.88))
             }

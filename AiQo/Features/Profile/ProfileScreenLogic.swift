@@ -131,9 +131,9 @@ extension ProfileScreen {
     var genderDisplayText: String {
         switch genderBinding.wrappedValue {
         case .male:
-            return NSLocalizedString("gender.male", value: "ذكر", comment: "")
+            return NSLocalizedString("male", value: "Male", comment: "")
         case .female:
-            return NSLocalizedString("gender.female", value: "أنثى", comment: "")
+            return NSLocalizedString("female", value: "Female", comment: "")
         }
     }
 

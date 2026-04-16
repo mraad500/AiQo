@@ -38,7 +38,7 @@ struct QuestPushupChallengeView: View {
 
                     Spacer()
 
-                    Text(quest.title)
+                    Text(questLocalizedText(quest.localizedTitleKey))
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(2)

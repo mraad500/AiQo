@@ -179,6 +179,10 @@ struct SmartFridgeScannerView: View {
                                 .foregroundStyle(platinum.opacity(0.72))
 
                             Button {
+                                guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else {
+                                    return
+                                }
+
                                 viewModel.captureAndAnalyze()
                             } label: {
                                 ZStack {

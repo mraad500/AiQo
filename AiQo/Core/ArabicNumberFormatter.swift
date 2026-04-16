@@ -1,29 +1,34 @@
 import Foundation
 
 extension Int {
+    private var appLanguageLocale: Locale {
+        AppSettingsStore.shared.appLanguage == .arabic
+            ? Locale(identifier: "ar_AE")
+            : Locale(identifier: "en_US_POSIX")
+    }
+
     /// Returns Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) when Arabic mode is active.
     var arabicFormatted: String {
-        guard AppSettingsStore.shared.appLanguage == .arabic else {
-            return formatted(.number.locale(.autoupdatingCurrent))
-        }
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "ar_AE")
+        formatter.locale = appLanguageLocale
         formatter.numberStyle = .decimal
         return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 }
 
 extension Double {
+    private var appLanguageLocale: Locale {
+        AppSettingsStore.shared.appLanguage == .arabic
+            ? Locale(identifier: "ar_AE")
+            : Locale(identifier: "en_US_POSIX")
+    }
+
     /// Returns Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) when Arabic mode is active.
     var arabicFormatted: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 1
-        if AppSettingsStore.shared.appLanguage == .arabic {
-            formatter.locale = Locale(identifier: "ar_AE")
-        } else {
-            formatter.locale = .autoupdatingCurrent
-        }
+        formatter.locale = appLanguageLocale
         return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 
@@ -40,11 +45,7 @@ extension Double {
         formatter.maximumFractionDigits = 1
         formatter.minimumFractionDigits = 0
         formatter.roundingMode = .halfUp
-        if AppSettingsStore.shared.appLanguage == .arabic {
-            formatter.locale = Locale(identifier: "ar_AE")
-        } else {
-            formatter.locale = .autoupdatingCurrent
-        }
+        formatter.locale = appLanguageLocale
         return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 }

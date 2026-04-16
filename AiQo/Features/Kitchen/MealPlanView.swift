@@ -13,6 +13,7 @@ struct MealPlanView: View {
             VStack(alignment: .leading, spacing: 16) {
                 durationPicker
                 generateButton
+                HealthComplianceCard(compact: true)
                 pinnedPlanSection
                 shoppingListSection
             }
@@ -406,6 +407,7 @@ private extension MealPlanView {
 
     func generatePlan() {
         guard !isGenerating else { return }
+        guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else { return }
 
         isGenerating = true
         let goal = UserProfileStore.shared.current.goalText

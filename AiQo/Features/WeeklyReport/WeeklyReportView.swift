@@ -32,6 +32,8 @@ struct WeeklyReportView: View {
                     if let data = viewModel.reportData {
                         motivationSection(data)
                     }
+
+                    HealthComplianceCard(compact: false)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)

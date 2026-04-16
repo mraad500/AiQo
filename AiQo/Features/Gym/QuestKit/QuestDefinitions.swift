@@ -7,7 +7,7 @@ enum QuestDefinitions {
             id: "s1q1",
             stageIndex: 1,
             questIndex: 1,
-            title: "شرارة الخير (مكافأة)",
+            title: "Kindness Spark (Bonus)",
             type: .oneTime,
             source: .manual,
             tiers: [
@@ -25,7 +25,7 @@ enum QuestDefinitions {
             id: "s1q2",
             stageIndex: 1,
             questIndex: 2,
-            title: "نبع الماء (يومي)",
+            title: "Water Spring (Daily)",
             type: .daily,
             source: .water,
             tiers: [
@@ -43,7 +43,7 @@ enum QuestDefinitions {
             id: "s1q3",
             stageIndex: 1,
             questIndex: 3,
-            title: "عرش التعافي (يومي)",
+            title: "Recovery Throne (Daily)",
             type: .daily,
             source: .healthkit,
             tiers: [
@@ -61,7 +61,7 @@ enum QuestDefinitions {
             id: "s1q4",
             stageIndex: 1,
             questIndex: 4,
-            title: "نبض زون 2 (تراكمي)",
+            title: "Zone 2 Pulse (Cumulative)",
             type: .cumulative,
             source: .workout,
             tiers: [
@@ -79,7 +79,7 @@ enum QuestDefinitions {
             id: "s1q5",
             stageIndex: 1,
             questIndex: 5,
-            title: "تأسيس المطبخ",
+            title: "Kitchen Foundation",
             type: .oneTime,
             source: .kitchen,
             tiers: [
@@ -99,7 +99,7 @@ enum QuestDefinitions {
             id: "s2q1",
             stageIndex: 2,
             questIndex: 1,
-            title: "دقة آلة الرؤية (كاميرا)",
+            title: "Vision Machine Accuracy (Camera)",
             type: .oneTime,
             source: .camera,
             tiers: [
@@ -117,7 +117,7 @@ enum QuestDefinitions {
             id: "s2q2",
             stageIndex: 2,
             questIndex: 2,
-            title: "الحركة في يوم واحد",
+            title: "Move in One Day",
             type: .daily,
             source: .healthkit,
             tiers: [
@@ -135,7 +135,7 @@ enum QuestDefinitions {
             id: "s2q3",
             stageIndex: 2,
             questIndex: 3,
-            title: "سلم البلانك",
+            title: "Plank Ladder",
             type: .cumulative,
             source: .timer,
             tiers: [
@@ -153,7 +153,7 @@ enum QuestDefinitions {
             id: "s2q4",
             stageIndex: 2,
             questIndex: 4,
-            title: "جلسة امتنان",
+            title: "Gratitude Session",
             type: .daily,
             source: .timer,
             tiers: [
@@ -171,7 +171,7 @@ enum QuestDefinitions {
             id: "s2q5",
             stageIndex: 2,
             questIndex: 5,
-            title: "سلسلة الوقود",
+            title: "Fuel Streak",
             type: .streak,
             source: .water,
             tiers: [

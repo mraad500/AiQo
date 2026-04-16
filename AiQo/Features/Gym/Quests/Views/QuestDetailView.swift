@@ -98,12 +98,12 @@ struct QuestDetailView: View {
                 items: [
                     String(
                         format: questLocalizedText("quests.share.message.format"),
-                        locale: Locale.current,
+                        locale: questAppLocale(),
                         questLocalizedText(quest.localizedTitleKey)
                     ),
                     String(
                         format: questLocalizedText("quests.share.stage_quest.format"),
-                        locale: Locale.current,
+                        locale: questAppLocale(),
                         quest.stageIndex,
                         quest.questIndex
                     )
@@ -140,7 +140,7 @@ struct QuestDetailView: View {
             Text(
                 String(
                     format: questLocalizedText("quests.common.tier_format"),
-                    locale: Locale.current,
+                    locale: questAppLocale(),
                     progress.tier
                 )
             )

@@ -90,7 +90,7 @@ struct QuestCard: View {
 
         return String(
             format: questLocalizedText("quests.common.tier_format"),
-            locale: Locale.current,
+            locale: questAppLocale(),
             progress.tier
         )
     }

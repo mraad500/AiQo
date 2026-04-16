@@ -5,6 +5,7 @@ import Supabase
 struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
+    @StateObject private var aiConsentManager = AIDataConsentManager.shared
     @State private var showDeveloperPanel = false
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
@@ -145,6 +146,41 @@ struct AppSettingsScreen: View {
                         Spacer()
 
                         Image(systemName: "brain")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Section(
+                NSLocalizedString(
+                    "settings.section.privacyAI",
+                    value: "Privacy & AI Data",
+                    comment: "Privacy and AI data settings section"
+                )
+            ) {
+                NavigationLink {
+                    AIDataPrivacySettingsView()
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(
+                                NSLocalizedString(
+                                    "settings.privacyAI.title",
+                                    value: "AI Data Use",
+                                    comment: "AI data use settings title"
+                                )
+                            )
+                            .foregroundStyle(.primary)
+
+                            Text(aiConsentStatusSubtitle)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "lock.shield")
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -404,6 +440,27 @@ struct AppSettingsScreen: View {
         }
     }
     #endif
+}
+
+private extension AppSettingsScreen {
+    var aiConsentStatusSubtitle: String {
+        if let acceptedAt = aiConsentManager.acceptedAt {
+            return String(
+                format: NSLocalizedString(
+                    "settings.privacyAI.acceptedAt",
+                    value: "Consent active since %@",
+                    comment: "AI consent accepted status"
+                ),
+                acceptedAt.formatted(date: .abbreviated, time: .shortened)
+            )
+        }
+
+        return NSLocalizedString(
+            "settings.privacyAI.notAccepted",
+            value: "Review what is shared before using cloud AI features",
+            comment: "AI consent missing status"
+        )
+    }
 }
 
 #Preview {

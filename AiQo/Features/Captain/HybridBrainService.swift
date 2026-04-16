@@ -264,8 +264,7 @@ private extension HybridBrainService {
         logger.notice("gemini_response status=\(httpResponse.statusCode)")
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            let rawBody = String(data: data, encoding: .utf8) ?? "nil"
-            logger.error("gemini_bad_status status=\(httpResponse.statusCode) body=\(rawBody.prefix(500), privacy: .public)")
+            logger.error("gemini_bad_status status=\(httpResponse.statusCode) bytes=\(data.count)")
             throw HybridBrainServiceError.badStatusCode(httpResponse.statusCode)
         }
 
@@ -273,8 +272,7 @@ private extension HybridBrainService {
         do {
             decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
         } catch {
-            let rawBody = String(data: data, encoding: .utf8) ?? "nil"
-            logger.error("gemini_decode_error body=\(rawBody.prefix(500), privacy: .public)")
+            logger.error("gemini_decode_error bytes=\(data.count)")
             throw HybridBrainServiceError.invalidResponse
         }
 
@@ -290,7 +288,7 @@ private extension HybridBrainService {
         let parsedResponse = jsonParser.decode(rawText: outputText, fallback: fallback)
 
         if parsedResponse.message == fallback.message {
-            logger.error("gemini_parse_fallback_applied raw=\(outputText.prefix(500), privacy: .public)")
+            logger.error("gemini_parse_fallback_applied output_length=\(outputText.count)")
         }
 
         return parsedResponse

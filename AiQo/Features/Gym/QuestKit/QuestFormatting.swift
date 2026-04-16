@@ -1,5 +1,15 @@
 import Foundation
 
+func questAppLocale() -> Locale {
+    AppSettingsStore.shared.appLanguage == .arabic
+        ? Locale(identifier: "ar_AE")
+        : Locale(identifier: "en_US_POSIX")
+}
+
+func questIsArabicLanguage() -> Bool {
+    AppSettingsStore.shared.appLanguage == .arabic
+}
+
 func questLocalizedText(_ key: String) -> String {
     let lang = AppSettingsStore.shared.appLanguage.rawValue
     if let path = Bundle.main.path(forResource: lang, ofType: "lproj"),
@@ -14,51 +24,66 @@ func questLocalizedText(_ key: String) -> String {
 }
 
 func questFormatValue(_ value: Double, unit: QuestMetricUnit) -> String {
+    let numericText: String
     switch unit {
-    case .liters:
-        return value.arabicFormatted + "L"
-    case .hours:
-        return value.arabicFormatted + "h"
-    case .minutes:
-        return Int(value.rounded()).arabicFormatted + "m"
-    case .seconds:
-        return Int(value.rounded()).arabicFormatted + "s"
-    case .kilometers:
-        return value.arabicFormatted + "km"
-    case .percent:
-        return Int(value.rounded()).arabicFormatted + "%"
-    case .days:
-        return Int(value.rounded()).arabicFormatted + "d"
-    case .count:
+    case .liters, .hours, .kilometers:
+        numericText = value.aiqoMetricString
+    case .count, .none:
         return Int(value.rounded()).arabicFormatted
-    case .none:
-        return Int(value.rounded()).arabicFormatted
+    default:
+        numericText = Int(value.rounded()).arabicFormatted
     }
+
+    guard let unitKey = questUnitKey(for: unit) else {
+        return numericText
+    }
+
+    return numericText + questLocalizedText(unitKey)
 }
 
 func questFormatValueArabic(_ value: Double, unit: QuestMetricUnit) -> String {
-    switch unit {
-    case .liters:
-        return value.arabicFormatted + "ل"
-    case .hours:
-        return value.arabicFormatted + "س"
-    case .minutes:
-        return Int(value.rounded()).arabicFormatted + "د"
-    case .seconds:
-        return Int(value.rounded()).arabicFormatted + "ث"
-    case .kilometers:
-        return value.arabicFormatted + "كم"
-    case .percent:
-        return Int(value.rounded()).arabicFormatted + "٪"
-    case .days:
-        return Int(value.rounded()).arabicFormatted + "ي"
-    case .count, .none:
-        return Int(value.rounded()).arabicFormatted
+    questFormatValue(value, unit: unit)
+}
+
+func questCompletionStatusText(isCompleted: Bool) -> String {
+    questLocalizedText(
+        isCompleted
+            ? "gym.quest.status.completed"
+            : "gym.quest.status.notCompleted"
+    )
+}
+
+func questSourceBadgeText(for quest: QuestDefinition) -> String {
+    let sourceKey: String
+    switch quest.source {
+    case .healthkit:
+        sourceKey = "gym.quest.source.appleHealth"
+    case .camera:
+        sourceKey = "gym.quest.source.visionCamera"
+    case .water:
+        sourceKey = "gym.quest.source.waterEntry"
+    case .timer:
+        sourceKey = "gym.quest.source.sessionTimer"
+    case .workout:
+        sourceKey = "gym.quest.source.cardioLog"
+    case .manual:
+        sourceKey = "gym.quest.source.userConfirmed"
+    case .social:
+        sourceKey = "gym.quest.source.arena"
+    case .kitchen:
+        sourceKey = "gym.quest.source.kitchen"
+    case .share:
+        sourceKey = "gym.quest.source.share"
     }
+
+    return String(
+        format: questLocalizedText("gym.quest.source.format"),
+        locale: questAppLocale(),
+        questLocalizedText(sourceKey)
+    )
 }
 
 struct Stage1QuestFormatter {
-    private let numberLocale = Locale(identifier: "en_US_POSIX")
     private let calendar = Calendar.current
 
     private let lri = "\u{2066}"
@@ -68,24 +93,24 @@ struct Stage1QuestFormatter {
         switch quest.id {
         case "s1q2":
             return joinedTokens([
-                isolated("3.0ل"),
-                isolated("2.5ل"),
-                isolated("2.0ل")
+                isolated(displayValue(3.0, unit: .liters)),
+                isolated(displayValue(2.5, unit: .liters)),
+                isolated(displayValue(2.0, unit: .liters))
             ])
         case "s1q3":
             return joinedTokens([
-                isolated("8س"),
-                isolated("7.5س"),
-                isolated("7س")
+                isolated(displayValue(8.0, unit: .hours)),
+                isolated(displayValue(7.5, unit: .hours)),
+                isolated(displayValue(7.0, unit: .hours))
             ])
         case "s1q4":
             return joinedTokens([
-                isolated("40د"),
-                isolated("30د"),
-                isolated("20د")
+                isolated(displayValue(40.0, unit: .minutes)),
+                isolated(displayValue(30.0, unit: .minutes)),
+                isolated(displayValue(20.0, unit: .minutes))
             ])
         case "s1q1", "s1q5":
-            return "مركز 1"
+            return centerText(for: 1)
         default:
             return questLocalizedText(quest.localizedLevelsKey)
         }
@@ -104,12 +129,33 @@ struct Stage1QuestFormatter {
         }
     }
 
+    func centerText(for center: Int) -> String {
+        guard center > 0 else {
+            return questCompletionStatusText(isCompleted: false)
+        }
+
+        if questIsArabicLanguage() {
+            return String(
+                format: questLocalizedText("gym.quest.center.format"),
+                locale: questAppLocale(),
+                center.arabicFormatted
+            )
+        }
+
+        let key = center == 1 ? "gym.quest.point.single" : "gym.quest.point.plural"
+        return String(
+            format: questLocalizedText(key),
+            locale: questAppLocale(),
+            center
+        )
+    }
+
     func centerPillText(for progress: QuestCardProgressModel) -> String {
         let currentCenter = center(fromTier: progress.tier)
-        if currentCenter == 0 {
-            return "غير مكتمل"
+        guard currentCenter > 0 else {
+            return questCompletionStatusText(isCompleted: false)
         }
-        return "مركز \(currentCenter.arabicFormatted)"
+        return centerText(for: currentCenter)
     }
 
     func progressLine(for quest: QuestDefinition, progress: QuestCardProgressModel) -> String {
@@ -118,11 +164,11 @@ struct Stage1QuestFormatter {
 
         switch quest.id {
         case "s1q2":
-            return "\(isolated(formatted(current, digits: 2) + "ل")) / \(isolated(formatted(target, digits: 2) + "ل"))"
+            return "\(isolated(displayValue(current, unit: .liters))) / \(isolated(displayValue(target, unit: .liters)))"
         case "s1q3":
-            return "\(isolated(formatted(current, digits: 2) + "س")) / \(isolated(formatted(target, digits: 2) + "س"))"
+            return "\(isolated(displayValue(current, unit: .hours))) / \(isolated(displayValue(target, unit: .hours)))"
         case "s1q4":
-            return "\(isolated(Int(current.rounded()).arabicFormatted + "د")) / \(isolated(Int(target.rounded()).arabicFormatted + "د"))"
+            return "\(isolated(displayValue(current, unit: .minutes))) / \(isolated(displayValue(target, unit: .minutes)))"
         default:
             return "\(isolated(Int(current.rounded()).arabicFormatted)) / \(isolated(Int(target.rounded()).arabicFormatted))"
         }
@@ -134,19 +180,19 @@ struct Stage1QuestFormatter {
             return nextTargetCopy(
                 current: progress.metricAValue,
                 thresholds: [2.0, 2.5, 3.0],
-                formatter: { String(format: "%.1f", locale: numberLocale, $0) + "ل" }
+                formatter: { displayValue($0, unit: .liters) }
             )
         case "s1q3":
             return nextTargetCopy(
                 current: progress.metricAValue,
                 thresholds: [7.0, 7.5, 8.0],
-                formatter: { formatted($0, digits: 1) + "س" }
+                formatter: { displayValue($0, unit: .hours) }
             )
         case "s1q4":
             return nextTargetCopy(
                 current: progress.metricAValue,
                 thresholds: [20.0, 30.0, 40.0],
-                formatter: { "\(Int($0.rounded()))د" }
+                formatter: { displayValue($0, unit: .minutes) }
             )
         default:
             return nil
@@ -156,26 +202,21 @@ struct Stage1QuestFormatter {
     func contextText(for quest: QuestDefinition, now: Date) -> String? {
         switch quest.id {
         case "s1q2":
-            return "يصفّر \(isolated("12:00 ص")) • متبقي \(timeRemainingUntilMidnight(from: now))"
+            return String(
+                format: questLocalizedText("gym.quest.resetsAt"),
+                locale: questAppLocale(),
+                isolated(questLocalizedText("gym.quest.time.midnight")),
+                timeRemainingUntilMidnight(from: now)
+            )
         case "s1q3":
-            return "آخر ليلة (\(isolated("6:00م")) → \(isolated("12:00م")))"
+            return String(
+                format: questLocalizedText("gym.quest.lastNightWindow"),
+                locale: questAppLocale(),
+                isolated(questLocalizedText("gym.quest.time.lastNight.start")),
+                isolated(questLocalizedText("gym.quest.time.lastNight.end"))
+            )
         default:
             return nil
-        }
-    }
-
-    func sourceBadgeText(for quest: QuestDefinition) -> String {
-        switch quest.id {
-        case "s1q2":
-            return "المصدر: إدخال الماء"
-        case "s1q3":
-            return "المصدر: Apple Health"
-        case "s1q4":
-            return "المصدر: سجل الكارديو"
-        case "s1q1", "s1q5":
-            return "المصدر: تأكيد المستخدم"
-        default:
-            return "المصدر: —"
         }
     }
 
@@ -185,19 +226,25 @@ struct Stage1QuestFormatter {
         formatter: (Double) -> String
     ) -> String {
         guard thresholds.count == 3 else {
-            return "هدفك الجاي: —"
+            return questLocalizedText("gym.quest.nextTarget.unavailable")
         }
 
+        let nextValue: String
         if current < thresholds[0] {
-            return "هدفك الجاي: \(isolated(formatter(thresholds[0])))"
+            nextValue = formatter(thresholds[0])
+        } else if current < thresholds[1] {
+            nextValue = formatter(thresholds[1])
+        } else if current < thresholds[2] {
+            nextValue = formatter(thresholds[2])
+        } else {
+            nextValue = questCompletionStatusText(isCompleted: true)
         }
-        if current < thresholds[1] {
-            return "هدفك الجاي: \(isolated(formatter(thresholds[1])))"
-        }
-        if current < thresholds[2] {
-            return "هدفك الجاي: \(isolated(formatter(thresholds[2])))"
-        }
-        return "هدفك الجاي: مكتمل مركز 1"
+
+        return String(
+            format: questLocalizedText("gym.quest.nextTarget.format"),
+            locale: questAppLocale(),
+            isolated(nextValue)
+        )
     }
 
     private func timeRemainingUntilMidnight(from now: Date) -> String {
@@ -206,22 +253,15 @@ struct Stage1QuestFormatter {
         let components = calendar.dateComponents([.hour, .minute], from: now, to: nextMidnight)
         let hours = max(components.hour ?? 0, 0)
         let minutes = max(components.minute ?? 0, 0)
-        return "\(isolated(hours.arabicFormatted + "س")) \(isolated(minutes.arabicFormatted + "د"))"
+        let hoursText = isolated(displayValue(Double(hours), unit: .hours))
+        let minutesText = isolated(displayValue(Double(minutes), unit: .minutes))
+        return "\(hoursText) \(minutesText)"
     }
 
-    private func formatted(_ value: Double, digits: Int) -> String {
-        switch digits {
-        case 0:
-            return String(Int(value.rounded()))
-        case 1:
-            let rounded = (value * 10).rounded() / 10
-            if abs(rounded.rounded() - rounded) < 0.0001 {
-                return String(Int(rounded.rounded()))
-            }
-            return String(format: "%.1f", locale: numberLocale, rounded)
-        default:
-            return String(format: "%.2f", locale: numberLocale, value)
-        }
+    private func displayValue(_ value: Double, unit: QuestMetricUnit) -> String {
+        questIsArabicLanguage()
+            ? questFormatValueArabic(value, unit: unit)
+            : questFormatValue(value, unit: unit)
     }
 
     private func isolated(_ text: String) -> String {
@@ -241,7 +281,7 @@ func questLevelsText(for quest: QuestDefinition) -> String {
     }
 
     let text = questLocalizedText(quest.localizedLevelsKey)
-    if (2...6).contains(quest.stageIndex) {
+    if questStageNeedsLTRDisplay(quest.stageIndex) {
         return questForceLTR(text)
     }
     return text
@@ -253,6 +293,10 @@ func questStageOneCenter(fromTier tier: Int) -> Int {
 
 func questStageOneCenter(for progress: QuestCardProgressModel) -> Int {
     questStageOneCenter(fromTier: progress.tier)
+}
+
+func questStageOneCenterText(_ center: Int) -> String {
+    stage1QuestFormatter.centerText(for: center)
 }
 
 func questStageOneCenterPillText(for progress: QuestCardProgressModel) -> String {
@@ -281,7 +325,7 @@ func questProgressText(for quest: QuestDefinition, progress: QuestCardProgressMo
         line = "\(questDisplayValue(currentA, unit: progress.metricAUnit, quest: quest)) / \(questDisplayValue(targetA, unit: progress.metricAUnit, quest: quest))"
     }
 
-    if (2...6).contains(quest.stageIndex) {
+    if questStageNeedsLTRDisplay(quest.stageIndex) {
         return questForceLTR(line)
     }
     return line
@@ -296,7 +340,7 @@ func questStageOneContextText(for quest: QuestDefinition, now: Date = Date()) ->
 }
 
 func questStageOneSourceBadgeText(for quest: QuestDefinition) -> String {
-    stage1QuestFormatter.sourceBadgeText(for: quest)
+    questSourceBadgeText(for: quest)
 }
 
 private func questDisplayTargetA(for quest: QuestDefinition, defaultTarget: Double) -> Double {
@@ -324,34 +368,32 @@ private func questTierMaxTargets(for quest: QuestDefinition) -> (a: Double, b: D
 }
 
 private func questDisplayValue(_ value: Double, unit: QuestMetricUnit, quest: QuestDefinition) -> String {
-    if (2...6).contains(quest.stageIndex) {
-        switch unit {
-        case .count:
-            return Int(value.rounded()).arabicFormatted
-        case .liters:
-            return value.arabicFormatted + "L"
-        case .hours:
-            return value.arabicFormatted + "h"
-        case .minutes:
-            return Int(value.rounded()).arabicFormatted + "m"
-        case .seconds:
-            return Int(value.rounded()).arabicFormatted + "s"
-        case .kilometers:
-            return value.arabicFormatted + "km"
-        case .percent:
-            return Int(value.rounded()).arabicFormatted + "%"
-        case .days:
-            return Int(value.rounded()).arabicFormatted + "d"
-        case .none:
-            return Int(value.rounded()).arabicFormatted
-        }
-    }
+    questFormatValue(value, unit: unit)
+}
 
-    if quest.stageIndex == 1 {
-        return questFormatValueArabic(value, unit: unit)
-    }
+private func questStageNeedsLTRDisplay(_ stageIndex: Int) -> Bool {
+    AppSettingsStore.shared.appLanguage == .english && (2...6).contains(stageIndex)
+}
 
-    return questFormatValue(value, unit: unit)
+private func questUnitKey(for unit: QuestMetricUnit) -> String? {
+    switch unit {
+    case .liters:
+        return "gym.quest.unit.litersShort"
+    case .hours:
+        return "gym.quest.unit.hoursShort"
+    case .minutes:
+        return "gym.quest.unit.minutesShort"
+    case .seconds:
+        return "gym.quest.unit.secondsShort"
+    case .kilometers:
+        return "gym.quest.unit.kilometersShort"
+    case .percent:
+        return "gym.quest.unit.percentShort"
+    case .days:
+        return "gym.quest.unit.daysShort"
+    case .count, .none:
+        return nil
+    }
 }
 
 private func questForceLTR(_ text: String) -> String {

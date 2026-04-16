@@ -106,7 +106,7 @@ final class WorkoutSessionViewModel: ObservableObject {
         case .idle:
             let isEnabled = !isControlPending && watchConnectionStatus == .connected
             return PrimaryControlConfiguration(
-                title: "Start Workout",
+                title: L10n.t("gym.session.control.startWorkout"),
                 icon: "play.fill",
                 backgroundColor: isEnabled ? baseBackgroundColor : disconnectedBackgroundColor,
                 foregroundColor: isEnabled ? baseForegroundColor : disconnectedForegroundColor,
@@ -117,7 +117,7 @@ final class WorkoutSessionViewModel: ObservableObject {
         case .running:
             let isEnabled = !isControlPending && remoteConnectionState != .disconnected && remoteConnectionState != .failed
             return PrimaryControlConfiguration(
-                title: "Pause Workout",
+                title: L10n.t("gym.session.control.pauseWorkout"),
                 icon: "pause.fill",
                 backgroundColor: baseBackgroundColor,
                 foregroundColor: baseForegroundColor,
@@ -128,7 +128,7 @@ final class WorkoutSessionViewModel: ObservableObject {
         case .paused:
             let isEnabled = !isControlPending && remoteConnectionState != .disconnected && remoteConnectionState != .failed
             return PrimaryControlConfiguration(
-                title: "Resume",
+                title: L10n.t("gym.session.control.resume"),
                 icon: "play.fill",
                 backgroundColor: baseBackgroundColor,
                 foregroundColor: baseForegroundColor,
@@ -138,7 +138,7 @@ final class WorkoutSessionViewModel: ObservableObject {
 
         case .starting:
             return PrimaryControlConfiguration(
-                title: "Connecting...",
+                title: L10n.t("gym.session.control.connecting"),
                 icon: "hourglass",
                 backgroundColor: baseBackgroundColor,
                 foregroundColor: baseForegroundColor,
@@ -148,7 +148,7 @@ final class WorkoutSessionViewModel: ObservableObject {
 
         case .ending:
             return PrimaryControlConfiguration(
-                title: "Ending...",
+                title: L10n.t("gym.session.control.ending"),
                 icon: "hourglass",
                 backgroundColor: baseBackgroundColor,
                 foregroundColor: baseForegroundColor,

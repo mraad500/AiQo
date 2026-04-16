@@ -143,12 +143,7 @@ struct FitnessAssessmentView: View {
                         .fill(GymTheme.mint.opacity(0.15))
                 )
 
-                // Disclaimer
-                Text(NSLocalizedString("assessment.disclaimer", comment: ""))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.35))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
+                HealthComplianceCard(compact: true)
 
                 // CTA
                 Button {
@@ -401,11 +396,7 @@ struct FitnessAssessmentView: View {
                         .fill(Color(hex: "F7F7F7"))
                 )
 
-                // Disclaimer
-                Text(NSLocalizedString("assessment.disclaimer", comment: ""))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.35))
-                    .multilineTextAlignment(.center)
+                HealthComplianceCard(compact: true)
 
                 // CTA
                 Button {

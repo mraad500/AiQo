@@ -75,6 +75,8 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
     }
 
     func translate(_ text: String, systemPrompt: String) async throws -> String {
+        try await AICloudConsentGate.requireConsent()
+
         let payload = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !payload.isEmpty else {
             throw Error.emptyResponse

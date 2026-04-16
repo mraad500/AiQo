@@ -14,6 +14,7 @@ struct KitchenView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     heroCard
+                    HealthComplianceCard(compact: true)
                     fridgePreviewCard
                     mealPlanSection
                 }

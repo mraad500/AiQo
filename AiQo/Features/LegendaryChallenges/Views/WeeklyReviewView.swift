@@ -304,6 +304,11 @@ struct WeeklyReviewView: View {
     }
 
     private func sendReviewToLLM() async -> ReviewResult? {
+        let hasConsent = await MainActor.run {
+            AIDataConsentManager.shared.ensureConsent(presentIfPossible: true)
+        }
+        guard hasConsent else { return nil }
+
         let sanitizer = PrivacySanitizer()
         let systemPrompt = "You are Captain Hamoudi reviewing a sanitized weekly fitness check-in. Return JSON only with keys: isOnTrack, captainMessage, adjustments, updatedTotalWeeks, warningIfAny."
         var reviewData: [String: Any] = [

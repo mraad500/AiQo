@@ -41,6 +41,8 @@ struct CloudBrainService: Sendable {
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
+        try await AICloudConsentGate.requireConsent()
+
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
 
         // Single MainActor hop — fetch both values at once to minimize main-thread contention

@@ -13,6 +13,7 @@ struct CaptainChatView: View {
                 ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 14) {
                         headerCard
+                        HealthComplianceCard(compact: true)
 
                         ForEach(globalBrain.messages) { message in
                             ChatMessageRow(
@@ -131,12 +132,6 @@ struct CaptainChatView: View {
             ChatHistoryView()
                 .environmentObject(globalBrain)
                 .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(28)
-        }
-        .sheet(isPresented: $globalBrain.showAIConsentSheet) {
-            AIDataConsentView()
-                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }

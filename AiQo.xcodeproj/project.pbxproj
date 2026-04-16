@@ -139,9 +139,6 @@
 		8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiQoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		806715F32F37367700D6EAB4 /* AiQoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AiQoWidgetExtension.entitlements; sourceTree = "<group>"; };
-		80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		80D81CDC2EF4D9230020C88D /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
-		80D81CDE2EF4D9230020C88D /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		80D9BD7E2F1A7E0300CDF8DC /* AiQoWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AiQoWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D9BD8A2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "AiQoWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		80D9BD942F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "AiQoWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -366,9 +363,6 @@
 				80D9BE7B2F1B0A9400CDF8DC /* WatchConnectivity.framework */,
 				80235CEC2F1A297A00A4983B /* HealthKit.framework */,
 				80235CEE2F1A2D4800A4983B /* HealthKit.framework */,
-				80D81CC92EF4D8FA0020C88D /* DeviceActivity.framework */,
-				80D81CDC2EF4D9230020C88D /* ManagedSettings.framework */,
-				80D81CDE2EF4D9230020C88D /* ManagedSettingsUI.framework */,
 				80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */,
 				80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */,
 			);

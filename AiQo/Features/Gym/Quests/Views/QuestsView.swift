@@ -50,6 +50,9 @@ struct BattleChallengesView: View {
     @State private var completedQuestForCelebration: QuestDefinition?
 
     private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+    private var layoutDirection: LayoutDirection {
+        AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -99,9 +102,9 @@ struct BattleChallengesView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 120)
             }
-            .environment(\.layoutDirection, .rightToLeft)
+            .environment(\.layoutDirection, layoutDirection)
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, layoutDirection)
         .overlay(alignment: .top) {
             if let centerToastMessage {
                 Text(centerToastMessage)
@@ -347,7 +350,11 @@ struct BattleChallengesView: View {
         guard center > 0 else { return }
         centerToastHideTask?.cancel()
         withAnimation(.easeInOut(duration: 0.22)) {
-            centerToastMessage = String(format: questLocalizedText("gym.quest.centerUpgrade"), center.arabicFormatted)
+            centerToastMessage = String(
+                format: questLocalizedText("gym.quest.centerUpgrade"),
+                locale: questAppLocale(),
+                questStageOneCenterText(center)
+            )
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 

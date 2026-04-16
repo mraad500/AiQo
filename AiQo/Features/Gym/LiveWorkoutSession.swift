@@ -42,7 +42,7 @@ final class LiveWorkoutSession: ObservableObject {
     
     // MARK: - Published State
     
-    @Published var title: String = "Gym Workout"
+    @Published var title: String = L10n.t("gym.session.defaultTitle")
     @Published var phase: Phase = .idle
     
     // Live workout data (updated in real-time from Watch)
@@ -92,19 +92,19 @@ final class LiveWorkoutSession: ObservableObject {
     
     var statusText: String {
         if remoteConnectionState == .disconnected && phase != .idle {
-            return "Disconnected"
+            return L10n.t("gym.session.status.disconnected")
         }
 
         if isControlPending {
-            return "Syncing..."
+            return L10n.t("gym.session.status.syncing")
         }
 
         switch phase {
-        case .idle: return "Ready"
-        case .starting: return "Connecting..."
-        case .running: return "Active"
-        case .paused: return "Paused"
-        case .ending: return "Saving..."
+        case .idle: return L10n.t("gym.session.status.ready")
+        case .starting: return L10n.t("gym.session.status.connecting")
+        case .running: return L10n.t("gym.session.status.active")
+        case .paused: return L10n.t("gym.session.status.paused")
+        case .ending: return L10n.t("gym.session.status.saving")
         }
     }
     
@@ -133,13 +133,13 @@ final class LiveWorkoutSession: ObservableObject {
         guard isZone2GuidedWorkout else { return "--" }
         let lower = Int(zone2LowerBoundBPM.rounded())
         let upper = Int(zone2UpperBoundBPM.rounded())
-        return "\(lower)-\(upper) BPM"
+        return "\(lower)-\(upper) \(L10n.t("heart.bpmUnit"))"
     }
     
     // MARK: - Initialization
     
     init(
-        title: String = "Gym Workout",
+        title: String = L10n.t("gym.session.defaultTitle"),
         activityType: HKWorkoutActivityType = .other,
         locationType: HKWorkoutSessionLocationType = .unknown,
         currentWorkout: GymWorkoutKind = .standard,
@@ -248,7 +248,7 @@ final class LiveWorkoutSession: ObservableObject {
         guard canStart else { return }
         connectivity.refreshWatchConnectivityState()
         guard connectivity.canStartWorkoutFromPhone else {
-            lastError = "Connect your Apple Watch to start this workout."
+            lastError = L10n.t("gym.session.error.connectWatch")
             return
         }
 
@@ -264,7 +264,7 @@ final class LiveWorkoutSession: ObservableObject {
         guard canStart else { return }
         connectivity.refreshWatchConnectivityState()
         guard connectivity.canStartWorkoutFromPhone else {
-            lastError = "Connect your Apple Watch to start this workout."
+            lastError = L10n.t("gym.session.error.connectWatch")
             return
         }
 

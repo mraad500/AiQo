@@ -3,7 +3,6 @@ import SwiftData
 import UIKit
 import UserNotifications
 import BackgroundTasks
-import FamilyControls
 import WatchConnectivity
 import AppIntents
 import HealthKit

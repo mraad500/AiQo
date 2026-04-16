@@ -315,6 +315,8 @@ struct CaptainPersonalizationOnboardingView: View {
                 }
             }
 
+            HealthComplianceCard(compact: true)
+
             VStack(spacing: 12) {
                 secondaryActionButton(
                     title: localized(

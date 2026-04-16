@@ -32,8 +32,6 @@ final class AppFlowController: ObservableObject {
     @Published private(set) var currentScreen: RootScreen
     @Published private(set) var refreshID = UUID()
 
-    private let protectionModel = ProtectionModel.shared
-
     private init() {
         Task { @MainActor in
             await Task.yield()
@@ -74,7 +72,7 @@ final class AppFlowController: ObservableObject {
 
     func finishOnboardingWithoutAdditionalPermissions() {
         Task { @MainActor in
-            // User chose to skip — don't prompt for FamilyControls or HealthKit permissions
+            // User chose to skip — don't prompt for optional onboarding permissions
             finalizeLegacyStep()
         }
     }
@@ -84,7 +82,6 @@ final class AppFlowController: ObservableObject {
             HealthKitService.permissionFlowEnabled = true
             await requestFullHealthKitPermissions()
             requestNotificationAuthorizationIfNeeded()
-            await protectionModel.requestAuthorization()
             finalizeLegacyStep()
 
             // Start HealthKit-dependent services now that onboarding is complete
@@ -273,6 +270,7 @@ final class AppFlowController: ObservableObject {
 
 struct AppRootView: View {
     @StateObject private var flow = AppFlowController.shared
+    @StateObject private var aiConsentManager = AIDataConsentManager.shared
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @Environment(\.scenePhase) private var scenePhase
 
@@ -295,6 +293,12 @@ struct AppRootView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             globalBrain.handleScenePhaseTransition(newPhase)
+        }
+        .sheet(isPresented: $aiConsentManager.isPresentingConsentSheet) {
+            AIDataConsentView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
         }
     }
 

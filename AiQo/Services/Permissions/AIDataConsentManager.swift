@@ -1,174 +1,176 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
+import UIKit
+
+enum AIDataConsentError: LocalizedError {
+    case consentRequired
+
+    var errorDescription: String? {
+        NSLocalizedString("ai.consent.blocked.message", comment: "")
+    }
+}
 
 /// Manages user consent for sharing personal data with third-party AI services.
-/// Apple Review Guidelines 5.1.1(i) & 5.1.2(i) require explicit consent before
-/// transmitting personal data to external AI services.
+@MainActor
 final class AIDataConsentManager: ObservableObject {
     static let shared = AIDataConsentManager()
 
     private enum Keys {
-        static let hasConsented = "aiqo.ai_data_consent.granted"
-        static let consentDate = "aiqo.ai_data_consent.date"
+        static let accepted = "aiqo.aiDataConsent.accepted"
+        static let acceptedAt = "aiqo.aiDataConsent.acceptedAt"
+        static let legacyAccepted = "aiqo.ai_data_consent.granted"
+        static let legacyAcceptedAt = "aiqo.ai_data_consent.date"
     }
 
     @Published private(set) var hasUserConsented: Bool
+    @Published private(set) var acceptedAt: Date?
+    @Published var isPresentingConsentSheet = false
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.hasUserConsented = defaults.bool(forKey: Keys.hasConsented)
+        Self.migrateLegacyKeysIfNeeded(defaults: defaults)
+
+        self.hasUserConsented = defaults.bool(forKey: Keys.accepted)
+        if let timestamp = defaults.object(forKey: Keys.acceptedAt) as? TimeInterval {
+            self.acceptedAt = Date(timeIntervalSince1970: timestamp)
+        } else {
+            self.acceptedAt = nil
+        }
+    }
+
+    func ensureConsent(presentIfPossible: Bool = true) -> Bool {
+        guard !hasUserConsented else { return true }
+
+        if presentIfPossible, UIApplication.shared.applicationState == .active {
+            isPresentingConsentSheet = true
+        }
+
+        return false
+    }
+
+    func presentDisclosure() {
+        isPresentingConsentSheet = true
     }
 
     func grantConsent() {
-        defaults.set(true, forKey: Keys.hasConsented)
-        defaults.set(Date().timeIntervalSince1970, forKey: Keys.consentDate)
+        let now = Date()
+        defaults.set(true, forKey: Keys.accepted)
+        defaults.set(now.timeIntervalSince1970, forKey: Keys.acceptedAt)
         hasUserConsented = true
+        acceptedAt = now
+        isPresentingConsentSheet = false
+    }
+
+    func dismissDisclosure() {
+        isPresentingConsentSheet = false
     }
 
     func revokeConsent() {
-        defaults.set(false, forKey: Keys.hasConsented)
-        defaults.removeObject(forKey: Keys.consentDate)
+        defaults.set(false, forKey: Keys.accepted)
+        defaults.removeObject(forKey: Keys.acceptedAt)
         hasUserConsented = false
+        acceptedAt = nil
+        isPresentingConsentSheet = false
+    }
+
+    private static func migrateLegacyKeysIfNeeded(defaults: UserDefaults) {
+        guard defaults.object(forKey: Keys.accepted) == nil else { return }
+
+        let legacyAccepted = defaults.bool(forKey: Keys.legacyAccepted)
+        defaults.set(legacyAccepted, forKey: Keys.accepted)
+
+        if let legacyTimestamp = defaults.object(forKey: Keys.legacyAcceptedAt) as? TimeInterval {
+            defaults.set(legacyTimestamp, forKey: Keys.acceptedAt)
+        }
     }
 }
 
-/// A sheet presented before any AI interaction to obtain explicit user consent
-/// for sharing data with third-party AI services.
 struct AIDataConsentView: View {
     @ObservedObject var consentManager = AIDataConsentManager.shared
-    @Environment(\.dismiss) private var dismiss
+    @State private var showPrivacyPolicy = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    Image(systemName: "brain.head.profile.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color(hex: "C6EFDB"))
-                        .padding(.top, 24)
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(NSLocalizedString("ai.consent.title", comment: ""))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
 
-                    Text(NSLocalizedString(
-                        "ai.consent.title",
-                        value: "مشاركة البيانات مع خدمة الذكاء الاصطناعي",
-                        comment: "AI consent title"
-                    ))
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
+                            Text(NSLocalizedString("ai.consent.subtitle", comment: ""))
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        consentDetailRow(
-                            icon: "doc.text.fill",
-                            title: NSLocalizedString(
-                                "ai.consent.what.title",
-                                value: "ما البيانات المُرسلة؟",
-                                comment: ""
-                            ),
-                            detail: NSLocalizedString(
-                                "ai.consent.what.detail",
-                                value: "رسائلك في المحادثة، ملخص بياناتك الصحية اليومية (الخطوات، السعرات، النوم، النبض)، وتفضيلاتك الشخصية.",
-                                comment: ""
-                            )
-                        )
+                        AIDataUseDisclosureView()
 
-                        consentDetailRow(
-                            icon: "server.rack",
-                            title: NSLocalizedString(
-                                "ai.consent.who.title",
-                                value: "إلى من تُرسل؟",
-                                comment: ""
-                            ),
-                            detail: NSLocalizedString(
-                                "ai.consent.who.detail",
-                                value: "Google Gemini AI لمعالجة اللغة وتقديم النصائح الصحية المخصصة. ElevenLabs لتحويل النص إلى صوت عند تفعيل صوت الكابتن.",
-                                comment: ""
-                            )
-                        )
-
-                        consentDetailRow(
-                            icon: "lock.shield.fill",
-                            title: NSLocalizedString(
-                                "ai.consent.why.title",
-                                value: "لماذا؟",
-                                comment: ""
-                            ),
-                            detail: NSLocalizedString(
-                                "ai.consent.why.detail",
-                                value: "لتوفير ردود مخصصة ونصائح صحية تناسب حالتك. البيانات الصحية تُلخَّص وتُموَّه قبل الإرسال. لا يتم تخزين بياناتك الشخصية لدى مزودي الخدمة.",
-                                comment: ""
-                            )
-                        )
+                        Button {
+                            showPrivacyPolicy = true
+                        } label: {
+                            Text(NSLocalizedString("ai.consent.privacyPolicy", comment: ""))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 4)
-
-                    Text(NSLocalizedString(
-                        "ai.consent.revoke",
-                        value: "يمكنك إلغاء هذه الموافقة في أي وقت من إعدادات التطبيق.",
-                        comment: ""
-                    ))
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    .padding(20)
                 }
-                .padding(24)
+
+                VStack(spacing: 12) {
+                    Button {
+                        consentManager.grantConsent()
+                    } label: {
+                        Text(NSLocalizedString("ai.consent.agree", comment: ""))
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.accentColor)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ai-consent-agree")
+
+                    Button {
+                        consentManager.dismissDisclosure()
+                    } label: {
+                        Text(NSLocalizedString("ai.consent.notNow", comment: ""))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ai-consent-not-now")
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+                .background(
+                    Color(.systemBackground)
+                        .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: -6)
+                )
             }
-
-            VStack(spacing: 12) {
-                Button {
-                    consentManager.grantConsent()
-                    dismiss()
-                } label: {
-                    Text(NSLocalizedString(
-                        "ai.consent.agree",
-                        value: "موافق على المشاركة",
-                        comment: ""
-                    ))
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(hex: "C6EFDB"))
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text(NSLocalizedString(
-                        "ai.consent.decline",
-                        value: "لا، شكرًا",
-                        comment: ""
-                    ))
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        consentManager.dismissDisclosure()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+        }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            LegalView(type: .privacyPolicy)
         }
         .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
-    }
-
-    private func consentDetailRow(icon: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color(hex: "C6EFDB"))
-                .frame(width: 32)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                Text(detail)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(3)
-            }
-        }
     }
 }

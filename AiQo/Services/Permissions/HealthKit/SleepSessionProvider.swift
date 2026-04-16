@@ -91,17 +91,7 @@ actor SleepSessionProvider {
         cache = (session, Date())
 
         #if DEBUG
-        let envelopeSec = session.endDate.timeIntervalSince(session.startDate)
-        print("""
-        🛌 AiQo Sleep Session (Apple Health algorithm):
-           Session envelope: \(session.startDate) → \(session.endDate)
-           Envelope duration: \(String(format: "%.2f", envelopeSec / 3600))h
-           Time Asleep (envelope - awake): \(String(format: "%.2f", session.totalAsleepHours))h
-           = \(Int(session.totalAsleepSeconds) / 3600)h \((Int(session.totalAsleepSeconds) % 3600) / 60)min
-           Source: \(session.chosenSourceName) (\(session.chosenSourceBundleID))
-           Stages: \(session.stages.count)
-           ⚠️ Apple Health → Sleep → Day tab → 'Time Asleep' should match ±2 min
-        """)
+        print("🛌 AiQo Sleep Session updated")
         #endif
 
         return session
@@ -243,13 +233,7 @@ actor SleepSessionProvider {
         }.sorted { $0.startDate < $1.startDate }
 
         #if DEBUG
-        let sleepSessions = sessions.filter { s in s.contains { asleepValues.contains($0.value) } }
-        print("🛌 Detected \(sleepSessions.count) sleep session(s)")
-        for (i, session) in sessions.enumerated() {
-            guard let s = session.map(\.start).min(), let e = session.map(\.end).max() else { continue }
-            let hasAsleep = session.contains { asleepValues.contains($0.value) }
-            print("   Session \(i + 1): \(s) → \(e) | hasAsleep: \(hasAsleep)")
-        }
+        print("🛌 Sleep session candidates processed")
         #endif
 
         return UnifiedSleepSession(

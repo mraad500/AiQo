@@ -290,6 +290,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     /// Pre-caches all common Captain Hamoudi phrases via ElevenLabs.
     /// Call this on WiFi (e.g., after first login or in background).
     func preCacheVoices() async {
+        guard await AICloudConsentGate.hasConsent() else { return }
         await voiceCache.preCacheAllPhrases()
     }
 

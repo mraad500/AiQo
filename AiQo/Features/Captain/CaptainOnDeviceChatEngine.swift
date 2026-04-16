@@ -60,10 +60,6 @@ actor CaptainOnDeviceChatEngine {
             let liveContext = await fetchLiveHealthContext()
             let instructions = buildDynamicSystemPrompt(with: liveContext)
 
-            #if DEBUG
-            Swift.print("--- AIQO DEBUG: Live Data - Steps: \(liveContext.currentSteps) ---")
-            Swift.print("--- AIQO DEBUG: Live Data - HR: \(liveContext.currentHeartRateBPM) Calories: \(liveContext.currentCalories) ---")
-            #endif
             logger.notice("captain_on_device_started")
 
             do {

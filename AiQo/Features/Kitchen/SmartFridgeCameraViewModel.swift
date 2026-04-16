@@ -132,6 +132,8 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     private func callVisionAPI(image: UIImage) async throws -> [FridgeItem] {
+        try await AICloudConsentGate.requireConsent()
+
         // Resolve API key using the same logic as HybridBrainService
         let apiKey = try resolveAPIKey()
 

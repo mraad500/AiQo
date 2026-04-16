@@ -29,6 +29,9 @@ struct WorkoutCategoriesView: View {
     @State private var selection = 0
     @State private var visibleCardIDs = Set<UUID>()
     @State private var animationSeed = 0
+    private var layoutDirection: LayoutDirection {
+        AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
+    }
 
     private var selectedCategory: WorkoutCategory {
         WorkoutCategory(rawValue: selection) ?? .cardio
@@ -73,7 +76,7 @@ struct WorkoutCategoriesView: View {
             clubSideFilter
                 .frame(width: 68)
         }
-        .environment(\.layoutDirection, .leftToRight)
+        .environment(\.layoutDirection, layoutDirection)
         .onAppear {
             animateCards(for: currentItems)
         }

@@ -101,7 +101,6 @@ final class CaptainViewModel: ObservableObject {
     @Published var feedbackTrigger: Int = 0
     @Published var activeModule: ScreenContext = .mainChat
     @Published var quickReplies: [String] = []
-    @Published var showAIConsentSheet = false
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -217,10 +216,8 @@ final class CaptainViewModel: ObservableObject {
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
 
-        // Apple Review Guidelines 5.1.1(i) & 5.1.2(i): require explicit consent
-        // before transmitting personal data to a third-party AI service.
-        guard AIDataConsentManager.shared.hasUserConsented else {
-            showAIConsentSheet = true
+        let requiresCloudConsent = context != .sleepAnalysis
+        guard !requiresCloudConsent || AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else {
             return
         }
 
@@ -663,6 +660,18 @@ final class CaptainViewModel: ObservableObject {
             return localizedFallbackMessage(
                 arabic: "الرد أخذ وقت أطول من المتوقع. جرّب مرة ثانية.",
                 english: "The reply took longer than expected. Try again."
+            )
+        }
+
+        if let consentError = error as? AIDataConsentError,
+           case .consentRequired = consentError {
+            return localizedFallbackMessage(
+                arabic: NSLocalizedString(
+                    "ai.consent.blocked.message",
+                    value: "يلزمك توافق على مشاركة بيانات الذكاء الاصطناعي حتى تستخدم الميزات السحابية داخل AiQo.",
+                    comment: "AI consent required fallback"
+                ),
+                english: "You need to agree to AiQo's AI data use disclosure before cloud AI features can run."
             )
         }
 

@@ -94,6 +94,8 @@ enum CaptainVoiceAPI {
     }
 
     static func synthesizeSpeech(for text: String) async throws -> Data {
+        try await AICloudConsentGate.requireConsent()
+
         guard let configuration = configuration() else {
             throw Error.missingConfiguration
         }

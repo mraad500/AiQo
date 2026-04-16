@@ -272,6 +272,8 @@ final class CaptainIntelligenceManager {
     }
 
     private func generateArabicAPIReply(for userInput: String) async throws -> String {
+        try await AICloudConsentGate.requireConsent()
+
         let configuration = try arabicAPIConfiguration()
 
         var request = URLRequest(url: configuration.endpointURL)

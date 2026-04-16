@@ -236,6 +236,10 @@ struct CaptainScreen: View {
                     .padding(.horizontal, 24)
                 }
 
+                HealthComplianceCard(compact: true)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 12)
+
                 CaptainInputView(
                     text: $viewModel.inputText,
                     isSending: viewModel.isSending,

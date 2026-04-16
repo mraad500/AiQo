@@ -60,6 +60,7 @@ struct SleepDetailCardView: View {
                     summaryAndChartSection
                     legendSection
                     smartWakeSection
+                    HealthComplianceCard(compact: false)
                 }
                 .padding(20)
             }

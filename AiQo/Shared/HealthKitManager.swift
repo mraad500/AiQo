@@ -333,7 +333,7 @@ final class HealthKitManager: ObservableObject {
         }
         lastObservedSteps = stepCount
 
-        logger.debug("health_data_updated steps=\(stepCount)")
+        logger.debug("health_data_updated")
 
         calculateAndAwardCoins(
             currentSteps: stepCount,

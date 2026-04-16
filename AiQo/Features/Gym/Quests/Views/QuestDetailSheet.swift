@@ -53,9 +53,9 @@ struct QuestDetailSheet: View {
                         Capsule().fill(Color(hex: "F5F5F5"))
                     )
 
-                // التحدي section
+                // Challenge section
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("التحدي")
+                    Text(questLocalizedText("gym.quest.challenge"))
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -66,9 +66,9 @@ struct QuestDetailSheet: View {
                         .lineSpacing(6)
                 }
 
-                // الفائدة section
+                // Benefit section
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("الفائدة")
+                    Text(questLocalizedText("gym.quest.benefit"))
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -86,9 +86,9 @@ struct QuestDetailSheet: View {
                     }
                 }
 
-                // شلون تنجزه section
+                // How to complete section
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("شلون تنجزه؟")
+                    Text(questLocalizedText("gym.quest.howToComplete"))
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
@@ -125,7 +125,7 @@ struct QuestDetailSheet: View {
 
                         Spacer()
 
-                        Text("مركزك الحالي")
+                        Text(questLocalizedText("gym.quest.currentProgress"))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color(hex: "1A1A1A"))
                     }
@@ -154,15 +154,15 @@ struct QuestDetailSheet: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 34)
         }
-        .alert("لا يمكن الوصول للكاميرا", isPresented: $cameraPermissionDenied) {
-            Button("افتح الإعدادات") {
+        .alert(questLocalizedText("quests.vision.camera.denied.title"), isPresented: $cameraPermissionDenied) {
+            Button(questLocalizedText("quests.vision.camera.open_settings")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("إلغاء", role: .cancel) {}
+            Button(questLocalizedText("gym.quest.cancel"), role: .cancel) {}
         } message: {
-            Text("التطبيق يحتاج إذن الكاميرا لإكمال هذا التحدي. افتح الإعدادات وفعّل الكاميرا.")
+            Text(questLocalizedText("quests.vision.camera.denied.message"))
         }
         .sheet(isPresented: $showCameraPermission) {
             QuestCameraPermissionGateView {
@@ -210,12 +210,12 @@ struct QuestDetailSheet: View {
                 items: [
                     String(
                         format: questLocalizedText("quests.share.message.format"),
-                        locale: Locale.current,
+                        locale: questAppLocale(),
                         questLocalizedText(quest.localizedTitleKey)
                     ),
                     String(
                         format: questLocalizedText("quests.share.stage_quest.format"),
-                        locale: Locale.current,
+                        locale: questAppLocale(),
                         quest.stageIndex,
                         quest.questIndex
                     )
@@ -232,8 +232,8 @@ struct QuestDetailSheet: View {
             guard quest.source == .healthkit else { return }
             await engine.refreshNow(reason: .manualPull)
         }
-        .alert("تعذّر فتح تطبيق الصحة", isPresented: $showHealthSetupAlert) {
-            Button("حسنًا", role: .cancel) {}
+        .alert(questLocalizedText("gym.quest.cantOpenHealth"), isPresented: $showHealthSetupAlert) {
+            Button(questLocalizedText("gym.quest.ok"), role: .cancel) {}
         } message: {
             Text(healthSetupAlertMessage)
         }
@@ -246,9 +246,8 @@ struct QuestDetailSheet: View {
         let isCompleted = quest.isStageOneBooleanQuest ? progress.isCompleted : (progress.currentTier >= 3)
 
         if isCompleted {
-            // Already completed
             HStack(spacing: 8) {
-                Text("تم الإنجاز")
+                Text(questCompletionStatusText(isCompleted: true))
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color(hex: "1A1A1A"))
                 Image(systemName: "checkmark.circle.fill")
@@ -263,17 +262,15 @@ struct QuestDetailSheet: View {
         } else {
             switch quest.source {
             case .healthkit:
-                // HealthKit: auto-tracking UI
                 VStack(spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "heart.fill")
                             .foregroundStyle(Color(hex: "B7E5D2"))
-                        Text("يتتبع تلقائياً من Apple Health")
+                        Text(questLocalizedText("gym.quest.autoTrackingAppleHealth"))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Color(hex: "666666"))
                     }
 
-                    // Progress bar
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 6)
@@ -293,7 +290,7 @@ struct QuestDetailSheet: View {
 
                     if !engine.isHealthAuthorized {
                         Button(action: { handleHealthKitCTA(progress: progress) }) {
-                            Text("اربط هيلث كِت")
+                            Text(questLocalizedText("gym.quest.linkHealthKit"))
                                 .font(.system(size: 15, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color(hex: "1A1A1A"))
                                 .frame(maxWidth: .infinity)
@@ -311,7 +308,7 @@ struct QuestDetailSheet: View {
                                         .controlSize(.small)
                                         .tint(.black.opacity(0.9))
                                 }
-                                Text("تحديث")
+                                Text(questLocalizedText("gym.quest.refresh"))
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
                             }
                             .foregroundStyle(Color(hex: "1A1A1A"))
@@ -332,11 +329,10 @@ struct QuestDetailSheet: View {
                 )
 
             case .camera:
-                // Camera button
                 Button(action: { handleCameraCTA(progress: progress) }) {
                     HStack(spacing: 8) {
                         Image(systemName: "camera.fill")
-                        Text(progress.isStarted ? "انهاء" : "افتح الكاميرا")
+                        Text(progress.isStarted ? questLocalizedText("gym.quest.endSession") : questLocalizedText("gym.camera.startChallenge"))
                     }
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color(hex: "1A1A1A"))
@@ -350,7 +346,7 @@ struct QuestDetailSheet: View {
 
             case .water:
                 Button(action: { showWaterEntry = true }) {
-                    Text("فتح إدخال الماء")
+                    Text(questLocalizedText("gym.quest.openWaterEntry"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -363,7 +359,7 @@ struct QuestDetailSheet: View {
 
             case .timer:
                 Button(action: { handleTimerCTA(progress: progress) }) {
-                    Text(progress.isStarted ? "انهاء الجلسة" : "ابدأ الجلسة")
+                    Text(progress.isStarted ? questLocalizedText("gym.quest.endSession") : questLocalizedText("gym.quest.startSession"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -376,7 +372,7 @@ struct QuestDetailSheet: View {
 
             case .workout:
                 Button(action: { showWorkoutEntry = true }) {
-                    Text("سجل جلسة كارديو")
+                    Text(questLocalizedText("gym.quest.logCardioSession"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -389,7 +385,7 @@ struct QuestDetailSheet: View {
 
             case .social:
                 Button(action: { handleSocialCTA() }) {
-                    Text("سجّل تفاعل")
+                    Text(questLocalizedText("gym.quest.logInteraction"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -402,7 +398,11 @@ struct QuestDetailSheet: View {
 
             case .kitchen:
                 Button(action: { handleKitchenCTA(progress: progress) }) {
-                    Text(quest.isStageOneBooleanQuest && progress.isCompleted ? "تم" : "فتح المطبخ")
+                    Text(
+                        quest.isStageOneBooleanQuest && progress.isCompleted
+                            ? questLocalizedText("gym.quest.done")
+                            : questLocalizedText("gym.quest.openKitchen")
+                    )
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -416,7 +416,7 @@ struct QuestDetailSheet: View {
 
             case .share:
                 Button(action: { showShareSheet = true }) {
-                    Text("مشاركة الإنجاز")
+                    Text(questLocalizedText("gym.quest.shareAchievement"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -429,7 +429,7 @@ struct QuestDetailSheet: View {
 
             case .manual:
                 Button(action: { handleManualCTA(progress: progress) }) {
-                    Text("أكد الإنجاز")
+                    Text(questLocalizedText("gym.quest.confirmAchievement"))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .frame(maxWidth: .infinity)
@@ -447,7 +447,7 @@ struct QuestDetailSheet: View {
 
     private var timerBlock: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Text("زمن الجلسة")
+            Text(questLocalizedText("gym.quest.sessionTime"))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
 
             Text(formattedElapsed())
@@ -500,12 +500,14 @@ struct QuestDetailSheet: View {
                     if quest.metricAKey == .sleepHours, !engine.hasSleepDataInOvernightWindow {
                         healthMessage = nil
                     } else {
-                        healthMessage = wasAuthorized ? "تم تحديث التقدم." : "تم ربط هيلث كِت وتحديث التقدم."
+                        healthMessage = wasAuthorized
+                            ? questLocalizedText("gym.quest.progressUpdated")
+                            : questLocalizedText("gym.quest.healthKitLinked")
                     }
                 }
             } else {
                 await MainActor.run {
-                    healthMessage = "تم رفض صلاحية هيلث كيت. يمكنك تفعيلها من الإعدادات."
+                    healthMessage = questLocalizedText("gym.quest.healthKitDenied")
                 }
             }
 
@@ -558,37 +560,12 @@ struct QuestDetailSheet: View {
     // MARK: - Helpers
 
     private var sourceText: String {
-        if quest.stageIndex == 1 {
-            return questStageOneSourceBadgeText(for: quest)
-        }
-
-        switch quest.source {
-        case .healthkit:
-            return "المصدر: Apple Health"
-        case .camera:
-            return "المصدر: كاميرا الرؤية"
-        case .water:
-            return "المصدر: إدخال الماء"
-        case .timer:
-            return "المصدر: مؤقت الجلسة"
-        case .workout:
-            return "المصدر: سجل الكارديو"
-        case .manual:
-            return "المصدر: تأكيد المستخدم"
-        case .social:
-            return "المصدر: الساحة"
-        case .kitchen:
-            return "المصدر: المطبخ"
-        case .share:
-            return "المصدر: مشاركة"
-        }
+        questSourceBadgeText(for: quest)
     }
 
     private func statusText(progress: QuestProgressRecord) -> String {
-        if quest.isStageOneBooleanQuest {
-            return progress.isCompleted ? "مكتمل" : "غير مكتمل"
-        }
-        return progress.currentTier >= 3 ? "مكتمل" : "غير مكتمل"
+        let isCompleted = quest.isStageOneBooleanQuest ? progress.isCompleted : (progress.currentTier >= 3)
+        return questCompletionStatusText(isCompleted: isCompleted)
     }
 
     private func formattedElapsed() -> String {
@@ -619,149 +596,26 @@ struct QuestSheetContent {
 enum QuestSheetContentProvider {
     static func content(for quest: QuestDefinition) -> QuestSheetContent {
         switch quest.id {
-        // Stage 1
         case "s1q1":
-            return .init(
-                explanation: "مهمة بداية لمرة واحدة: فعل خير بسيط يوقّفك على نية واضحة ويشغّل الاستيقاظ من الداخل.",
-                benefits: [
-                    "يرفع صفاء النفس ويخفف ضغط اليوم.",
-                    "يقوّي النية والانضباط السلوكي من أول مرحلة.",
-                    "يبني توازنًا داخليًا ينعكس على قراراتك."
-                ],
-                howTo: [
-                    "اختَر مساعدة واحدة مباشرة اليوم.",
-                    "أكمل الفعل فعليًا بدون تأجيل.",
-                    "ارجع واضغط \"أكد الإنجاز\"."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s1q1")
         case "s1q2":
-            return .init(
-                explanation: "مهمة يومية لترطيب جسمك اليوم بنفس اليوم، وترقيتك تكون حسب مركزك من 3 إلى 1.",
-                benefits: [
-                    "ترطيب أفضل يعني طاقة وثبات أعلى خلال اليوم.",
-                    "يدعم التركيز وصفاء الذهن في الشغل والتمرين.",
-                    "يحسن نضارة الجلد وأداء الجسم العام."
-                ],
-                howTo: [
-                    "قسّم شرب الماء على فترات بدل دفعة واحدة.",
-                    "سجّل كل كمية تشربها من زر الإدخال.",
-                    "استهدف 2.0ل ثم ارفعها إلى 2.5ل ثم 3.0ل."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s1q2")
         case "s1q3":
-            return .init(
-                explanation: "مهمة نوم يومية من نافذة الليل الماضية، وتقييمها بالمراكز حسب عدد ساعات النوم.",
-                benefits: [
-                    "يسرّع التعافي العضلي والعصبي.",
-                    "يساعد توازن الهرمونات وتنظيم الشهية.",
-                    "يرفع التركيز وجودة الأداء الذهني."
-                ],
-                howTo: [
-                    "اربط Apple Health حتى يقرأ ساعات النوم تلقائيًا.",
-                    "استهدف 7.0س ثم 7.5س ثم 8.0س.",
-                    "استخدم زر \"تحديث\" بعد الاستيقاظ."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s1q3")
         case "s1q4":
-            return .init(
-                explanation: "مهمة تراكمية لزون 2 داخل المرحلة 1، وكل ما زادت الدقائق يرتفع مركزك حتى المركز 1.",
-                benefits: [
-                    "يعزّز حرق الدهون بكفاءة على المدى الطويل.",
-                    "يقوي القلب والتحمل بدون إجهاد مفرط.",
-                    "يدعم الهدوء العصبي وتنظيم التوتر."
-                ],
-                howTo: [
-                    "سجّل جلسات زون 2 بشكل منتظم.",
-                    "ابدأ بـ 20د ثم ارفعها إلى 30د ثم 40د.",
-                    "حدّث الدقائق من زر تسجيل الجلسة."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s1q4")
         case "s1q5":
-            return .init(
-                explanation: "مهمة تأسيس لمرة واحدة: حفظ خطة المطبخ يثبت نظامك الغذائي من البداية.",
-                benefits: [
-                    "يثبّت السلوك اليومي ويقلل العشوائية.",
-                    "يعطيك تحكمًا أفضل في اختيارات الأكل.",
-                    "يقلل تعب القرارات اليومية حول الوجبات."
-                ],
-                howTo: [
-                    "افتح شاشة المطبخ من الزر.",
-                    "أنشئ/احفظ خطة وجباتك.",
-                    "تكتمل المهمة تلقائيًا بعد حفظ الخطة."
-                ]
-            )
-
-        // Stage 2
+            return localizedContent(prefix: "gym.quest.s1q5")
         case "s2q1":
-            return .init(
-                explanation: "تحدي كاميرا لقياس دقة أداء الضغط عبر الرؤية الحاسوبية.",
-                benefits: [
-                    "يبني قوة الجزء العلوي من الجسم.",
-                    "يحسن دقة الأداء والتحكم الحركي.",
-                    "يعزز الثقة بالنفس من خلال التقدم المرئي."
-                ],
-                howTo: [
-                    "افتح الكاميرا من الزر.",
-                    "أدِّ تمارين الضغط أمام الكاميرا.",
-                    "حقق العدد المطلوب بالدقة المحددة."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s2q1")
         case "s2q2":
-            return .init(
-                explanation: "مهمة يومية لقطع مسافة معينة مشياً أو جرياً.",
-                benefits: [
-                    "يحسن صحة القلب والأوعية الدموية.",
-                    "يعزز حرق السعرات الحرارية.",
-                    "يرفع مستوى الطاقة والنشاط اليومي."
-                ],
-                howTo: [
-                    "امشِ أو اجرِ خلال يومك.",
-                    "تتبع المسافة تلقائياً من Apple Health.",
-                    "استهدف 3كم ثم 5كم ثم 6كم."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s2q2")
         case "s2q3":
-            return .init(
-                explanation: "تحدي تراكمي لزيادة وقت البلانك تدريجياً.",
-                benefits: [
-                    "يقوي عضلات الجذع والبطن.",
-                    "يحسن الثبات والتوازن.",
-                    "يدعم صحة الظهر والعمود الفقري."
-                ],
-                howTo: [
-                    "ابدأ المؤقت عند بدء البلانك.",
-                    "حافظ على الوضعية الصحيحة.",
-                    "أوقف المؤقت عند الانتهاء."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s2q3")
         case "s2q4":
-            return .init(
-                explanation: "جلسة امتنان يومية لتعزيز الصحة النفسية.",
-                benefits: [
-                    "يقلل التوتر والقلق.",
-                    "يحسن جودة النوم.",
-                    "يعزز الشعور بالرضا والسعادة."
-                ],
-                howTo: [
-                    "ابدأ جلسة الامتنان من المؤقت.",
-                    "تأمل فيما أنت ممتن له.",
-                    "استهدف 2د ثم 3د ثم 5د."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s2q4")
         case "s2q5":
-            return .init(
-                explanation: "سلسلة يومية لشرب الماء بانتظام.",
-                benefits: [
-                    "يبني عادة ترطيب مستدامة.",
-                    "يحسن الأداء البدني والذهني.",
-                    "يعزز الانضباط اليومي."
-                ],
-                howTo: [
-                    "اشرب الحد الأدنى من الماء يومياً.",
-                    "سجّل الكمية كل يوم.",
-                    "حافظ على السلسلة بدون انقطاع."
-                ]
-            )
+            return localizedContent(prefix: "gym.quest.s2q5")
 
         // Stage 3
         case "s3q1":
@@ -839,6 +693,22 @@ enum QuestSheetContentProvider {
         default:
             return defaultContent(for: quest)
         }
+    }
+
+    private static func localizedContent(prefix: String) -> QuestSheetContent {
+        QuestSheetContent(
+            explanation: questLocalizedText("\(prefix).explanation"),
+            benefits: [
+                questLocalizedText("\(prefix).benefit1"),
+                questLocalizedText("\(prefix).benefit2"),
+                questLocalizedText("\(prefix).benefit3")
+            ],
+            howTo: [
+                questLocalizedText("\(prefix).howTo1"),
+                questLocalizedText("\(prefix).howTo2"),
+                questLocalizedText("\(prefix).howTo3")
+            ]
+        )
     }
 
     private static func defaultContent(for quest: QuestDefinition) -> QuestSheetContent {
@@ -970,14 +840,14 @@ private struct QuestWaterEntrySheetInternal: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("إدخال الماء")
+            Text(questLocalizedText("gym.quest.waterEntry"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
 
-            Text("أضف 0.25 لتر الآن لتحديث المهمة فوراً")
+            Text(questLocalizedText("gym.quest.waterAdd"))
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
 
-            Button("+0.25ل") {
+            Button(questLocalizedText("gym.quest.waterButton")) {
                 onAddWater(0.25)
                 dismiss()
             }
@@ -998,13 +868,13 @@ private struct QuestWorkoutEntrySheetInternal: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("سجّل جلسة")
+            Text(questLocalizedText("gym.quest.logSession"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
 
             if !quickOptions.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(quickOptions, id: \.self) { option in
-                        Button("\(Int(option))د") {
+                        Button("\(Int(option))\(questLocalizedText("gym.quest.minuteUnit"))") {
                             minutes = option
                         }
                         .buttonStyle(.bordered)
@@ -1012,10 +882,19 @@ private struct QuestWorkoutEntrySheetInternal: View {
                 }
             }
 
-            Stepper("\(Int(minutes)) دقيقة", value: $minutes, in: 5...180, step: 5)
+            Stepper(
+                String(
+                    format: questLocalizedText("gym.quest.minuteLabel"),
+                    locale: questAppLocale(),
+                    Int(minutes)
+                ),
+                value: $minutes,
+                in: 5...180,
+                step: 5
+            )
                 .font(.system(size: 17, weight: .bold, design: .rounded))
 
-            Button("حفظ") {
+            Button(questLocalizedText("gym.quest.save")) {
                 onSave(minutes)
                 dismiss()
             }

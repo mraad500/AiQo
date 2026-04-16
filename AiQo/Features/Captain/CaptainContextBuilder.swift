@@ -269,7 +269,7 @@ final class CaptainContextBuilder {
 
         let buffers = WeeklyMetricsBufferStore.shared.allBuffered()
         guard !buffers.isEmpty else {
-            print("[BrainV2] TrendSnapshot: no buffered daily data")
+            print("[BrainV2] TrendSnapshot unavailable")
             return nil
         }
 
@@ -304,7 +304,7 @@ final class CaptainContextBuilder {
 
         Self.cachedTrendSnapshot = snapshot
         Self.trendCacheTimestamp = Date()
-        print("[BrainV2] TrendSnapshot computed: steps=\(snapshot.stepsTrend.rawValue), sleep=\(snapshot.sleepTrend.rawValue), streak=\(snapshot.streakMomentum.rawValue)")
+        print("[BrainV2] TrendSnapshot computed")
         return snapshot
     }
 

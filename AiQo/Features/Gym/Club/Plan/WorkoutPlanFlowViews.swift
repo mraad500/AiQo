@@ -19,6 +19,8 @@ struct WorkoutPlanDashboard: View {
                 }
                 .buttonStyle(.plain)
 
+                HealthComplianceCard(compact: true)
+
                 Text(L10n.t("gym.plan.dailyPlans"))
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
@@ -176,6 +178,7 @@ struct CaptainPlanChatView: View {
 
             VStack(spacing: 12) {
                 messagesSection
+                HealthComplianceCard(compact: true)
 
                 if let workoutPlan = globalBrain.currentWorkoutPlan {
                     pinPlanButton(for: workoutPlan)

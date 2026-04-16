@@ -186,6 +186,8 @@ struct MemoryExtractor: Sendable {
         assistantReply: String,
         store: MemoryStore
     ) async {
+        guard await AICloudConsentGate.hasConsent() else { return }
+
         // Privacy-first: sanitize all outgoing text before it leaves the device
         let sanitizer = PrivacySanitizer()
         let sanitizedUserMessage = sanitizer.sanitizeText(userMessage, knownUserName: nil)
