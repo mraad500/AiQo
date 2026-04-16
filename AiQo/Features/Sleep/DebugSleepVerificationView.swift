@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct DebugSleepVerificationView: View {
-    @State private var session: UnifiedSleepSession = .empty
+    @State private var session: UnifiedSleepSession = .makeEmpty()
     @State private var isLoading = true
 
     var body: some View {

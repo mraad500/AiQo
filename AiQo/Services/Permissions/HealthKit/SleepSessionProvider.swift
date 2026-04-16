@@ -16,17 +16,19 @@ struct UnifiedSleepSession: Sendable, Equatable {
     let chosenSourceName: String
     let chosenSourceBundleID: String
 
-    var totalAsleepHours: Double { totalAsleepSeconds / 3600.0 }
-    var isEmpty: Bool { totalAsleepSeconds < 60 }
+    nonisolated var totalAsleepHours: Double { totalAsleepSeconds / 3600.0 }
+    nonisolated var isEmpty: Bool { totalAsleepSeconds < 60 }
 
-    static let empty = UnifiedSleepSession(
-        startDate: Date(),
-        endDate: Date(),
-        totalAsleepSeconds: 0,
-        stages: [],
-        chosenSourceName: "",
-        chosenSourceBundleID: ""
-    )
+    nonisolated static func makeEmpty() -> UnifiedSleepSession {
+        UnifiedSleepSession(
+            startDate: .distantPast,
+            endDate: .distantPast,
+            totalAsleepSeconds: 0,
+            stages: [],
+            chosenSourceName: "",
+            chosenSourceBundleID: ""
+        )
+    }
 }
 
 // MARK: - Provider (single source of truth for sleep data)
@@ -46,6 +48,7 @@ actor SleepSessionProvider {
 
     private init() {}
 
+    
     // MARK: - Public API
 
     func lastNightSession(forceRefresh: Bool = false) async -> UnifiedSleepSession {
@@ -57,7 +60,7 @@ actor SleepSessionProvider {
 
         guard HKHealthStore.isHealthDataAvailable(),
               let type = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
-            return .empty
+            return .makeEmpty()
         }
 
         let (windowStart, windowEnd) = Self.sleepWindow(referenceDate: Date())
@@ -130,7 +133,7 @@ actor SleepSessionProvider {
         windowStart: Date,
         windowEnd: Date
     ) -> UnifiedSleepSession {
-        guard !samples.isEmpty else { return .empty }
+        guard !samples.isEmpty else { return .makeEmpty() }
 
         let asleepValues = asleepRawValues
         let awakeValue = HKCategoryValueSleepAnalysis.awake.rawValue
@@ -163,7 +166,7 @@ actor SleepSessionProvider {
             })
             .first
         else {
-            return .empty
+            return .makeEmpty()
         }
 
         // --- Clamp relevant samples to window, sorted by start ---
@@ -177,7 +180,7 @@ actor SleepSessionProvider {
             }
             .sorted { $0.start < $1.start }
 
-        guard !relevant.isEmpty else { return .empty }
+        guard !relevant.isEmpty else { return .makeEmpty() }
 
         // --- Detect session boundaries (gap > 1 hour = new session) ---
         let sessionBreakThreshold: TimeInterval = 60 * 60
@@ -227,7 +230,7 @@ actor SleepSessionProvider {
         }
 
         guard let finalStart = overallStart, let finalEnd = overallEnd, totalTimeAsleep > 0 else {
-            return .empty
+            return .makeEmpty()
         }
 
         // --- Build stage array for UI (unchanged) ---

@@ -29,7 +29,7 @@ struct SleepStageData: Identifiable, Equatable, Sendable {
     let startDate: Date
     let endDate: Date
 
-    init(stage: Stage, startDate: Date, endDate: Date) {
+    nonisolated init(stage: Stage, startDate: Date, endDate: Date) {
         self.stage = stage
         self.startDate = startDate
         self.endDate = endDate
