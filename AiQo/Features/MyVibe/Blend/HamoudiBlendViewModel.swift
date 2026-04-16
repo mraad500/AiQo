@@ -1,57 +1,75 @@
 import Foundation
 import Combine
 
+enum BlendSheetState: Equatable {
+    case empty
+    case loading
+    case playing
+    case error(BlendError)
+}
+
+/// Manages blend-specific state only: state, queue, currentSource.
+/// Live Spotify data (track name, artist, playback) is read directly
+/// from SpotifyVibeManager by the view — no Combine mirroring needed.
 @MainActor
 final class HamoudiBlendViewModel: ObservableObject {
-    @Published var isConnectedToSpotify: Bool = false
-    @Published var isWebAPIAuthorized: Bool = false
-    @Published var isBuilding: Bool = false
-    @Published var error: BlendError?
-    @Published var blendQueue: [BlendTrackItem] = []
+    @Published var state: BlendSheetState = .empty
+    @Published var queue: [BlendTrackItem] = []
+    @Published var currentSource: BlendSourceTag? = nil
 
-    let playback = BlendPlaybackController()
+    private let spotify = SpotifyVibeManager.shared
     private let engine = BlendEngine()
-    private let spotify: SpotifyVibeManager
     private var cancellables = Set<AnyCancellable>()
+    private var isBuildingBlend = false
 
     init() {
-        self.spotify = SpotifyVibeManager.shared
-
+        // Auto-build when Spotify connects and we have no queue.
         spotify.$isConnected
-            .receive(on: RunLoop.main)
-            .assign(to: &$isConnectedToSpotify)
+            .dropFirst()
+            .removeDuplicates()
+            .filter { $0 }
+            .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.queue.isEmpty, self.state == .empty else { return }
+                Task { [weak self] in await self?.buildAndPlay() }
+            }
+            .store(in: &cancellables)
 
-        spotify.$isWebAPIAuthorized
-            .receive(on: RunLoop.main)
-            .assign(to: &$isWebAPIAuthorized)
+        // Track blend source from player state changes.
+        spotify.$currentBlendSource
+            .compactMap { $0 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] source in
+                self?.currentSource = source
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Lifecycle
 
-    /// Called on sheet appear. Attempts silent reconnect, then restores a persisted same-day queue.
     func onSheetAppear() async {
-        // 1. Try silent reconnect if not already connected
-        if !isConnectedToSpotify {
-            let reconnected = await spotify.reconnectSilentlyIfPossible()
-            if reconnected {
-                PrivacySanitizer.log("Blend sheet: silent reconnect succeeded — skipping connect state.")
+        let connected = await spotify.reconnectSilentlyIfPossible()
+
+        if connected, let saved = BlendQueuePersistence.load(), !saved.isEmpty {
+            queue = saved
+            currentSource = saved.first?.source
+
+            var lookup: [String: BlendSourceTag] = [:]
+            for item in saved { lookup[item.uri] = item.source }
+            spotify.blendSourceLookup = lookup
+
+            let startIndex = Int.random(in: 0..<saved.count)
+            startPlayback(tracks: saved, fromIndex: startIndex)
+
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                spotify.fetchCurrentPlayerState()
             }
+            return
         }
 
-        // 2. Try to restore a same-day persisted queue
-        guard blendQueue.isEmpty else { return }
-        if let restored = BlendQueuePersistence.load() {
-            blendQueue = restored.tracks
-
-            // Pick a random start index (not always index 0) for variety on reopen
-            let randomIndex = Int.random(in: 0..<restored.tracks.count)
-
-            if isConnectedToSpotify {
-                playback.startBlend(tracks: restored.tracks, startIndex: randomIndex)
-            }
-
-            PrivacySanitizer.log("Blend sheet: restored \(restored.tracks.count) tracks, starting at index \(randomIndex).")
-        }
+        state = .empty
     }
 
     // MARK: - Actions
@@ -60,79 +78,105 @@ final class HamoudiBlendViewModel: ObservableObject {
         spotify.connect()
     }
 
-    func authorizeWebAPI() {
-        spotify.authorizeWebAPI()
-    }
-
-    func disconnectSpotify() {
-        spotify.logoutSpotify()
-        blendQueue = []
-        BlendQueuePersistence.clear()
-        playback.stop()
-    }
-
-    /// Called when user taps "مزيج جديد" — clears persisted queue, then rebuilds.
-    func regenerateBlend() async {
-        BlendQueuePersistence.clear()
-        blendQueue = []
-        playback.stop()
-        await buildAndPlay()
-    }
-
     func buildAndPlay() async {
-        isBuilding = true
-        error = nil
+        guard !isBuildingBlend else { return }
+        isBuildingBlend = true
+        defer { isBuildingBlend = false }
+
+        state = .loading
 
         do {
-            // Fetch user tracks (required)
-            let user = try await spotify.fetchTopTrackURIs()
+            async let hamoudiURIs = spotify.fetchHamoudiPlaylistTracks()
+            async let userURIs = spotify.fetchUserTopTracks()
 
-            // Fetch master playlist (optional — if private/unavailable, use 100% user tracks)
-            var master: [String] = []
-            do {
-                master = try await spotify.fetchMasterPlaylistURIs(
-                    playlistId: BlendConfiguration.default.masterPlaylistId
-                )
-            } catch {
-                PrivacySanitizer.log("Master playlist unavailable, using 100%% user tracks: \(error.localizedDescription)")
+            let (hamoudi, user) = try await (hamoudiURIs, userURIs)
+
+            guard !hamoudi.isEmpty else {
+                state = .error(.noMasterTracks)
+                return
             }
 
-            // If no master tracks, set userShare to 1.0 (all user tracks)
-            let effectiveUserShare = master.isEmpty ? 1.0 : featureFlagBlendRatio
             let config = BlendConfiguration(
-                userShare: effectiveUserShare,
-                totalTracks: BlendConfiguration.default.totalTracks,
-                masterPlaylistId: BlendConfiguration.default.masterPlaylistId
+                userShare: 0.6,
+                totalTracks: 10,
+                masterPlaylistId: "14YVMyaZsefyZMgEIIicao"
             )
-
-            let tracks = try await engine.build(
+            let blended = try await engine.build(
                 userTopURIs: user,
-                masterURIs: master.isEmpty ? user : master,
+                masterURIs: hamoudi,
                 config: config
             )
 
-            blendQueue = tracks
-            playback.startBlend(tracks: tracks)
-            BlendQueuePersistence.save(tracks)
+            BlendQueuePersistence.save(blended)
+            queue = blended
+            currentSource = blended.first?.source
 
-            PrivacySanitizer.log("Blend built and started: \(tracks.count) tracks.")
-        } catch let blendError as BlendError {
-            self.error = blendError
-            PrivacySanitizer.log("Blend build failed: \(blendError.errorDescription ?? "unknown")")
+            var lookup: [String: BlendSourceTag] = [:]
+            for item in blended { lookup[item.uri] = item.source }
+            spotify.blendSourceLookup = lookup
+
+            startPlayback(tracks: blended, fromIndex: 0)
+
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                spotify.fetchCurrentPlayerState()
+            }
+
+        } catch let error as BlendError {
+            state = .error(error)
         } catch {
-            self.error = .unknown(error.localizedDescription)
-            PrivacySanitizer.log("Blend build failed: \(error.localizedDescription)")
+            state = .error(.unknown(error.localizedDescription))
         }
-
-        isBuilding = false
     }
 
-    // MARK: - Config
+    func regenerateBlend() async {
+        BlendQueuePersistence.clear()
+        queue = []
+        currentSource = nil
+        state = .empty
+        await buildAndPlay()
+    }
 
-    private var featureFlagBlendRatio: Double {
-        if let ratio = Bundle.main.infoDictionary?["HAMOUDI_BLEND_RATIO"] as? Double {
-            return ratio
+    func togglePlayPause() {
+        if spotify.playbackState == .playing {
+            spotify.pauseVibe()
+        } else {
+            spotify.resumeVibe()
         }
-        return BlendConfiguration.default.userShare
+    }
+
+    func skipNext() {
+        spotify.skipNext()
+    }
+
+    func skipPrevious() {
+        spotify.skipPrevious()
+    }
+
+    // MARK: - Computed
+
+    var currentError: BlendError? {
+        if case .error(let e) = state { return e }
+        return nil
+    }
+
+    func dismissError() {
+        state = .empty
+    }
+
+    // MARK: - Private
+
+    private func startPlayback(tracks: [BlendTrackItem], fromIndex: Int) {
+        guard !tracks.isEmpty, fromIndex < tracks.count else { return }
+
+        spotify.playTrack(uri: tracks[fromIndex].uri)
+
+        let remaining = Array(tracks[(fromIndex + 1)...]) + Array(tracks[..<fromIndex])
+        for track in remaining {
+            spotify.enqueueTrack(uri: track.uri)
+        }
+
+        state = .playing
+        currentSource = tracks[fromIndex].source
     }
 }

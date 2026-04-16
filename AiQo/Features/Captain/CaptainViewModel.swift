@@ -101,6 +101,7 @@ final class CaptainViewModel: ObservableObject {
     @Published var feedbackTrigger: Int = 0
     @Published var activeModule: ScreenContext = .mainChat
     @Published var quickReplies: [String] = []
+    @Published var showAIConsentSheet = false
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -215,6 +216,13 @@ final class CaptainViewModel: ObservableObject {
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
+
+        // Apple Review Guidelines 5.1.1(i) & 5.1.2(i): require explicit consent
+        // before transmitting personal data to a third-party AI service.
+        guard AIDataConsentManager.shared.hasUserConsented else {
+            showAIConsentSheet = true
+            return
+        }
 
         HapticEngine.light()
         AnalyticsService.shared.track(.captainMessageSent(length: trimmedText.count))

@@ -214,6 +214,14 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         return false
     }
 
+    /// Explicitly fetches the current player state from Spotify and feeds it through
+    /// the existing playerStateDidChange pipeline to populate track name / artist.
+    func fetchCurrentPlayerState() {
+        guard isConnected else { return }
+        requestPlayerState()
+        log("Explicit player state fetch requested.")
+    }
+
     @discardableResult
     func handleURL(_ url: URL) -> Bool {
         let handled = sessionManager.application(
@@ -432,6 +440,7 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         blendSourceLookup = [:]
         webAPIToken = nil
         isWebAPIAuthorized = false
+        KeychainStore.delete("aiqo.spotify.webapi.refresh")
 
         setConnectionState(false)
         setPausedState(true)
@@ -528,6 +537,8 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         false
     }
 
+    func fetchCurrentPlayerState() {}
+
     func connect() {
         presentAvailabilityError()
     }
@@ -553,6 +564,10 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     func stopVibe() {
         isPaused = true
         playbackState = .stopped
+    }
+
+    func playTrack(uri: String) {
+        presentAvailabilityError()
     }
 
     func skipNext() {}
@@ -590,6 +605,22 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
 
     func fetchMasterPlaylistURIs(playlistId: String) async throws -> [String] {
         throw BlendError.unknown("Simulator")
+    }
+
+    func refreshWebAPIToken() async throws {
+        throw BlendError.authExpired
+    }
+
+    func fetchHamoudiPlaylistTracks() async throws -> [String] {
+        throw BlendError.unknown("Simulator")
+    }
+
+    func fetchUserTopTracks(limit: Int = 50) async throws -> [String] {
+        throw BlendError.unknown("Simulator")
+    }
+
+    func enqueueTrack(uri: String) {
+        presentAvailabilityError()
     }
 
     func clearError() {

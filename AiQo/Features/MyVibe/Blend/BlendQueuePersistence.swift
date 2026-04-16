@@ -4,54 +4,46 @@ import Foundation
 /// Only stores Spotify URIs and source tags — NEVER track names, artist names, or cover art.
 enum BlendQueuePersistence {
 
-    private static let key = "aiqo.blend.persistedQueue"
+    private static let key = "aiqo.blend.queue.v2"
 
     // MARK: - Save
 
-    /// Saves a blend queue after a successful build.
-    static func save(_ tracks: [BlendTrackItem], currentIndex: Int = 0) {
+    static func save(_ queue: [BlendTrackItem]) {
+        let uris = queue.map { $0.uri }
         let sourceMap = Dictionary(
-            tracks.map { ($0.uri, $0.source) },
-            uniquingKeysWith: { _, last in last }
+            uniqueKeysWithValues: queue.map {
+                ($0.uri, $0.source == .user ? "user" : "hamoudi")
+            }
         )
         let persisted = PersistedBlendQueue(
-            uris: tracks.map(\.uri),
+            uris: uris,
             sourceMap: sourceMap,
-            builtDate: Date(),
-            currentIndex: currentIndex
+            builtDate: Date().timeIntervalSince1970
         )
-
-        guard let data = try? JSONEncoder().encode(persisted) else {
-            PrivacySanitizer.log("BlendQueuePersistence: failed to encode queue.")
-            return
+        if let data = try? JSONEncoder().encode(persisted) {
+            UserDefaults.standard.set(data, forKey: key)
+            PrivacySanitizer.log("BlendQueuePersistence: saved \(uris.count) track URIs.")
         }
-
-        UserDefaults.standard.set(data, forKey: key)
-        PrivacySanitizer.log("BlendQueuePersistence: saved \(tracks.count) track URIs.")
     }
 
     // MARK: - Load
 
-    /// Loads a persisted blend queue if it was built today.
-    /// Returns `nil` if no queue exists or if the queue is from a different day.
-    static func load() -> (tracks: [BlendTrackItem], currentIndex: Int)? {
+    static func load() -> [BlendTrackItem]? {
         guard let data = UserDefaults.standard.data(forKey: key),
-              let persisted = try? JSONDecoder().decode(PersistedBlendQueue.self, from: data) else {
-            return nil
-        }
+              let persisted = try? JSONDecoder().decode(PersistedBlendQueue.self, from: data)
+        else { return nil }
 
-        // Only restore same-day queues
-        guard Calendar.current.isDateInToday(persisted.builtDate) else {
-            PrivacySanitizer.log("BlendQueuePersistence: stale queue from \(persisted.builtDate) — discarding.")
+        // Only use same-day queue
+        let builtDate = Date(timeIntervalSince1970: persisted.builtDate)
+        guard Calendar.current.isDateInToday(builtDate) else {
+            PrivacySanitizer.log("BlendQueuePersistence: stale queue — discarding.")
             clear()
             return nil
         }
 
         let tracks = persisted.uris.map { uri in
-            BlendTrackItem(
-                uri: uri,
-                source: persisted.sourceMap[uri] ?? .user
-            )
+            let source: BlendSourceTag = persisted.sourceMap[uri] == "user" ? .user : .hamoudi
+            return BlendTrackItem(uri: uri, source: source)
         }
 
         guard !tracks.isEmpty else {
@@ -59,16 +51,12 @@ enum BlendQueuePersistence {
             return nil
         }
 
-        // Clamp index to valid range
-        let index = min(max(persisted.currentIndex, 0), tracks.count - 1)
-
-        PrivacySanitizer.log("BlendQueuePersistence: restored \(tracks.count) tracks (index \(index)).")
-        return (tracks, index)
+        PrivacySanitizer.log("BlendQueuePersistence: restored \(tracks.count) tracks.")
+        return tracks
     }
 
     // MARK: - Clear
 
-    /// Clears the persisted queue (e.g. when user taps "مزيج جديد").
     static func clear() {
         UserDefaults.standard.removeObject(forKey: key)
         PrivacySanitizer.log("BlendQueuePersistence: cleared.")

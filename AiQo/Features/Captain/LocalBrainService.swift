@@ -751,25 +751,14 @@ private extension LocalBrainService {
     }
 
     func buildLatestSleepSession() async throws -> SleepSession {
-        let authorized = try await healthManager.requestSleepAuthorizationIfNeeded()
-        guard authorized else {
-            throw SleepStageFetchError.authorizationDenied
-        }
-
-        let stages = try await healthManager.fetchSleepStagesForLastNight()
-        guard !stages.isEmpty else {
+        let unified = await SleepSessionProvider.shared.lastNightSession()
+        guard !unified.isEmpty else {
             throw SleepStageFetchError.sleepAnalysisUnavailable
         }
 
-        let totalSleep = stages
-            .filter { $0.stage != .awake }
-            .reduce(0) { $0 + $1.duration }
-        guard totalSleep > 0 else {
-            throw SleepStageFetchError.sleepAnalysisUnavailable
-        }
-
+        let stages = unified.stages
         return SleepSession(
-            totalSleep: totalSleep,
+            totalSleep: unified.totalAsleepSeconds,
             deepSleep: totalDuration(for: .deep, in: stages),
             remSleep: totalDuration(for: .rem, in: stages),
             coreSleep: totalDuration(for: .core, in: stages),

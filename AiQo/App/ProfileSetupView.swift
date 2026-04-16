@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct ProfileSetupView: View {
-    @State private var fullName = ""
-    @State private var username = ""
+    @State private var fullName = UserProfileStore.shared.current.name
+    @State private var username = UserProfileStore.shared.current.username ?? ""
     @State private var birthDate = Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
     @State private var gender: ActivityNotificationGender = .male
     @State private var weightText = ""

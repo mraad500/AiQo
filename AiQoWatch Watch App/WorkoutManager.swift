@@ -116,33 +116,26 @@ final class WorkoutManager: NSObject, ObservableObject {
         isAuthorizationRequestInFlight = true
         logEvent("authorization requested")
 
-        healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { [weak self] success, error in
-            Self.runOnMain { [weak self] in
-                guard let self else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await self.healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
                 self.isAuthorizationRequestInFlight = false
+                self.isWorkoutAuthorizationGranted = true
+                self.logEvent("authorization granted: true")
+                self.refreshWeeklyWidgetData(force: true)
+                self.recoverActiveWorkoutIfNeeded()
 
-                if let error {
-                    self.isWorkoutAuthorizationGranted = false
+                if let pendingConfig = self.pendingStartConfiguration, self.session == nil {
                     self.pendingStartConfiguration = nil
-                    self.logEvent("authorization failed: \(error.localizedDescription)")
-                    return
+                    self.logEvent("starting queued workout after authorization")
+                    self.startWorkout(with: pendingConfig)
                 }
-
-                self.isWorkoutAuthorizationGranted = success
-                self.logEvent("authorization granted: \(success)")
-                if success {
-                    self.refreshWeeklyWidgetData(force: true)
-                    self.recoverActiveWorkoutIfNeeded()
-
-                    if let pendingStartConfiguration = self.pendingStartConfiguration, self.session == nil {
-                        self.pendingStartConfiguration = nil
-                        self.logEvent("starting queued workout after authorization")
-                        self.startWorkout(with: pendingStartConfiguration)
-                    }
-                } else if self.pendingStartConfiguration != nil {
-                    self.pendingStartConfiguration = nil
-                    self.logEvent("authorization denied; queued workout discarded")
-                }
+            } catch {
+                self.isAuthorizationRequestInFlight = false
+                self.isWorkoutAuthorizationGranted = false
+                self.pendingStartConfiguration = nil
+                self.logEvent("authorization failed: \(error.localizedDescription)")
             }
         }
     }

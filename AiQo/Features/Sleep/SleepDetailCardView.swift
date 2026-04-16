@@ -15,6 +15,7 @@ struct SleepDetailCardView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var sleepScoreBreakdown: SleepScoreBreakdown?
+    @State private var providerAsleepSeconds: TimeInterval = 0
     @StateObject private var smartWakeViewModel: SmartWakeViewModel
 
     init(
@@ -393,7 +394,12 @@ struct SleepDetailCardView: View {
     }
 
     private var totalSleepDuration: TimeInterval {
-        sleepStages
+        // Use provider's envelope-minus-awake value (matches Apple Health "Time Asleep")
+        if providerAsleepSeconds > 0 {
+            return providerAsleepSeconds
+        }
+        // Fallback for preview/historical data
+        return sleepStages
             .filter { $0.stage != .awake }
             .reduce(0) { $0 + $1.duration }
     }
@@ -471,8 +477,9 @@ struct SleepDetailCardView: View {
                 throw SleepStageFetchError.authorizationDenied
             }
 
+            let session = await SleepSessionProvider.shared.lastNightSession()
+            let stages = session.stages
             let referenceDate = Date()
-            let stages = try await healthManager.fetchSleepStagesForLastNight(now: referenceDate)
             let historicalBedtimes = (try? await healthManager.fetchHistoricalSleepBedtimes(before: referenceDate)) ?? []
             let scoreBreakdown = Self.makeSleepScoreBreakdown(
                 from: stages,
@@ -481,6 +488,7 @@ struct SleepDetailCardView: View {
 
             await MainActor.run {
                 sleepStages = stages
+                providerAsleepSeconds = session.totalAsleepSeconds
                 sleepScoreBreakdown = scoreBreakdown
                 isLoading = false
 

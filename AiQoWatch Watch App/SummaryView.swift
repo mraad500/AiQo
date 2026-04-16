@@ -88,8 +88,6 @@ struct SummaryView: View {
     }
 
     private func closeSummary() {
-        guard !isClosing else { return }
-        isClosing = true
         stopAutoDismissCountdown()
         workoutManager.showingSummaryView = false
         dismiss()

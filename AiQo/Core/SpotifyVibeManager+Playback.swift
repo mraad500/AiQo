@@ -99,6 +99,18 @@ extension SpotifyVibeManager {
         })
     }
 
+    func playTrack(uri: String) {
+        guard isConnected, let playerAPI = appRemote.playerAPI else {
+            PrivacySanitizer.log("Aura Vibe: playTrack called but not connected")
+            return
+        }
+        playerAPI.play(uri) { _, error in
+            if let error = error {
+                PrivacySanitizer.log("Aura Vibe: playTrack error: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func skipNext() {
         guard appRemote.isConnected else {
             reportError("Connect Spotify before skipping tracks.", code: "spotify_disconnected")

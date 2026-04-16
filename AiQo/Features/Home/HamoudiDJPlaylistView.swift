@@ -2,8 +2,10 @@ import SwiftUI
 
 struct HamoudiDJPlaylistView: View {
     @StateObject private var viewModel = HamoudiBlendViewModel()
+    @ObservedObject private var spotify = SpotifyVibeManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var animatePulse = false
+    @State private var presentedError: PresentedBlendError?
 
     // Brand colors
     private let mint = Color(hex: "B7E5D2")
@@ -12,6 +14,17 @@ struct HamoudiDJPlaylistView: View {
     private let bgTop = Color(hex: "FAFAF7")
     private let bgBottom = Color(hex: "F3F4F1")
     private let spotifyGreen = Color(red: 0.12, green: 0.85, blue: 0.38)
+
+    // Derived from SpotifyVibeManager directly — no Combine mirroring.
+    private var isPlaying: Bool { spotify.playbackState == .playing }
+    private var trackName: String? {
+        let name = spotify.currentTrackName
+        return name == "Not Playing" ? nil : name
+    }
+    private var artistName: String? {
+        let name = spotify.currentArtistName
+        return name.isEmpty ? nil : name
+    }
 
     var body: some View {
         if !AiQoFeatureFlags.hamoudiBlendEnabled {
@@ -32,22 +45,27 @@ struct HamoudiDJPlaylistView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
 
-                if viewModel.isBuilding {
+                switch viewModel.state {
+                case .loading:
                     loadingState
-                } else if !viewModel.isConnectedToSpotify && viewModel.blendQueue.isEmpty {
-                    spotifyConnectEmptyState
-                } else if viewModel.isConnectedToSpotify && !viewModel.isWebAPIAuthorized && viewModel.blendQueue.isEmpty {
-                    authorizeState
-                } else if viewModel.blendQueue.isEmpty {
-                    blendCTAState
-                } else {
+                case .playing:
                     blendContent
+                case .error:
+                    blendErrorState
+                case .empty:
+                    if spotify.isConnected && viewModel.queue.isEmpty {
+                        blendCTAState
+                    } else if !viewModel.queue.isEmpty {
+                        blendContent
+                    } else {
+                        spotifyConnectEmptyState
+                    }
                 }
 
                 Spacer(minLength: 0)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !viewModel.blendQueue.isEmpty {
+                if !viewModel.queue.isEmpty {
                     transportControls
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
@@ -64,46 +82,53 @@ struct HamoudiDJPlaylistView: View {
             }
         }
         .task { await viewModel.onSheetAppear() }
+        .task(id: viewModel.currentError) {
+            if let error = viewModel.currentError {
+                presentedError = PresentedBlendError(error: error)
+            } else {
+                presentedError = nil
+            }
+        }
         .environment(\.layoutDirection, .rightToLeft)
-        .alert(
-            NSLocalizedString("blend.error.title", comment: ""),
-            isPresented: showErrorAlert,
-            presenting: viewModel.error
-        ) { error in
+        .alert(item: $presentedError) { presented in
+            let error = presented.error
             switch error {
             case .spotifyAppNotInstalled:
-                Button(NSLocalizedString("blend.error.open_appstore", comment: "")) {
-                    if let url = URL(string: "https://apps.apple.com/app/spotify/id324684580") {
-                        UIApplication.shared.open(url)
+                return Alert(
+                    title: Text(NSLocalizedString("blend.error.title", comment: "")),
+                    message: Text(error.errorDescription ?? ""),
+                    primaryButton: .default(Text(NSLocalizedString("blend.error.open_appstore", comment: ""))) {
+                        if let url = URL(string: "https://apps.apple.com/app/spotify/id324684580") {
+                            UIApplication.shared.open(url)
+                        }
+                    },
+                    secondaryButton: .cancel(Text(NSLocalizedString("blend.error.dismiss", comment: ""))) {
+                        dismissPresentedError()
                     }
-                }
-                Button(NSLocalizedString("blend.error.dismiss", comment: ""), role: .cancel) {
-                    viewModel.error = nil
-                }
+                )
             case .requiresPremium:
-                Button(NSLocalizedString("blend.error.learn_more", comment: "")) {
-                    if let url = URL(string: "https://www.spotify.com/premium") {
-                        UIApplication.shared.open(url)
+                return Alert(
+                    title: Text(NSLocalizedString("blend.error.title", comment: "")),
+                    message: Text(error.errorDescription ?? ""),
+                    primaryButton: .default(Text(NSLocalizedString("blend.error.learn_more", comment: ""))) {
+                        if let url = URL(string: "https://www.spotify.com/premium") {
+                            UIApplication.shared.open(url)
+                        }
+                    },
+                    secondaryButton: .cancel(Text(NSLocalizedString("blend.error.dismiss", comment: ""))) {
+                        dismissPresentedError()
                     }
-                }
-                Button(NSLocalizedString("blend.error.dismiss", comment: ""), role: .cancel) {
-                    viewModel.error = nil
-                }
+                )
             default:
-                Button(NSLocalizedString("blend.error.dismiss", comment: ""), role: .cancel) {
-                    viewModel.error = nil
-                }
+                return Alert(
+                    title: Text(NSLocalizedString("blend.error.title", comment: "")),
+                    message: Text(error.errorDescription ?? ""),
+                    dismissButton: .cancel(Text(NSLocalizedString("blend.error.dismiss", comment: ""))) {
+                        dismissPresentedError()
+                    }
+                )
             }
-        } message: { error in
-            Text(error.errorDescription ?? "")
         }
-    }
-
-    private var showErrorAlert: Binding<Bool> {
-        Binding(
-            get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
-        )
     }
 
     // MARK: - Background
@@ -115,6 +140,11 @@ struct HamoudiDJPlaylistView: View {
             endPoint: .bottom
         )
         .ignoresSafeArea()
+    }
+
+    private func dismissPresentedError() {
+        presentedError = nil
+        viewModel.dismissError()
     }
 
     // MARK: - Header
@@ -200,38 +230,6 @@ struct HamoudiDJPlaylistView: View {
         }
     }
 
-    // MARK: - Authorize Web API
-
-    private var authorizeState: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            Image(systemName: "person.badge.key")
-                .font(.system(size: 36))
-                .foregroundStyle(mintVibrant)
-
-            Text(NSLocalizedString("blend.authorize.title", comment: ""))
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.black.opacity(0.55))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-
-            Button {
-                viewModel.authorizeWebAPI()
-            } label: {
-                Text(NSLocalizedString("blend.authorize.button", comment: ""))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 14)
-                    .background(Capsule().fill(mintVibrant))
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-        }
-    }
-
     // MARK: - Loading
 
     private var loadingState: some View {
@@ -271,7 +269,7 @@ struct HamoudiDJPlaylistView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Blend CTA (authorized, no queue yet)
+    // MARK: - Blend CTA (connected, no queue yet)
 
     private var blendCTAState: some View {
         VStack(spacing: 24) {
@@ -318,6 +316,40 @@ struct HamoudiDJPlaylistView: View {
         }
     }
 
+    // MARK: - Blend Error State
+
+    private var blendErrorState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 36))
+                .foregroundStyle(sand)
+
+            if let error = viewModel.currentError {
+                Text(error.errorDescription ?? "")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.black.opacity(0.55))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button {
+                Task { await viewModel.buildAndPlay() }
+            } label: {
+                Text(NSLocalizedString("blend.error.retry", comment: "Retry"))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(Capsule().fill(mintVibrant))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
+    }
+
     // MARK: - Blend Content (playing)
 
     private var blendContent: some View {
@@ -330,7 +362,7 @@ struct HamoudiDJPlaylistView: View {
                 queueVisualization
                     .padding(.horizontal, 20)
 
-                // Regenerate ("مزيج جديد")
+                // Regenerate
                 Button {
                     Task { await viewModel.regenerateBlend() }
                 } label: {
@@ -379,27 +411,27 @@ struct HamoudiDJPlaylistView: View {
                 Spacer()
             }
 
-            // Source badge — animates between user/hamoudi
-            if let source = viewModel.playback.currentSource {
+            // Source badge
+            if let source = viewModel.currentSource {
                 sourceBadge(source)
                     .transition(.opacity.combined(with: .scale))
-                    .animation(.easeInOut(duration: 0.4), value: viewModel.playback.currentSource)
+                    .animation(.easeInOut(duration: 0.4), value: viewModel.currentSource)
             } else {
                 sourceBadge(.hamoudi)
                     .opacity(0.5)
             }
 
-            // Current track info (in-memory only — never persisted)
-            if let trackName = viewModel.playback.currentTrackName {
+            // Current track info — read directly from Spotify, never persisted
+            if let name = trackName {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(trackName)
+                    Text(name)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.black.opacity(0.8))
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    if let artistName = viewModel.playback.currentArtistName {
-                        Text(artistName)
+                    if let artist = artistName {
+                        Text(artist)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.black.opacity(0.45))
                             .lineLimit(1)
@@ -408,11 +440,11 @@ struct HamoudiDJPlaylistView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
-                .animation(.easeInOut(duration: 0.35), value: viewModel.playback.currentTrackName)
+                .animation(.easeInOut(duration: 0.35), value: trackName)
             }
 
             // Waveform
-            if viewModel.playback.isPlaying {
+            if isPlaying {
                 BlendWaveformView(accentColor: mintVibrant)
                     .frame(height: 32)
             }
@@ -462,7 +494,7 @@ struct HamoudiDJPlaylistView: View {
                 .foregroundStyle(Color.black.opacity(0.5))
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 10), spacing: 8) {
-                ForEach(viewModel.blendQueue) { track in
+                ForEach(viewModel.queue) { track in
                     Circle()
                         .fill(track.source == .user ? mintVibrant : sand)
                         .frame(width: 12, height: 12)
@@ -497,7 +529,7 @@ struct HamoudiDJPlaylistView: View {
 
     private var transportControls: some View {
         HStack(spacing: 12) {
-            if let source = viewModel.playback.currentSource {
+            if let source = viewModel.currentSource {
                 HStack(spacing: 8) {
                     Image(systemName: source == .user ? "person.fill" : "headphones")
                         .font(.system(size: 13, weight: .semibold))
@@ -521,27 +553,33 @@ struct HamoudiDJPlaylistView: View {
 
             HStack(spacing: 4) {
                 transportButton(systemName: "backward.fill", size: 13) {
-                    viewModel.playback.skipPrevious()
+                    viewModel.skipPrevious()
                 }
 
                 transportButton(
-                    systemName: viewModel.playback.isPlaying ? "pause.fill" : "play.fill",
+                    systemName: isPlaying ? "pause.fill" : "play.fill",
                     size: 16,
                     isPrimary: true
                 ) {
-                    viewModel.playback.togglePlayPause()
+                    Task {
+                        if !spotify.isConnected {
+                            let ok = await spotify.reconnectSilentlyIfPossible()
+                            guard ok else { return }
+                        }
+                        viewModel.togglePlayPause()
+                    }
                 }
 
                 transportButton(systemName: "forward.fill", size: 13) {
-                    viewModel.playback.skipNext()
+                    viewModel.skipNext()
                 }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(glassCard)
-        .animation(.spring(), value: viewModel.playback.isPlaying)
-        .animation(.spring(), value: viewModel.playback.currentSource)
+        .animation(.spring(), value: isPlaying)
+        .animation(.spring(), value: viewModel.currentSource)
     }
 
     private func transportButton(systemName: String, size: CGFloat, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {
@@ -605,6 +643,23 @@ struct HamoudiDJPlaylistView: View {
                     .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+    }
+}
+
+private struct PresentedBlendError: Identifiable, Equatable {
+    let error: BlendError
+
+    var id: String {
+        switch error {
+        case .spotifyAppNotInstalled:  return "spotifyAppNotInstalled"
+        case .requiresPremium:         return "requiresPremium"
+        case .authExpired:             return "authExpired"
+        case .noUserTracks:            return "noUserTracks"
+        case .noMasterTracks:          return "noMasterTracks"
+        case .networkUnavailable:      return "networkUnavailable"
+        case .rateLimited:             return "rateLimited"
+        case .unknown(let message):    return "unknown:\(message)"
+        }
     }
 }
 

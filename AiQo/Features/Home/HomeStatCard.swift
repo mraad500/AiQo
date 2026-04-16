@@ -34,6 +34,10 @@ struct HomeStatCard: View {
     
     /// Animation trigger for value changes
     @State private var valueChangeID: UUID = UUID()
+
+    #if DEBUG
+    @State private var showDebugSleep = false
+    #endif
     
     // MARK: - Computed Properties
     
@@ -97,6 +101,14 @@ struct HomeStatCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(kind.title), \(displayValue) \(kind.unit)")
         .accessibilityAddTraits(.isButton)
+        #if DEBUG
+        .sheet(isPresented: $showDebugSleep) {
+            DebugSleepVerificationView()
+        }
+        .onLongPressGesture(minimumDuration: 3) {
+            if kind == .sleep { showDebugSleep = true }
+        }
+        #endif
     }
     
     // MARK: - Card Content (Polished Layout)

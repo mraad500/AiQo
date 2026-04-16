@@ -708,49 +708,7 @@ actor HealthKitService {
     // MARK: - Sleep (Today)
 
     private func sleepHoursToday() async -> Double {
-        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return 0 }
-
-        let (dayStart, dayEnd) = todayBounds()
-
-        // نطاق أكبر شوي حتى نمسك نوم الليل اللي يقطع منتصف الليل
-        let startFetch = Calendar.current.date(byAdding: .hour, value: -18, to: dayStart) ?? dayStart
-        let endFetch   = Calendar.current.date(byAdding: .hour, value: 6, to: dayEnd) ?? dayEnd
-
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startFetch,
-            end: endFetch,
-            options: []
-        )
-
-        return await withCheckedContinuation { cont in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, _ in
-
-                let relevant = (samples as? [HKCategorySample])?.filter {
-                    if #available(iOS 16.0, *) {
-                        return $0.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-                               $0.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-                               $0.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue  ||
-                               $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
-                    } else {
-                        return $0.value == HKCategoryValueSleepAnalysis.asleep.rawValue
-                    }
-                } ?? []
-
-                let seconds = relevant.reduce(0.0) { acc, sample in
-                    let s = max(sample.startDate, dayStart)
-                    let e = min(sample.endDate, dayEnd)
-                    return e > s ? acc + e.timeIntervalSince(s) : acc
-                }
-
-                cont.resume(returning: seconds / 3600.0)
-            }
-            store.execute(query)
-        }
+        await SleepSessionProvider.shared.lastNightSession().totalAsleepHours
     }
 
     // MARK: - Sleep (All Time)

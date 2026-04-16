@@ -898,58 +898,7 @@ final class CaptainIntelligenceManager {
     }
 
     private func fetchSleepHoursAttributedToToday() async throws -> Double {
-        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            throw CaptainIntelligenceError.missingHealthType(HKCategoryTypeIdentifier.sleepAnalysis.rawValue)
-        }
-
-        let (dayStart, dayEnd) = dayBounds(for: Date())
-
-        let extendedStart = calendar.date(byAdding: .hour, value: -18, to: dayStart) ?? dayStart
-        let extendedEnd = calendar.date(byAdding: .hour, value: 6, to: dayEnd) ?? dayEnd
-
-        let predicate = HKQuery.predicateForSamples(
-            withStart: extendedStart,
-            end: extendedEnd,
-            options: []
-        )
-
-        let rawSamples: [HKCategorySample] = try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: 150,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: (samples as? [HKCategorySample]) ?? [])
-            }
-
-            healthStore.execute(query)
-        }
-
-        let asleepSamples = rawSamples.filter { isAsleepSample($0) }
-        let seconds = asleepSamples.reduce(0.0) { partial, sample in
-            let clampedStart = max(sample.startDate, dayStart)
-            let clampedEnd = min(sample.endDate, dayEnd)
-            guard clampedEnd > clampedStart else { return partial }
-            return partial + clampedEnd.timeIntervalSince(clampedStart)
-        }
-
-        return seconds / 3600.0
-    }
-
-    private func isAsleepSample(_ sample: HKCategorySample) -> Bool {
-        if #available(iOS 16.0, *) {
-            return sample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-                sample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-                sample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue ||
-                sample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
-        } else {
-            return sample.value == HKCategoryValueSleepAnalysis.asleep.rawValue
-        }
+        await SleepSessionProvider.shared.lastNightSession().totalAsleepHours
     }
 
     private func todayDateInterval(now: Date = Date()) -> DateInterval {

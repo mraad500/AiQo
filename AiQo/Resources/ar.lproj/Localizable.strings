@@ -1590,9 +1590,9 @@
 "legacy.intro.body" = "%@، AiQo يحدد مستواك اعتماداً على تاريخك الصحي الكامل المسجّل على جهازك... كل خطوة مشيتها، كل ساعة نمتها، وكل جهد بذلته عبر السنين الماضية.";
 "legacy.intro.tagline" = "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.";
 "legacy.permissions.granted" = "تم منح الصلاحيات";
-"legacy.permissions.title" = "منح صلاحيات الصحة والإشعارات";
+"legacy.permissions.title" = "صلاحيات الصحة والإشعارات";
 "legacy.permissions.subtitle" = "مطلوب للمتابعة";
-"legacy.permissions.a11y" = "منح صلاحيات الصحة والإشعارات";
+"legacy.permissions.a11y" = "صلاحيات الصحة والإشعارات";
 "legacy.continue" = "متابعة";
 "legacy.skip" = "ليس الآن";
 "legacy.result.level" = "المستوى";
@@ -2669,3 +2669,4 @@
 "blend.error.no_master_tracks" = "صار خطأ بسحب قائمة حمودي. جرب مرة ثانية.";
 "blend.error.no_network" = "ماكو إنترنت";
 "blend.error.rate_limited" = "كثرت الطلبات. جرب بعد دقيقة.";
+"blend.error.retry" = "جرب مرة ثانية";

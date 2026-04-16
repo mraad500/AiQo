@@ -63,37 +63,8 @@ extension HealthKitManager {
 
     /// Total sleep hours from the last completed sleep session ending today.
     func lastNightSleepHours() async -> Double? {
-        guard HKHealthStore.isHealthDataAvailable() else { return nil }
-        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
-
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
-        let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: Date(), options: .strictEndDate)
-
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
-            ) { _, samples, _ in
-                guard let categorySamples = samples as? [HKCategorySample] else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let sleepValues: Set<Int> = [
-                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepREM.rawValue
-                ]
-                let totalHours = categorySamples
-                    .filter { sleepValues.contains($0.value) }
-                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 3600.0 }
-
-                continuation.resume(returning: totalHours > 0 ? totalHours : nil)
-            }
-            HKHealthStore().execute(query)
-        }
+        let session = await SleepSessionProvider.shared.lastNightSession()
+        return session.isEmpty ? nil : session.totalAsleepHours
     }
 
     /// Total workout minutes and count for today.

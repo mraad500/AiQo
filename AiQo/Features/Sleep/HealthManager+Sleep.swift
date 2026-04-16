@@ -77,20 +77,11 @@ extension HealthKitManager {
         now: Date = Date(),
         calendar: Calendar = .current
     ) async throws -> [SleepStageData] {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            throw SleepStageFetchError.healthDataUnavailable
+        let session = await SleepSessionProvider.shared.lastNightSession()
+        guard !session.isEmpty else {
+            return []
         }
-
-        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            throw SleepStageFetchError.sleepAnalysisUnavailable
-        }
-
-        let queryWindow = sleepQueryWindow(
-            forMorningOf: now,
-            effectiveEnd: now,
-            calendar: calendar
-        )
-        return try await fetchSleepStages(in: queryWindow, sleepType: sleepType)
+        return session.stages
     }
 
     func fetchHistoricalSleepBedtimes(

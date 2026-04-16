@@ -25,6 +25,7 @@ struct CaptainPromptBuilder: Sendable {
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
             layerScreenContext(request: request),
+            layerMedicalDisclaimer(language: request.language),
             layerOutputContract(screenContext: request.screenContext, language: request.language)
         ]
         .filter { !$0.isEmpty }
@@ -504,5 +505,33 @@ struct CaptainPromptBuilder: Sendable {
         }
 
         return nil
+    }
+
+    // MARK: - Medical Disclaimer Layer (Apple Guideline 1.4.1)
+
+    private func layerMedicalDisclaimer(language: AppLanguage) -> String {
+        if language == .arabic {
+            return """
+            === تنويه طبي (إلزامي) ===
+            عند تقديم أي نصيحة صحية أو معلومة طبية:
+            1. اذكر دائماً أن هذه المعلومات للأغراض التعليمية فقط وليست بديلاً عن استشارة طبيب مختص.
+            2. أضف مصدر علمي موثوق لكل نصيحة صحية رئيسية (مثل: WHO، Mayo Clinic، NHS، أو مجلات طبية معروفة).
+            3. مثال: "حسب توصيات منظمة الصحة العالمية (WHO)، البالغين يحتاجون 150 دقيقة نشاط بدني أسبوعياً."
+            4. إذا كانت النصيحة تتعلق بالنوم، استخدم مصادر مثل: American Academy of Sleep Medicine أو Sleep Foundation.
+            5. إذا كانت تتعلق بالتمارين، استخدم مصادر مثل: ACSM أو WHO Physical Activity Guidelines.
+            6. اختم الرد الصحي بعبارة: "⚕️ هذي معلومات تثقيفية — استشر طبيبك للحالات الخاصة."
+            """
+        } else {
+            return """
+            === MEDICAL DISCLAIMER (MANDATORY) ===
+            When providing any health advice or medical information:
+            1. Always state that information is for educational purposes only and not a substitute for professional medical advice.
+            2. Include a credible scientific source for each major health recommendation (e.g., WHO, Mayo Clinic, NHS, ACSM, or peer-reviewed journals).
+            3. Example: "According to WHO guidelines, adults need at least 150 minutes of moderate physical activity per week."
+            4. For sleep advice, cite sources like: American Academy of Sleep Medicine or Sleep Foundation.
+            5. For exercise advice, cite sources like: ACSM or WHO Physical Activity Guidelines.
+            6. End health-related replies with: "⚕️ This is educational info — consult your doctor for personal medical advice."
+            """
+        }
     }
 }

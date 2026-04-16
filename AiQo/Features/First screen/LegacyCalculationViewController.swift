@@ -106,7 +106,7 @@ struct LegacyCalculationScreenView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(hasGrantedPermissions
                                  ? NSLocalizedString("legacy.permissions.granted", value: "تم منح الصلاحيات", comment: "")
-                                 : NSLocalizedString("legacy.permissions.title", value: "منح صلاحيات الصحة والإشعارات", comment: ""))
+                                 : NSLocalizedString("legacy.permissions.title", value: "صلاحيات الصحة والإشعارات", comment: ""))
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
 
@@ -144,7 +144,7 @@ struct LegacyCalculationScreenView: View {
                 }
                 .buttonStyle(AiQoPressButtonStyle())
                 .disabled(isRequestingPermissions || hasGrantedPermissions)
-                .accessibilityLabel(NSLocalizedString("legacy.permissions.a11y", value: "منح صلاحيات الصحة والإشعارات", comment: ""))
+                .accessibilityLabel(NSLocalizedString("legacy.permissions.a11y", value: "صلاحيات الصحة والإشعارات", comment: ""))
 
                 Button { viewModel.primaryButtonTapped() } label: {
                     HStack(spacing: 8) {
@@ -165,18 +165,8 @@ struct LegacyCalculationScreenView: View {
                 .opacity(hasGrantedPermissions ? 1 : 0.5)
                 .animation(.easeInOut(duration: 0.3), value: hasGrantedPermissions)
 
-                Button { viewModel.skipToHome() } label: {
-                    Text(NSLocalizedString("legacy.skip", value: "ليس الآن", comment: ""))
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(.primary.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(hex: "F7D7A7").opacity(0.4))
-                        )
-                }
-                .buttonStyle(.plain)
+                // "Not Now" button removed per Apple Review Guideline 5.1.1(iv):
+                // Users must always proceed to the system permission request.
             }
             .padding(28)
             .glassCard()

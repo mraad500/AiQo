@@ -45,9 +45,8 @@ enum BlendError: LocalizedError, Equatable {
 
 struct PersistedBlendQueue: Codable {
     let uris: [String]
-    let sourceMap: [String: BlendSourceTag]
-    let builtDate: Date
-    let currentIndex: Int
+    let sourceMap: [String: String] // uri → "user" or "hamoudi"
+    let builtDate: TimeInterval     // Date().timeIntervalSince1970
 }
 
 // MARK: - Blend Configuration

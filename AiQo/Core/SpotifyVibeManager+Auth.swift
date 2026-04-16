@@ -92,7 +92,61 @@ extension SpotifyVibeManager {
                 self.isWebAPIAuthorized = true
                 self.log("Web API token acquired via PKCE.")
             }
+
+            // Save refresh token for silent re-auth when access token expires
+            if let refreshToken = json["refresh_token"] as? String {
+                KeychainStore.set(refreshToken, for: "aiqo.spotify.webapi.refresh")
+                self.log("Saved refresh token to Keychain.")
+            }
         }.resume()
+    }
+
+    // MARK: - Token Refresh
+
+    /// Uses the stored refresh token to obtain a new Web API access token.
+    /// Called automatically when API requests return 401.
+    func refreshWebAPIToken() async throws {
+        guard let refreshToken = KeychainStore.get("aiqo.spotify.webapi.refresh") else {
+            log("No refresh token in Keychain — cannot auto-refresh.")
+            throw BlendError.authExpired
+        }
+
+        var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+
+        let bodyParts = [
+            "grant_type=refresh_token",
+            "refresh_token=\(refreshToken)",
+            "client_id=\(clientID)"
+        ]
+        request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let newAccessToken = json["access_token"] as? String else {
+            KeychainStore.delete("aiqo.spotify.webapi.refresh")
+            log("Token refresh failed — refresh token may be revoked.")
+            throw BlendError.authExpired
+        }
+
+        // Spotify may rotate the refresh token
+        if let newRefresh = json["refresh_token"] as? String {
+            KeychainStore.set(newRefresh, for: "aiqo.spotify.webapi.refresh")
+        }
+
+        // Write to Keychain immediately so getWebAPIToken() picks it up on retry
+        KeychainStore.set(newAccessToken, for: "aiqo.spotify.webapi.token")
+
+        DispatchQueue.main.async { [weak self] in
+            self?.webAPIToken = newAccessToken
+            self?.isWebAPIAuthorized = true
+        }
+
+        log("Web API token refreshed successfully.")
     }
 
     private func generateCodeVerifier() -> String {

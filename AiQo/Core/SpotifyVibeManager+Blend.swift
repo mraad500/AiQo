@@ -308,6 +308,111 @@ extension SpotifyVibeManager {
         return uris
     }
 
+    // MARK: - Blend V2 Token Helper
+
+    /// Tries the in-memory webAPIToken first, falls back to Keychain.
+    /// This avoids failures from race conditions where the @Published
+    /// property hasn't been set yet but the token exists in Keychain.
+    private func getWebAPIToken() -> String? {
+        if let token = webAPIToken, !token.isEmpty { return token }
+        return KeychainStore.get("aiqo.spotify.webapi.token")
+    }
+
+    // MARK: - Blend V2 Fetch
+
+    /// Fetch Hamoudi's playlist tracks via Web API (hardcoded public playlist).
+    /// Automatically refreshes the token and retries once on 401.
+    func fetchHamoudiPlaylistTracks() async throws -> [String] {
+        let playlistId = "14YVMyaZsefyZMgEIIicao"
+
+        for attempt in 0..<2 {
+            guard let token = getWebAPIToken() else {
+                throw BlendError.authExpired
+            }
+
+            var request = URLRequest(
+                url: URL(string: "https://api.spotify.com/v1/playlists/\(playlistId)/tracks?limit=100&fields=items(track(uri))")!
+            )
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode == 403 {
+                    PrivacySanitizer.log("Aura Vibe: Hamoudi playlist fetch failed — check playlist is public (403)")
+                    throw BlendError.noMasterTracks
+                }
+                if httpResponse.statusCode == 401 {
+                    if attempt == 0 {
+                        log("Hamoudi playlist fetch got 401 — attempting token refresh...")
+                        try await refreshWebAPIToken()
+                        continue
+                    }
+                    throw BlendError.authExpired
+                }
+            }
+
+            struct TracksResponse: Decodable {
+                struct Item: Decodable {
+                    struct Track: Decodable { let uri: String }
+                    let track: Track?
+                }
+                let items: [Item]
+            }
+
+            let decoded = try JSONDecoder().decode(TracksResponse.self, from: data)
+            let uris = decoded.items.compactMap { $0.track?.uri }
+            PrivacySanitizer.log("Aura Vibe: fetched \(uris.count) Hamoudi tracks")
+            return uris
+        }
+
+        throw BlendError.authExpired
+    }
+
+    /// Fetch user's top tracks via Web API.
+    /// Automatically refreshes the token and retries once on 401.
+    func fetchUserTopTracks(limit: Int = 50) async throws -> [String] {
+        for attempt in 0..<2 {
+            guard let token = getWebAPIToken() else {
+                throw BlendError.authExpired
+            }
+
+            var request = URLRequest(
+                url: URL(string: "https://api.spotify.com/v1/me/top/tracks?limit=\(limit)&time_range=medium_term")!
+            )
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 401 {
+                if attempt == 0 {
+                    log("User top tracks fetch got 401 — attempting token refresh...")
+                    try await refreshWebAPIToken()
+                    continue
+                }
+                throw BlendError.authExpired
+            }
+
+            struct TopTracksResponse: Decodable {
+                struct Track: Decodable { let uri: String }
+                let items: [Track]
+            }
+
+            let decoded = try JSONDecoder().decode(TopTracksResponse.self, from: data)
+            let uris = decoded.items.map { $0.uri }
+            PrivacySanitizer.log("Aura Vibe: fetched \(uris.count) user top tracks")
+            return uris
+        }
+
+        throw BlendError.authExpired
+    }
+
+    /// Enqueue a URI (after first track is playing).
+    func enqueueTrack(uri: String) {
+        guard isConnected, let playerAPI = appRemote.playerAPI else { return }
+        playerAPI.enqueueTrackUri(uri, callback: { _, _ in })
+    }
+
     // MARK: - Seeded Shuffle
 
     static func daySeed() -> UInt64 {

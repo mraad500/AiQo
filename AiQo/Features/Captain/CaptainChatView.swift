@@ -134,6 +134,12 @@ struct CaptainChatView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $globalBrain.showAIConsentSheet) {
+            AIDataConsentView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
         }

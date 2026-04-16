@@ -1591,9 +1591,9 @@
 "legacy.intro.body" = "%@, AiQo determines your level based on your complete health history stored on your device — every step you walked, every hour you slept, and every effort over the years.";
 "legacy.intro.tagline" = "You're not starting from zero — you're coming with a history.";
 "legacy.permissions.granted" = "Permissions granted";
-"legacy.permissions.title" = "Grant Health & Notification Permissions";
+"legacy.permissions.title" = "Health & Notification Access";
 "legacy.permissions.subtitle" = "Required to continue";
-"legacy.permissions.a11y" = "Grant Health & Notification Permissions";
+"legacy.permissions.a11y" = "Health & Notification Access";
 "legacy.continue" = "Continue";
 "legacy.skip" = "Not Now";
 "legacy.result.level" = "Level";
@@ -2670,3 +2670,4 @@
 "blend.error.no_master_tracks" = "Couldn't load Hamoudi's playlist. Please try again.";
 "blend.error.no_network" = "No internet connection";
 "blend.error.rate_limited" = "Too many requests. Try again in a minute.";
+"blend.error.retry" = "Try again";
