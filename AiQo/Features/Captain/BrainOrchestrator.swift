@@ -119,7 +119,8 @@ private extension BrainOrchestrator {
             userProfileSummary: request.userProfileSummary,
             intentSummary: request.intentSummary,
             workingMemorySummary: request.workingMemorySummary,
-            attachedImageData: nil
+            attachedImageData: nil,
+            purpose: request.purpose
         )
     }
 
@@ -325,7 +326,8 @@ private extension BrainOrchestrator {
             userProfileSummary: originalRequest.userProfileSummary,
             intentSummary: originalRequest.intentSummary,
             workingMemorySummary: originalRequest.workingMemorySummary,
-            attachedImageData: nil
+            attachedImageData: nil,
+            purpose: originalRequest.purpose
         )
     }
 

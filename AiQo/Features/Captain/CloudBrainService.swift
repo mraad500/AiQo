@@ -44,12 +44,11 @@ struct CloudBrainService: Sendable {
         guard TierGate.shared.canAccess(.captainChat) else {
             throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
         }
-        try await AICloudConsentGate.requireConsent()
-
+        let startedAt = Date()
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
 
-        // Single MainActor hop — fetch both values at once to minimize main-thread contention
-        let (activeTier, cloudSafeMemories) = await MainActor.run {
+        // Single MainActor hop — tier, memories, and consent state in one round-trip.
+        let (activeTier, cloudSafeMemories, consentGranted) = await MainActor.run {
             let tier = AccessManager.shared.activeTier
             let budget = tier == .intelligencePro ? 700 : 400
             let memories = MemoryStore.shared.buildCloudSafeRelevantContext(
@@ -57,7 +56,25 @@ struct CloudBrainService: Sendable {
                 screenContext: request.screenContext,
                 maxTokens: budget
             )
-            return (tier, memories)
+            let consent = AIDataConsentManager.shared.hasUserConsented
+            return (tier, memories, consent)
+        }
+
+        guard consentGranted else {
+            await AuditLogger.shared.record(AuditLogger.Entry(
+                id: UUID(),
+                timestamp: startedAt,
+                destination: "none",
+                tier: activeTier.auditLabel,
+                promptBytes: 0,
+                responseBytes: 0,
+                latencyMs: 0,
+                consentGranted: false,
+                sanitizationApplied: false,
+                purpose: request.purpose.rawValue,
+                outcome: .consentDenied
+            ))
+            throw AIDataConsentError.consentRequired
         }
 
         // All sanitization runs off-MainActor (on the cooperative thread pool).
@@ -71,10 +88,55 @@ struct CloudBrainService: Sendable {
         let aiModel = activeTier == .intelligencePro
             ? GeminiModel.reasoning
             : GeminiModel.fast
+        let promptBytes = Self.estimatedPromptBytes(of: sanitizedRequest)
 
-        return try await transport.generateReply(
-            request: sanitizedRequest,
-            model: aiModel
-        )
+        do {
+            let reply = try await transport.generateReply(
+                request: sanitizedRequest,
+                model: aiModel
+            )
+            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+            await AuditLogger.shared.record(AuditLogger.Entry(
+                id: UUID(),
+                timestamp: startedAt,
+                destination: aiModel,
+                tier: activeTier.auditLabel,
+                promptBytes: promptBytes,
+                responseBytes: reply.message.utf8.count,
+                latencyMs: latencyMs,
+                consentGranted: true,
+                sanitizationApplied: true,
+                purpose: request.purpose.rawValue,
+                outcome: .success
+            ))
+            return reply
+        } catch {
+            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+            await AuditLogger.shared.record(AuditLogger.Entry(
+                id: UUID(),
+                timestamp: startedAt,
+                destination: aiModel,
+                tier: activeTier.auditLabel,
+                promptBytes: promptBytes,
+                responseBytes: 0,
+                latencyMs: latencyMs,
+                consentGranted: true,
+                sanitizationApplied: true,
+                purpose: request.purpose.rawValue,
+                outcome: .failure
+            ))
+            throw error
+        }
+    }
+
+    private static func estimatedPromptBytes(of request: HybridBrainRequest) -> Int {
+        var total = 0
+        for msg in request.conversation {
+            total += msg.content.utf8.count
+        }
+        total += request.intentSummary.utf8.count
+        total += request.workingMemorySummary.utf8.count
+        total += request.userProfileSummary.utf8.count
+        return total
     }
 }

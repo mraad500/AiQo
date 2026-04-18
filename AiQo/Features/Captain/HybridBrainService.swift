@@ -16,6 +16,16 @@ struct CaptainConversationMessage: Sendable {
 
 // MARK: - Request / Reply
 
+/// Coarse classification of why a request is going to the cloud.
+/// Used by `AuditLogger` to attribute usage and by AccessManager gating.
+/// Keep values stable — they're persisted to `brain_audit.log.json`.
+enum RequestPurpose: String, Sendable, Codable {
+    case captainChat
+    case kitchen
+    case voice
+    case memoryConsolidation
+}
+
 struct HybridBrainRequest: Sendable {
     let conversation: [CaptainConversationMessage]
     let screenContext: ScreenContext
@@ -25,8 +35,31 @@ struct HybridBrainRequest: Sendable {
     let intentSummary: String
     let workingMemorySummary: String
     let attachedImageData: Data?
+    let purpose: RequestPurpose
 
     var hasAttachedImage: Bool { attachedImageData != nil }
+
+    init(
+        conversation: [CaptainConversationMessage],
+        screenContext: ScreenContext,
+        language: AppLanguage,
+        contextData: CaptainContextData,
+        userProfileSummary: String,
+        intentSummary: String,
+        workingMemorySummary: String,
+        attachedImageData: Data?,
+        purpose: RequestPurpose = .captainChat
+    ) {
+        self.conversation = conversation
+        self.screenContext = screenContext
+        self.language = language
+        self.contextData = contextData
+        self.userProfileSummary = userProfileSummary
+        self.intentSummary = intentSummary
+        self.workingMemorySummary = workingMemorySummary
+        self.attachedImageData = attachedImageData
+        self.purpose = purpose
+    }
 }
 
 struct HybridBrainServiceReply: Sendable {

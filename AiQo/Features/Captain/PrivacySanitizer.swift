@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// - PII (emails, phones, UUIDs, IPs) redacted to "[REDACTED]"
 /// - User names normalized to "User" in cloud payloads
 /// - Conversation truncated to LAST 4 messages only (prevents hallucination, saves tokens)
-/// - Health data bucketed: steps by 50, calories by 10
+/// - Health data bucketed: steps by 500, calories by 10, HR by 5, sleep by 0.5h
 /// - Kitchen images stripped of EXIF/GPS metadata
 struct PrivacySanitizer: Sendable {
 
@@ -22,7 +22,7 @@ struct PrivacySanitizer: Sendable {
     private let maxConversationMessages = 4
     private let maximumKitchenImageDimension = 1280
     private let kitchenImageCompressionQuality: CGFloat = 0.78
-    private let stepsBucketSize = 50
+    private let stepsBucketSize = 500
     private let caloriesBucketSize = 10
     private let maximumSteps = 100_000
     private let maximumCalories = 10_000
@@ -118,7 +118,8 @@ struct PrivacySanitizer: Sendable {
             userProfileSummary: "",
             intentSummary: safeIntent,
             workingMemorySummary: safeWorkingMemory,
-            attachedImageData: sanitizedImageData
+            attachedImageData: sanitizedImageData,
+            purpose: request.purpose
         )
     }
 
@@ -338,13 +339,35 @@ private extension PrivacySanitizer {
 
     // MARK: - Health Data Bucketing
 
+    /// Preserves Brain V2 signals at coarse granularity so Gemini can reason about
+    /// energy/recovery state without ever receiving raw HealthKit values.
+    /// - Keeps: steps/calories/HR/sleep (bucketed), timeOfDay, toneHint, stageTitle, bioPhase
+    /// - Drops: emotionalState, trendSnapshot, messageSentiment, recentInteractions
     func sanitizeHealthContext(_ context: CaptainContextData) -> CaptainContextData {
         CaptainContextData(
             steps: bucketedNonNegativeInt(context.steps, bucketSize: stepsBucketSize, maximum: maximumSteps),
             calories: bucketedNonNegativeInt(context.calories, bucketSize: caloriesBucketSize, maximum: maximumCalories),
             vibe: "General",
-            level: clamp(context.level, minimum: 1, maximum: maximumLevel)
+            level: clamp(context.level, minimum: 1, maximum: maximumLevel),
+            sleepHours: bucketedSleep(context.sleepHours),
+            heartRate: bucketedHeartRate(context.heartRate),
+            timeOfDay: context.timeOfDay,
+            toneHint: context.toneHint,
+            stageTitle: context.stageTitle,
+            bioPhase: context.bioPhase
         )
+    }
+
+    func bucketedHeartRate(_ hr: Int?) -> Int? {
+        guard let hr, hr > 0 else { return nil }
+        let clamped = min(max(hr, 0), 260)
+        return (clamped / 5) * 5
+    }
+
+    func bucketedSleep(_ hours: Double) -> Double {
+        guard hours > 0 else { return 0 }
+        let clamped = min(max(hours, 0), 24)
+        return ((clamped * 2).rounded() / 2)
     }
 
     // MARK: - Self-Identifying Phrase Replacement
@@ -432,10 +455,12 @@ private extension PrivacySanitizer {
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 
+    /// Floor-bucketing: matches the free-text int-bucketing direction so structured
+    /// and free-text vitals have identical privacy granularity.
     func bucketedNonNegativeInt(_ value: Int, bucketSize: Int, maximum: Int) -> Int {
         let clamped = clamp(value, minimum: 0, maximum: maximum)
         guard bucketSize > 1 else { return clamped }
-        return Int((Double(clamped) / Double(bucketSize)).rounded()) * bucketSize
+        return (clamped / bucketSize) * bucketSize
     }
 
     func clamp(_ value: Int, minimum: Int, maximum: Int) -> Int {
@@ -489,7 +514,7 @@ private extension PrivacySanitizer {
     func bucketHeartRateMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+)\s*(bpm|نبضة|ن/د)"#,
+            pattern: #"(\d+)\s*(bpm|نبضة/دقيقة|نبضة|ن/د)"#,
             bucket: 5,
             isDouble: false
         )
@@ -498,7 +523,7 @@ private extension PrivacySanitizer {
     func bucketStepMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+)\s*(steps?|خطوة|خطوات)"#,
+            pattern: #"(\d+)\s*(steps?|خطوات|خطوة|خطوه)"#,
             bucket: 500,
             isDouble: false
         )
@@ -507,7 +532,7 @@ private extension PrivacySanitizer {
     func bucketDistanceMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+(?:\.\d+)?)\s*(km|كم|كيلو)"#,
+            pattern: #"(\d+(?:\.\d+)?)\s*(km|كيلومتر|كم|كيلو)"#,
             bucket: 0.1,
             isDouble: true
         )
@@ -516,16 +541,19 @@ private extension PrivacySanitizer {
     func bucketCalorieMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+)\s*(kcal|سعرة|سعرات|سعر\s*حراري)"#,
+            pattern: #"(\d+)\s*(kcal|cal|سعرة\s*حرارية|سعر\s*حراري|سعرات|سعرة)"#,
             bucket: 10,
             isDouble: false
         )
     }
 
     func bucketDurationMentions(in text: String) -> String {
+        // English units anchored with \b to avoid matching "mints", "minor", etc.
+        // Arabic alternatives can't use \b reliably (NSRegularExpression's word-boundary
+        // semantics require ASCII word chars on at least one side).
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+)\s*(min|minutes?|دقيقة|دقائق)"#,
+            pattern: #"(\d+)\s*(?:(?:minutes?|mins?|min)\b|دقيقة|دقائق)"#,
             bucket: 5,
             isDouble: false
         )
@@ -534,7 +562,7 @@ private extension PrivacySanitizer {
     func bucketSleepMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+(?:\.\d+)?)\s*(hours?|ساعة|ساعات|h)\b"#,
+            pattern: #"(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|ساعة|ساعات)\b"#,
             bucket: 0.5,
             isDouble: true
         )
@@ -543,13 +571,19 @@ private extension PrivacySanitizer {
     func bucketZonePercentMentions(in text: String) -> String {
         bucketNumericMatches(
             in: text,
-            pattern: #"(\d+)\s*%\s*(zone\s*\d|زون|peak|below)"#,
+            pattern: #"(\d+)\s*%\s*(zone\s*\d|زون|peak|below|منطقة)"#,
             bucket: 5,
             isDouble: false
         )
     }
 
     /// Walks matches right-to-left so replacements don't invalidate NSRange offsets of earlier matches.
+    ///
+    /// Bucketing semantics:
+    /// - Integer buckets (e.g. 5, 10, 500) use **floor** — privacy-friendly: "487 kcal" → "480",
+    ///   never rounds UP to reveal a higher bound.
+    /// - Float buckets (e.g. 0.1, 0.5) use **round-half-to-nearest-or-even** — preserves
+    ///   signal for small numbers like distance/sleep where floor would lose too much precision.
     func bucketNumericMatches(
         in text: String,
         pattern: String,
@@ -575,11 +609,14 @@ private extension PrivacySanitizer {
             let raw = String(result[digitSwiftRange])
             guard let rawValue = Double(raw) else { continue }
 
-            let bucketed = (rawValue / bucket).rounded() * bucket
+            let scaled = rawValue / bucket
+            let bucketed: Double
             let replacement: String
             if isDouble {
+                bucketed = scaled.rounded() * bucket
                 replacement = String(format: "%.1f", bucketed)
             } else {
+                bucketed = scaled.rounded(.down) * bucket
                 replacement = String(Int(bucketed))
             }
             result.replaceSubrange(digitSwiftRange, with: replacement)

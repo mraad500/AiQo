@@ -41,7 +41,8 @@ struct KitchenPlanGenerationService {
             userProfileSummary: "",
             intentSummary: triggerText,
             workingMemorySummary: "",
-            attachedImageData: nil
+            attachedImageData: nil,
+            purpose: .kitchen
         )
 
         do {
