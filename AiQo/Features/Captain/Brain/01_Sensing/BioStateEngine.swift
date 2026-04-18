@@ -8,18 +8,20 @@ import Foundation
 actor BioStateEngine {
     static let shared = BioStateEngine()
 
-    private let snapshotService: CaptainHealthSnapshotService
+    typealias MetricsFetcher = @Sendable () async throws -> CaptainDailyHealthMetrics
+
+    private let fetchMetrics: MetricsFetcher
     private let clock: @Sendable () -> Date
     private let freshnessWindow: TimeInterval
     private var lastSnapshot: BioSnapshot?
     private var lastSnapshotAt: Date?
 
     init(
-        snapshotService: CaptainHealthSnapshotService = .shared,
+        fetchMetrics: @escaping MetricsFetcher = { try await CaptainHealthSnapshotService.shared.fetchTodayEssentialMetrics() },
         clock: @escaping @Sendable () -> Date = Date.init,
         freshnessWindow: TimeInterval = 180
     ) {
-        self.snapshotService = snapshotService
+        self.fetchMetrics = fetchMetrics
         self.clock = clock
         self.freshnessWindow = freshnessWindow
     }
@@ -61,7 +63,7 @@ actor BioStateEngine {
     private func buildSnapshot() async -> BioSnapshot {
         let metrics: CaptainDailyHealthMetrics
         do {
-            metrics = try await snapshotService.fetchTodayEssentialMetrics()
+            metrics = try await fetchMetrics()
         } catch {
             diag.warning("BioStateEngine: metrics fetch failed (\(error.localizedDescription)) — returning zeros")
             metrics = CaptainDailyHealthMetrics(

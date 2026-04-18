@@ -39,9 +39,24 @@ final class BehavioralObserverTests: XCTestCase {
 final class ContextSensorTests: XCTestCase {
 
     func testCaptureReturnsCoherentContext() async {
-        let sensor = ContextSensor()
+        let stubMetrics = CaptainDailyHealthMetrics(
+            stepCount: 4500,
+            activeEnergyKilocalories: 200,
+            averageOrCurrentHeartRateBPM: 68,
+            sleepHours: 7.2
+        )
+        let bioEngine = BioStateEngine(fetchMetrics: { stubMetrics })
+        let observer = BehavioralObserver()
+        await observer.record(.appOpened)
+        await observer.record(.captainChatStarted)
+
+        let sensor = ContextSensor(bioEngine: bioEngine, behavioralObserver: observer)
         let ctx = await sensor.capture()
+
+        XCTAssertEqual(ctx.bio.stepsBucketed, 4500)
         XCTAssertTrue((1...7).contains(ctx.dayOfWeek))
+        XCTAssertEqual(ctx.recentEventCount, 2)
+        XCTAssertFalse(ctx.needsRecovery, "7.2h sleep + nil HRV should not require recovery")
         XCTAssertLessThan(ctx.capturedAt.timeIntervalSinceNow, 1.0)
     }
 }
