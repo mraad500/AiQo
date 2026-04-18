@@ -4,6 +4,7 @@ final class TierGate {
     enum Feature: Sendable {
         case captainChat
         case captainNotifications
+        case captainMemory
         case photoAnalysis
         case multiWeekPlan(weeks: Int)
         case weeklyInsightsNarrative
@@ -15,6 +16,8 @@ final class TierGate {
                 return "captainChat"
             case .captainNotifications:
                 return "captainNotifications"
+            case .captainMemory:
+                return "captainMemory"
             case .photoAnalysis:
                 return "photoAnalysis"
             case .multiWeekPlan(let weeks):
@@ -58,7 +61,7 @@ final class TierGate {
 
     func requiredTier(for feature: Feature) -> SubscriptionTier {
         switch feature {
-        case .captainChat, .captainNotifications:
+        case .captainChat, .captainNotifications, .captainMemory:
             return .core
         case .photoAnalysis, .weeklyInsightsNarrative, .premiumVoice:
             return .intelligencePro

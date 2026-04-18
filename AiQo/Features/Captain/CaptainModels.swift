@@ -137,7 +137,7 @@ struct CaptainStructuredResponse: Codable, Sendable {
     }
 }
 
-struct SpotifyRecommendation: Codable, Equatable, Sendable {
+nonisolated struct SpotifyRecommendation: Codable, Equatable, Sendable {
     let vibeName: String
     let description: String
     let spotifyURI: String

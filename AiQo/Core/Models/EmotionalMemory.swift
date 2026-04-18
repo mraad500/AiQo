@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum EmotionKind: String, Codable, CaseIterable, Sendable {
+nonisolated enum EmotionKind: String, Codable, CaseIterable, Sendable {
     case grief
     case joy
     case anxiety

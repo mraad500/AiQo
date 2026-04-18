@@ -187,7 +187,12 @@ final class CaptainSmartNotificationService {
     }
 
     func evaluateInactivityAndNotifyIfNeeded() async {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("CaptainSmartNotificationService blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let inactivityMinutes = InactivityTracker.shared.currentInactivityMinutes

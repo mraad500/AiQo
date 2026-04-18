@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-struct SemanticFactSnapshot: Identifiable, Sendable {
+nonisolated struct SemanticFactSnapshot: Identifiable, Sendable {
     let id: UUID
     let storageKey: String
     let content: String

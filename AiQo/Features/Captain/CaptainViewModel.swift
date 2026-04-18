@@ -97,6 +97,8 @@ final class CaptainViewModel: ObservableObject {
     @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
     @Published var showGratitudeSession: Bool = false
+    // TODO(P1.3): replace with real paywall presentation wired to PaywallSource.captainGate
+    @Published var showPaywall: Bool = false
     @Published var customization: CaptainCustomization = .default
     @Published var feedbackTrigger: Int = 0
     @Published var activeModule: ScreenContext = .mainChat
@@ -215,6 +217,14 @@ final class CaptainViewModel: ObservableObject {
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
+
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("CaptainViewModel.sendMessage blocked by TierGate(.captainChat)")
+                showPaywall = true
+                return
+            }
+        }
 
         let requiresCloudConsent = context != .sleepAnalysis
         if requiresCloudConsent, AIDataConsentManager.shared.isInOfflineOnlyMode {

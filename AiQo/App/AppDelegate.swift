@@ -15,6 +15,8 @@ struct AiQoApp: App {
     private let captainContainer: ModelContainer
 
     init() {
+        DevOverride.warnIfActive()
+
         captainContainer = Self.makeCaptainContainer()
 
         // ربط الـ stores بالـ container
@@ -24,6 +26,9 @@ struct AiQoApp: App {
             Task {
                 await EpisodicStore.shared.configure(container: v4Container)
                 await SemanticStore.shared.configure(container: v4Container)
+                await ProceduralStore.shared.configure(container: v4Container)
+                await EmotionalStore.shared.configure(container: v4Container)
+                await RelationshipStore.shared.configure(container: v4Container)
             }
         }
         CaptainPersonalizationStore.shared.configure(container: captainContainer)

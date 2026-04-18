@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-struct EpisodicEntrySnapshot: Identifiable, Sendable {
+nonisolated struct EpisodicEntrySnapshot: Identifiable, Sendable {
     let id: UUID
     let sessionID: UUID
     let timestamp: Date

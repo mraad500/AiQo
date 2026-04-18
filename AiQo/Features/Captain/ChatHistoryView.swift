@@ -11,12 +11,19 @@ struct ChatHistoryView: View {
 
     @State private var sessions: [ChatSession] = []
 
+    private var isMemoryAccessible: Bool {
+        if DevOverride.unlockAllFeatures { return true }
+        return TierGate.shared.canAccess(.captainMemory)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 theme.background.ignoresSafeArea()
 
-                if sessions.isEmpty {
+                if !isMemoryAccessible {
+                    lockedState
+                } else if sessions.isEmpty {
                     emptyState
                 } else {
                     sessionList
@@ -27,13 +34,15 @@ struct ChatHistoryView: View {
             .fontDesign(.rounded)
             .environment(\.layoutDirection, .rightToLeft)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.startNewChat()
-                        dismiss()
-                    } label: {
-                        Label("محادثة جديدة", systemImage: "plus.message")
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                if isMemoryAccessible {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            viewModel.startNewChat()
+                            dismiss()
+                        } label: {
+                            Label("محادثة جديدة", systemImage: "plus.message")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        }
                     }
                 }
 
@@ -51,6 +60,10 @@ struct ChatHistoryView: View {
                 }
             }
             .onAppear {
+                guard isMemoryAccessible else {
+                    diag.info("ChatHistoryView blocked by TierGate(.captainMemory)")
+                    return
+                }
                 sessions = MemoryStore.shared.fetchSessions()
             }
         }
@@ -60,6 +73,25 @@ struct ChatHistoryView: View {
 // MARK: - Subviews
 
 private extension ChatHistoryView {
+    // TODO(P1.3): replace with CaptainLockedView (glassmorphism)
+    var lockedState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 44, weight: .light, design: .rounded))
+                .foregroundStyle(theme.subtext.opacity(0.4))
+
+            Text("🔒 يتطلب اشتراك")
+                .font(.system(size: 17, weight: .medium, design: .rounded))
+                .foregroundStyle(theme.subtext)
+
+            Text("الذاكرة — ميزة AiQo Max. حمودي يتذكر محادثاتك.")
+                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .foregroundStyle(theme.subtext.opacity(0.8))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+    }
+
     var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "bubble.left.and.bubble.right")

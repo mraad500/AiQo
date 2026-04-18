@@ -1,6 +1,6 @@
 import Foundation
 
-struct BioSnapshot: Codable, Hashable, Sendable {
+nonisolated struct BioSnapshot: Codable, Hashable, Sendable {
     let timestamp: Date
     let stepsBucketed: Int
     let heartRateBucketed: Int?
@@ -22,14 +22,14 @@ struct BioSnapshot: Codable, Hashable, Sendable {
     }
 }
 
-struct EmotionalSnapshot: Codable, Hashable, Sendable {
+nonisolated struct EmotionalSnapshot: Codable, Hashable, Sendable {
     let primaryMood: EmotionKind?
     let intensity: Double
     let confidence: Double
     let signals: [MoodSignalSummary]
 }
 
-struct MoodSignalSummary: Codable, Hashable, Sendable {
+nonisolated struct MoodSignalSummary: Codable, Hashable, Sendable {
     let kind: String
     let value: Double
 }
