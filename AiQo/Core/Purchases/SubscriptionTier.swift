@@ -63,4 +63,55 @@ enum SubscriptionTier: Int, Comparable {
             return SubscriptionProductIDs.intelligenceProMonthly
         }
     }
+
+    // MARK: - Tier-scaled capacity (P1.3)
+    //
+    // Additive: these computeds let TierGate + other consumers ask the tier
+    // directly instead of hard-coding numbers at each gate. Raw values and case
+    // names are unchanged to preserve UserDefaults-persisted EntitlementStore
+    // state and avoid a 30+ callsite rename.
+
+    /// Captain memory fact cap (user-visible count in Captain Memory settings).
+    var memoryFactLimit: Int {
+        switch self {
+        case .none: return 50
+        case .core: return 200
+        case .intelligencePro: return 500
+        }
+    }
+
+    /// Hard upper bound on Captain-originated local notifications per 24h.
+    var dailyNotificationBudget: Int {
+        switch self {
+        case .none: return 2
+        case .core: return 4
+        case .intelligencePro: return 7
+        }
+    }
+
+    /// How many memory entries the retriever may surface per Captain turn.
+    var memoryRetrievalDepth: Int {
+        switch self {
+        case .none: return 5
+        case .core: return 10
+        case .intelligencePro: return 25
+        }
+    }
+
+    /// Rolling window (days) that pattern-mining may reach into.
+    var patternMiningWindowDays: Int {
+        switch self {
+        case .none, .core: return 14
+        case .intelligencePro: return 56
+        }
+    }
+
+    /// Approximate Gemini prompt byte budget available to the tier.
+    var geminiContextBudget: Int {
+        switch self {
+        case .none: return 2_000
+        case .core: return 8_000
+        case .intelligencePro: return 32_000
+        }
+    }
 }

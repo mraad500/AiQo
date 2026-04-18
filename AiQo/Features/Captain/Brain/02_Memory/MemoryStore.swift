@@ -33,7 +33,7 @@ final class MemoryStore {
     private var cloudSafeContextCache: [Int: String] = [:]
     private var persistedMessageWriteCount = 0
     private var maxMemories: Int {
-        AccessManager.shared.captainMemoryLimit
+        TierGate.shared.memoryFactLimit
     }
 
     var isEnabled: Bool {

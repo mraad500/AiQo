@@ -79,7 +79,7 @@ struct CaptainMemorySettingsView: View {
                     .multilineTextAlignment(.center)
 
                 if !memories.isEmpty {
-                    Text("\(memories.count) / \(AccessManager.shared.captainMemoryLimit)")
+                    Text("\(memories.count) / \(TierGate.shared.memoryFactLimit)")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(GymTheme.mint)
                         .padding(.horizontal, 8)

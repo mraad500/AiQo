@@ -193,6 +193,7 @@ final class CaptainSmartNotificationService {
             }
         }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard await MainActor.run(body: { TierGate.shared.canAccess(.captainNotifications) }) else { return }
 
         let inactivityMinutes = InactivityTracker.shared.currentInactivityMinutes
         guard inactivityMinutes >= 45 else { return }
@@ -589,6 +590,7 @@ final class AIWorkoutSummaryService {
     ) async {
         guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard await MainActor.run(body: { TierGate.shared.canAccess(.captainNotifications) }) else { return }
 
         if let workoutID {
             guard !processedWorkoutIDs.contains(workoutID) else { return }

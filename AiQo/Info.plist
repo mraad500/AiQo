@@ -80,6 +80,22 @@
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
+	<key>NOTIFICATION_BRAIN_ENABLED</key>
+	<false/>
+	<key>MEMORY_V4_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_MEMORY_CALLBACK_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_EMOTIONAL_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_CULTURAL_ENABLED</key>
+	<false/>
+	<key>CRISIS_DETECTOR_ENABLED</key>
+	<false/>
+	<key>BRAIN_DASHBOARD_ENABLED</key>
+	<false/>
+	<key>AUDIT_LOGGER_VERBOSE</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

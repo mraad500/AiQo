@@ -104,6 +104,10 @@ final class CaptainViewModel: ObservableObject {
     @Published var activeModule: ScreenContext = .mainChat
     @Published var quickReplies: [String] = []
 
+    /// Mirrors `TierGate.shared.currentTier`. Views bind to this for
+    /// reactive "Pro-only" badges, trial banners, etc.
+    @Published private(set) var effectiveTier: TierGate.EffectiveTier = .free
+
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
 
@@ -148,6 +152,19 @@ final class CaptainViewModel: ObservableObject {
         self.morningHabitOrchestrator = morningHabitOrchestrator ?? .shared
         loadCustomization()
         loadPersistedHistory()
+        bindTierGate()
+    }
+
+    private func bindTierGate() {
+        // Seed with the current tier, then keep the @Published mirror in sync.
+        // TierGate is @MainActor so read/subscribe on main.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.effectiveTier = TierGate.shared.currentTier
+            TierGate.shared.$currentTier
+                .receive(on: DispatchQueue.main)
+                .assign(to: &self.$effectiveTier)
+        }
     }
 
     deinit {

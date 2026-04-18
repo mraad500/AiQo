@@ -5,6 +5,7 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
+    @ObservedObject private var tierGate = TierGate.shared
     private let appTint = Color.aiqoAccent
 
     @State private var showLevelUp = false
@@ -49,10 +50,18 @@ struct MainTabScreen: View {
             .accessibilityHint(L10n.t("tab.gym.hint"))
 
             NavigationStack {
-                CaptainScreen()
-                    .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
-                        CaptainChatView()
+                Group {
+                    if tierGate.canAccess(.captainChat) {
+                        CaptainScreen()
+                            .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
+                                CaptainChatView()
+                            }
+                    } else {
+                        CaptainLockedView(
+                            requiredTier: tierGate.requiredTier(for: .captainChat)
+                        )
                     }
+                }
             }
             .tag(MainTabRouter.Tab.captain)
             .tabItem {
