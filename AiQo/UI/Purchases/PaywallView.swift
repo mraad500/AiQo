@@ -17,7 +17,7 @@ struct PaywallView: View {
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
 
-    private let supportedTiers: [SubscriptionTier] = [.core, .intelligencePro]
+    private let supportedTiers: [SubscriptionTier] = [.max, .pro]
     private let onPurchaseSuccess: (() -> Void)?
     let source: PaywallSource
 
@@ -51,7 +51,7 @@ struct PaywallView: View {
             return selectedProductID
         }
 
-        return SubscriptionTier.intelligencePro.productID
+        return SubscriptionTier.pro.productID
     }
 
     private var selectedPlan: PaywallPlanModel? {
@@ -862,7 +862,7 @@ struct PaywallView: View {
 
     private func details(for tier: SubscriptionTier) -> PaywallPlanDetails {
         switch tier {
-        case .core:
+        case .max:
             return PaywallPlanDetails(
                 title: "AiQo Max",
                 eyebrow: copy(ar: "السرعة اليومية الذكية", en: "Fast everyday coaching"),
@@ -885,7 +885,7 @@ struct PaywallView: View {
                 tintIntensity: 0.18,
                 isFeatured: false
             )
-        case .intelligencePro:
+        case .pro:
             return PaywallPlanDetails(
                 title: "AiQo Intelligence Pro",
                 eyebrow: copy(ar: "الأقوى لكسر الأرقام والتحليل", en: "The full analytical stack"),
@@ -908,7 +908,7 @@ struct PaywallView: View {
                 tintIntensity: 0.16,
                 isFeatured: true
             )
-        case .none:
+        case .none, .trial:
             return PaywallPlanDetails(
                 title: "AiQo",
                 eyebrow: "",

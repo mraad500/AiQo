@@ -269,7 +269,12 @@ final class TrialJourneyOrchestrator {
             content: content,
             trigger: nil
         )
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("TrialJourneyOrchestrator immediate blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         UNUserNotificationCenter.current().add(request) { _ in }
         AnalyticsService.shared.track(.trialNotificationFired(kind: kind.rawValue))
     }
@@ -298,7 +303,12 @@ final class TrialJourneyOrchestrator {
                 let interval = max(1, date.timeIntervalSinceNow)
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
                 let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-                guard TierGate.shared.canAccess(.captainNotifications) else { return }
+                if !DevOverride.unlockAllFeatures {
+                    guard TierGate.shared.canAccess(.captainNotifications) else {
+                        diag.info("TrialJourneyOrchestrator scheduled blocked by TierGate(.captainNotifications)")
+                        return
+                    }
+                }
                 UNUserNotificationCenter.current().add(request) { _ in }
             }
         }
@@ -400,7 +410,12 @@ final class TrialJourneyOrchestrator {
             content: content,
             trigger: trigger
         )
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("TrialJourneyOrchestrator sundayReport blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         UNUserNotificationCenter.current().add(request) { _ in }
     }
 }

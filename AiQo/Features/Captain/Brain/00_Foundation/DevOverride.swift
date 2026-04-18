@@ -23,6 +23,21 @@ enum DevOverride {
     /// Logs a loud warning on app launch when the override is active, so there is
     /// no chance of shipping a build that has it accidentally left on.
     static func warnIfActive() {
+        let plistValue = Bundle.main.object(forInfoDictionaryKey: infoPlistKey) as? Bool ?? false
+        let compiledAsDebug: Bool = {
+            #if DEBUG
+            return true
+            #else
+            return false
+            #endif
+        }()
+
+        print("---- DevOverride diagnostic ----")
+        print("  Info.plist AIQO_DEV_UNLOCK_ALL = \(plistValue)")
+        print("  Compiled #if DEBUG              = \(compiledAsDebug)")
+        print("  unlockAllFeatures (effective)   = \(unlockAllFeatures)")
+        print("--------------------------------")
+
         guard unlockAllFeatures else { return }
         let banner = "⚠️⚠️⚠️ DEV_OVERRIDE ACTIVE — All paid features unlocked. DO NOT SHIP. ⚠️⚠️⚠️"
         print(banner)

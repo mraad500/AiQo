@@ -79,10 +79,15 @@ final class NotificationService {
             repeats: false
         )
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService schedule blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         UNUserNotificationCenter.current().add(request)
     }
-    
+
     // دالة جديدة لمعالجة البيانات القادمة من الخلفية (اختياري)
     func handleRemoteNotification(userInfo: [AnyHashable: Any]) {
         // إذا كنت تريد تنفيذ شيء معين عند وصول إشعار صامت
@@ -268,7 +273,12 @@ final class CaptainSmartNotificationService {
                 repeats: false
             )
         )
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService.sendCaptainNotification blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         UNUserNotificationCenter.current().add(request)
         Task { @MainActor in
             ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
@@ -278,7 +288,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Water Reminder
 
     func evaluateWaterAndNotifyIfNeeded(currentLiters: Double, targetLiters: Double) {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateWaterAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard currentLiters < targetLiters * 0.5 else { return }
 
@@ -313,7 +328,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Meal Time Reminder
 
     func evaluateMealTimeAndNotifyIfNeeded() {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateMealTimeAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let currentHour = Calendar.current.component(.hour, from: Date())
@@ -364,7 +384,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Step Goal Progress
 
     func evaluateStepGoalAndNotifyIfNeeded(currentSteps: Int, targetSteps: Int) {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateStepGoalAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard targetSteps > 0 else { return }
 
@@ -430,7 +455,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Sleep Reminder
 
     func evaluateSleepTimeAndNotifyIfNeeded(targetBedtimeHour: Int) {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateSleepTimeAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let now = Date()
@@ -588,7 +618,12 @@ final class AIWorkoutSummaryService {
         endedAt: Date,
         workoutID: String? = nil
     ) async {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService workout summary blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard await MainActor.run(body: { TierGate.shared.canAccess(.captainNotifications) }) else { return }
 
@@ -868,7 +903,12 @@ final class AIWorkoutSummaryService {
             content: content,
             trigger: nil
         )
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService captain workout blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         notificationCenter.add(request)
         Task { @MainActor in
             ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")

@@ -1,8 +1,9 @@
 import Foundation
 
 /// Central registry of in-app feature flags sourced from `Info.plist`.
-/// Kept as a lightweight scaffold — new flags should land here so callers
-/// never read `Bundle.main.object(forInfoDictionaryKey:)` directly.
+///
+/// Prefer the `@FeatureFlag` property wrapper on `FeatureFlags` entries over the
+/// lower-level `FeatureFlag` struct or direct `Bundle.main.object` lookups.
 enum AiQoFeatureFlags {
     static func boolFlag(named key: String, default defaultValue: Bool) -> Bool {
         let rawValue = Bundle.main.object(forInfoDictionaryKey: key)
@@ -26,18 +27,37 @@ enum AiQoFeatureFlags {
     }
 }
 
+/// Property wrapper form. Reads fresh from Info.plist each access (no caching) so
+/// test injection of bundled Info.plist values takes effect immediately.
+@propertyWrapper
 struct FeatureFlag {
     let key: String
     let defaultValue: Bool
 
-    var value: Bool {
+    init(_ key: String, default defaultValue: Bool = false) {
+        self.key = key
+        self.defaultValue = defaultValue
+    }
+
+    var wrappedValue: Bool {
         AiQoFeatureFlags.boolFlag(named: key, default: defaultValue)
     }
+
+    /// Legacy accessor for call sites that used the old struct shape `FeatureFlag(key:defaultValue:).value`.
+    /// New code should read the property directly via `@FeatureFlag`.
+    var value: Bool { wrappedValue }
 }
 
 enum FeatureFlags {
-    static let memoryV4Enabled = FeatureFlag(
-        key: "MEMORY_V4_ENABLED",
-        defaultValue: false
-    )
+    @FeatureFlag("MEMORY_V4_ENABLED", default: false)
+    static var memoryV4Enabled: Bool
+
+    @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
+    static var brainV2Enabled: Bool
+
+    @FeatureFlag("HAMOUDI_BLEND_ENABLED", default: false)
+    static var hamoudiBlendEnabled: Bool
+
+    @FeatureFlag("TRIBE_SUBSCRIPTION_GATE_ENABLED", default: false)
+    static var tribeSubscriptionGateEnabled: Bool
 }

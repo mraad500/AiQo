@@ -38,7 +38,7 @@ final class PurchasesTests: XCTestCase {
         XCTAssertEqual(reloadedStore.activeProductId, SubscriptionProductIDs.intelligenceProMonthly)
         XCTAssertEqual(reloadedStore.expiresAt, expectedExpiry)
         XCTAssertTrue(reloadedStore.isActive)
-        XCTAssertEqual(reloadedStore.currentTier, .intelligencePro)
+        XCTAssertEqual(reloadedStore.currentTier, .pro)
         XCTAssertTrue(reloadedStore.hasIntelligenceProAccess)
         XCTAssertTrue(reloadedStore.canCreateTribe)
     }
@@ -72,7 +72,7 @@ final class PurchasesTests: XCTestCase {
             expiresAt: expectedExpiry
         )
 
-        XCTAssertEqual(store.currentTier, .intelligencePro)
+        XCTAssertEqual(store.currentTier, .pro)
         XCTAssertTrue(store.hasIntelligenceProAccess)
         XCTAssertFalse(store.canCreateTribe)
     }

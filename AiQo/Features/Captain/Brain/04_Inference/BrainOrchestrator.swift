@@ -39,8 +39,10 @@ struct BrainOrchestrator: Sendable {
         userName: String?
     ) async throws -> HybridBrainServiceReply {
         let routedRequest = interceptSleepIntent(request)
-        if route(for: routedRequest) == .cloud,
+        if !DevOverride.unlockAllFeatures,
+           route(for: routedRequest) == .cloud,
            !TierGate.shared.canAccess(.captainChat) {
+            diag.info("BrainOrchestrator.processMessage blocked by TierGate(.captainChat)")
             return makeTierRequiredReply(
                 language: routedRequest.language,
                 requiredTier: TierGate.shared.requiredTier(for: .captainChat)

@@ -86,7 +86,11 @@ private extension SleepSessionObserver {
     func syncSleepUpdates(shouldNotify: Bool) async {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
         let (samples, newAnchor) = await fetchAnchoredSleepSamples(type: sleepType, anchor: sleepAnchor)
-        let actuallyNotify = shouldNotify && TierGate.shared.canAccess(.captainNotifications)
+        let notificationsAllowed = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainNotifications)
+        if shouldNotify && !notificationsAllowed {
+            diag.info("SleepSessionObserver.syncSleepUpdates blocked by TierGate(.captainNotifications)")
+        }
+        let actuallyNotify = shouldNotify && notificationsAllowed
 
         if let newAnchor {
             sleepAnchor = newAnchor
@@ -177,7 +181,12 @@ private extension SleepSessionObserver {
         )
 
         do {
-            guard TierGate.shared.canAccess(.captainNotifications) else { return }
+            if !DevOverride.unlockAllFeatures {
+                guard TierGate.shared.canAccess(.captainNotifications) else {
+                    diag.info("SleepSessionObserver notification add blocked by TierGate(.captainNotifications)")
+                    return
+                }
+            }
             try await notificationCenter.add(request)
             userDefaults.set(sessionEndedAt.timeIntervalSince1970, forKey: DefaultsKeys.lastNotifiedSleepEnd)
         } catch {

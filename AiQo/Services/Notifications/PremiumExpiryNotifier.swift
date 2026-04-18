@@ -20,7 +20,12 @@ enum PremiumExpiryNotifier {
     ]
 
     static func scheduleAllNotifications(_ expiresAt: Date) {
-        guard TierGate.shared.canAccess(.captainNotifications) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("PremiumExpiryNotifier.scheduleAllNotifications blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         let center = UNUserNotificationCenter.current()
         clearScheduledNotifications(center: center)
 
@@ -48,7 +53,12 @@ enum PremiumExpiryNotifier {
                 trigger: trigger
             )
 
-            guard TierGate.shared.canAccess(.captainNotifications) else { return }
+            if !DevOverride.unlockAllFeatures {
+                guard TierGate.shared.canAccess(.captainNotifications) else {
+                    diag.info("PremiumExpiryNotifier.add blocked by TierGate(.captainNotifications)")
+                    return
+                }
+            }
             center.add(request) { error in
                 if let error {
                     diag.error("Failed to schedule premium notification \(notification.identifier)", error: error)

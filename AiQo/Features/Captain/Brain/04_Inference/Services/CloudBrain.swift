@@ -41,8 +41,11 @@ struct CloudBrainService: Sendable {
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
-        guard TierGate.shared.canAccess(.captainChat) else {
-            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("CloudBrainService.generateReply blocked by TierGate(.captainChat)")
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+            }
         }
         let startedAt = Date()
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
@@ -50,7 +53,7 @@ struct CloudBrainService: Sendable {
         // Single MainActor hop — tier, memories, and consent state in one round-trip.
         let (activeTier, cloudSafeMemories, consentGranted) = await MainActor.run {
             let tier = AccessManager.shared.activeTier
-            let budget = tier == .intelligencePro ? 700 : 400
+            let budget = tier.effectiveAccessTier == .pro ? 700 : 400
             let memories = MemoryStore.shared.buildCloudSafeRelevantContext(
                 for: latestUserMessage,
                 screenContext: request.screenContext,
@@ -85,7 +88,7 @@ struct CloudBrainService: Sendable {
             cloudSafeMemories: cloudSafeMemories
         )
 
-        let aiModel = activeTier == .intelligencePro
+        let aiModel = activeTier.effectiveAccessTier == .pro
             ? GeminiModel.reasoning
             : GeminiModel.fast
         let promptBytes = Self.estimatedPromptBytes(of: sanitizedRequest)

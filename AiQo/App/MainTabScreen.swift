@@ -5,7 +5,7 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
-    @ObservedObject private var tierGate = TierGate.shared
+    private let tierGate = TierGate.shared
     private let appTint = Color.aiqoAccent
 
     @State private var showLevelUp = false
@@ -57,9 +57,13 @@ struct MainTabScreen: View {
                                 CaptainChatView()
                             }
                     } else {
-                        CaptainLockedView(
-                            requiredTier: tierGate.requiredTier(for: .captainChat)
-                        )
+                        CaptainLockedView(config: .init(
+                            title: "Captain",
+                            subtitle: "Upgrade to unlock the Captain.",
+                            iconSystemName: "lock.fill",
+                            tier: tierGate.requiredTier(for: .captainChat),
+                            onUpgradeTap: {}
+                        ))
                     }
                 }
             }

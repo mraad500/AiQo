@@ -21,7 +21,7 @@ struct AiQoApp: App {
 
         // ربط الـ stores بالـ container
         MemoryStore.shared.configure(container: captainContainer, storageMode: Self.captainStorageMode)
-        if FeatureFlags.memoryV4Enabled.value {
+        if FeatureFlags.memoryV4Enabled {
             let v4Container = captainContainer
             Task {
                 await EpisodicStore.shared.configure(container: v4Container)
@@ -42,11 +42,11 @@ struct AiQoApp: App {
     }
 
     private static var captainStorageMode: MemoryStore.StorageMode {
-        FeatureFlags.memoryV4Enabled.value ? .schemaV4 : .legacyV3
+        FeatureFlags.memoryV4Enabled ? .schemaV4 : .legacyV3
     }
 
     private static func makeCaptainContainer() -> ModelContainer {
-        if !FeatureFlags.memoryV4Enabled.value {
+        if !FeatureFlags.memoryV4Enabled {
             return makeCaptainContainerV3()
         }
 

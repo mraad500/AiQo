@@ -27,25 +27,25 @@ final class AccessManager: ObservableObject {
     var activeTier: SubscriptionTier {
         let liveTier = EntitlementStore.shared.currentTier
         if liveTier != .none { return liveTier }
-        if FreeTrialManager.shared.isTrialActive { return .intelligencePro }
+        if FreeTrialManager.shared.isTrialActive { return .pro }
         return .none
     }
 
     // MARK: — Core tier features
 
-    var canAccessCaptain: Bool { activeTier >= .core }
-    var canAccessGym: Bool { activeTier >= .core }
-    var canAccessKitchen: Bool { activeTier >= .core }
-    var canAccessMyVibe: Bool { activeTier >= .core }
-    var canAccessChallenges: Bool { activeTier >= .core }
-    var canAccessDataTracking: Bool { activeTier >= .core }
-    var canReceiveCaptainNotifications: Bool { activeTier >= .core }
+    var canAccessCaptain: Bool { activeTier >= .max }
+    var canAccessGym: Bool { activeTier >= .max }
+    var canAccessKitchen: Bool { activeTier >= .max }
+    var canAccessMyVibe: Bool { activeTier >= .max }
+    var canAccessChallenges: Bool { activeTier >= .max }
+    var canAccessDataTracking: Bool { activeTier >= .max }
+    var canReceiveCaptainNotifications: Bool { activeTier >= .max }
 
-    // MARK: — Feature gates that stay inside Core
+    // MARK: — Feature gates that stay inside Max
 
-    var canAccessHRRAssessment: Bool { activeTier >= .core }
-    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .core }
-    var canAccessRecordProjects: Bool { activeTier >= .core }
+    var canAccessHRRAssessment: Bool { activeTier >= .max }
+    var canAccessWeeklyAIWorkoutPlan: Bool { activeTier >= .max }
+    var canAccessRecordProjects: Bool { activeTier >= .max }
 
     // MARK: — Legendary Challenges access
 
@@ -57,22 +57,22 @@ final class AccessManager: ObservableObject {
 
     var legendaryChallengeAccess: LegendaryChallengeAccess {
         switch activeTier {
-        case .none, .core:        return .viewOnly
-        case .intelligencePro:    return .full
+        case .none, .max:         return .viewOnly
+        case .trial, .pro:        return .full
         }
     }
 
-    // MARK: — Intelligence Pro exclusives
+    // MARK: — Pro exclusives
 
-    var canAccessPeaks: Bool { activeTier >= .intelligencePro }
-    var canAccessExtendedMemory: Bool { activeTier >= .intelligencePro }
-    var canAccessIntelligenceModel: Bool { activeTier >= .intelligencePro }
+    var canAccessPeaks: Bool { activeTier >= .pro }
+    var canAccessExtendedMemory: Bool { activeTier >= .pro }
+    var canAccessIntelligenceModel: Bool { activeTier >= .pro }
 
     // MARK: — Memory limit based on tier
 
     var captainMemoryLimit: Int {
-        switch activeTier {
-        case .intelligencePro:
+        switch activeTier.effectiveAccessTier {
+        case .pro:
             return 500
         default:
             return 200

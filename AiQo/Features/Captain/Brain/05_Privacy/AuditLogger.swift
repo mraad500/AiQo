@@ -98,8 +98,9 @@ extension SubscriptionTier {
     var auditLabel: String {
         switch self {
         case .none: return "none"
-        case .core: return "max"
-        case .intelligencePro: return "pro"
+        case .max: return "max"
+        case .trial: return "trial"
+        case .pro: return "pro"
         }
     }
 }

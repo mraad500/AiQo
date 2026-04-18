@@ -1,27 +1,48 @@
 import Foundation
 
 /// The runtime subscription tiers of AiQo.
-enum SubscriptionTier: Int, Comparable {
+///
+/// Raw values are stable and persisted (`aiqo.purchases.currentTier` UserDefault):
+/// `.none = 0`, `.max = 1`, `.trial = 2`, `.pro = 3`. Never renumber — rename only.
+enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     case none = 0
-    case core = 1
-    case intelligencePro = 3
+    case max = 1
+    case trial = 2
+    case pro = 3
 
     static func < (lhs: SubscriptionTier, rhs: SubscriptionTier) -> Bool {
-        lhs.rawValue < rhs.rawValue
+        lhs.rank < rhs.rank
     }
+
+    /// Hierarchy for ≥ comparisons. `.trial` is ranked at Pro-equivalent.
+    private var rank: Int {
+        switch self {
+        case .none:  return 0
+        case .max:   return 1
+        case .trial: return 2
+        case .pro:   return 2
+        }
+    }
+
+    /// Trial gets Pro-equivalent access; otherwise self.
+    var effectiveAccessTier: SubscriptionTier {
+        self == .trial ? .pro : self
+    }
+
+    var isPaid: Bool { self != .none }
 
     static func from(productID: String) -> SubscriptionTier {
         switch productID {
         case SubscriptionProductIDs.coreMonthly,
              SubscriptionProductIDs.legacyCoreMonthly,
              SubscriptionProductIDs.legacyStandardMonthly:
-            return .core
+            return .max
         case SubscriptionProductIDs.intelligenceProMonthly,
              SubscriptionProductIDs.proMonthly,
              SubscriptionProductIDs.legacyIntelligenceProMonthly,
              SubscriptionProductIDs.legacyProMonthly,
              SubscriptionProductIDs.legacyIntelligenceMonthly:
-            return .intelligencePro
+            return .pro
         default:
             return .none
         }
@@ -31,9 +52,11 @@ enum SubscriptionTier: Int, Comparable {
         switch self {
         case .none:
             return ""
-        case .core:
+        case .max:
             return "AiQo Max"
-        case .intelligencePro:
+        case .trial:
+            return "تجربة مجانية"
+        case .pro:
             return "AiQo Intelligence Pro"
         }
     }
@@ -44,22 +67,22 @@ enum SubscriptionTier: Int, Comparable {
 
     var monthlyPrice: String {
         switch self {
-        case .none:
+        case .none, .trial:
             return ""
-        case .core:
+        case .max:
             return SubscriptionProductIDs.coreFallbackPrice
-        case .intelligencePro:
+        case .pro:
             return SubscriptionProductIDs.intelligenceProFallbackPrice
         }
     }
 
     var productID: String {
         switch self {
-        case .none:
+        case .none, .trial:
             return ""
-        case .core:
+        case .max:
             return SubscriptionProductIDs.coreMonthly
-        case .intelligencePro:
+        case .pro:
             return SubscriptionProductIDs.intelligenceProMonthly
         }
     }
@@ -75,8 +98,8 @@ enum SubscriptionTier: Int, Comparable {
     var memoryFactLimit: Int {
         switch self {
         case .none: return 50
-        case .core: return 200
-        case .intelligencePro: return 500
+        case .max: return 200
+        case .trial, .pro: return 500
         }
     }
 
@@ -84,8 +107,8 @@ enum SubscriptionTier: Int, Comparable {
     var dailyNotificationBudget: Int {
         switch self {
         case .none: return 2
-        case .core: return 4
-        case .intelligencePro: return 7
+        case .max: return 4
+        case .trial, .pro: return 7
         }
     }
 
@@ -93,16 +116,16 @@ enum SubscriptionTier: Int, Comparable {
     var memoryRetrievalDepth: Int {
         switch self {
         case .none: return 5
-        case .core: return 10
-        case .intelligencePro: return 25
+        case .max: return 10
+        case .trial, .pro: return 25
         }
     }
 
     /// Rolling window (days) that pattern-mining may reach into.
     var patternMiningWindowDays: Int {
         switch self {
-        case .none, .core: return 14
-        case .intelligencePro: return 56
+        case .none, .max: return 14
+        case .trial, .pro: return 56
         }
     }
 
@@ -110,8 +133,8 @@ enum SubscriptionTier: Int, Comparable {
     var geminiContextBudget: Int {
         switch self {
         case .none: return 2_000
-        case .core: return 8_000
-        case .intelligencePro: return 32_000
+        case .max: return 8_000
+        case .trial, .pro: return 32_000
         }
     }
 }

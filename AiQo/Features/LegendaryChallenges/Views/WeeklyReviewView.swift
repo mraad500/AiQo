@@ -261,9 +261,12 @@ struct WeeklyReviewView: View {
     // MARK: - Submit Logic
 
     private func submitReview() {
-        guard TierGate.shared.canAccess(.captainChat) else {
-            showPaywall = true
-            return
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("WeeklyReviewView.submitReview blocked by TierGate(.captainChat)")
+                showPaywall = true
+                return
+            }
         }
 
         isSubmitting = true

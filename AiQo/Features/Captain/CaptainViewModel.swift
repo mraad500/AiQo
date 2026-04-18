@@ -97,7 +97,6 @@ final class CaptainViewModel: ObservableObject {
     @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
     @Published var showGratitudeSession: Bool = false
-    // TODO(P1.3): replace with real paywall presentation wired to PaywallSource.captainGate
     @Published var showPaywall: Bool = false
     @Published var customization: CaptainCustomization = .default
     @Published var feedbackTrigger: Int = 0
@@ -106,7 +105,7 @@ final class CaptainViewModel: ObservableObject {
 
     /// Mirrors `TierGate.shared.currentTier`. Views bind to this for
     /// reactive "Pro-only" badges, trial banners, etc.
-    @Published private(set) var effectiveTier: TierGate.EffectiveTier = .free
+    @Published private(set) var effectiveTier: SubscriptionTier = .none
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -156,14 +155,12 @@ final class CaptainViewModel: ObservableObject {
     }
 
     private func bindTierGate() {
-        // Seed with the current tier, then keep the @Published mirror in sync.
-        // TierGate is @MainActor so read/subscribe on main.
+        // Seed with the current tier. HEAD's TierGate exposes currentTier
+        // as a computed property (reads UserDefaults live), so a one-shot
+        // read is enough; downstream views re-query on render.
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.effectiveTier = TierGate.shared.currentTier
-            TierGate.shared.$currentTier
-                .receive(on: DispatchQueue.main)
-                .assign(to: &self.$effectiveTier)
         }
     }
 

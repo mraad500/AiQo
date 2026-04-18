@@ -73,23 +73,17 @@ struct ChatHistoryView: View {
 // MARK: - Subviews
 
 private extension ChatHistoryView {
-    // TODO(P1.3): replace with CaptainLockedView (glassmorphism)
     var lockedState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 44, weight: .light, design: .rounded))
-                .foregroundStyle(theme.subtext.opacity(0.4))
-
-            Text("🔒 يتطلب اشتراك")
-                .font(.system(size: 17, weight: .medium, design: .rounded))
-                .foregroundStyle(theme.subtext)
-
-            Text("الذاكرة — ميزة AiQo Max. حمودي يتذكر محادثاتك.")
-                .font(.system(size: 13, weight: .regular, design: .rounded))
-                .foregroundStyle(theme.subtext.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
+        CaptainLockedView(config: .init(
+            title: "الذاكرة",
+            subtitle: "حمودي يتذكر محادثاتك ويبني عليها كل يوم. افتح AiQo Max لتفعيلها.",
+            iconSystemName: "brain.head.profile",
+            tier: .max,
+            onUpgradeTap: {
+                viewModel.showPaywall = true
+                dismiss()
+            }
+        ))
     }
 
     var emptyState: some View {

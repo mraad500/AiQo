@@ -183,9 +183,12 @@ struct SmartFridgeScannerView: View {
                                 .foregroundStyle(platinum.opacity(0.72))
 
                             Button {
-                                guard TierGate.shared.canAccess(.captainChat) else {
-                                    showPaywall = true
-                                    return
+                                if !DevOverride.unlockAllFeatures {
+                                    guard TierGate.shared.canAccess(.captainChat) else {
+                                        diag.info("SmartFridgeScannerView capture blocked by TierGate(.captainChat)")
+                                        showPaywall = true
+                                        return
+                                    }
                                 }
                                 guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else {
                                     return

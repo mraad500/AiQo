@@ -186,7 +186,12 @@ struct MemoryExtractor: Sendable {
         assistantReply: String,
         store: MemoryStore
     ) async {
-        guard TierGate.shared.canAccess(.captainChat) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("MemoryExtractor.extractWithLLM blocked by TierGate(.captainChat)")
+                return
+            }
+        }
         guard await AICloudConsentGate.hasConsent() else { return }
 
         // Privacy-first: sanitize all outgoing text before it leaves the device

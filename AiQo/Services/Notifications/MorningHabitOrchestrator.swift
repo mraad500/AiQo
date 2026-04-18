@@ -75,9 +75,12 @@ final class MorningHabitOrchestrator: NSObject {
     }
 
     func refreshMonitoringState(now: Date = Date()) async {
-        guard TierGate.shared.canAccess(.captainNotifications) else {
-            cancelMorningNotification()
-            return
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("MorningHabitOrchestrator.refreshMonitoringState blocked by TierGate(.captainNotifications)")
+                cancelMorningNotification()
+                return
+            }
         }
         guard let wakeDate = scheduledWakeDate else { return }
         guard isInsideMonitoringWindow(now: now, wakeDate: wakeDate) else { return }
@@ -309,9 +312,12 @@ private extension MorningHabitOrchestrator {
         stepsSinceWake: Int,
         body: String
     ) async {
-        guard TierGate.shared.canAccess(.captainNotifications) else {
-            cancelMorningNotification()
-            return
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("MorningHabitOrchestrator.scheduleMorningNotification blocked by TierGate(.captainNotifications)")
+                cancelMorningNotification()
+                return
+            }
         }
         guard !FreeTrialManager.shared.isInsideTrialWindow else {
             // Trial Journey owns the morning narrative during the first 7 days.
@@ -344,7 +350,12 @@ private extension MorningHabitOrchestrator {
         )
 
         do {
-            guard TierGate.shared.canAccess(.captainNotifications) else { return }
+            if !DevOverride.unlockAllFeatures {
+                guard TierGate.shared.canAccess(.captainNotifications) else {
+                    diag.info("MorningHabitOrchestrator notification add blocked by TierGate(.captainNotifications)")
+                    return
+                }
+            }
             try await notificationCenter.add(request)
             await MainActor.run {
                 ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
