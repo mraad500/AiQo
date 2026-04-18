@@ -41,7 +41,8 @@ final class CaptainMemory {
     }
 }
 
-struct CaptainMemorySnapshot: Equatable, Sendable {
+struct CaptainMemorySnapshot: Equatable, Sendable, Identifiable {
+    let id: UUID
     let key: String
     let value: String
     let category: String
@@ -50,7 +51,28 @@ struct CaptainMemorySnapshot: Equatable, Sendable {
     let updatedAt: Date
     let accessCount: Int
 
+    init(
+        id: UUID,
+        key: String,
+        value: String,
+        category: String,
+        confidence: Double,
+        source: String,
+        updatedAt: Date,
+        accessCount: Int
+    ) {
+        self.id = id
+        self.key = key
+        self.value = value
+        self.category = category
+        self.confidence = confidence
+        self.source = source
+        self.updatedAt = updatedAt
+        self.accessCount = accessCount
+    }
+
     init(memory: CaptainMemory) {
+        self.id = memory.id
         self.key = memory.key
         self.value = memory.value
         self.category = memory.category
@@ -58,5 +80,16 @@ struct CaptainMemorySnapshot: Equatable, Sendable {
         self.source = memory.source
         self.updatedAt = memory.updatedAt
         self.accessCount = memory.accessCount
+    }
+
+    init(fact: SemanticFact) {
+        self.id = fact.id
+        self.key = fact.storageKey
+        self.value = fact.content
+        self.category = fact.categoryRaw
+        self.confidence = fact.confidence
+        self.source = fact.sourceRaw
+        self.updatedAt = fact.lastConfirmedAt
+        self.accessCount = fact.referenceCount
     }
 }

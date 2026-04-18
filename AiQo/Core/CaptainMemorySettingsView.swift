@@ -2,12 +2,12 @@ import SwiftUI
 
 /// شاشة إعدادات ذاكرة الكابتن — تعرض كل المعلومات المحفوظة
 struct CaptainMemorySettingsView: View {
-    @State private var memories: [CaptainMemory] = []
+    @State private var memories: [CaptainMemorySnapshot] = []
     @State private var isEnabled: Bool = MemoryStore.shared.isEnabled
     @State private var showClearConfirmation = false
     @State private var weeklyReports: [WeeklyReportEntry] = []
 
-    private var groupedMemories: [(String, [CaptainMemory])] {
+    private var groupedMemories: [(String, [CaptainMemorySnapshot])] {
         let grouped = Dictionary(grouping: memories, by: { $0.category })
         return grouped.sorted { $0.key < $1.key }
     }
@@ -113,7 +113,7 @@ struct CaptainMemorySettingsView: View {
 
     // MARK: - Memory Row
 
-    private func memoryRow(_ memory: CaptainMemory) -> some View {
+    private func memoryRow(_ memory: CaptainMemorySnapshot) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack {
                 confidenceBadge(memory.confidence)
@@ -170,7 +170,7 @@ struct CaptainMemorySettingsView: View {
         memories = MemoryStore.shared.allMemories()
     }
 
-    private func deleteMemories(at offsets: IndexSet, in items: [CaptainMemory]) {
+    private func deleteMemories(at offsets: IndexSet, in items: [CaptainMemorySnapshot]) {
         for index in offsets {
             let memory = items[index]
             MemoryStore.shared.remove(memory.key)
@@ -227,7 +227,7 @@ struct CaptainMemorySettingsView: View {
         }
     }
 
-    private func valueLabel(_ memory: CaptainMemory) -> String {
+    private func valueLabel(_ memory: CaptainMemorySnapshot) -> String {
         switch memory.key {
         case "goal":
             return CaptainPrimaryGoal.localizedValue(forStoredValue: memory.value) ?? memory.value

@@ -12,48 +12,13 @@ import WidgetKit
 struct AiQoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var globalBrain = CaptainViewModel()
-
-    /// ModelContainer منفصل لذاكرة الكابتن ومشاريع كسر الأرقام — store مخصص عشان ما يتعارض مع الـ containers الثانية
-    private let captainContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: CaptainSchemaV3.self)
-
-        // مسار مخصص منفصل عن default.store
-        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            do {
-                try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-                let storeURL = appSupport.appending(path: "captain_memory.store")
-
-                let config = ModelConfiguration(
-                    "CaptainMemoryStore",
-                    schema: schema,
-                    url: storeURL
-                )
-                return try ModelContainer(
-                    for: schema,
-                    migrationPlan: CaptainSchemaMigrationPlan.self,
-                    configurations: [config]
-                )
-            } catch {
-                #if DEBUG
-                print("[AppDelegate] Failed to create CaptainMemory ModelContainer: \(error). Falling back to in-memory store.")
-                #endif
-                CrashReporter.shared.recordError(error, context: "captain_container_migration_failed")
-            }
-        }
-
-        // Fallback to in-memory container to prevent crash
-        do {
-            let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-            return try ModelContainer(for: schema, configurations: [memoryConfig])
-        } catch {
-            // Last resort — this should never fail for an in-memory store
-            fatalError("Failed to create even an in-memory ModelContainer: \(error)")
-        }
-    }()
+    private let captainContainer: ModelContainer
 
     init() {
+        captainContainer = Self.makeCaptainContainer()
+
         // ربط الـ stores بالـ container
-        MemoryStore.shared.configure(container: captainContainer)
+        MemoryStore.shared.configure(container: captainContainer, storageMode: Self.captainStorageMode)
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
         WeeklyMetricsBufferStore.shared.configure(container: captainContainer)
@@ -62,6 +27,79 @@ struct AiQoApp: App {
         ConversationThreadManager.shared.pruneOldEntries()
 
         schedulePostLaunchWarmup()
+    }
+
+    private static var captainStorageMode: MemoryStore.StorageMode {
+        FeatureFlags.memoryV4Enabled.value ? .schemaV4 : .legacyV3
+    }
+
+    private static func makeCaptainContainer() -> ModelContainer {
+        if !FeatureFlags.memoryV4Enabled.value {
+            return makeCaptainContainerV3()
+        }
+
+        return makeCaptainContainerV4()
+    }
+
+    private static func captainStoreURL() throws -> URL {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        return appSupport.appending(path: "captain_memory.store")
+    }
+
+    private static func makeCaptainContainerV3() -> ModelContainer {
+        let schema = Schema(versionedSchema: CaptainSchemaV3.self)
+
+        do {
+            let config = ModelConfiguration(
+                "CaptainMemoryStore",
+                schema: schema,
+                url: try captainStoreURL()
+            )
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: CaptainSchemaMigrationPlan.self,
+                configurations: [config]
+            )
+        } catch {
+            #if DEBUG
+            print("[AppDelegate] Failed to create V3 CaptainMemory ModelContainer: \(error). Falling back to in-memory store.")
+            #endif
+            CrashReporter.shared.recordError(error, context: "captain_container_v3_failed")
+            return makeInMemoryCaptainContainer(schema: schema)
+        }
+    }
+
+    private static func makeCaptainContainerV4() -> ModelContainer {
+        let schema = Schema(versionedSchema: MemorySchemaV4.self)
+
+        do {
+            let config = ModelConfiguration(
+                "CaptainMemoryStore",
+                schema: schema,
+                url: try captainStoreURL()
+            )
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: CaptainSchemaMigrationPlan.self,
+                configurations: [config]
+            )
+        } catch {
+            diag.error("Captain V4 container creation failed", error: error)
+            CrashReporter.shared.recordError(error, context: "captain_container_v4_failed")
+            return makeInMemoryCaptainContainer(schema: schema)
+        }
+    }
+
+    private static func makeInMemoryCaptainContainer(schema: Schema) -> ModelContainer {
+        do {
+            let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            return try ModelContainer(for: schema, configurations: [memoryConfig])
+        } catch {
+            fatalError("Failed to create even an in-memory ModelContainer: \(error)")
+        }
     }
 
     var body: some Scene {

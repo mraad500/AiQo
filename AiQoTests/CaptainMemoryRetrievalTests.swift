@@ -19,7 +19,7 @@ final class CaptainMemoryRetrievalTests: XCTestCase {
         )
 
         store = MemoryStore.shared
-        store.configure(container: container)
+        store.configure(container: container, storageMode: .legacyV3)
         store.isEnabled = true
         store.clearAll()
     }

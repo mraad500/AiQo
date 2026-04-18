@@ -2,15 +2,33 @@ import Foundation
 import SwiftData
 import os.log
 
-/// مدير ذاكرة الكابتن حمّودي — يحفظ ويسترجع الذكريات عبر الجلسات
 @MainActor
 @Observable
 final class MemoryStore {
+    enum StorageMode: String {
+        case legacyV3
+        case schemaV4
+    }
+
+    private struct MemoryRecord {
+        let id: UUID
+        let key: String
+        let value: String
+        let category: String
+        let confidence: Double
+        let source: String
+        let createdAt: Date
+        let updatedAt: Date
+        let accessCount: Int
+        let isCloudSafe: Bool
+    }
+
     static let shared = MemoryStore()
 
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AiQo", category: "MemoryStore")
     private var container: ModelContainer?
     private var context: ModelContext?
+    private var storageMode: StorageMode = .legacyV3
     private var promptContextCache: [Int: String] = [:]
     private var cloudSafeContextCache: [Int: String] = [:]
     private var persistedMessageWriteCount = 0
@@ -18,152 +36,195 @@ final class MemoryStore {
         AccessManager.shared.captainMemoryLimit
     }
 
-    /// هل ذاكرة الكابتن مفعّلة
     var isEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: "captain_memory_enabled") }
         set { UserDefaults.standard.set(newValue, forKey: "captain_memory_enabled") }
     }
 
     private init() {
-        // isEnabled defaults to true on first launch
         if UserDefaults.standard.object(forKey: "captain_memory_enabled") == nil {
             UserDefaults.standard.set(true, forKey: "captain_memory_enabled")
         }
     }
 
-    /// ربط الـ ModelContainer — يُستدعى من نقطة الدخول
-    func configure(container: ModelContainer) {
+    func configure(container: ModelContainer, storageMode: StorageMode) {
         self.container = container
         self.context = ModelContext(container)
+        self.storageMode = storageMode
         invalidateMemoryContextCaches()
         persistedMessageWriteCount = 0
     }
 
-    // MARK: - CRUD
-
-    /// حفظ أو تحديث ذاكرة
     func set(_ key: String, value: String, category: String, source: String, confidence: Double = 0.7) {
         guard isEnabled, let context else { return }
 
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.key == key }
-            )
-            let existing = try context.fetch(descriptor)
-
-            if let memory = existing.first {
-                memory.value = value
-                memory.updatedAt = Date()
-                memory.confidence = min(memory.confidence + 0.05, 1.0)
-                if memory.source != "user_explicit" || source == "user_explicit" {
-                    memory.source = source
-                }
-            } else {
-                // تحقق من الحد الأقصى
-                let countDescriptor = FetchDescriptor<CaptainMemory>()
-                let count = (try? context.fetchCount(countDescriptor)) ?? 0
-                if count >= maxMemories {
-                    removeLowestConfidence()
-                }
-
-                let memory = CaptainMemory(
-                    key: key,
-                    value: value,
-                    category: category,
-                    source: source,
-                    confidence: confidence
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let descriptor = FetchDescriptor<CaptainMemory>(
+                    predicate: #Predicate { $0.key == key }
                 )
-                context.insert(memory)
-            }
+                let existing = try context.fetch(descriptor)
 
-            try context.save()
-            invalidateMemoryContextCaches()
-        } catch {
-            logger.error("memory_store_set_error key=\(key) error=\(error.localizedDescription)")
+                if let memory = existing.first {
+                    memory.value = value
+                    memory.updatedAt = Date()
+                    memory.confidence = min(memory.confidence + 0.05, 1)
+                    if memory.source != "user_explicit" || source == "user_explicit" {
+                        memory.source = source
+                    }
+                } else {
+                    let count = try context.fetchCount(FetchDescriptor<CaptainMemory>())
+                    if count >= maxMemories {
+                        removeLowestConfidence()
+                    }
+
+                    let memory = CaptainMemory(
+                        key: key,
+                        value: value,
+                        category: category,
+                        source: source,
+                        confidence: confidence
+                    )
+                    context.insert(memory)
+                }
+
+                try context.save()
+                invalidateMemoryContextCaches()
+            } catch {
+                logger.error("memory_store_set_error key=\(key) error=\(error.localizedDescription)")
+            }
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<SemanticFact>(
+                    predicate: #Predicate { $0.storageKey == key }
+                )
+                let existing = try context.fetch(descriptor)
+
+                if let fact = existing.first {
+                    fact.content = value
+                    fact.categoryRaw = category
+                    fact.lastConfirmedAt = Date()
+                    fact.confidence = min(fact.confidence + 0.05, 1)
+                    fact.salience = max(fact.salience, confidence)
+                    fact.mentionCount += 1
+                    fact.isPII = fact.isPII || Self.isPII(key: key, category: category)
+                    fact.isSensitive = fact.isSensitive || Self.isSensitive(category: category)
+                    if fact.sourceRaw != "user_explicit" || source == "user_explicit" {
+                        fact.sourceRaw = source
+                    }
+                } else {
+                    let count = try context.fetchCount(FetchDescriptor<SemanticFact>())
+                    if count >= maxMemories {
+                        removeLowestConfidence()
+                    }
+
+                    let fact = SemanticFact(
+                        storageKey: key,
+                        content: value,
+                        category: Self.factCategory(for: category),
+                        categoryRawOverride: category,
+                        confidence: confidence,
+                        salience: 0.5,
+                        source: Self.factSource(for: source),
+                        sourceRawOverride: source,
+                        firstMentionedAt: Date(),
+                        mentionCount: 1,
+                        referenceCount: 0,
+                        isPII: Self.isPII(key: key, category: category),
+                        isSensitive: Self.isSensitive(category: category)
+                    )
+                    context.insert(fact)
+                }
+
+                try context.save()
+                invalidateMemoryContextCaches()
+            } catch {
+                logger.error("memory_store_set_v4_error key=\(key) error=\(error.localizedDescription)")
+            }
         }
     }
 
-    /// استرجاع قيمة بالمفتاح
     func get(_ key: String) -> String? {
         guard let context else { return nil }
 
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.key == key }
-            )
-            return try context.fetch(descriptor).first?.value
-        } catch {
-            logger.error("memory_store_get_error key=\(key) error=\(error.localizedDescription)")
-            return nil
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let descriptor = FetchDescriptor<CaptainMemory>(
+                    predicate: #Predicate { $0.key == key }
+                )
+                return try context.fetch(descriptor).first?.value
+            } catch {
+                logger.error("memory_store_get_error key=\(key) error=\(error.localizedDescription)")
+                return nil
+            }
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<SemanticFact>(
+                    predicate: #Predicate { $0.storageKey == key }
+                )
+                return try context.fetch(descriptor).first?.content
+            } catch {
+                logger.error("memory_store_get_v4_error key=\(key) error=\(error.localizedDescription)")
+                return nil
+            }
         }
     }
 
-    /// استرجاع كل الذكريات بتصنيف معين
-    func getByCategory(_ category: String) -> [CaptainMemory] {
-        guard let context else { return [] }
-
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.category == category },
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            return try context.fetch(descriptor)
-        } catch {
-            logger.error("memory_store_category_error category=\(category) error=\(error.localizedDescription)")
-            return []
-        }
+    func getByCategory(_ category: String) -> [CaptainMemorySnapshot] {
+        let records = (try? fetchAllMemoryRecords()) ?? []
+        return records
+            .filter { $0.category == category }
+            .sorted { lhs, rhs in
+                if lhs.updatedAt == rhs.updatedAt {
+                    return lhs.key < rhs.key
+                }
+                return lhs.updatedAt > rhs.updatedAt
+            }
+            .map(snapshot(from:))
     }
 
-    /// كل الذكريات مرتبة بالتصنيف
-    func allMemories() -> [CaptainMemory] {
-        guard let context else { return [] }
-
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                sortBy: [SortDescriptor(\.category), SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            return try context.fetch(descriptor)
-        } catch {
-            logger.error("memory_store_all_error error=\(error.localizedDescription)")
-            return []
-        }
+    func allMemories() -> [CaptainMemorySnapshot] {
+        let records = (try? fetchAllMemoryRecords()) ?? []
+        return records
+            .sorted { lhs, rhs in
+                if lhs.category == rhs.category {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.category < rhs.category
+            }
+            .map(snapshot(from:))
     }
 
-    /// يرجّع الذكريات الأكثر صلة برسالة المستخدم الحالية بدل ضخ كل الذاكرة دفعة وحدة
     func retrieveRelevantMemories(
         for message: String,
         screenContext: ScreenContext,
         limit: Int = 8,
         allowedCategories: Set<String>? = nil
     ) -> [CaptainMemorySnapshot] {
-        guard isEnabled, let context else { return [] }
+        guard isEnabled else { return [] }
 
         let intent = CaptainMessageIntent.detect(message: message, screenContext: screenContext)
         let messageTokens = CaptainCognitiveTextAnalyzer.tokens(from: message)
 
         do {
-            // Cap the fetch + ranking cost. Recency already dominates relevance for chat —
-            // unbounded fetches were blocking MainActor for seconds on large memory stores.
-            var descriptor = FetchDescriptor<CaptainMemory>(
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            descriptor.fetchLimit = 100
-            let memories = try context.fetch(descriptor)
-            let filtered = memories.filter { memory in
-                guard let allowedCategories else { return true }
-                return allowedCategories.contains(memory.category)
-            }
+            let filtered = try fetchAllMemoryRecords()
+                .filter { record in
+                    guard let allowedCategories else { return true }
+                    return allowedCategories.contains(record.category)
+                }
 
             let ranked = filtered
-                .compactMap { memory -> (CaptainMemory, Double)? in
+                .compactMap { record -> (MemoryRecord, Double)? in
                     let score = relevanceScore(
-                        for: memory,
+                        for: record,
                         messageTokens: messageTokens,
                         intent: intent,
                         screenContext: screenContext
                     )
                     guard score > 0 else { return nil }
-                    return (memory, score)
+                    return (record, score)
                 }
                 .sorted { lhs, rhs in
                     if lhs.1 == rhs.1 {
@@ -175,16 +236,9 @@ final class MemoryStore {
             let selected = Array(ranked.prefix(limit))
             guard !selected.isEmpty else { return [] }
 
-            // Bump accessCount in-place; defer the SwiftData save so the UI is not blocked
-            // by disk I/O on every send.
-            selected.forEach { item in
-                item.0.accessCount += 1
-            }
-            Task { @MainActor in
-                try? context.save()
-            }
+            bumpAccessCounts(for: selected.map(\.0.id))
 
-            return selected.map { CaptainMemorySnapshot(memory: $0.0) }
+            return selected.map { snapshot(from: $0.0) }
         } catch {
             logger.error("memory_store_relevant_error error=\(error.localizedDescription)")
             return []
@@ -220,34 +274,30 @@ final class MemoryStore {
         return lines.joined(separator: "\n")
     }
 
-    /// بناء سياق الذكريات للـ system prompt
     func buildPromptContext(maxTokens: Int = 800) -> String {
-        guard isEnabled, let context else { return "" }
+        guard isEnabled else { return "" }
         if let cached = promptContextCache[maxTokens] {
             return cached
         }
 
         do {
-            // جيب مشاريع نشطة أولاً (عددها قليل دايماً)
-            var projectDescriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.category == "active_record_project" },
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            projectDescriptor.fetchLimit = 5
-            let projectMemories = try context.fetch(projectDescriptor)
-
-            // جيب آخر 30 ذاكرة عامة — مرتبة بالثقة + الحداثة عبر SwiftData
-            var otherDescriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.category != "active_record_project" },
-                sortBy: [SortDescriptor(\.confidence, order: .reverse), SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            otherDescriptor.fetchLimit = 30
-            let otherMemories = try context.fetch(otherDescriptor)
+            let records = try fetchAllMemoryRecords()
+            let projectRecords = records
+                .filter { $0.category == "active_record_project" }
+                .sorted { $0.updatedAt > $1.updatedAt }
+            let otherRecords = records
+                .filter { $0.category != "active_record_project" }
+                .sorted { lhs, rhs in
+                    if lhs.confidence == rhs.confidence {
+                        return lhs.updatedAt > rhs.updatedAt
+                    }
+                    return lhs.confidence > rhs.confidence
+                }
 
             var lines: [String] = []
             var estimatedTokens = 0
 
-            for memory in projectMemories + otherMemories {
+            for memory in Array(projectRecords.prefix(5)) + Array(otherRecords.prefix(30)) {
                 let line = "- \(memory.key): \(memory.value)"
                 let lineTokens = line.count / 4
                 if estimatedTokens + lineTokens > maxTokens { break }
@@ -265,9 +315,8 @@ final class MemoryStore {
         }
     }
 
-    /// Builds a privacy-safe memory context suitable for cloud (no PII, no exact measurements)
     func buildCloudSafeContext(maxTokens: Int = 400) -> String {
-        guard isEnabled, let context else { return "" }
+        guard isEnabled else { return "" }
         if let cached = cloudSafeContextCache[maxTokens] {
             return cached
         }
@@ -275,21 +324,21 @@ final class MemoryStore {
         let cloudSafeCategories: Set<String> = ["goal", "preference", "mood", "injury", "nutrition", "insight"]
 
         do {
-            var descriptor = FetchDescriptor<CaptainMemory>(
-                sortBy: [SortDescriptor(\.confidence, order: .reverse), SortDescriptor(\.updatedAt, order: .reverse)]
-            )
-            descriptor.fetchLimit = 40
-
-            let allResults = try context.fetch(descriptor)
-            let filtered = allResults.filter { cloudSafeCategories.contains($0.category) }
-            let limited = Array(filtered.prefix(15))
+            let records = try fetchAllMemoryRecords()
+                .filter { cloudSafeCategories.contains($0.category) && $0.isCloudSafe }
+                .sorted { lhs, rhs in
+                    if lhs.confidence == rhs.confidence {
+                        return lhs.updatedAt > rhs.updatedAt
+                    }
+                    return lhs.confidence > rhs.confidence
+                }
 
             var lines: [String] = []
             var budget = maxTokens
 
-            for memory in limited {
+            for memory in records.prefix(15) {
                 let line = "- \(memory.key): \(memory.value)"
-                let cost = line.count / 4
+                let cost = max(1, line.count / 4)
                 guard budget - cost > 0 else { break }
                 budget -= cost
                 lines.append(line)
@@ -304,249 +353,403 @@ final class MemoryStore {
         }
     }
 
-    /// تنظيف الذكريات القديمة واللي confidence قليل
     func removeStale(olderThan days: Int = 90, belowConfidence: Double = 0.3) {
         guard let context else { return }
 
-        do {
-            let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate {
-                    $0.updatedAt < cutoff && $0.confidence < belowConfidence && $0.category != "active_record_project"
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let descriptor = FetchDescriptor<CaptainMemory>(
+                    predicate: #Predicate {
+                        $0.updatedAt < cutoff && $0.confidence < belowConfidence && $0.category != "active_record_project"
+                    }
+                )
+                let stale = try context.fetch(descriptor)
+                for memory in stale {
+                    context.delete(memory)
                 }
-            )
-            let stale = try context.fetch(descriptor)
-            for memory in stale {
-                context.delete(memory)
+                try context.save()
+                if !stale.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+                logger.info("memory_store_cleanup removed=\(stale.count)")
+            } catch {
+                logger.error("memory_store_cleanup_error error=\(error.localizedDescription)")
             }
-            try context.save()
-            if !stale.isEmpty {
-                invalidateMemoryContextCaches()
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<SemanticFact>(
+                    predicate: #Predicate {
+                        $0.lastConfirmedAt < cutoff && $0.confidence < belowConfidence && $0.categoryRaw != "active_record_project"
+                    }
+                )
+                let stale = try context.fetch(descriptor)
+                for fact in stale {
+                    context.delete(fact)
+                }
+                try context.save()
+                if !stale.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+                logger.info("memory_store_cleanup_v4 removed=\(stale.count)")
+            } catch {
+                logger.error("memory_store_cleanup_v4_error error=\(error.localizedDescription)")
             }
-            logger.info("memory_store_cleanup removed=\(stale.count)")
-        } catch {
-            logger.error("memory_store_cleanup_error error=\(error.localizedDescription)")
         }
     }
 
-    /// حذف ذاكرة بالمفتاح
     func remove(_ key: String) {
         guard let context else { return }
 
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.key == key }
-            )
-            let results = try context.fetch(descriptor)
-            for memory in results {
-                context.delete(memory)
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let descriptor = FetchDescriptor<CaptainMemory>(
+                    predicate: #Predicate { $0.key == key }
+                )
+                let results = try context.fetch(descriptor)
+                for memory in results {
+                    context.delete(memory)
+                }
+                try context.save()
+                if !results.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+            } catch {
+                logger.error("memory_store_remove_error key=\(key) error=\(error.localizedDescription)")
             }
-            try context.save()
-            if !results.isEmpty {
-                invalidateMemoryContextCaches()
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<SemanticFact>(
+                    predicate: #Predicate { $0.storageKey == key }
+                )
+                let results = try context.fetch(descriptor)
+                for fact in results {
+                    context.delete(fact)
+                }
+                try context.save()
+                if !results.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+            } catch {
+                logger.error("memory_store_remove_v4_error key=\(key) error=\(error.localizedDescription)")
             }
-        } catch {
-            logger.error("memory_store_remove_error key=\(key) error=\(error.localizedDescription)")
         }
     }
 
-    /// مسح كل الذاكرة
     func clearAll() {
         guard let context else { return }
 
-        do {
-            let descriptor = FetchDescriptor<CaptainMemory>()
-            let all = try context.fetch(descriptor)
-            for memory in all {
-                context.delete(memory)
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let all = try context.fetch(FetchDescriptor<CaptainMemory>())
+                for memory in all {
+                    context.delete(memory)
+                }
+                try context.save()
+                if !all.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+                logger.info("memory_store_clear_all")
+            } catch {
+                logger.error("memory_store_clear_error error=\(error.localizedDescription)")
             }
-            try context.save()
-            if !all.isEmpty {
-                invalidateMemoryContextCaches()
+        case .schemaV4:
+            do {
+                let all = try context.fetch(FetchDescriptor<SemanticFact>())
+                for fact in all {
+                    context.delete(fact)
+                }
+                try context.save()
+                if !all.isEmpty {
+                    invalidateMemoryContextCaches()
+                }
+                logger.info("memory_store_clear_all_v4")
+            } catch {
+                logger.error("memory_store_clear_v4_error error=\(error.localizedDescription)")
             }
-            logger.info("memory_store_clear_all")
-        } catch {
-            logger.error("memory_store_clear_error error=\(error.localizedDescription)")
         }
     }
 
-    /// ملخص للـ debug
     func summary() -> String {
-        guard let context else { return "MemoryStore: not configured" }
-
         do {
-            let descriptor = FetchDescriptor<CaptainMemory>()
-            let count = try context.fetchCount(descriptor)
-            return "MemoryStore: \(count) memories, enabled=\(isEnabled)"
+            let count = try fetchAllMemoryRecords().count
+            return "MemoryStore: \(count) memories, enabled=\(isEnabled), mode=\(storageMode.rawValue)"
         } catch {
             return "MemoryStore: error reading count"
         }
     }
 
-    // MARK: - Chat History Persistence
-
     private static let maxPersistedMessages = 200
     private static let trimCheckInterval = 12
 
-    /// حفظ رسالة محادثة جديدة — يُستدعى فوراً عند الإرسال أو الاستقبال
     func persistMessage(_ chatMessage: ChatMessage, sessionID: UUID) {
         guard let context else { return }
-
-        // تجاهل الرسائل المؤقتة (ephemeral) والفارغة
         guard !chatMessage.isEphemeral,
               !chatMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        do {
-            context.insert(PersistentChatMessage(chatMessage: chatMessage, sessionID: sessionID))
-            try context.save()
-            persistedMessageWriteCount += 1
-            if persistedMessageWriteCount >= Self.trimCheckInterval {
-                persistedMessageWriteCount = 0
-                trimChatHistoryIfNeeded()
+        switch storageMode {
+        case .legacyV3:
+            do {
+                context.insert(PersistentChatMessage(chatMessage: chatMessage, sessionID: sessionID))
+                try context.save()
+                persistedMessageWriteCount += 1
+                if persistedMessageWriteCount >= Self.trimCheckInterval {
+                    persistedMessageWriteCount = 0
+                    trimChatHistoryIfNeeded()
+                }
+            } catch {
+                logger.error("chat_persist_error id=\(chatMessage.id) error=\(error.localizedDescription)")
             }
-        } catch {
-            logger.error("chat_persist_error id=\(chatMessage.id) error=\(error.localizedDescription)")
+        case .schemaV4:
+            do {
+                try persistMessageV4(chatMessage, sessionID: sessionID)
+                try context.save()
+                persistedMessageWriteCount += 1
+                if persistedMessageWriteCount >= Self.trimCheckInterval {
+                    persistedMessageWriteCount = 0
+                    trimChatHistoryIfNeeded()
+                }
+            } catch {
+                logger.error("chat_persist_v4_error id=\(chatMessage.id) error=\(error.localizedDescription)")
+            }
         }
     }
 
-    /// يؤجل حفظ الرسالة إلى دورة MainActor التالية حتى ما تتعطل الواجهة وقت الإرسال.
     func persistMessageAsync(_ chatMessage: ChatMessage, sessionID: UUID) {
         Task(priority: .utility) { @MainActor [chatMessage, sessionID] in
             self.persistMessage(chatMessage, sessionID: sessionID)
         }
     }
 
-    /// استرجاع رسائل جلسة محددة مرتبة من الأقدم للأحدث
     func fetchMessages(for sessionID: UUID) -> [ChatMessage] {
         guard let context else { return [] }
 
-        do {
-            let descriptor = FetchDescriptor<PersistentChatMessage>(
-                predicate: #Predicate { $0.sessionID == sessionID },
-                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
-            )
-            return try context.fetch(descriptor).map { $0.toChatMessage() }
-        } catch {
-            logger.error("chat_fetch_session_error session=\(sessionID) error=\(error.localizedDescription)")
-            return []
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let descriptor = FetchDescriptor<PersistentChatMessage>(
+                    predicate: #Predicate { $0.sessionID == sessionID },
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+                )
+                return try context.fetch(descriptor).map { $0.toChatMessage() }
+            } catch {
+                logger.error("chat_fetch_session_error session=\(sessionID) error=\(error.localizedDescription)")
+                return []
+            }
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<EpisodicEntry>(
+                    predicate: #Predicate { $0.sessionID == sessionID },
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+                )
+                let episodes = try context.fetch(descriptor)
+                return messages(from: episodes)
+            } catch {
+                logger.error("chat_fetch_session_v4_error session=\(sessionID) error=\(error.localizedDescription)")
+                return []
+            }
         }
     }
 
-    /// استرجاع كل الجلسات مرتبة من الأحدث للأقدم — خفيف على الذاكرة
     func fetchSessions() -> [ChatSession] {
         guard let context else { return [] }
 
-        do {
-            // نجيب آخر 500 رسالة بس — كافي لعرض الجلسات الأخيرة بدون ما نثقل الذاكرة
-            var descriptor = FetchDescriptor<PersistentChatMessage>(
-                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
-            )
-            descriptor.fetchLimit = 500
+        switch storageMode {
+        case .legacyV3:
+            do {
+                var descriptor = FetchDescriptor<PersistentChatMessage>(
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+                )
+                descriptor.fetchLimit = 500
+                let messages = try context.fetch(descriptor)
 
-            // بدل ما نخزن كل الـ objects، نمر عليهم مرة وحدة ونجمع metadata بس
-            struct SessionMeta {
-                var firstTimestamp: Date
-                var firstText: String
-                var firstUserText: String?
-                var count: Int
-            }
+                struct SessionMeta {
+                    var firstTimestamp: Date
+                    var firstText: String
+                    var firstUserText: String?
+                    var count: Int
+                }
 
-            var metaMap: [UUID: SessionMeta] = [:]
+                var metaMap: [UUID: SessionMeta] = [:]
 
-            // نستخدم enumeration بدل fetch عشان ما نحمّل الكل بالذاكرة
-            let messages = try context.fetch(descriptor)
-            for msg in messages {
-                if var meta = metaMap[msg.sessionID] {
-                    meta.count += 1
-                    if meta.firstUserText == nil && msg.isUser {
-                        meta.firstUserText = msg.text
+                for message in messages {
+                    if var meta = metaMap[message.sessionID] {
+                        meta.count += 1
+                        if meta.firstUserText == nil && message.isUser {
+                            meta.firstUserText = message.text
+                        }
+                        metaMap[message.sessionID] = meta
+                    } else {
+                        metaMap[message.sessionID] = SessionMeta(
+                            firstTimestamp: message.timestamp,
+                            firstText: message.text,
+                            firstUserText: message.isUser ? message.text : nil,
+                            count: 1
+                        )
                     }
-                    metaMap[msg.sessionID] = meta
-                } else {
-                    metaMap[msg.sessionID] = SessionMeta(
-                        firstTimestamp: msg.timestamp,
-                        firstText: msg.text,
-                        firstUserText: msg.isUser ? msg.text : nil,
-                        count: 1
+                }
+
+                return metaMap.compactMap { sessionID, meta in
+                    guard meta.count > 1 else { return nil }
+                    let preview = meta.firstUserText ?? meta.firstText
+                    let trimmed = preview.count > 60 ? String(preview.prefix(60)) + "…" : preview
+                    return ChatSession(
+                        id: sessionID,
+                        preview: trimmed,
+                        timestamp: meta.firstTimestamp,
+                        messageCount: meta.count
                     )
                 }
+                .sorted { $0.timestamp > $1.timestamp }
+            } catch {
+                logger.error("chat_fetch_sessions_error error=\(error.localizedDescription)")
+                return []
             }
-
-            // بناء الجلسات — نتخطى الجلسات اللي فيها رسالة وحدة بس (الترحيبية)
-            let sessions: [ChatSession] = metaMap.compactMap { sessionID, meta in
-                guard meta.count > 1 else { return nil }
-
-                let preview = meta.firstUserText ?? meta.firstText
-                let trimmed = preview.count > 60 ? String(preview.prefix(60)) + "…" : preview
-
-                return ChatSession(
-                    id: sessionID,
-                    preview: trimmed,
-                    timestamp: meta.firstTimestamp,
-                    messageCount: meta.count
+        case .schemaV4:
+            do {
+                var descriptor = FetchDescriptor<EpisodicEntry>(
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
                 )
-            }
+                descriptor.fetchLimit = 250
+                let episodes = try context.fetch(descriptor)
 
-            return sessions.sorted { $0.timestamp > $1.timestamp }
-        } catch {
-            logger.error("chat_fetch_sessions_error error=\(error.localizedDescription)")
-            return []
+                struct SessionMeta {
+                    var firstTimestamp: Date
+                    var preview: String
+                    var count: Int
+                }
+
+                var metaMap: [UUID: SessionMeta] = [:]
+
+                for episode in episodes {
+                    let messages = messages(from: [episode])
+                    guard !messages.isEmpty else { continue }
+                    let preview = messages.first(where: \.isUser)?.text ?? messages[0].text
+                    let count = messages.count
+
+                    if var meta = metaMap[episode.sessionID] {
+                        meta.count += count
+                        metaMap[episode.sessionID] = meta
+                    } else {
+                        metaMap[episode.sessionID] = SessionMeta(
+                            firstTimestamp: messages.first?.timestamp ?? episode.timestamp,
+                            preview: preview,
+                            count: count
+                        )
+                    }
+                }
+
+                return metaMap.compactMap { sessionID, meta in
+                    guard meta.count > 1 else { return nil }
+                    let trimmed = meta.preview.count > 60 ? String(meta.preview.prefix(60)) + "…" : meta.preview
+                    return ChatSession(
+                        id: sessionID,
+                        preview: trimmed,
+                        timestamp: meta.firstTimestamp,
+                        messageCount: meta.count
+                    )
+                }
+                .sorted { $0.timestamp > $1.timestamp }
+            } catch {
+                logger.error("chat_fetch_sessions_v4_error error=\(error.localizedDescription)")
+                return []
+            }
         }
     }
 
-    /// مسح كل محادثات الكابتن
     func clearChatHistory() {
         guard let context else { return }
 
-        do {
-            let descriptor = FetchDescriptor<PersistentChatMessage>()
-            let all = try context.fetch(descriptor)
-            for msg in all {
-                context.delete(msg)
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let all = try context.fetch(FetchDescriptor<PersistentChatMessage>())
+                for message in all {
+                    context.delete(message)
+                }
+                try context.save()
+                persistedMessageWriteCount = 0
+                logger.info("chat_history_cleared count=\(all.count)")
+            } catch {
+                logger.error("chat_clear_error error=\(error.localizedDescription)")
             }
-            try context.save()
-            persistedMessageWriteCount = 0
-            logger.info("chat_history_cleared count=\(all.count)")
-        } catch {
-            logger.error("chat_clear_error error=\(error.localizedDescription)")
+        case .schemaV4:
+            do {
+                let all = try context.fetch(FetchDescriptor<EpisodicEntry>())
+                for episode in all {
+                    context.delete(episode)
+                }
+                try context.save()
+                persistedMessageWriteCount = 0
+                logger.info("chat_history_cleared_v4 count=\(all.count)")
+            } catch {
+                logger.error("chat_clear_v4_error error=\(error.localizedDescription)")
+            }
         }
     }
 
-    /// حذف الرسائل القديمة إذا تجاوزنا الحد الأقصى — "Zero Digital Pollution"
     private func trimChatHistoryIfNeeded() {
         guard let context else { return }
 
-        do {
-            let countDescriptor = FetchDescriptor<PersistentChatMessage>()
-            let total = try context.fetchCount(countDescriptor)
-            guard total > Self.maxPersistedMessages else { return }
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let total = try context.fetchCount(FetchDescriptor<PersistentChatMessage>())
+                guard total > Self.maxPersistedMessages else { return }
 
-            let excess = total - Self.maxPersistedMessages
-            var oldestDescriptor = FetchDescriptor<PersistentChatMessage>(
-                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
-            )
-            oldestDescriptor.fetchLimit = excess
+                let excess = total - Self.maxPersistedMessages
+                var oldestDescriptor = FetchDescriptor<PersistentChatMessage>(
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+                )
+                oldestDescriptor.fetchLimit = excess
 
-            let toDelete = try context.fetch(oldestDescriptor)
-            for msg in toDelete {
-                context.delete(msg)
+                let toDelete = try context.fetch(oldestDescriptor)
+                for message in toDelete {
+                    context.delete(message)
+                }
+                try context.save()
+                logger.info("chat_trim removed=\(toDelete.count) total_was=\(total)")
+            } catch {
+                logger.error("chat_trim_error error=\(error.localizedDescription)")
             }
-            try context.save()
-            logger.info("chat_trim removed=\(toDelete.count) total_was=\(total)")
-        } catch {
-            logger.error("chat_trim_error error=\(error.localizedDescription)")
+        case .schemaV4:
+            do {
+                let descriptor = FetchDescriptor<EpisodicEntry>(
+                    sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+                )
+                let episodes = try context.fetch(descriptor)
+                var totalMessages = episodes.reduce(0) { $0 + messageCount(for: $1) }
+                guard totalMessages > Self.maxPersistedMessages else { return }
+
+                var toDelete: [EpisodicEntry] = []
+                for episode in episodes {
+                    guard totalMessages > Self.maxPersistedMessages else { break }
+                    totalMessages -= max(1, messageCount(for: episode))
+                    toDelete.append(episode)
+                }
+
+                for episode in toDelete {
+                    context.delete(episode)
+                }
+                try context.save()
+                logger.info("chat_trim_v4 removed=\(toDelete.count)")
+            } catch {
+                logger.error("chat_trim_v4_error error=\(error.localizedDescription)")
+            }
         }
     }
-
-    // MARK: - Private
 
     private func invalidateMemoryContextCaches() {
         promptContextCache.removeAll()
         cloudSafeContextCache.removeAll()
     }
 
-    func relevanceScore(
-        for memory: CaptainMemory,
+    private func relevanceScore(
+        for memory: MemoryRecord,
         messageTokens: Set<String>,
         intent: CaptainMessageIntent,
         screenContext: ScreenContext
@@ -561,7 +764,7 @@ final class MemoryStore {
             }
         }
 
-        var score = memory.confidence * 3.0
+        var score = memory.confidence * 3
         score += intent.retrievalCategoryWeights[memory.category] ?? 0
         score += screenMemoryWeight(for: memory.category, screenContext: screenContext)
         score += directCategoryBoost(for: memory.category, intent: intent)
@@ -578,7 +781,7 @@ final class MemoryStore {
 
         if memory.category == "active_record_project",
            (intent == .challenge || screenContext == .peaks) {
-            score += 4.0
+            score += 4
         }
 
         return score
@@ -592,15 +795,15 @@ final class MemoryStore {
         case (.sleep, "sleep"):
             return 4.5
         case (.workout, "injury"), (.recovery, "injury"):
-            return 4.0
+            return 4
         case (.workout, "goal"), (.nutrition, "goal"), (.challenge, "goal"):
             return 2.5
         case (.nutrition, "nutrition"):
-            return 4.0
+            return 4
         case (.vibe, "mood"), (.emotionalSupport, "mood"):
             return 3.5
         case (.challenge, "active_record_project"):
-            return 5.0
+            return 5
         default:
             return 0
         }
@@ -638,7 +841,7 @@ final class MemoryStore {
             return category == "mood" ? 2.8 : 0
         case .mainChat:
             switch category {
-            case "goal", "preference", "insight": return 1.0
+            case "goal", "preference", "insight": return 1
             default: return 0
             }
         }
@@ -663,7 +866,7 @@ final class MemoryStore {
         case ..<1:
             return 1.5
         case ..<7:
-            return 1.0
+            return 1
         case ..<30:
             return 0.5
         default:
@@ -674,17 +877,268 @@ final class MemoryStore {
     private func removeLowestConfidence() {
         guard let context else { return }
 
-        do {
-            var descriptor = FetchDescriptor<CaptainMemory>(
-                predicate: #Predicate { $0.category != "active_record_project" },
-                sortBy: [SortDescriptor(\.confidence)]
-            )
-            descriptor.fetchLimit = 1
-            if let lowest = try context.fetch(descriptor).first {
-                context.delete(lowest)
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let memories = try context.fetch(FetchDescriptor<CaptainMemory>())
+                if let lowest = memories
+                    .filter({ $0.category != "active_record_project" })
+                    .sorted(by: { $0.confidence < $1.confidence })
+                    .first {
+                    context.delete(lowest)
+                }
+            } catch {
+                logger.error("memory_store_remove_lowest_error error=\(error.localizedDescription)")
             }
-        } catch {
-            logger.error("memory_store_remove_lowest_error error=\(error.localizedDescription)")
+        case .schemaV4:
+            do {
+                let facts = try context.fetch(FetchDescriptor<SemanticFact>())
+                if let lowest = facts
+                    .filter({ $0.categoryRaw != "active_record_project" })
+                    .sorted(by: { $0.confidence < $1.confidence })
+                    .first {
+                    context.delete(lowest)
+                }
+            } catch {
+                logger.error("memory_store_remove_lowest_v4_error error=\(error.localizedDescription)")
+            }
         }
+    }
+
+    private func fetchAllMemoryRecords() throws -> [MemoryRecord] {
+        guard let context else { return [] }
+
+        switch storageMode {
+        case .legacyV3:
+            let memories = try context.fetch(FetchDescriptor<CaptainMemory>())
+            return memories.map {
+                MemoryRecord(
+                    id: $0.id,
+                    key: $0.key,
+                    value: $0.value,
+                    category: $0.category,
+                    confidence: $0.confidence,
+                    source: $0.source,
+                    createdAt: $0.createdAt,
+                    updatedAt: $0.updatedAt,
+                    accessCount: $0.accessCount,
+                    isCloudSafe: !Self.isPII(key: $0.key, category: $0.category) && !Self.isSensitive(category: $0.category)
+                )
+            }
+        case .schemaV4:
+            let facts = try context.fetch(FetchDescriptor<SemanticFact>())
+            return facts
+                .filter { !$0.userHidden }
+                .map {
+                    MemoryRecord(
+                        id: $0.id,
+                        key: $0.storageKey,
+                        value: $0.content,
+                        category: $0.categoryRaw,
+                        confidence: $0.confidence,
+                        source: $0.sourceRaw,
+                        createdAt: $0.firstMentionedAt,
+                        updatedAt: $0.lastConfirmedAt,
+                        accessCount: $0.referenceCount,
+                        isCloudSafe: $0.isCloudSafe
+                    )
+                }
+        }
+    }
+
+    private func snapshot(from record: MemoryRecord) -> CaptainMemorySnapshot {
+        CaptainMemorySnapshot(
+            id: record.id,
+            key: record.key,
+            value: record.value,
+            category: record.category,
+            confidence: record.confidence,
+            source: record.source,
+            updatedAt: record.updatedAt,
+            accessCount: record.accessCount
+        )
+    }
+
+    private func bumpAccessCounts(for ids: [UUID]) {
+        guard let context else { return }
+        guard !ids.isEmpty else { return }
+
+        switch storageMode {
+        case .legacyV3:
+            do {
+                let memories = try context.fetch(FetchDescriptor<CaptainMemory>())
+                let idSet = Set(ids)
+                for memory in memories where idSet.contains(memory.id) {
+                    memory.accessCount += 1
+                }
+                Task { @MainActor in
+                    try? context.save()
+                }
+            } catch {
+                logger.error("memory_store_access_bump_error error=\(error.localizedDescription)")
+            }
+        case .schemaV4:
+            do {
+                let facts = try context.fetch(FetchDescriptor<SemanticFact>())
+                let idSet = Set(ids)
+                for fact in facts where idSet.contains(fact.id) {
+                    fact.referenceCount += 1
+                    fact.lastReferencedAt = Date()
+                }
+                Task { @MainActor in
+                    try? context.save()
+                }
+            } catch {
+                logger.error("memory_store_access_bump_v4_error error=\(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func persistMessageV4(_ chatMessage: ChatMessage, sessionID: UUID) throws {
+        guard let context else { return }
+
+        if chatMessage.isUser {
+            let episode = EpisodicEntry(
+                id: chatMessage.id,
+                sessionID: sessionID,
+                timestamp: chatMessage.timestamp,
+                userMessageID: chatMessage.id,
+                userMessage: chatMessage.text,
+                captainResponse: "",
+                salienceScore: 0.5
+            )
+            context.insert(episode)
+            return
+        }
+
+        var descriptor = FetchDescriptor<EpisodicEntry>(
+            predicate: #Predicate { $0.sessionID == sessionID },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        descriptor.fetchLimit = 5
+        let candidates = try context.fetch(descriptor)
+
+        if let episode = candidates.first(where: {
+            $0.captainResponseMessageID == nil && $0.captainResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }) {
+            episode.captainResponse = chatMessage.text
+            episode.captainResponseMessageID = chatMessage.id
+            episode.captainResponseTimestamp = chatMessage.timestamp
+            episode.setCaptainSpotifyRecommendation(chatMessage.spotifyRecommendation)
+        } else {
+            let episode = EpisodicEntry(
+                id: chatMessage.id,
+                sessionID: sessionID,
+                timestamp: chatMessage.timestamp,
+                captainResponseTimestamp: chatMessage.timestamp,
+                userMessageID: UUID(),
+                captainResponseMessageID: chatMessage.id,
+                userMessage: "",
+                captainResponse: chatMessage.text,
+                captainSpotifyRecommendation: chatMessage.spotifyRecommendation,
+                salienceScore: 0.5
+            )
+            context.insert(episode)
+        }
+    }
+
+    private func messages(from episodes: [EpisodicEntry]) -> [ChatMessage] {
+        let messages = episodes.flatMap { episode -> [ChatMessage] in
+            var result: [ChatMessage] = []
+
+            let userText = episode.userMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !userText.isEmpty {
+                result.append(
+                    ChatMessage(
+                        id: episode.userMessageID,
+                        text: episode.userMessage,
+                        isUser: true,
+                        timestamp: episode.timestamp
+                    )
+                )
+            }
+
+            let captainText = episode.captainResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !captainText.isEmpty {
+                result.append(
+                    ChatMessage(
+                        id: episode.captainResponseMessageID ?? episode.id,
+                        text: episode.captainResponse,
+                        isUser: false,
+                        timestamp: episode.captainResponseTimestamp ?? episode.timestamp,
+                        spotifyRecommendation: episode.captainSpotifyRecommendation
+                    )
+                )
+            }
+
+            return result
+        }
+
+        return messages.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private func messageCount(for episode: EpisodicEntry) -> Int {
+        var count = 0
+        if !episode.userMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            count += 1
+        }
+        if !episode.captainResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            count += 1
+        }
+        return count
+    }
+
+    private static func factCategory(for rawCategory: String) -> FactCategory {
+        switch rawCategory.lowercased() {
+        case "health", "health_condition", "body", "sleep", "injury", "nutrition":
+            return .health
+        case "preference":
+            return .preference
+        case "goal", "objective", "active_record_project":
+            return .goal
+        case "relationship", "family":
+            return .relationship
+        case "work", "career":
+            return .work
+        case "habit":
+            return .habit
+        case "aspiration":
+            return .aspiration
+        case "fear":
+            return .fear
+        case "accomplishment", "insight", "workout_history":
+            return .accomplishment
+        default:
+            return .other
+        }
+    }
+
+    private static func factSource(for rawSource: String) -> FactSource {
+        switch rawSource.lowercased() {
+        case "user_explicit", "explicit":
+            return .explicit
+        case "inferred":
+            return .inferred
+        default:
+            return .extracted
+        }
+    }
+
+    private static func isPII(key: String, category: String) -> Bool {
+        let piiKeys: Set<String> = ["user_name", "weight", "height", "age"]
+        return piiKeys.contains(key.lowercased()) || category.lowercased() == "identity"
+    }
+
+    private static func isSensitive(category: String) -> Bool {
+        let sensitiveCategories: Set<String> = [
+            "health",
+            "health_condition",
+            "mental_health",
+            "medical",
+            "body",
+            "sleep",
+            "injury"
+        ]
+        return sensitiveCategories.contains(category.lowercased())
     }
 }
