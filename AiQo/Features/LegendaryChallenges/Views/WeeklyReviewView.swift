@@ -316,15 +316,17 @@ struct WeeklyReviewView: View {
     }
 
     private func sendReviewToLLM() async -> ReviewResult? {
-        guard TierGate.shared.canAccess(.weeklyInsightsNarrative) else {
-            return WeeklyReviewTemplateGenerator.generate(
-                project: project,
-                currentWeight: sanitizedNumber(currentWeight),
-                bestPerformance: sanitizedNumber(bestPerformance),
-                feedback: feedback,
-                weekRating: weekRating,
-                selectedObstacle: selectedObstacle
-            )
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.weeklyInsightsNarrative) else {
+                return WeeklyReviewTemplateGenerator.generate(
+                    project: project,
+                    currentWeight: sanitizedNumber(currentWeight),
+                    bestPerformance: sanitizedNumber(bestPerformance),
+                    feedback: feedback,
+                    weekRating: weekRating,
+                    selectedObstacle: selectedObstacle
+                )
+            }
         }
 
         let hasConsent = await MainActor.run {

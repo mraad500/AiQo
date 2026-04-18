@@ -85,7 +85,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
-            if CaptainVoiceAPI.isConfigured && TierGate.shared.canAccess(.premiumVoice) {
+            if CaptainVoiceAPI.isConfigured && (DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.premiumVoice)) {
                 do {
                     let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: sanitizedText)
                     guard !Task.isCancelled else { return }

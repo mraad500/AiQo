@@ -51,7 +51,7 @@ struct MainTabScreen: View {
 
             NavigationStack {
                 Group {
-                    if tierGate.canAccess(.captainChat) {
+                    if DevOverride.unlockAllFeatures || tierGate.canAccess(.captainChat) {
                         CaptainScreen()
                             .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
                                 CaptainChatView()

@@ -210,7 +210,9 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     /// 2. On timeout or any error, returns `false` immediately → caller falls through to AVSpeech
     /// 3. The continuation has a safety timeout so it can never leak
     private func playRemoteSpeechIfAvailable(for text: String, sequence: Int) async -> Bool {
-        guard TierGate.shared.canAccess(.premiumVoice) else { return false }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.premiumVoice) else { return false }
+        }
 
         // Check voice cache first (instant, offline)
         if let cachedAudio = await voiceCache.matchedAudio(for: text) {
@@ -292,7 +294,9 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     /// Pre-caches all common Captain Hamoudi phrases via ElevenLabs.
     /// Call this on WiFi (e.g., after first login or in background).
     func preCacheVoices() async {
-        guard TierGate.shared.canAccess(.premiumVoice) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.premiumVoice) else { return }
+        }
         guard await AICloudConsentGate.hasConsent() else { return }
         await voiceCache.preCacheAllPhrases()
     }

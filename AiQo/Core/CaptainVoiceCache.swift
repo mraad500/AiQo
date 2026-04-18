@@ -135,9 +135,12 @@ actor CaptainVoiceCache {
             return
         }
 
-        guard await TierGate.shared.canAccess(.premiumVoice) else {
-            logger.notice("voice_cache_skipped reason=tier_gated")
-            return
+        let devOverride = await MainActor.run { DevOverride.unlockAllFeatures }
+        if !devOverride {
+            guard await TierGate.shared.canAccess(.premiumVoice) else {
+                logger.notice("voice_cache_skipped reason=tier_gated")
+                return
+            }
         }
 
         guard await CaptainVoiceAPI.isConfigured else {

@@ -315,7 +315,9 @@ struct SmartFridgeScannerView: View {
         guard !items.isEmpty else { return }
 
         kitchenStore.addFridgeItems(items)
-        guard TierGate.shared.canAccess(.photoAnalysis) else { return }
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.photoAnalysis) else { return }
+        }
 
         let stamp = Date()
         for item in items {

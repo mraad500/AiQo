@@ -412,9 +412,11 @@ private extension MealPlanView {
     func generatePlan() {
         guard !isGenerating else { return }
         let weeks = max(1, Int(ceil(Double(max(selectedDays, 1)) / 7.0)))
-        guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
-            showPaywall = true
-            return
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
+                showPaywall = true
+                return
+            }
         }
         guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else { return }
 

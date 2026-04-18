@@ -16,8 +16,10 @@ struct KitchenPlanGenerationService {
     ) async throws -> KitchenMealPlan {
         let normalizedDays = days == 7 ? 7 : 3
         let weeks = max(1, Int(ceil(Double(normalizedDays) / 7.0)))
-        guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
-            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .multiWeekPlan(weeks: weeks)))
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .multiWeekPlan(weeks: weeks)))
+            }
         }
 
         let prefersArabic = KitchenLanguageRouter.route(for: triggerText) == .arabicGPT
