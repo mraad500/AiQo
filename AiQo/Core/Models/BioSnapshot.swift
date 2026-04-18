@@ -1,6 +1,6 @@
 import Foundation
 
-struct BioSnapshot: Codable, Hashable {
+struct BioSnapshot: Codable, Hashable, Sendable {
     let timestamp: Date
     let stepsBucketed: Int
     let heartRateBucketed: Int?
@@ -11,7 +11,7 @@ struct BioSnapshot: Codable, Hashable {
     let dayOfWeek: Int
     let isFasting: Bool
 
-    enum TimeOfDay: String, Codable {
+    enum TimeOfDay: String, Codable, Sendable {
         case dawn
         case morning
         case midday
@@ -22,14 +22,14 @@ struct BioSnapshot: Codable, Hashable {
     }
 }
 
-struct EmotionalSnapshot: Codable, Hashable {
+struct EmotionalSnapshot: Codable, Hashable, Sendable {
     let primaryMood: EmotionKind?
     let intensity: Double
     let confidence: Double
     let signals: [MoodSignalSummary]
 }
 
-struct MoodSignalSummary: Codable, Hashable {
+struct MoodSignalSummary: Codable, Hashable, Sendable {
     let kind: String
     let value: Double
 }

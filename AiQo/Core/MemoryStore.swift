@@ -61,6 +61,7 @@ final class MemoryStore {
         switch storageMode {
         case .legacyV3:
             do {
+                var persistedConfidence = confidence
                 let descriptor = FetchDescriptor<CaptainMemory>(
                     predicate: #Predicate { $0.key == key }
                 )
@@ -70,6 +71,7 @@ final class MemoryStore {
                     memory.value = value
                     memory.updatedAt = Date()
                     memory.confidence = min(memory.confidence + 0.05, 1)
+                    persistedConfidence = memory.confidence
                     if memory.source != "user_explicit" || source == "user_explicit" {
                         memory.source = source
                     }
@@ -91,11 +93,22 @@ final class MemoryStore {
 
                 try context.save()
                 invalidateMemoryContextCaches()
+                shadowWriteSemanticFact(
+                    key: key,
+                    value: value,
+                    category: category,
+                    source: source,
+                    confidence: persistedConfidence,
+                    salience: max(0.5, persistedConfidence),
+                    storageMode: .legacyV3
+                )
             } catch {
                 logger.error("memory_store_set_error key=\(key) error=\(error.localizedDescription)")
             }
         case .schemaV4:
             do {
+                var persistedConfidence = confidence
+                var persistedSalience = 0.5
                 let descriptor = FetchDescriptor<SemanticFact>(
                     predicate: #Predicate { $0.storageKey == key }
                 )
@@ -110,6 +123,8 @@ final class MemoryStore {
                     fact.mentionCount += 1
                     fact.isPII = fact.isPII || Self.isPII(key: key, category: category)
                     fact.isSensitive = fact.isSensitive || Self.isSensitive(category: category)
+                    persistedConfidence = fact.confidence
+                    persistedSalience = fact.salience
                     if fact.sourceRaw != "user_explicit" || source == "user_explicit" {
                         fact.sourceRaw = source
                     }
@@ -135,10 +150,21 @@ final class MemoryStore {
                         isSensitive: Self.isSensitive(category: category)
                     )
                     context.insert(fact)
+                    persistedConfidence = fact.confidence
+                    persistedSalience = fact.salience
                 }
 
                 try context.save()
                 invalidateMemoryContextCaches()
+                shadowWriteSemanticFact(
+                    key: key,
+                    value: value,
+                    category: category,
+                    source: source,
+                    confidence: persistedConfidence,
+                    salience: persistedSalience,
+                    storageMode: .schemaV4
+                )
             } catch {
                 logger.error("memory_store_set_v4_error key=\(key) error=\(error.localizedDescription)")
             }
@@ -375,6 +401,7 @@ final class MemoryStore {
                     invalidateMemoryContextCaches()
                 }
                 logger.info("memory_store_cleanup removed=\(stale.count)")
+                shadowPruneSemanticFacts(olderThan: cutoff, belowConfidence: belowConfidence)
             } catch {
                 logger.error("memory_store_cleanup_error error=\(error.localizedDescription)")
             }
@@ -394,6 +421,7 @@ final class MemoryStore {
                     invalidateMemoryContextCaches()
                 }
                 logger.info("memory_store_cleanup_v4 removed=\(stale.count)")
+                shadowPruneSemanticFacts(olderThan: cutoff, belowConfidence: belowConfidence)
             } catch {
                 logger.error("memory_store_cleanup_v4_error error=\(error.localizedDescription)")
             }
@@ -417,6 +445,7 @@ final class MemoryStore {
                 if !results.isEmpty {
                     invalidateMemoryContextCaches()
                 }
+                shadowRemoveSemanticFact(key)
             } catch {
                 logger.error("memory_store_remove_error key=\(key) error=\(error.localizedDescription)")
             }
@@ -433,6 +462,7 @@ final class MemoryStore {
                 if !results.isEmpty {
                     invalidateMemoryContextCaches()
                 }
+                shadowRemoveSemanticFact(key)
             } catch {
                 logger.error("memory_store_remove_v4_error key=\(key) error=\(error.localizedDescription)")
             }
@@ -454,6 +484,7 @@ final class MemoryStore {
                     invalidateMemoryContextCaches()
                 }
                 logger.info("memory_store_clear_all")
+                shadowClearSemanticFacts()
             } catch {
                 logger.error("memory_store_clear_error error=\(error.localizedDescription)")
             }
@@ -468,6 +499,7 @@ final class MemoryStore {
                     invalidateMemoryContextCaches()
                 }
                 logger.info("memory_store_clear_all_v4")
+                shadowClearSemanticFacts()
             } catch {
                 logger.error("memory_store_clear_v4_error error=\(error.localizedDescription)")
             }
@@ -501,6 +533,7 @@ final class MemoryStore {
                     persistedMessageWriteCount = 0
                     trimChatHistoryIfNeeded()
                 }
+                shadowRecordEpisode(from: chatMessage, sessionID: sessionID)
             } catch {
                 logger.error("chat_persist_error id=\(chatMessage.id) error=\(error.localizedDescription)")
             }
@@ -513,6 +546,7 @@ final class MemoryStore {
                     persistedMessageWriteCount = 0
                     trimChatHistoryIfNeeded()
                 }
+                shadowRecordEpisode(from: chatMessage, sessionID: sessionID)
             } catch {
                 logger.error("chat_persist_v4_error id=\(chatMessage.id) error=\(error.localizedDescription)")
             }
@@ -1140,5 +1174,139 @@ final class MemoryStore {
             "injury"
         ]
         return sensitiveCategories.contains(category.lowercased())
+    }
+
+    // MARK: - Shadow Writes
+
+    private func shadowWriteSemanticFact(
+        key: String,
+        value: String,
+        category: String,
+        source: String,
+        confidence: Double,
+        salience: Double,
+        storageMode: StorageMode
+    ) {
+        guard FeatureFlags.memoryV4Enabled.value else { return }
+
+        let factCategory = Self.factCategory(for: category)
+        let factSource = Self.factSource(for: source)
+        let isPII = Self.isPII(key: key, category: category)
+        let isSensitive = Self.isSensitive(category: category)
+
+        Task(priority: .utility) {
+            _ = await SemanticStore.shared.syncFact(
+                storageKey: key,
+                content: value,
+                category: factCategory,
+                rawCategory: category,
+                confidence: confidence,
+                salience: salience,
+                source: factSource,
+                rawSource: source,
+                isPII: isPII,
+                isSensitive: isSensitive,
+                incrementMentionCount: storageMode == .legacyV3
+            )
+        }
+    }
+
+    private func shadowRemoveSemanticFact(_ key: String) {
+        guard FeatureFlags.memoryV4Enabled.value else { return }
+
+        Task(priority: .utility) {
+            await SemanticStore.shared.delete(storageKey: key)
+        }
+    }
+
+    private func shadowClearSemanticFacts() {
+        guard FeatureFlags.memoryV4Enabled.value else { return }
+
+        Task(priority: .utility) {
+            await SemanticStore.shared.deleteAll()
+        }
+    }
+
+    private func shadowPruneSemanticFacts(olderThan cutoff: Date, belowConfidence threshold: Double) {
+        guard FeatureFlags.memoryV4Enabled.value else { return }
+
+        Task(priority: .utility) {
+            _ = await SemanticStore.shared.pruneStale(
+                olderThan: cutoff,
+                belowConfidence: threshold
+            )
+        }
+    }
+
+    private func shadowRecordEpisode(from chatMessage: ChatMessage, sessionID: UUID) {
+        guard FeatureFlags.memoryV4Enabled.value else { return }
+
+        Task(priority: .utility) {
+            let snapshots = await currentShadowSnapshots(for: chatMessage)
+            _ = await EpisodicStore.shared.record(
+                message: chatMessage,
+                sessionID: sessionID,
+                bioContext: snapshots.bio,
+                emotionalContext: snapshots.emotional
+            )
+        }
+    }
+
+    private func currentShadowSnapshots(for chatMessage: ChatMessage) async -> (bio: BioSnapshot?, emotional: EmotionalSnapshot?) {
+        let context = await CaptainContextBuilder.shared.buildContextData()
+        let bio = BioSnapshot(
+            timestamp: chatMessage.timestamp,
+            stepsBucketed: max(0, context.steps),
+            heartRateBucketed: context.heartRate,
+            hrvBucketed: nil,
+            sleepHoursBucketed: context.sleepHours > 0 ? context.sleepHours : nil,
+            caloriesBucketed: max(0, context.calories),
+            timeOfDay: Self.bioSnapshotTimeOfDay(from: context.bioPhase),
+            dayOfWeek: Calendar.current.component(.weekday, from: chatMessage.timestamp),
+            isFasting: false
+        )
+
+        guard let emotionalState = context.emotionalState else {
+            return (bio, nil)
+        }
+
+        let emotional = EmotionalSnapshot(
+            primaryMood: Self.emotionKind(for: emotionalState.estimatedMood),
+            intensity: min(1, max(0.2, Double(emotionalState.signals.count) * 0.18)),
+            confidence: emotionalState.confidence,
+            signals: emotionalState.signals.map { MoodSignalSummary(kind: $0, value: 1) }
+        )
+
+        return (bio, emotional)
+    }
+
+    private static func bioSnapshotTimeOfDay(from phase: BioTimePhase) -> BioSnapshot.TimeOfDay {
+        switch phase {
+        case .awakening:
+            return .morning
+        case .energy:
+            return .midday
+        case .focus:
+            return .afternoon
+        case .recovery:
+            return .evening
+        case .zen:
+            return .night
+        }
+    }
+
+    private static func emotionKind(for mood: EstimatedMood) -> EmotionKind {
+        switch mood {
+        case .highEnergy:
+            return .joy
+        case .neutral:
+            return .peace
+        case .lowEnergy:
+            return .contentment
+        case .stressed:
+            return .anxiety
+        case .recovering:
+            return .hope
+        }
     }
 }

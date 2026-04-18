@@ -19,6 +19,13 @@ struct AiQoApp: App {
 
         // ربط الـ stores بالـ container
         MemoryStore.shared.configure(container: captainContainer, storageMode: Self.captainStorageMode)
+        if FeatureFlags.memoryV4Enabled.value {
+            let v4Container = captainContainer
+            Task {
+                await EpisodicStore.shared.configure(container: v4Container)
+                await SemanticStore.shared.configure(container: v4Container)
+            }
+        }
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
         WeeklyMetricsBufferStore.shared.configure(container: captainContainer)

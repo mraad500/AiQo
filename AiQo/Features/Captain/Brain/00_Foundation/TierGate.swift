@@ -85,4 +85,16 @@ final class TierGate {
         )
         return allowed
     }
+
+    func memoryFactLimit() async -> Int {
+        await MainActor.run {
+            AccessManager.shared.captainMemoryLimit
+        }
+    }
+
+    func cappedMemoryFetchLimit(requested: Int, fallback: Int) async -> Int {
+        let normalized = requested > 0 ? requested : fallback
+        let tierLimit = await memoryFactLimit()
+        return max(1, min(normalized, tierLimit))
+    }
 }

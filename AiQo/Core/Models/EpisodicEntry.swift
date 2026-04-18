@@ -102,6 +102,14 @@ final class EpisodicEntry {
         extractedEmotionIdsJSON = try? JSONEncoder().encode(ids)
     }
 
+    func setEmotionalContext(_ snapshot: EmotionalSnapshot?) {
+        emotionalContextJSON = snapshot.flatMap { try? JSONEncoder().encode($0) }
+    }
+
+    func setBioContext(_ snapshot: BioSnapshot?) {
+        bioContextJSON = snapshot.flatMap { try? JSONEncoder().encode($0) }
+    }
+
     func setCaptainSpotifyRecommendation(_ recommendation: SpotifyRecommendation?) {
         captainSpotifyRecommendationData = recommendation.flatMap { try? JSONEncoder().encode($0) }
     }

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum FactCategory: String, Codable, CaseIterable {
+enum FactCategory: String, Codable, CaseIterable, Sendable {
     case health
     case preference
     case goal
@@ -14,7 +14,7 @@ enum FactCategory: String, Codable, CaseIterable {
     case other
 }
 
-enum FactSource: String, Codable {
+enum FactSource: String, Codable, Sendable {
     case extracted
     case explicit
     case inferred
