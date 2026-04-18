@@ -11,6 +11,8 @@
 2. `3684a5e` — BATCH 3b: BioStateEngine unified HealthKit read API with freshness cache
 3. `8b8e29e` — BATCH 3c: BehavioralObserver + ContextSensor + nightly BGTask for emotion/pattern mining
 4. `6f9281a` — BATCH 3d: HealthKit/Music/Weather bridges as typed Brain/ adapters
+5. `93b16fd` — BATCH 3: result report
+6. `c0435a0` — BATCH 3 fixup: swap BioStateEngine to injectable `fetchMetrics` closure (so simulator tests don't hang on HealthKit authorization)
 
 ---
 
@@ -182,10 +184,26 @@ No TODO comments added — stubs simply return `nil` so callers can type-check a
 
 ### Total test count added
 
-**19 new tests** across four files:
-- `BioStateEngineTests.swift` — 6
-- `BehavioralObserverTests.swift` — 8 (3 test classes)
+**21 new tests** across four files (all passing in `iPhone 17 Pro` simulator, serial execution):
+- `BioStateEngineTests.swift` — 8 (all 8 pass with mocked `fetchMetrics`)
+- `BehavioralObserverTests.swift` — 8 across three classes (4 observer + 1 sensor + 3 coordinator)
 - `BridgesTests.swift` — 5
+
+### Full test run (BATCH 3 + existing memory regressions)
+
+```
+BackgroundCoordinatorTests     3/3 passed in 0.001s
+BehavioralObserverTests        4/4 passed in 0.011s
+BioStateEngineTests            8/8 passed in 0.023s
+BridgesTests                   5/5 passed in 0.002s
+ContextSensorTests             1/1 passed in 0.000s
+EpisodicStoreTests             4/4 passed in 0.073s   (regression)
+FactExtractorTests             7/7 passed in 0.855s   (regression)
+MemoryRetrieverTests           5/5 passed in 0.035s   (regression)
+SemanticStoreTests             4/4 passed in 0.026s   (regression)
+                              ------
+                              41/41 passed, 0 failures
+```
 
 ### Cloud-call audit
 
