@@ -111,6 +111,13 @@ extension SpotifyVibeManager {
         }
     }
 
+    /// Queues a track URI after the currently playing one.
+    /// Used by the HamoudiDJ queue to line up the next picks.
+    func enqueueTrack(uri: String) {
+        guard isConnected, let playerAPI = appRemote.playerAPI else { return }
+        playerAPI.enqueueTrackUri(uri, callback: { _, _ in })
+    }
+
     func skipNext() {
         guard appRemote.isConnected else {
             reportError("Connect Spotify before skipping tracks.", code: "spotify_disconnected")
@@ -366,7 +373,22 @@ extension SpotifyVibeManager: SPTAppRemoteDelegate {
         }
 
         connectionRetryCount = 0
-        log("All connection retries exhausted. Starting fresh authentication...")
+
+        // If the SDK session is still valid, the App Remote transport
+        // failing is a transient Spotify-app issue (app suspended, stuck,
+        // URL scheme denied by iOS). Forcing fresh auth here opens a new
+        // ASWebAuth session that often also fails, and the user sees a
+        // confusing error. Surface a retriable error instead and let the
+        // user act (force-quit Spotify, try again) or the next foreground
+        // cycle retry organically.
+        if let session = sessionManager.session, !session.isExpired {
+            log("App Remote exhausted retries but SDK session is valid — Spotify app likely unresponsive.")
+            let mapped = SpotifyAuthError.generic
+            reportError(mapped.localizedMessage, code: "spotify_app_unresponsive")
+            return
+        }
+
+        log("App Remote exhausted retries and no valid SDK session. Starting fresh authentication...")
         sessionManager.initiateSession(with: scopes, options: .default, campaign: nil)
     }
 
@@ -390,12 +412,11 @@ extension SpotifyVibeManager: SPTAppRemotePlayerStateDelegate {
         updatePlayerState(from: playerState)
 
         let trackURI = playerState.track.uri
-        if let source = resolveBlendSource(for: trackURI) {
-            DispatchQueue.main.async { [weak self] in
-                self?.currentBlendSource = source
-            }
-        }
-
+        NotificationCenter.default.post(
+            name: .spotifyPlayerTrackChanged,
+            object: nil,
+            userInfo: ["uri": trackURI]
+        )
         log("Player state updated. Track URI: \(trackURI)")
     }
 }

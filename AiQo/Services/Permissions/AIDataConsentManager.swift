@@ -19,6 +19,8 @@ final class AIDataConsentManager: ObservableObject {
     private enum Keys {
         static let accepted = "aiqo.aiDataConsent.accepted"
         static let acceptedAt = "aiqo.aiDataConsent.acceptedAt"
+        static let decisionDate = "aiqo.aiDataConsent.decisionDate"
+        static let offlineModeChosen = "aiqo.aiDataConsent.offlineModeChosen"
         static let legacyAccepted = "aiqo.ai_data_consent.granted"
         static let legacyAcceptedAt = "aiqo.ai_data_consent.date"
     }
@@ -71,9 +73,23 @@ final class AIDataConsentManager: ObservableObject {
     func revokeConsent() {
         defaults.set(false, forKey: Keys.accepted)
         defaults.removeObject(forKey: Keys.acceptedAt)
+        defaults.set(true, forKey: Keys.offlineModeChosen)
         hasUserConsented = false
         acceptedAt = nil
         isPresentingConsentSheet = false
+    }
+
+    func declineAndUseOffline() {
+        defaults.set(false, forKey: Keys.accepted)
+        defaults.set(Date().timeIntervalSince1970, forKey: Keys.decisionDate)
+        defaults.set(true, forKey: Keys.offlineModeChosen)
+        hasUserConsented = false
+        acceptedAt = nil
+        isPresentingConsentSheet = false
+    }
+
+    var isInOfflineOnlyMode: Bool {
+        defaults.bool(forKey: Keys.offlineModeChosen) && !hasUserConsented
     }
 
     private static func migrateLegacyKeysIfNeeded(defaults: UserDefaults) {

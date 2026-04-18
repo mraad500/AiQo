@@ -187,7 +187,10 @@ final class ConversationThreadManager {
             metadata: metadataJSON
         )
         modelContext.insert(entry)
-        try? modelContext.save()
+        // Defer the disk save so the caller (often mid-send) is not blocked by fsync.
+        Task { @MainActor in
+            try? modelContext.save()
+        }
     }
 
     private func localizeType(_ rawType: String) -> String {

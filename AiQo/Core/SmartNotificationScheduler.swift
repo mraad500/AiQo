@@ -725,7 +725,8 @@ final class SmartNotificationScheduler {
 
         let translated = try await middlewareTranslator.translate(
             payload,
-            systemPrompt: translationSystemPrompt
+            systemPrompt: translationSystemPrompt,
+            knownUserName: smartNotificationCurrentUserFirstName()
         )
 
         let normalizedTranslation = translated.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -944,4 +945,13 @@ final class SmartNotificationScheduler {
             currentTime: Date()
         )
     }
+}
+
+private func smartNotificationCurrentUserFirstName() -> String? {
+    let raw = UserProfileStore.shared.current.name
+        .components(separatedBy: " ")
+        .first?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let raw, !raw.isEmpty else { return nil }
+    return raw
 }

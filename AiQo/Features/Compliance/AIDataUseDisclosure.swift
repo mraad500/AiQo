@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AIDataUseDisclosureView: View {
+struct AIDataUseDisclosureRows: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             disclosureRow(
@@ -33,15 +33,6 @@ struct AIDataUseDisclosureView: View {
                 detailKey: "ai.consent.control.detail"
             )
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-        )
     }
 
     private func disclosureRow(
@@ -70,9 +61,25 @@ struct AIDataUseDisclosureView: View {
     }
 }
 
+struct AIDataUseDisclosureView: View {
+    var body: some View {
+        AIDataUseDisclosureRows()
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            )
+    }
+}
+
 struct AIDataPrivacySettingsView: View {
     @ObservedObject private var consentManager = AIDataConsentManager.shared
     @State private var showPrivacyPolicy = false
+    @State private var showingRevokeConfirmation = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -83,7 +90,7 @@ struct AIDataPrivacySettingsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Button {
                         if consentManager.hasUserConsented {
-                            consentManager.revokeConsent()
+                            showingRevokeConfirmation = true
                         } else {
                             consentManager.presentDisclosure()
                         }
@@ -103,6 +110,24 @@ struct AIDataPrivacySettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .confirmationDialog(
+                        NSLocalizedString("ai.settings.revoke.confirm.title", comment: ""),
+                        isPresented: $showingRevokeConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(
+                            NSLocalizedString("ai.settings.revoke", comment: ""),
+                            role: .destructive
+                        ) {
+                            consentManager.revokeConsent()
+                        }
+                        Button(
+                            NSLocalizedString("settings.cancel", comment: ""),
+                            role: .cancel
+                        ) {}
+                    } message: {
+                        Text(NSLocalizedString("ai.settings.revoke.confirm.message", comment: ""))
+                    }
 
                     Button {
                         showPrivacyPolicy = true

@@ -2758,6 +2758,61 @@
 "blend.error.rate_limited" = "Too many requests. Try again in a minute.";
 "blend.error.retry" = "Try again";
 
+/* Spotify Auth Errors (user-safe, no SDK jargon) */
+"spotify.err.notInstalled" = "Please install Spotify from the App Store to continue.";
+"spotify.err.cancelled" = "You cancelled the sign-in. Try again when you're ready.";
+"spotify.err.devMode" = "Your account isn't on the testing list yet. Contact us in-app and we'll add you within minutes.";
+"spotify.err.network" = "Weak connection. Try again on a stronger network.";
+"spotify.err.tokenExpired" = "Your session expired. Please reconnect.";
+"spotify.err.generic" = "Spotify didn't respond. Force-quit the Spotify app, reopen it, then try again.";
+
+/* Spotify Entry / Connect Card (Vibe Sheet) */
+"spotify.connect.connected" = "Spotify Connected";
+"spotify.connect.connect" = "Connect to Spotify";
+"spotify.connect.connected.sub" = "Open DJ Hamoudi playlists";
+"spotify.connect.connect.sub" = "Tap to link Spotify playback";
+"spotify.a11y.open" = "Open Spotify";
+"spotify.a11y.connect" = "Connect Spotify";
+"spotify.playlists.header" = "DJ Hamoudi's Playlists";
+"spotify.logout" = "Log out of Spotify";
+"spotify.a11y.logout" = "Log out of Spotify";
+
+/* Hamoudi+you+DJ entry button (in Vibe Spotify section) */
+"blend.entry.title" = "Hamoudi+you+DJ 🎧";
+"blend.entry.subtitle" = "Blend your taste with Hamoudi's";
+"blend.entry.a11y" = "Open Hamoudi+you+DJ blend";
+
+/* Hamoudi+you+DJ sheet — "Powered by" footer */
+"blend.footer.powered_by" = "Powered by";
+
+/* Pre-auth permission disclosure (Apple Guideline 5.1.1 transparency) */
+"blend.perm.title" = "What AiQo will access from Spotify";
+"blend.perm.tracks" = "Your top tracks";
+"blend.perm.tracks.desc" = "To learn your taste and blend it with Hamoudi's picks";
+"blend.perm.playback" = "Current playback state";
+"blend.perm.playback.desc" = "To show what's playing right now";
+"blend.perm.control" = "Playback controls";
+"blend.perm.control.desc" = "Play, pause, and skip from inside the app";
+"blend.perm.revoke" = "You can revoke access anytime from your Spotify account settings.";
+"blend.perm.privacy" = "We never send your music data to AiQo servers. Your session stays securely on your device.";
+
+/* VoiceOver labels — Vibe Sheet */
+"vibe.a11y.openSettings" = "Open vibe settings";
+"vibe.a11y.openDJChat" = "Open DJ chat";
+"vibe.a11y.done" = "Done";
+"vibe.a11y.pausePlayback" = "Pause playback";
+"vibe.a11y.resumePlayback" = "Resume playback";
+"vibe.a11y.stopPlayback" = "Stop playback";
+"vibe.a11y.whyUnavailable" = "Learn why Spotify is unavailable";
+"vibe.a11y.pauseVibe" = "Pause vibe";
+"vibe.a11y.resumeVibe" = "Resume vibe";
+"vibe.a11y.playVibe" = "Play vibe";
+"vibe.a11y.resumeAiqo" = "Resume AiQo Sounds";
+"vibe.a11y.playAiqo" = "Play AiQo Sounds";
+"vibe.a11y.playSpotify" = "Play playlist in Spotify";
+"vibe.a11y.connectSpotify" = "Connect Spotify";
+"vibe.a11y.playPlaylist" = "Play %@ playlist in Spotify";
+
 /* Health Disclaimer (Apple Guideline 1.4.1) */
 "health.disclaimer.general" = "AiQo provides general wellness and fitness guidance only. It is not a medical device and does not provide medical diagnosis, treatment, or emergency advice. Consult a qualified healthcare professional before making medical decisions.";
 "health.disclaimer.sources" = "Sources";
@@ -2793,7 +2848,27 @@
 "ai.settings.status.notAccepted" = "Cloud AI sharing is currently disabled until you approve the in-app disclosure.";
 "ai.settings.revoke" = "Revoke Consent";
 "ai.settings.reviewConsent" = "Review Consent";
+/* Revoke confirmation dialog */
+"ai.settings.revoke.confirm.title" = "Revoke AI consent?";
+"ai.settings.revoke.confirm.message" = "Cloud AI features (Captain chat, Kitchen scanner, premium voice) will stop working until you re-enable consent.";
 "settings.section.privacyAI" = "Privacy & AI Data";
 "settings.privacyAI.title" = "AI Data Use";
 "settings.privacyAI.acceptedAt" = "Consent active since %@";
 "settings.privacyAI.notAccepted" = "Review what is shared before using cloud AI features";
+
+/* Onboarding AI Consent & Medical Disclaimer (Apple Guidelines 5.1.1(i), 5.1.2(i), 1.4.1) */
+"onboarding.aiConsent.offlineOnly" = "Continue without sharing data";
+"onboarding.medical.title" = "This app is not a substitute for a doctor";
+"onboarding.medical.body" = "AiQo provides general wellness and fitness guidance. It is not a medical device and does not offer medical diagnosis, treatment, or emergency advice. Information shown in this app is for educational purposes only and is not a substitute for professional medical advice. Consult a qualified physician before starting any exercise program or making decisions about your health. If you have a medical condition, take medications, or are pregnant, consult your doctor before using this app's features. In an emergency, call your local emergency services immediately.";
+"onboarding.medical.wont.1" = "Diagnose medical conditions";
+"onboarding.medical.wont.2" = "Prescribe medications or supplements";
+"onboarding.medical.wont.3" = "Replace a medical consultation";
+"onboarding.medical.wont.4" = "Handle medical emergencies";
+"onboarding.medical.confirm" = "I read and understand";
+"onboarding.medical.continue" = "Continue";
+"onboarding.medical.settingsNote" = "You can review this notice anytime in Settings > Privacy & AI";
+
+/* Captain Offline Mode Banner */
+"captain.offlineBanner.title" = "No data sharing";
+"captain.offlineBanner.body" = "You chose not to share data with cloud AI. You can change this in Settings.";
+"captain.offlineBanner.action" = "Open Settings";

@@ -76,6 +76,7 @@ final class CaptainIntelligenceManager {
     private let healthStore: HKHealthStore
     private let calendar: Calendar
     private let session: URLSession
+    private let sanitizer = PrivacySanitizer()
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CaptainIntelligenceManager"
@@ -276,11 +277,16 @@ final class CaptainIntelligenceManager {
 
         let configuration = try arabicAPIConfiguration()
 
+        let sanitizedText = sanitizer.sanitizeText(
+            userInput,
+            knownUserName: arabicAPIUserFirstName()
+        )
+
         var request = URLRequest(url: configuration.endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(CaptainArabicAPIRequest(text: userInput))
+        request.httpBody = try JSONEncoder().encode(CaptainArabicAPIRequest(text: sanitizedText))
 
         let data: Data
         let response: URLResponse
@@ -310,6 +316,15 @@ final class CaptainIntelligenceManager {
         let reply = try decodeCaptainArabicAPIResponse(from: data)
         guard !reply.isEmpty else { throw CaptainIntelligenceError.arabicAPIEmptyResponse }
         return reply
+    }
+
+    private func arabicAPIUserFirstName() -> String? {
+        let raw = UserProfileStore.shared.current.name
+            .components(separatedBy: " ")
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let raw, !raw.isEmpty else { return nil }
+        return raw
     }
 
     private func arabicAPIConfiguration() throws -> CaptainArabicAPIConfiguration {

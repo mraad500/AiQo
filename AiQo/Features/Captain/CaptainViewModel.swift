@@ -217,6 +217,9 @@ final class CaptainViewModel: ObservableObject {
         guard !isLoading else { return }
 
         let requiresCloudConsent = context != .sleepAnalysis
+        if requiresCloudConsent, AIDataConsentManager.shared.isInOfflineOnlyMode {
+            return
+        }
         guard !requiresCloudConsent || AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else {
             return
         }
@@ -238,27 +241,34 @@ final class CaptainViewModel: ObservableObject {
         isLoading = true
         coachState = .readingMessage
         persistChatMessage(userMessage)
-        ConversationThreadManager.shared.logUserMessage(content: trimmedText)
 
         let requestID = UUID()
         activeRequestID = requestID
         let attachedImageData = Self.preparedImageData(from: image)
 
-        // Capture everything needed BEFORE leaving the MainActor.
-        // The heavy lifting (prompt building, sanitization, network call) runs on the
-        // cooperative thread pool via Task.detached — never blocking the UI.
-        let conversation = buildConversationHistory()
-        let userName = captainReplyUserName()
+        // Only the lightweight captures happen here. The heavy SwiftData fetches
+        // (memory retrieval, thread log save) are deferred into the Task so the
+        // typing bubble can render before MainActor gets busy again.
         let language = AppSettingsStore.shared.appLanguage
-        let promptContext = cognitivePipeline.buildPromptContext(
-            userMessage: trimmedText,
-            screenContext: context,
-            customization: customization,
-            preferredName: userName
-        )
 
         responseTask = Task { [weak self] in
             guard let self else { return }
+
+            // One frame for SwiftUI to render isLoading = true + typing bubble
+            // before any blocking MainActor work (SwiftData fetches, HealthKit).
+            await Task.yield()
+
+            ConversationThreadManager.shared.logUserMessage(content: trimmedText)
+
+            let conversation = self.buildConversationHistory()
+            let userName = self.captainReplyUserName()
+            let promptContext = self.cognitivePipeline.buildPromptContext(
+                userMessage: trimmedText,
+                screenContext: context,
+                customization: self.customization,
+                preferredName: userName
+            )
+
             await self.processMessage(
                 requestID: requestID,
                 screenContext: context,
@@ -406,6 +416,10 @@ final class CaptainViewModel: ObservableObject {
                 coachState = .idle
             }
         }
+
+        // Give SwiftUI a frame to render the typing indicator before any
+        // MainActor-isolated work (HealthKit reads, prompt assembly) starts.
+        await Task.yield()
 
         do {
             // Build HealthKit context (async but lightweight — just reads cached values)

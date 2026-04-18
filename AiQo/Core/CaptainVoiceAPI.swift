@@ -100,6 +100,12 @@ enum CaptainVoiceAPI {
             throw Error.missingConfiguration
         }
 
+        let sanitizedText = PrivacySanitizer().sanitizeForTTS(
+            text,
+            knownUserName: captainVoiceCurrentUserFirstName(),
+            language: AppSettingsStore.shared.appLanguage
+        )
+
         guard var components = URLComponents(
             url: configuration.apiURL.appendingPathComponent(configuration.voiceID),
             resolvingAgainstBaseURL: false
@@ -123,7 +129,7 @@ enum CaptainVoiceAPI {
         request.setValue(configuration.apiKey, forHTTPHeaderField: "xi-api-key")
         request.httpBody = try JSONEncoder().encode(
             SpeechRequest(
-                text: text,
+                text: sanitizedText,
                 modelID: configuration.modelID,
                 voiceSettings: VoiceSettings(
                     stability: 0.34,
@@ -225,4 +231,13 @@ enum CaptainVoiceAPI {
 
         return String(decoding: data, as: UTF8.self)
     }
+}
+
+private func captainVoiceCurrentUserFirstName() -> String? {
+    let raw = UserProfileStore.shared.current.name
+        .components(separatedBy: " ")
+        .first?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let raw, !raw.isEmpty else { return nil }
+    return raw
 }

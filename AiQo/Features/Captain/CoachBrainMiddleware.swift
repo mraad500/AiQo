@@ -4,7 +4,7 @@ import SwiftUI
 import Combine
 
 protocol CoachBrainTranslating: Sendable {
-    func translate(_ text: String, systemPrompt: String) async throws -> String
+    func translate(_ text: String, systemPrompt: String, knownUserName: String?) async throws -> String
 }
 
 struct CoachBrainLLMTranslator: CoachBrainTranslating {
@@ -74,10 +74,11 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
         self.processInfo = processInfo
     }
 
-    func translate(_ text: String, systemPrompt: String) async throws -> String {
+    func translate(_ text: String, systemPrompt: String, knownUserName: String?) async throws -> String {
         try await AICloudConsentGate.requireConsent()
 
-        let payload = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sanitizedText = PrivacySanitizer().sanitizeText(text, knownUserName: knownUserName)
+        let payload = sanitizedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !payload.isEmpty else {
             throw Error.emptyResponse
         }
@@ -370,11 +371,10 @@ final class CoachBrainMiddleware: ObservableObject {
         await transition(to: .translatingInput, minimumDuration: 0)
         logger.notice("translation_started stage=input")
 
-        // Privacy-first: sanitize user text before sending to external translation API
-        let sanitizedInput = sanitizer.sanitizeText(rawMessage, knownUserName: nil)
         let translated = try await translator.translate(
-            sanitizedInput,
-            systemPrompt: inputTranslationPrompt
+            rawMessage,
+            systemPrompt: inputTranslationPrompt,
+            knownUserName: coachBrainCurrentUserFirstName()
         )
         let normalized = translated.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else {
@@ -391,7 +391,8 @@ final class CoachBrainMiddleware: ObservableObject {
 
         let arabicReply = try await translator.translate(
             englishReply,
-            systemPrompt: outputTranslationPrompt
+            systemPrompt: outputTranslationPrompt,
+            knownUserName: coachBrainCurrentUserFirstName()
         )
         let normalizedArabicReply = arabicReply.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedArabicReply.isEmpty else {
@@ -468,7 +469,8 @@ final class CoachBrainMiddleware: ObservableObject {
             logger.notice("translation_started stage=fallback_output")
             let translatedFallback = try await translator.translate(
                 englishFallback,
-                systemPrompt: outputTranslationPrompt
+                systemPrompt: outputTranslationPrompt,
+                knownUserName: coachBrainCurrentUserFirstName()
             )
             let normalized = translatedFallback.trimmingCharacters(in: .whitespacesAndNewlines)
             logger.notice("translation_succeeded stage=fallback_output")
@@ -772,4 +774,13 @@ final class CoachBrainMiddleware: ObservableObject {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%02d", value)
     }
 
+}
+
+private func coachBrainCurrentUserFirstName() -> String? {
+    let raw = UserProfileStore.shared.current.name
+        .components(separatedBy: " ")
+        .first?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let raw, !raw.isEmpty else { return nil }
+    return raw
 }

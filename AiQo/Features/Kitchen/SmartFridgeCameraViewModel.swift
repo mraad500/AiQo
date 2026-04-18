@@ -46,9 +46,6 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     private var isSessionConfigured = false
     private var processingTickerTask: Task<Void, Never>?
     private var configuredMaxPhotoDimensions: CMVideoDimensions?
-    private let maxGeminiImageBytes = 900_000
-    private let geminiImageMaxDimension: CGFloat = 960
-    private let geminiImageCompressionQuality: CGFloat = 0.68
 
     private let sanitizer = PrivacySanitizer()
     private let logger = Logger(
@@ -142,8 +139,7 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
             throw FridgeAnalysisError.imageProcessingFailed
         }
 
-        let minimizedImageData = minimizedGeminiImageData(from: imageData)
-        let base64Image = minimizedImageData.base64EncodedString()
+        let base64Image = imageData.base64EncodedString()
 
         // Build the Gemini request body
         let requestBody: [String: Any] = [
@@ -255,29 +251,6 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
             let unit = dict["unit"] as? String
             return FridgeItem(name: name, quantity: quantity, unit: unit)
         }
-    }
-
-    private func minimizedGeminiImageData(from imageData: Data) -> Data {
-        guard imageData.count > maxGeminiImageBytes,
-              let image = UIImage(data: imageData) else {
-            return imageData
-        }
-
-        let longestEdge = max(image.size.width, image.size.height)
-        let scale = min(1, geminiImageMaxDimension / max(longestEdge, 1))
-        let targetSize = CGSize(
-            width: max(image.size.width * scale, 1),
-            height: max(image.size.height * scale, 1)
-        )
-
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
-        let reducedData = renderer.jpegData(withCompressionQuality: geminiImageCompressionQuality) { _ in
-            image.draw(in: CGRect(origin: .zero, size: targetSize))
-        }
-
-        return reducedData.count < imageData.count ? reducedData : imageData
     }
 
     private func configureAndStartSessionIfNeeded() {

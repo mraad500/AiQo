@@ -74,7 +74,7 @@ struct VibeControlSheet: View {
                 .presentationBackground(.clear)
         }
         .sheet(isPresented: $showBlendPlaylist) {
-            HamoudiDJPlaylistView()
+            HamoudiDJView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(.ultraThinMaterial)

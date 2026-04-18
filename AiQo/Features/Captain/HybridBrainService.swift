@@ -88,6 +88,7 @@ enum HybridBrainServiceError: LocalizedError {
 private enum GeminiConfig {
     static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
     static let requestTimeoutSeconds: TimeInterval = 35
+    static let resourceTimeoutSeconds: TimeInterval = 40
 
     /// Resolves the API key at runtime from Info.plist (populated by Secrets.xcconfig).
     /// The key is NEVER hardcoded here — it flows via:
@@ -158,8 +159,19 @@ struct HybridBrainService: Sendable {
         category: "HybridBrainService"
     )
 
+    /// Dedicated session so `timeoutIntervalForResource` is honored — `URLSession.shared`
+    /// uses a 7-day resource timeout by default, which lets stalled streams hang the chat.
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = GeminiConfig.requestTimeoutSeconds
+        config.timeoutIntervalForResource = GeminiConfig.resourceTimeoutSeconds
+        config.waitsForConnectivity = false
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: config)
+    }()
+
     init(
-        session: URLSession = .shared,
+        session: URLSession = HybridBrainService.defaultSession,
         promptBuilder: CaptainPromptBuilder = CaptainPromptBuilder(),
         jsonParser: LLMJSONParser = LLMJSONParser()
     ) {

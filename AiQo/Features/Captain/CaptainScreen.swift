@@ -197,57 +197,28 @@ struct CaptainScreen: View {
     @EnvironmentObject private var viewModel: CaptainViewModel
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
+    @State private var showHealthSources = false
+    @Namespace private var avatarNamespace
+
+    /// Flips to true the moment the user sends their first message this session.
+    /// Resets to false on `startNewChat()` and on cold launch (which calls `loadPersistedHistory()` → `startNewChat()`).
+    private var hasUserStartedChat: Bool {
+        viewModel.messages.contains(where: \.isUser)
+    }
 
     var body: some View {
         ZStack {
             CaptainBackgroundView()
 
-            VStack(spacing: 0) {
-                GeometryReader { geometry in
-                    ZStack(alignment: .bottom) {
-                        let layout = viewModel.layout(for: geometry.size.height)
-
-                        VStack {
-                            Spacer()
-
-                            CaptainAvatarView()
-                                .frame(height: layout.avatarHeight)
-                                .offset(y: layout.avatarOffset)
-                                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.avatarOffset)
-                                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.avatarHeight)
-                        }
-
-                        VStack {
-                            ChatContainerView(
-                                messages: viewModel.messages,
-                                isTyping: viewModel.isTyping,
-                                coachState: viewModel.coachState,
-                                scrollEnabled: layout.chatScrollEnabled
-                            )
-                            .frame(height: layout.chatHeight)
-                            .offset(y: layout.chatOffset)
-                            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.chatHeight)
-                            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: layout.chatOffset)
-                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.messages.count)
-
-                            Spacer()
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                }
-
-                HealthComplianceCard(compact: true)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 12)
-
-                CaptainInputView(
-                    text: $viewModel.inputText,
-                    isSending: viewModel.isSending,
-                    onSend: viewModel.sendMessage
-                )
-                .padding(.bottom, 16)
+            if hasUserStartedChat {
+                chatModeLayout
+                    .transition(.opacity)
+            } else {
+                showcaseModeLayout
+                    .transition(.opacity)
             }
         }
+        .animation(.spring(response: 0.55, dampingFraction: 0.85), value: hasUserStartedChat)
         .safeAreaInset(edge: .top, spacing: 0) {
             topChrome
         }
@@ -267,6 +238,12 @@ struct CaptainScreen: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $showHealthSources) {
+            HealthSourcesView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
             Task {
@@ -279,13 +256,93 @@ struct CaptainScreen: View {
         .sensoryFeedback(.selection, trigger: viewModel.feedbackTrigger)
     }
 
+    /// Pre-chat: large avatar centered, chat lives in a compact box above it.
+    /// This is what the user sees on cold launch and after `startNewChat()`.
+    private var showcaseModeLayout: some View {
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                ZStack(alignment: .bottom) {
+                    let layout = viewModel.layout(for: geometry.size.height)
+
+                    VStack {
+                        Spacer()
+
+                        CaptainAvatarView()
+                            .frame(height: layout.avatarHeight)
+                            .offset(y: layout.avatarOffset)
+                            .matchedGeometryEffect(id: "captain-avatar", in: avatarNamespace)
+                    }
+
+                    VStack {
+                        ChatContainerView(
+                            messages: viewModel.messages,
+                            isTyping: viewModel.isTyping,
+                            coachState: viewModel.coachState,
+                            scrollEnabled: layout.chatScrollEnabled
+                        )
+                        .frame(height: layout.chatHeight)
+                        .offset(y: layout.chatOffset)
+
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 24)
+                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: viewModel.messages.count)
+            }
+
+            CaptainInputView(
+                isSending: viewModel.isSending,
+                onSend: { text in viewModel.sendMessage(text) }
+            )
+            .padding(.bottom, 16)
+        }
+    }
+
+    /// After first user message: full-screen chat, compact avatar pinned above
+    /// the input bar on the leading (right in RTL) side — messages flow directly
+    /// on the screen, not in a boxed container.
+    private var chatModeLayout: some View {
+        VStack(spacing: 0) {
+            ChatContainerView(
+                messages: viewModel.messages,
+                isTyping: viewModel.isTyping,
+                coachState: viewModel.coachState,
+                scrollEnabled: true
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 12)
+
+            HStack(spacing: 10) {
+                CaptainAvatarView(breathes: false)
+                    .frame(width: 120, height: 120)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.55), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.10), radius: 10, x: 0, y: 5)
+                    .matchedGeometryEffect(id: "captain-avatar", in: avatarNamespace)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 6)
+            .environment(\.layoutDirection, .leftToRight)
+
+            CaptainInputView(
+                isSending: viewModel.isSending,
+                onSend: { text in viewModel.sendMessage(text) }
+            )
+            .padding(.bottom, 16)
+        }
+    }
+
     private var topChrome: some View {
         AiQoScreenTopChrome(
             horizontalInset: 10,
-            profileVerticalOffset: 1,
+            profileVerticalOffset: -12,
             onProfileTap: { viewModel.showProfile = true }
         ) {
-            HStack {
+            HStack(alignment: .top) {
                 Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.text)
@@ -293,19 +350,40 @@ struct CaptainScreen: View {
 
                 Spacer(minLength: 0)
 
-                Button {
-                    viewModel.showChatHistory = true
-                } label: {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(theme.subtext)
-                        .frame(width: 34, height: 34)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
+                VStack(spacing: 8) {
+                    chromeCircleButton(
+                        systemImage: "clock.arrow.circlepath",
+                        accessibilityLabel: NSLocalizedString("captain.history.button", value: "Chat history", comment: "")
+                    ) {
+                        viewModel.showChatHistory = true
+                    }
+
+                    chromeCircleButton(
+                        systemImage: "text.book.closed.fill",
+                        accessibilityLabel: NSLocalizedString("health.sources.button", value: "Health sources", comment: "")
+                    ) {
+                        showHealthSources = true
+                    }
                 }
             }
             .environment(\.layoutDirection, .rightToLeft)
         }
+    }
+
+    private func chromeCircleButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(theme.subtext)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(theme.border, lineWidth: 0.7))
+        }
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func hideKeyboard() {
@@ -395,46 +473,50 @@ struct ChatContainerView: View {
     private let thinkingIndicatorID = "captain-thinking-indicator"
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 10) {
-                        ForEach(messages) { message in
-                            ChatBubbleView(
-                                text: message.content,
-                                isUser: message.isUser,
-                                maxBubbleWidth: geometry.size.width * 0.72
-                            )
-                            .id(message.id)
-                        }
-
-                        if isTyping {
-                            HStack {
-                                TypingIndicatorView(state: coachState)
-                                Spacer()
-                            }
-                            .id(thinkingIndicatorID)
-                            .padding(.top, 6)
-                        }
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 10) {
+                    ForEach(messages) { message in
+                        ChatBubbleView(
+                            text: message.content,
+                            isUser: message.isUser
+                        )
+                        .id(message.id)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .bottom)),
+                            removal: .opacity
+                        ))
                     }
-                    .padding(.top, 24)
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 20)
+
+                    if isTyping {
+                        HStack {
+                            TypingIndicatorView(state: coachState)
+                            Spacer()
+                        }
+                        .id(thinkingIndicatorID)
+                        .padding(.top, 6)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .bottomLeading)),
+                            removal: .opacity
+                        ))
+                    }
                 }
-                .scrollDisabled(!scrollEnabled)
-                .scrollDismissesKeyboard(.interactively)
-                .onAppear {
-                    scrollToBottom(using: proxy, animated: false)
-                }
-                .onChange(of: messages.count) {
-                    scrollToBottom(using: proxy)
-                }
-                .onChange(of: messages.last?.content) {
-                    scrollToBottom(using: proxy)
-                }
-                .onChange(of: isTyping) {
-                    scrollToBottom(using: proxy)
-                }
+                .padding(.top, 24)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 20)
+                .animation(.spring(response: 0.38, dampingFraction: 0.82), value: messages.count)
+                .animation(.easeInOut(duration: 0.22), value: isTyping)
+            }
+            .scrollDisabled(!scrollEnabled)
+            .scrollDismissesKeyboard(.immediately)
+            .onAppear {
+                scrollToBottom(using: proxy, animated: false)
+            }
+            .onChange(of: messages.count) {
+                scrollToBottom(using: proxy)
+            }
+            .onChange(of: isTyping) {
+                scrollToBottom(using: proxy)
             }
         }
     }
@@ -448,14 +530,8 @@ struct ChatContainerView: View {
             return
         }
 
-        if #available(iOS 17.0, *) {
-            withAnimation(.smooth(duration: 0.24)) {
-                proxy.scrollTo(targetID, anchor: .bottom)
-            }
-        } else {
-            withAnimation(.easeOut(duration: 0.24)) {
-                proxy.scrollTo(targetID, anchor: .bottom)
-            }
+        withAnimation(.smooth(duration: 0.32)) {
+            proxy.scrollTo(targetID, anchor: .bottom)
         }
     }
 }
@@ -465,47 +541,56 @@ struct ChatContainerView: View {
 struct ChatBubbleView: View {
     let text: String
     let isUser: Bool
-    let maxBubbleWidth: CGFloat
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var sizeClass
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 52) }
+    /// Cap on bubble width. Avoids `UIScreen.main` (deprecated in iOS 26) by
+    /// keying off the size class instead — compact = phone, regular = iPad.
+    private var maxBubbleWidth: CGFloat {
+        sizeClass == .regular ? 520 : 300
+    }
 
-            VStack(alignment: isUser ? .trailing : .leading, spacing: 10) {
+    var body: some View {
+        // Positions swapped: Captain bubbles align to the LEFT of the row,
+        // user bubbles align to the RIGHT (flipped from the previous layout).
+        HStack {
+            if !isUser { Spacer(minLength: 52) }
+
+            VStack(alignment: isUser ? .leading : .trailing, spacing: 8) {
                 Text(text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(theme.chatBubbleText)
                     .lineSpacing(3)
-                    .multilineTextAlignment(isUser ? .trailing : .leading)
+                    .multilineTextAlignment(isUser ? .leading : .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if canSpeakReply {
-                    HStack(spacing: 0) {
-                        Spacer(minLength: 0)
-
-                        Button {
-                            Task {
-                                await CaptainVoiceService.shared.speak(text: text)
-                            }
-                        } label: {
-                            Image(systemName: "speaker.wave.2")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .padding(7)
-                                .background(.ultraThinMaterial, in: Circle())
+                    Button {
+                        Task {
+                            await CaptainVoiceService.shared.speak(text: text)
                         }
-                        .buttonStyle(.plain)
+                    } label: {
+                        Image(systemName: "speaker.wave.2")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .padding(7)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .trailing : .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
+            // Cap the bubble width so short messages hug their content instead
+            // of stretching to fill the row. Size-class-based cap keeps phones
+            // and iPads correct without depending on the deprecated `UIScreen.main`.
+            .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .leading : .trailing)
+            .fixedSize(horizontal: true, vertical: true)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(isUser ? theme.userBubble : theme.captainBubble)
@@ -519,7 +604,7 @@ struct ChatBubbleView: View {
             .accessibilityLabel(isUser ? "User message" : "Captain message")
             .accessibilityValue(text)
 
-            if !isUser { Spacer(minLength: 52) }
+            if isUser { Spacer(minLength: 52) }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
@@ -534,20 +619,11 @@ struct TypingIndicatorView: View {
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
 
-    @State private var phase = 0
-    private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
-
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .fill(theme.spatialMint.opacity(phase == index ? 0.98 : 0.30))
-                        .frame(width: 5, height: 5)
-                        .scaleEffect(phase == index ? 1.22 : 0.82)
-                        .blur(radius: phase == index ? 0.2 : 0)
-                        .blendMode(.screen)
-                        .animation(.easeInOut(duration: 0.24), value: phase)
+                    PulsingDot(tint: theme.spatialMint, delay: Double(index) * 0.18)
                 }
             }
 
@@ -557,9 +633,6 @@ struct TypingIndicatorView: View {
                 .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 4)
         }
         .padding(.leading, 4)
-        .onReceive(timer) { _ in
-            phase = (phase + 1) % 3
-        }
     }
 
     private var thinkingLabel: String {
@@ -569,6 +642,35 @@ struct TypingIndicatorView: View {
         default:
             return "الكابتن يفكر..."
         }
+    }
+}
+
+/// Cheap pulsing dot — single `@State` flip + CoreAnimation `.repeatForever`.
+///
+/// Replaces a `Timer.publish(...).autoconnect()` that used to be stored as an
+/// instance property on `TypingIndicatorView`. Because SwiftUI reconstructs view
+/// structs on every parent body pass, that pattern created a fresh timer (and
+/// left stale ones live) on every `@Published` emission from the view model,
+/// piling up 0.35 s main-thread ticks until the chat appeared frozen.
+private struct PulsingDot: View {
+    let tint: Color
+    let delay: Double
+
+    @State private var isPulsing = false
+
+    var body: some View {
+        Circle()
+            .fill(tint)
+            .frame(width: 5, height: 5)
+            .scaleEffect(isPulsing ? 1.22 : 0.82)
+            .opacity(isPulsing ? 0.98 : 0.30)
+            .animation(
+                .easeInOut(duration: 0.48)
+                    .repeatForever()
+                    .delay(delay),
+                value: isPulsing
+            )
+            .onAppear { isPulsing = true }
     }
 }
 
@@ -937,15 +1039,18 @@ struct BreathingRingIndicatorView: View {
 // MARK: - Avatar View
 
 struct CaptainAvatarView: View {
+    var breathes: Bool = true
+
     @State private var breathingOffset: CGFloat = 0
 
     var body: some View {
         Image("Hammoudi5")
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .offset(y: breathingOffset)
+            .offset(y: breathes ? breathingOffset : 0)
             .shadow(color: .black.opacity(0.15), radius: 25, x: 0, y: 15)
             .onAppear {
+                guard breathes else { return }
                 withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
                     breathingOffset = -8
                 }
@@ -955,13 +1060,22 @@ struct CaptainAvatarView: View {
 
 // MARK: - Input View
 
+/// Input bar with **local** text state.
+///
+/// Key perf fix: previously bound its `TextField` to `$viewModel.inputText`, a
+/// `@Published` on `CaptainViewModel`. Every keystroke published the whole VM,
+/// forcing `CaptainScreen` (GeometryReader + layout math + chat container) to
+/// re-evaluate per character — that's what pinned CPU at 50% while typing.
+/// Holding the text locally keeps each keystroke inside this subview.
 struct CaptainInputView: View {
-    @Binding var text: String
     var isSending: Bool
-    var onSend: () -> Void
+    var onSend: (String) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -972,15 +1086,16 @@ struct CaptainInputView: View {
                     .foregroundStyle(theme.subtext.opacity(0.75)),
                 axis: .vertical
             )
+            .focused($isFocused)
             .font(.system(size: 18, weight: .medium, design: .rounded))
             .foregroundStyle(theme.text)
             .lineLimit(1...4)
             .submitLabel(.send)
-            .onSubmit(onSend)
+            .onSubmit(send)
             .padding(.leading, 18)
             .padding(.vertical, 16)
 
-            Button(action: onSend) {
+            Button(action: send) {
                 ZStack {
                     Circle()
                         .fill(canSend ? theme.spatialMint.opacity(0.20) : Color.white.opacity(0.05))
@@ -1015,6 +1130,14 @@ struct CaptainInputView: View {
 
     private var canSend: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
+    }
+
+    private func send() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        onSend(trimmed)
+        text = ""
+        isFocused = false
     }
 }
 

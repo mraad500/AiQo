@@ -39,35 +39,24 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     }()
     let scopes: SPTScope = [
         .appRemoteControl,
-        .playlistReadPrivate,
         .userTopRead,
         .userReadPlaybackState,
         .userModifyPlaybackState
     ]
 
-    @Published var isGeneratingBlend: Bool = false
-    @Published var blendError: String?
-
-    // Blend Engine (in-memory queue, no playlist creation)
-    @Published var currentBlendSource: BlendSourceTag?
-    @Published var currentBlendQueue: [BlendTrackItem] = []
-    var blendSourceLookup: [String: BlendSourceTag] = [:]
-
-    private static let keychainTokenKey = "aiqo.spotify.webapi.token"
-
-    @Published var webAPIToken: String? {
-        didSet {
-            if let webAPIToken {
-                KeychainStore.set(webAPIToken, for: Self.keychainTokenKey)
-            } else {
-                KeychainStore.delete(Self.keychainTokenKey)
-            }
-        }
-    }
+    @Published var webAPIToken: String?
     @Published var isWebAPIAuthorized: Bool = false
+    /// First 8 hex chars of SHA256(rawSpotifyUserID). Safe to log / render.
+    /// Populated once after a successful OAuth session.
+    @Published var currentSpotifyUserIDHash: String?
+    /// Raw Spotify user ID — in-memory only, never written to disk.
+    /// Exposed for Dashboard allowlisting diagnostics via the debugger.
+    var _rawSpotifyUserIDForDashboard: String?
     var pkceCodeVerifier: String?
+    /// Guards against re-entrant `authorizeWebAPI()` calls while an ASWebAuth session is open.
+    var isAuthorizingWebAPI: Bool = false
 
-    static let webAPIScopes = "playlist-read-private user-top-read user-read-playback-state user-modify-playback-state"
+    static let webAPIScopes = "user-top-read user-read-playback-state user-modify-playback-state"
 
     var pendingVibeURI: String?
     var shouldReconnectWhenActive = false
@@ -103,17 +92,22 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         appRemote.connectionParameters.accessToken = sessionManager.session?.accessToken
         refreshSpotifyAvailability()
 
-        // One-time migration: UserDefaults → Keychain
-        if let legacyToken = UserDefaults.standard.string(forKey: "spotify_web_api_token"), !legacyToken.isEmpty {
-            KeychainStore.set(legacyToken, for: Self.keychainTokenKey)
-            UserDefaults.standard.removeObject(forKey: "spotify_web_api_token")
-            log("Migrated Web API token from UserDefaults to Keychain.")
-        }
+        migrateLegacySpotifyTokensIfNeeded()
 
-        if let savedToken = KeychainStore.get(Self.keychainTokenKey), !savedToken.isEmpty {
-            webAPIToken = savedToken
-            isWebAPIAuthorized = true
-            log("Restored Web API token from Keychain.")
+        // Only mark as "authorized" if the token is actually usable — either
+        // still valid, or expired-but-refreshable. A dead token (expired and
+        // no refresh) should NOT be marked authorized; otherwise the VM's
+        // auto-build subscriber would fire and immediately hit authExpired.
+        if let token = SpotifyTokenStore.load(), !token.accessToken.isEmpty {
+            let isFresh = token.expiresAt > Date()
+            let canRefresh = (token.refreshToken ?? "").isEmpty == false
+            if isFresh || canRefresh {
+                webAPIToken = token.accessToken
+                isWebAPIAuthorized = true
+                log("Restored Spotify Web API token from SpotifyTokenStore.")
+            } else {
+                log("Stored Spotify token is expired and has no refresh token; awaiting PKCE.")
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -176,10 +170,10 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
 
     /// Attempts to reconnect to Spotify without prompting the user for auth.
     /// Returns `true` if we have a cached session and App Remote connects within 3s.
-    /// Returns `false` immediately if no Keychain token or no cached session exists.
+    /// Returns `false` immediately if no stored token or no cached session exists.
     func reconnectSilentlyIfPossible() async -> Bool {
-        // 1. Check Keychain for saved Web API token
-        guard let savedToken = KeychainStore.get("aiqo.spotify.webapi.token"),
+        // 1. Check SpotifyTokenStore for saved Web API token
+        guard let savedToken = SpotifyTokenStore.load()?.accessToken,
               !savedToken.isEmpty else {
             log("Silent reconnect: no Keychain token found.")
             return false
@@ -386,12 +380,14 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
 
     func presentAvailabilityError() {
         if !isSpotifyAppInstalled {
-            reportError("Install Spotify to use My Vibe playlist controls.", code: "spotify_not_installed")
+            let mapped = SpotifyAuthError.notInstalled
+            reportError(mapped.localizedMessage, code: mapped.code)
             return
         }
 
         if !canAttemptAuthorization {
-            reportError("Spotify authentication is unavailable right now.", code: "spotify_auth_unavailable")
+            let mapped = SpotifyAuthError.generic
+            reportError(mapped.localizedMessage, code: "spotify_auth_unavailable")
         }
     }
 
@@ -434,13 +430,9 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         shouldReconnectWhenActive = false
         connectionRetryCount = 0
 
-        blendError = nil
-        currentBlendSource = nil
-        currentBlendQueue = []
-        blendSourceLookup = [:]
-        webAPIToken = nil
-        isWebAPIAuthorized = false
-        KeychainStore.delete("aiqo.spotify.webapi.refresh")
+        currentSpotifyUserIDHash = nil
+        _rawSpotifyUserIDForDashboard = nil
+        clearSpotifyToken()
 
         setConnectionState(false)
         setPausedState(true)
@@ -475,16 +467,79 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         }
 
         if statusCode == 401 || statusCode == 403 {
-            DispatchQueue.main.async { [weak self] in
-                self?.webAPIToken = nil
-                self?.isWebAPIAuthorized = false
-                self?.log("Web API token expired/invalid — cleared. User must re-auth.")
-            }
+            self.clearSpotifyToken()
+            self.log("Web API token expired/invalid — cleared. User must re-auth.")
         }
 
         let fullMessage = "\(fallback): \(message)"
         log("Spotify API error: \(fullMessage)")
         return NSError(domain: "SpotifyAPI", code: statusCode, userInfo: [NSLocalizedDescriptionKey: fullMessage])
+    }
+
+    // MARK: - Token Persistence
+
+    /// Centralized write path. Replaces all legacy token writes.
+    /// Updates SpotifyTokenStore and syncs the published mirrors on the main thread.
+    func persistSpotifyToken(access: String, refresh: String?, expiresIn: TimeInterval) {
+        let carriedRefresh = refresh ?? SpotifyTokenStore.load()?.refreshToken
+        let token = SpotifyToken(
+            accessToken: access,
+            refreshToken: carriedRefresh,
+            expiresAt: Date().addingTimeInterval(expiresIn)
+        )
+        SpotifyTokenStore.save(token)
+
+        let apply = { [weak self] in
+            self?.webAPIToken = access
+            self?.isWebAPIAuthorized = true
+        }
+        if Thread.isMainThread { apply() } else { DispatchQueue.main.async(execute: apply) }
+    }
+
+    /// Centralized clear path. Wipes SpotifyTokenStore and the published mirrors.
+    func clearSpotifyToken() {
+        SpotifyTokenStore.clear()
+
+        let apply = { [weak self] in
+            self?.webAPIToken = nil
+            self?.isWebAPIAuthorized = false
+        }
+        if Thread.isMainThread { apply() } else { DispatchQueue.main.async(execute: apply) }
+    }
+
+    /// One-shot migration: legacy UserDefaults + split Keychain keys → SpotifyTokenStore.
+    /// Runs at init. After success, old keys are deleted and never read again.
+    ///
+    /// Fix (post-live-test): the old synthesized `expiresAt = now + 3300s` was
+    /// dishonest — the migrated access token was often already expired on the
+    /// server, causing a stale-token cycle (stale token → 401 → clear → error
+    /// alert). We now set `expiresAt = Date()` so the token is treated as
+    /// immediately expired; if no refresh token exists, `refreshWebAPITokenIfNeeded`
+    /// will trigger the auto-PKCE recovery path instead of serving a stale token.
+    private func migrateLegacySpotifyTokensIfNeeded() {
+        if SpotifyTokenStore.load() != nil { return }
+
+        let legacyUD = UserDefaults.standard.string(forKey: "spotify_web_api_token")
+        let legacyKCAccess = KeychainStore.get("aiqo.spotify.webapi.token")
+        let legacyKCRefresh = KeychainStore.get("aiqo.spotify.webapi.refresh")
+
+        defer {
+            UserDefaults.standard.removeObject(forKey: "spotify_web_api_token")
+            KeychainStore.delete("aiqo.spotify.webapi.token")
+            KeychainStore.delete("aiqo.spotify.webapi.refresh")
+        }
+
+        let access = (legacyUD?.isEmpty == false ? legacyUD : nil) ?? legacyKCAccess
+        guard let access, !access.isEmpty else { return }
+
+        SpotifyTokenStore.save(
+            SpotifyToken(
+                accessToken: access,
+                refreshToken: legacyKCRefresh,
+                expiresAt: Date()
+            )
+        )
+        log("Migrated legacy Spotify tokens into SpotifyTokenStore (treated as expired).")
     }
 
     func log(_ message: String) {
@@ -516,13 +571,9 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
     @Published var lastErrorMessage: String?
     @Published var lastErrorCode: String?
 
-    @Published var isGeneratingBlend: Bool = false
-    @Published var blendError: String?
-    @Published var currentBlendSource: BlendSourceTag?
-    @Published var currentBlendQueue: [BlendTrackItem] = []
-    var blendSourceLookup: [String: BlendSourceTag] = [:]
     @Published var webAPIToken: String?
     @Published var isWebAPIAuthorized: Bool = false
+    @Published private(set) var currentSpotifyUserIDHash: String?
 
     var canAttemptAuthorization: Bool { false }
     var isPlaybackAvailable: Bool { false }
@@ -586,37 +637,20 @@ final class SpotifyVibeManager: NSObject, ObservableObject {
         presentAvailabilityError()
     }
 
-    func buildBlendQueue(userRatio: Double = 0.6, completion: @escaping (Result<[BlendTrackItem], Error>) -> Void) {
-        presentAvailabilityError()
-        completion(.failure(NSError(domain: "BlendEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "Simulator"])))
-    }
-
-    func playBlendQueue(_ queue: [BlendTrackItem]) {
-        presentAvailabilityError()
-    }
-
-    func resolveBlendSource(for trackURI: String) -> BlendSourceTag? {
-        nil
-    }
-
-    func fetchTopTrackURIs(limit: Int = 10) async throws -> [String] {
-        throw BlendError.unknown("Simulator")
-    }
-
-    func fetchMasterPlaylistURIs(playlistId: String) async throws -> [String] {
-        throw BlendError.unknown("Simulator")
-    }
-
     func refreshWebAPIToken() async throws {
-        throw BlendError.authExpired
+        throw SpotifyAPIError.authExpired
     }
 
-    func fetchHamoudiPlaylistTracks() async throws -> [String] {
-        throw BlendError.unknown("Simulator")
+    func refreshWebAPITokenIfNeeded() async throws -> String {
+        throw SpotifyAPIError.authExpired
     }
 
     func fetchUserTopTracks(limit: Int = 50) async throws -> [String] {
-        throw BlendError.unknown("Simulator")
+        throw SpotifyAPIError.unknown("Simulator")
+    }
+
+    func fetchUserTopTracksWithMetadata(limit: Int = 30) async throws -> [SpotifyTopTrack] {
+        throw SpotifyAPIError.unknown("Simulator")
     }
 
     func enqueueTrack(uri: String) {

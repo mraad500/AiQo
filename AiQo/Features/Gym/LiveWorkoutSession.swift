@@ -42,7 +42,7 @@ final class LiveWorkoutSession: ObservableObject {
     
     // MARK: - Published State
     
-    @Published var title: String = L10n.t("gym.session.defaultTitle")
+    @Published var title: String = ""
     @Published var phase: Phase = .idle
     
     // Live workout data (updated in real-time from Watch)
@@ -139,13 +139,13 @@ final class LiveWorkoutSession: ObservableObject {
     // MARK: - Initialization
     
     init(
-        title: String = L10n.t("gym.session.defaultTitle"),
+        title: String? = nil,
         activityType: HKWorkoutActivityType = .other,
         locationType: HKWorkoutSessionLocationType = .unknown,
         currentWorkout: GymWorkoutKind = .standard,
         coachingProfile: WorkoutCoachingProfile = .standard
     ) {
-        self.title = title
+        self.title = title ?? L10n.t("gym.session.defaultTitle")
         self.activityType = activityType
         self.locationType = locationType
         self.currentWorkout = currentWorkout

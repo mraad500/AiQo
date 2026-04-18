@@ -2757,6 +2757,61 @@
 "blend.error.rate_limited" = "كثرت الطلبات. جرب بعد دقيقة.";
 "blend.error.retry" = "جرب مرة ثانية";
 
+/* Spotify Auth Errors (user-safe, dialect-correct, no SDK jargon) */
+"spotify.err.notInstalled" = "ثبّت تطبيق Spotify أول من الـ App Store بعدين نكمل.";
+"spotify.err.cancelled" = "لغيت الربط. جرّب مرة ثانية لمن تكون جاهز.";
+"spotify.err.devMode" = "الحساب مو مضاف حالياً على قائمة المستخدمين. راسلنا من داخل التطبيق ونضيفك بدقائق.";
+"spotify.err.network" = "الاتصال ضعيف. جرّب لمن تكون شبكتك أقوى.";
+"spotify.err.tokenExpired" = "انتهت الجلسة. وصّل مرة ثانية.";
+"spotify.err.generic" = "Spotify ما رد عالاتصال. سكّر تطبيق Spotify وافتحه مرة ثانية، ثم جرّب.";
+
+/* Spotify Entry / Connect Card (Vibe Sheet) */
+"spotify.connect.connected" = "سبوتيفاي متصل";
+"spotify.connect.connect" = "وصّل سبوتيفاي";
+"spotify.connect.connected.sub" = "افتح قوائم حمودي";
+"spotify.connect.connect.sub" = "اضغط لوصل التشغيل";
+"spotify.a11y.open" = "افتح سبوتيفاي";
+"spotify.a11y.connect" = "وصّل سبوتيفاي";
+"spotify.playlists.header" = "قوائم حمودي";
+"spotify.logout" = "سجل خروج من سبوتيفاي";
+"spotify.a11y.logout" = "سجل خروج من سبوتيفاي";
+
+/* Hamoudi+you+DJ entry button (in Vibe Spotify section) */
+"blend.entry.title" = "Hamoudi+you+DJ 🎧";
+"blend.entry.subtitle" = "امزج ذوقك مع حمودي";
+"blend.entry.a11y" = "افتح مزيج حمودي+انت+دي جي";
+
+/* Hamoudi+you+DJ sheet — "Powered by" footer */
+"blend.footer.powered_by" = "مدعوم من";
+
+/* Pre-auth permission disclosure (Apple Guideline 5.1.1 transparency) */
+"blend.perm.title" = "شنو يطلع عليه AiQo من سبوتيفاي";
+"blend.perm.tracks" = "أغانيك الأكثر استماعاً";
+"blend.perm.tracks.desc" = "عشان نعرف ذوقك ونمزجه مع اختيارات حمودي";
+"blend.perm.playback" = "حالة التشغيل الحالية";
+"blend.perm.playback.desc" = "عشان نعرض شنو يشتغل الحين";
+"blend.perm.control" = "تحكّم بالتشغيل";
+"blend.perm.control.desc" = "تشغيل، إيقاف، تخطّي من داخل التطبيق";
+"blend.perm.revoke" = "تقدر تلغي الربط بأي وقت من إعدادات حسابك بسبوتيفاي.";
+"blend.perm.privacy" = "لا نرسل بيانات موسيقاك إلى خوادم AiQo. الجلسة محفوظة بآمان داخل جهازك.";
+
+/* VoiceOver labels — Vibe Sheet */
+"vibe.a11y.openSettings" = "افتح إعدادات الفايب";
+"vibe.a11y.openDJChat" = "افتح دردشة الدي جي";
+"vibe.a11y.done" = "تم";
+"vibe.a11y.pausePlayback" = "أوقف التشغيل مؤقتًا";
+"vibe.a11y.resumePlayback" = "استأنف التشغيل";
+"vibe.a11y.stopPlayback" = "أوقف التشغيل";
+"vibe.a11y.whyUnavailable" = "اعرف سبب عدم توفر سبوتيفاي";
+"vibe.a11y.pauseVibe" = "أوقف الفايب مؤقتًا";
+"vibe.a11y.resumeVibe" = "استأنف الفايب";
+"vibe.a11y.playVibe" = "شغّل الفايب";
+"vibe.a11y.resumeAiqo" = "استأنف أصوات AiQo";
+"vibe.a11y.playAiqo" = "شغّل أصوات AiQo";
+"vibe.a11y.playSpotify" = "شغّل القائمة في سبوتيفاي";
+"vibe.a11y.connectSpotify" = "وصّل سبوتيفاي";
+"vibe.a11y.playPlaylist" = "شغّل قائمة %@ في سبوتيفاي";
+
 /* Health Disclaimer (Apple Guideline 1.4.1) */
 "health.disclaimer.general" = "يوفر AiQo إرشادات عامة للعافية واللياقة فقط. ليس جهازاً طبياً ولا يقدم تشخيصاً طبياً أو علاجاً أو إرشادات للطوارئ. استشر أخصائي رعاية صحية مؤهلاً قبل اتخاذ قرارات طبية.";
 "health.disclaimer.sources" = "المصادر";
@@ -2792,7 +2847,27 @@
 "ai.settings.status.notAccepted" = "مشاركة الذكاء الاصطناعي السحابية معطلة حالياً إلى أن توافق على الإفصاح داخل التطبيق.";
 "ai.settings.revoke" = "سحب الموافقة";
 "ai.settings.reviewConsent" = "مراجعة الموافقة";
+/* Revoke confirmation dialog */
+"ai.settings.revoke.confirm.title" = "سحب موافقة الذكاء الاصطناعي؟";
+"ai.settings.revoke.confirm.message" = "ستتوقف ميزات الذكاء الاصطناعي السحابية (محادثة الكابتن، ماسح المطبخ، الصوت المميز) عن العمل إلى أن تعيد تفعيل الموافقة.";
 "settings.section.privacyAI" = "الخصوصية وبيانات الذكاء الاصطناعي";
 "settings.privacyAI.title" = "استخدام بيانات الذكاء الاصطناعي";
 "settings.privacyAI.acceptedAt" = "الموافقة مفعلة منذ %@";
 "settings.privacyAI.notAccepted" = "راجع ما الذي يُشارك قبل استخدام ميزات الذكاء الاصطناعي السحابية";
+
+/* Onboarding AI Consent & Medical Disclaimer (Apple Guidelines 5.1.1(i), 5.1.2(i), 1.4.1) */
+"onboarding.aiConsent.offlineOnly" = "تابع بدون مشاركة بيانات";
+"onboarding.medical.title" = "هذا التطبيق ليس بديلاً عن الطبيب";
+"onboarding.medical.body" = "يُقدّم تطبيق AiQo إرشادات عامة للعافية واللياقة البدنية، وهو ليس جهازاً طبياً ولا يُقدّم تشخيصاً أو علاجاً. المعلومات داخل التطبيق لأغراض تثقيفية فقط ولا تُعدّ استشارة طبية. يُرجى استشارة طبيب مختصّ قبل البدء بأي برنامج تمرين أو اتخاذ قرارات تتعلق بصحتك. إذا كنت تعاني من حالة طبية، أو تتناول أدوية، أو كنت حاملاً، فاستشر طبيبك قبل استخدام ميزات التطبيق. في حالات الطوارئ، اتصل فوراً بخدمات الطوارئ المحلية.";
+"onboarding.medical.wont.1" = "تشخيص الحالات الطبية";
+"onboarding.medical.wont.2" = "وصف أدوية أو مكملات غذائية";
+"onboarding.medical.wont.3" = "استبدال استشارة طبيب مختصّ";
+"onboarding.medical.wont.4" = "التعامل مع حالات الطوارئ الطبية";
+"onboarding.medical.confirm" = "قرأت وفهمت";
+"onboarding.medical.continue" = "متابعة";
+"onboarding.medical.settingsNote" = "يمكنك مراجعة هذا الإشعار في أي وقت من الإعدادات > الخصوصية والذكاء الاصطناعي";
+
+/* Captain Offline Mode Banner */
+"captain.offlineBanner.title" = "بدون مشاركة بيانات";
+"captain.offlineBanner.body" = "اخترت ألا تتم مشاركة البيانات مع خدمات الذكاء الاصطناعي السحابية. يمكنك تغيير ذلك من الإعدادات.";
+"captain.offlineBanner.action" = "فتح الإعدادات";

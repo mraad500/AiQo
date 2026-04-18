@@ -43,7 +43,11 @@ struct WorkoutCategoriesView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            // Cards (scrollable) — left side
+            // Vertical side filter — leading side (right in RTL, left in LTR)
+            clubSideFilter
+                .frame(width: 68)
+
+            // Cards (scrollable) — trailing side
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 14) {
                     ForEach(Array(currentItems.enumerated()), id: \.element.id) { index, item in
@@ -67,14 +71,10 @@ struct WorkoutCategoriesView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.trailing, 8)
+                .padding(.leading, 8)
                 .padding(.top, 18)
                 .padding(.bottom, 100)
             }
-
-            // Vertical side filter — right side
-            clubSideFilter
-                .frame(width: 68)
         }
         .environment(\.layoutDirection, layoutDirection)
         .onAppear {

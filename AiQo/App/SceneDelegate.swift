@@ -13,6 +13,8 @@ enum OnboardingKeys {
     static let didContinueWithoutAccount = "didContinueWithoutAccount"
     static let didCompleteDatingProfile = "didCompleteDatingProfile"
     static let didSelectLanguage = "didSelectLanguage"
+    static let didCompleteAIConsent = "didCompleteAIConsent"
+    static let didAcknowledgeMedicalDisclaimer = "didAcknowledgeMedicalDisclaimer"
 }
 
 @MainActor
@@ -24,6 +26,8 @@ final class AppFlowController: ObservableObject {
         case login
         case profileSetup
         case legacy
+        case aiConsent
+        case medicalDisclaimer
         case captainPersonalization
         case featureIntro
         case main
@@ -103,7 +107,17 @@ final class AppFlowController: ObservableObject {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
         FreeTrialManager.shared.startTrialIfNeeded()
         TrialJourneyOrchestrator.shared.refresh()
-        transition(to: .captainPersonalization)
+        transition(to: .aiConsent)
+    }
+
+    func finalizeAIConsent() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteAIConsent)
+        transition(to: .medicalDisclaimer)
+    }
+
+    func finalizeMedicalDisclaimer() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+        transition(to: Self.resolveCurrentScreen())
     }
 
     func didCompleteCaptainPersonalization() {
@@ -170,6 +184,8 @@ final class AppFlowController: ObservableObject {
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didCompleteDatingProfile)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didShowFirstAuthScreen)
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didContinueWithoutAccount)
+            UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteAIConsent)
+            UserDefaults.standard.removeObject(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
 
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .login)
@@ -201,6 +217,8 @@ final class AppFlowController: ObservableObject {
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
         let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
             || didCompleteFeatureIntro
+        let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
+        let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
 
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
@@ -226,6 +244,14 @@ final class AppFlowController: ObservableObject {
             return .legacy
         }
 
+        if !didCompleteAIConsent {
+            return .aiConsent
+        }
+
+        if !didAcknowledgeMedicalDisclaimer {
+            return .medicalDisclaimer
+        }
+
         if !didCompleteCaptainPersonalization {
             return .captainPersonalization
         }
@@ -243,6 +269,8 @@ final class AppFlowController: ObservableObject {
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
         let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
             || didCompleteFeatureIntro
+        let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
+        let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -250,6 +278,14 @@ final class AppFlowController: ObservableObject {
 
         if !didCompleteLegacyCalculation {
             return .legacy
+        }
+
+        if !didCompleteAIConsent {
+            return .aiConsent
+        }
+
+        if !didAcknowledgeMedicalDisclaimer {
+            return .medicalDisclaimer
         }
 
         if !didCompleteCaptainPersonalization {
@@ -318,6 +354,12 @@ struct AppRootView: View {
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .legacy:
             LegacyCalculationScreenView()
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .aiConsent:
+            AIConsentOnboardingView(onContinue: { flow.finalizeAIConsent() })
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .medicalDisclaimer:
+            MedicalDisclaimerOnboardingView(onAcknowledge: { flow.finalizeMedicalDisclaimer() })
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .captainPersonalization:
             CaptainPersonalizationOnboardingView()

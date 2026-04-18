@@ -3,7 +3,8 @@ import UIKit
 
 struct CaptainChatView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
-    @FocusState private var isInputFocused: Bool
+    @ObservedObject private var consentManager = AIDataConsentManager.shared
+    @State private var showAIPrivacySettings = false
 
     private let bottomAnchorID = "captain-chat-bottom"
 
@@ -13,6 +14,13 @@ struct CaptainChatView: View {
                 ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 14) {
                         headerCard
+
+                        if consentManager.isInOfflineOnlyMode {
+                            CaptainOfflineModeBanner {
+                                showAIPrivacySettings = true
+                            }
+                        }
+
                         HealthComplianceCard(compact: true)
 
                         ForEach(globalBrain.messages) { message in
@@ -55,7 +63,11 @@ struct CaptainChatView: View {
 
                         if globalBrain.isLoading {
                             CaptainTypingRow()
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .id("typing-indicator")
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .bottom)),
+                                    removal: .opacity
+                                ))
                         }
 
                         // Quick Reply Chips
@@ -96,10 +108,7 @@ struct CaptainChatView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 20)
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .onTapGesture {
-                    isInputFocused = false
-                }
+                .scrollDismissesKeyboard(.immediately)
                 .safeAreaPadding(.bottom, 8)
                 .onAppear {
                     scrollToBottom(using: proxy, animated: false)
@@ -107,14 +116,16 @@ struct CaptainChatView: View {
                 .onChange(of: globalBrain.messages.count) {
                     scrollToBottom(using: proxy)
                 }
-                .onChange(of: globalBrain.isLoading) {
-                    scrollToBottom(using: proxy)
+                .onChange(of: globalBrain.isLoading) { _, thinking in
+                    if thinking {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            proxy.scrollTo("typing-indicator", anchor: .bottom)
+                        }
+                    } else {
+                        scrollToBottom(using: proxy)
+                    }
                 }
                 .onChange(of: globalBrain.currentWorkoutPlan != nil) {
-                    scrollToBottom(using: proxy)
-                }
-                .onChange(of: isInputFocused) {
-                    guard isInputFocused else { return }
                     scrollToBottom(using: proxy)
                 }
             }
@@ -122,7 +133,9 @@ struct CaptainChatView: View {
         .navigationTitle("Captain Hamoudi")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            composerBar
+            ChatComposerBar(isSending: globalBrain.isLoading) { text in
+                globalBrain.sendMessage(text, context: .mainChat)
+            }
         }
         .background(CaptainChatBackground())
         .fullScreenCover(isPresented: $globalBrain.showGratitudeSession) {
@@ -134,6 +147,14 @@ struct CaptainChatView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
+        }
+        .sheet(isPresented: $showAIPrivacySettings) {
+            NavigationStack {
+                AIDataPrivacySettingsView()
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
         }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
@@ -197,101 +218,6 @@ private extension CaptainChatView {
         .padding(.vertical, 8)
     }
 
-    var composerBar: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.white.opacity(0.001))
-                .frame(height: 8)
-
-            HStack(alignment: .bottom, spacing: 12) {
-                TextField("اكتب رسالتك للكابتن...", text: $globalBrain.inputText, axis: .vertical)
-                    .focused($isInputFocused)
-                    .textInputAutocapitalization(.sentences)
-                    .autocorrectionDisabled(false)
-                    .submitLabel(.send)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    .lineLimit(1...4)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 13)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(0.56))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.white.opacity(0.68), lineWidth: 1)
-                    )
-                    .onSubmit {
-                        sendCurrentMessage()
-                    }
-
-                Button(action: sendCurrentMessage) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        AiQoTheme.Colors.ctaGradientLeading,
-                                        AiQoTheme.Colors.ctaGradientTrailing
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(hex: "113238"))
-                            .rotationEffect(.degrees(12))
-                    }
-                    .frame(width: 50, height: 50)
-                    .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 7)
-                }
-                .buttonStyle(.plain)
-                .disabled(trimmedInput.isEmpty || globalBrain.isLoading)
-                .opacity(trimmedInput.isEmpty || globalBrain.isLoading ? 0.55 : 1)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(Color.white.opacity(0.72), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: -6)
-            )
-            .padding(.horizontal, 14)
-            .padding(.bottom, 8)
-        }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.clear,
-                    Color(UIColor.systemGroupedBackground).opacity(0.78),
-                    Color(UIColor.systemGroupedBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-    }
-
-    var trimmedInput: String {
-        globalBrain.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func sendCurrentMessage() {
-        let message = trimmedInput
-        guard !message.isEmpty else { return }
-
-        globalBrain.sendMessage(message, context: .mainChat)
-        isInputFocused = false
-    }
-
     func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
         let scrollAction = {
             if let lastMessageID = globalBrain.messages.last?.id {
@@ -308,6 +234,57 @@ private extension CaptainChatView {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             scrollAction()
         }
+    }
+}
+
+private struct CaptainOfflineModeBanner: View {
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(AuthFlowTheme.sand)
+                .frame(width: 22, height: 22)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(NSLocalizedString("captain.offlineBanner.title", comment: ""))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+
+                Text(NSLocalizedString("captain.offlineBanner.body", comment: ""))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Button(action: onOpenSettings) {
+                HStack(spacing: 4) {
+                    Text(NSLocalizedString("captain.offlineBanner.action", comment: ""))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    Image(systemName: "chevron.forward")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(AuthFlowTheme.sand)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("captain-offline-banner-settings")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AuthFlowTheme.sand.opacity(0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(AuthFlowTheme.sand, lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -407,6 +384,8 @@ private struct CaptainTypingRow: View {
             Spacer(minLength: 26)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("الكابتن يكتب")
     }
 }
 
@@ -417,7 +396,7 @@ private struct TypingDot: View {
 
     var body: some View {
         Circle()
-            .fill(Color(hex: "B99973"))
+            .fill(Color(hex: "5ECDB7"))
             .frame(width: 8, height: 8)
             .scaleEffect(isAnimating ? 1 : 0.55)
             .opacity(isAnimating ? 1 : 0.35)
@@ -621,6 +600,119 @@ private extension WorkoutPlan {
 private extension Exercise {
     var displaySummary: String {
         "\(name) • \(sets)x\(repsOrDuration)"
+    }
+}
+
+/// Input composer bar with **local** text state.
+///
+/// Key perf fix: the TextField used to bind to `$globalBrain.inputText`, which is
+/// `@Published`. Every keystroke re-published the whole `CaptainViewModel`, forcing
+/// `CaptainChatView` and every `ChatMessageRow` inside it to re-evaluate — that's
+/// why opening the keyboard pinned one core at 50% and sending spiked to 100%.
+/// Holding the text and focus state locally keeps each keystroke inside this
+/// subview; the only time anything escapes to the VM is when the user taps send.
+private struct ChatComposerBar: View {
+    let isSending: Bool
+    let onSend: (String) -> Void
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(height: 8)
+
+            HStack(alignment: .bottom, spacing: 12) {
+                TextField("اكتب رسالتك للكابتن...", text: $text, axis: .vertical)
+                    .focused($isFocused)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(false)
+                    .submitLabel(.send)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.56))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.white.opacity(0.68), lineWidth: 1)
+                    )
+                    .onSubmit(send)
+
+                Button(action: send) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        AiQoTheme.Colors.ctaGradientLeading,
+                                        AiQoTheme.Colors.ctaGradientTrailing
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: "113238"))
+                            .rotationEffect(.degrees(12))
+                    }
+                    .frame(width: 50, height: 50)
+                    .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 7)
+                }
+                .buttonStyle(.plain)
+                .disabled(isDisabled)
+                .opacity(isDisabled ? 0.55 : 1)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: -6)
+            )
+            .padding(.horizontal, 14)
+            .padding(.bottom, 8)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.clear,
+                    Color(UIColor.systemGroupedBackground).opacity(0.78),
+                    Color(UIColor.systemGroupedBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var trimmed: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isDisabled: Bool {
+        trimmed.isEmpty || isSending
+    }
+
+    private func send() {
+        let message = trimmed
+        guard !message.isEmpty else { return }
+        onSend(message)
+        text = ""
+        isFocused = false
     }
 }
 

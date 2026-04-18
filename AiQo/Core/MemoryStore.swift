@@ -142,9 +142,12 @@ final class MemoryStore {
         let messageTokens = CaptainCognitiveTextAnalyzer.tokens(from: message)
 
         do {
-            let descriptor = FetchDescriptor<CaptainMemory>(
+            // Cap the fetch + ranking cost. Recency already dominates relevance for chat —
+            // unbounded fetches were blocking MainActor for seconds on large memory stores.
+            var descriptor = FetchDescriptor<CaptainMemory>(
                 sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
             )
+            descriptor.fetchLimit = 100
             let memories = try context.fetch(descriptor)
             let filtered = memories.filter { memory in
                 guard let allowedCategories else { return true }
@@ -172,10 +175,14 @@ final class MemoryStore {
             let selected = Array(ranked.prefix(limit))
             guard !selected.isEmpty else { return [] }
 
+            // Bump accessCount in-place; defer the SwiftData save so the UI is not blocked
+            // by disk I/O on every send.
             selected.forEach { item in
                 item.0.accessCount += 1
             }
-            try? context.save()
+            Task { @MainActor in
+                try? context.save()
+            }
 
             return selected.map { CaptainMemorySnapshot(memory: $0.0) }
         } catch {

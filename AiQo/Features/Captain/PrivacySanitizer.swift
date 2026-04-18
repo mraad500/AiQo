@@ -163,6 +163,38 @@ struct PrivacySanitizer: Sendable {
         return sanitized
     }
 
+    // MARK: - TTS Sanitization
+
+    /// Sanitize a Captain reply for third-party TTS transmission.
+    /// Replaces the known user's first name with a neutral vocative so the TTS provider
+    /// never receives the real name, while preserving natural-sounding speech.
+    func sanitizeForTTS(
+        _ text: String,
+        knownUserName: String?,
+        language: AppLanguage
+    ) -> String {
+        guard let first = knownUserName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !first.isEmpty else {
+            return text
+        }
+        let replacement = language == .arabic ? "صديقي" : "friend"
+        let escaped = NSRegularExpression.escapedPattern(for: first)
+        let pattern = "\\b\(escaped)\\b"
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: .caseInsensitive
+        ) else {
+            return text
+        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(
+            in: text,
+            options: [],
+            range: range,
+            withTemplate: replacement
+        )
+    }
+
     // MARK: - Name Injection (post-generation, into Captain's reply)
 
     func injectUserName(into response: String, userName: String) -> String {
@@ -424,14 +456,27 @@ private extension PrivacySanitizer {
 extension PrivacySanitizer {
     private static let vibeLogger = Logger(subsystem: "com.mraad500.aiqo", category: "MyVibe")
 
+    /// Fixed token used to stand in for a track title in logs.
+    /// Track names are arbitrary user content — callers should never interpolate them directly;
+    /// pass `PrivacySanitizer.redactedTrack` instead.
+    static let redactedTrack = "<track>"
+
     static func log(_ message: String, sensitive: [String] = []) {
         var sanitized = message
         for value in sensitive {
             sanitized = sanitized.replacingOccurrences(of: value, with: "<redacted>")
         }
+        // Spotify URIs — preserve the type, redact only the ID.
+        // "spotify:track:abc123" → "spotify:track:***"
         sanitized = sanitized.replacingOccurrences(
-            of: #"spotify:[a-z]+:[A-Za-z0-9]+"#,
-            with: "spotify:<redacted>",
+            of: #"spotify:([a-z]+):[A-Za-z0-9]+"#,
+            with: "spotify:$1:***",
+            options: .regularExpression
+        )
+        // Bare Spotify user IDs outside a URI (e.g. "user:abc123").
+        sanitized = sanitized.replacingOccurrences(
+            of: #"\buser:[A-Za-z0-9_\-]+"#,
+            with: "user:***",
             options: .regularExpression
         )
         vibeLogger.log("\(sanitized, privacy: .public)")

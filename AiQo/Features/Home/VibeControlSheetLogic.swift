@@ -28,11 +28,15 @@ extension VibeControlSheet {
                         SpotifyGlyph()
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(vibeManager.isConnected ? "Spotify Connected" : "Connect to Spotify")
+                            Text(vibeManager.isConnected
+                                 ? "spotify.connect.connected".localized
+                                 : "spotify.connect.connect".localized)
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundStyle(.white)
 
-                            Text(vibeManager.isConnected ? "Open DJ Hamoudi playlists" : "Tap to link Spotify playback")
+                            Text(vibeManager.isConnected
+                                 ? "spotify.connect.connected.sub".localized
+                                 : "spotify.connect.connect.sub".localized)
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.white.opacity(0.76))
                         }
@@ -48,10 +52,11 @@ extension VibeControlSheet {
                     .background(sectionBackground(cornerRadius: 26))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(vibeManager.isConnected ? "افتح سبوتيفاي" : "وصّل سبوتيفاي")
+                .accessibilityLabel(vibeManager.isConnected
+                                    ? "spotify.a11y.open".localized
+                                    : "spotify.a11y.connect".localized)
 
-                // Hamoudi+you+DJ Blend button
-                if AiQoFeatureFlags.hamoudiBlendEnabled {
+                // Hamoudi+you+DJ button
                 Button {
                     showBlendPlaylist = true
                 } label: {
@@ -75,11 +80,11 @@ extension VibeControlSheet {
                         }
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Hamoudi+you+DJ 🎧")
+                            Text("blend.entry.title".localized)
                                 .font(.system(size: 16, weight: .heavy, design: .rounded))
                                 .foregroundStyle(.white)
 
-                            Text("امزج ذوقك مع حمودي")
+                            Text("blend.entry.subtitle".localized)
                                 .font(.system(size: 10, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.white.opacity(0.72))
                         }
@@ -116,12 +121,11 @@ extension VibeControlSheet {
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("افتح مزيج حمودي+انت+دي جي")
-                } // end hamoudiBlendEnabled
+                .accessibilityLabel("blend.entry.a11y".localized)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("DJ Hamoudi's Playlists")
+                        Text("spotify.playlists.header".localized)
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
@@ -141,7 +145,7 @@ extension VibeControlSheet {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
                                 .font(.system(size: 12, weight: .semibold))
 
-                            Text("سجل خروج من سبوتيفاي")
+                            Text("spotify.logout".localized)
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                         }
                         .foregroundStyle(Color.white.opacity(0.55))
@@ -156,7 +160,7 @@ extension VibeControlSheet {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("سجل خروج من سبوتيفاي")
+                    .accessibilityLabel("spotify.a11y.logout".localized)
                 }
             }
             .padding(.horizontal, 18)
@@ -324,7 +328,7 @@ extension VibeControlSheet {
                 .frame(maxWidth: .infinity, minHeight: 52)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("افتح إعدادات الفايب")
+            .accessibilityLabel("vibe.a11y.openSettings".localized)
 
             Button(action: handleCompactPlayPauseTapped) {
                 Image(systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill")
@@ -348,7 +352,7 @@ extension VibeControlSheet {
                     .background(controlOrbBackground)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("افتح دردشة الدي جي")
+            .accessibilityLabel("vibe.a11y.openDJChat".localized)
         }
         .padding(10)
         .background(sectionBackground(cornerRadius: 24))
@@ -373,7 +377,7 @@ extension VibeControlSheet {
                     }
                     .buttonStyle(.plain)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .accessibilityLabel("تم")
+                    .accessibilityLabel("vibe.a11y.done".localized)
                 }
 
                 detailSheetContent
@@ -398,7 +402,9 @@ extension VibeControlSheet {
                     title: currentPlaybackState == .playing ? "Pause" : "Resume",
                     systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill",
                     isEnabled: isPauseResumeAvailable,
-                    accessibilityLabel: currentPlaybackState == .playing ? "أوقف التشغيل مؤقتًا" : "استأنف التشغيل"
+                    accessibilityLabel: currentPlaybackState == .playing
+                        ? "vibe.a11y.pausePlayback".localized
+                        : "vibe.a11y.resumePlayback".localized
                 ) {
                     handlePauseResumeTapped()
                 }
@@ -407,7 +413,7 @@ extension VibeControlSheet {
                     title: "Stop",
                     systemName: "stop.fill",
                     isEnabled: currentPlaybackState != .stopped,
-                    accessibilityLabel: "أوقف التشغيل"
+                    accessibilityLabel: "vibe.a11y.stopPlayback".localized
                 ) {
                     handleStopTapped()
                 }
@@ -490,7 +496,7 @@ extension VibeControlSheet {
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color(red: 0.46, green: 0.90, blue: 0.78))
-                    .accessibilityLabel("اعرف سبب عدم توفر سبوتيفاي")
+                    .accessibilityLabel("vibe.a11y.whyUnavailable".localized)
                 }
             }
 
@@ -836,20 +842,24 @@ extension VibeControlSheet {
     var compactPlayPauseAccessibilityLabel: String {
         switch currentPlaybackState {
         case .playing:
-            return "أوقف الفايب مؤقتًا"
+            return "vibe.a11y.pauseVibe".localized
         case .paused:
-            return "استأنف الفايب"
+            return "vibe.a11y.resumeVibe".localized
         case .stopped:
-            return "شغّل الفايب"
+            return "vibe.a11y.playVibe".localized
         }
     }
 
     var primaryAccessibilityLabel: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return aiqoAudioManager.playbackState == .paused ? "استأنف أصوات AiQo" : "شغّل أصوات AiQo"
+            return aiqoAudioManager.playbackState == .paused
+                ? "vibe.a11y.resumeAiqo".localized
+                : "vibe.a11y.playAiqo".localized
         case .spotify:
-            return vibeManager.isConnected ? "شغّل القائمة في سبوتيفاي" : "وصّل سبوتيفاي"
+            return vibeManager.isConnected
+                ? "vibe.a11y.playSpotify".localized
+                : "vibe.a11y.connectSpotify".localized
         }
     }
 
@@ -946,7 +956,7 @@ extension VibeControlSheet {
             .background(sectionBackground(cornerRadius: 22))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("شغّل قائمة \(playlist.title) في سبوتيفاي")
+        .accessibilityLabel(String(format: "vibe.a11y.playPlaylist".localized, playlist.title))
     }
 
     func handlePauseResumeTapped() {
