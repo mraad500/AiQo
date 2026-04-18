@@ -133,7 +133,9 @@ private extension BrainOrchestrator {
         userName: String?
     ) async -> HybridBrainServiceReply {
         do {
-            return try await generateLocalReply(for: request)
+            let reply = try await generateLocalReply(for: request)
+            await persistIfMemoryEnabled(request: request, reply: reply)
+            return reply
         } catch let error as AppleIntelligenceSleepAgentError {
             return await handleSleepAgentError(error, request: request, userName: userName)
         } catch {
@@ -197,6 +199,7 @@ private extension BrainOrchestrator {
             logger.notice("cloud_request_started")
             let reply = try await cloudService.generateReply(request: request, userName: userName)
             logger.notice("cloud_request_succeeded")
+            await persistIfMemoryEnabled(request: request, reply: reply)
             return reply
         } catch {
             if let brainError = error as? BrainError,
@@ -220,7 +223,9 @@ private extension BrainOrchestrator {
 
             // Otherwise try Apple Intelligence as a local fallback
             do {
-                return try await generateLocalReply(for: request)
+                let reply = try await generateLocalReply(for: request)
+                await persistIfMemoryEnabled(request: request, reply: reply)
+                return reply
             } catch {
                 logger.error("local_fallback_failed error=\(error.localizedDescription, privacy: .public)")
                 return makeNetworkErrorReply(language: request.language)
@@ -305,9 +310,11 @@ private extension BrainOrchestrator {
                 return makeComputedSleepReply(session: session, language: originalRequest.language)
             }
 
+            await persistIfMemoryEnabled(request: originalRequest, reply: retryReply)
             return retryReply
         }
 
+        await persistIfMemoryEnabled(request: originalRequest, reply: primaryReply)
         return primaryReply
     }
 
@@ -688,6 +695,53 @@ private extension BrainOrchestrator {
 
         return Self.sleepDataPatterns.contains { pattern in
             normalized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+    }
+}
+
+// MARK: - Memory Persistence Hook (BATCH 3a)
+
+private extension BrainOrchestrator {
+    /// Persists a successful LLM exchange to EpisodicStore and kicks off non-blocking
+    /// fact extraction into SemanticStore. Only runs when MEMORY_V4_ENABLED.
+    /// Never called on error / fallback paths — we don't poison memory with canned replies.
+    func persistIfMemoryEnabled(
+        request: HybridBrainRequest,
+        reply: HybridBrainServiceReply
+    ) async {
+        guard FeatureFlags.memoryV4Enabled else { return }
+
+        let userMessage = latestUserMessage(in: request)
+        let captainResponse = reply.message
+        guard !userMessage.isEmpty, !captainResponse.isEmpty else { return }
+
+        let episodeID = await EpisodicStore.shared.record(
+            userMessage: userMessage,
+            captainResponse: captainResponse
+        )
+
+        Task.detached(priority: .utility) {
+            let candidates = await FactExtractor.shared.extract(
+                userMessage: userMessage,
+                captainResponse: captainResponse,
+                maxFacts: 3
+            )
+            let persistable = candidates.filter { !$0.sensitive }
+            guard !persistable.isEmpty else { return }
+
+            let related: [UUID] = episodeID.map { [$0] } ?? []
+            for candidate in persistable {
+                _ = await SemanticStore.shared.addOrReinforce(
+                    content: candidate.content,
+                    category: candidate.category,
+                    confidence: candidate.confidence,
+                    source: .extracted,
+                    isPII: false,
+                    isSensitive: false,
+                    relatedEntryIDs: related
+                )
+            }
+            diag.info("BrainOrchestrator.persistIfMemoryEnabled: wrote \(persistable.count) facts (episode=\(episodeID?.uuidString ?? "nil"))")
         }
     }
 }
