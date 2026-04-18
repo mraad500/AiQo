@@ -10,6 +10,7 @@ struct MainTabScreen: View {
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
+    @State private var showCaptainPaywall = false
 
     var body: some View {
         Group {
@@ -58,12 +59,15 @@ struct MainTabScreen: View {
                             }
                     } else {
                         CaptainLockedView(config: .init(
-                            title: "Captain",
-                            subtitle: "Upgrade to unlock the Captain.",
-                            iconSystemName: "lock.fill",
+                            title: "محادثة حمودي",
+                            subtitle: "افتح الكابتن حمودي كامل مع اشتراك AiQo. كل الميزات، بلهجتك، في أي وقت.",
+                            iconSystemName: "message.badge.waveform.fill",
                             tier: tierGate.requiredTier(for: .captainChat),
-                            onUpgradeTap: {}
+                            onUpgradeTap: { showCaptainPaywall = true }
                         ))
+                        .sheet(isPresented: $showCaptainPaywall) {
+                            PaywallView(source: .captainGate)
+                        }
                     }
                 }
             }
