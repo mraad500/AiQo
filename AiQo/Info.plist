@@ -11,8 +11,6 @@
 	</array>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
-	<key>CAPTAIN_ARABIC_API_URL</key>
-	<string>$(CAPTAIN_ARABIC_API_URL)</string>
 	<key>CAPTAIN_VOICE_API_KEY</key>
 	<string>$(CAPTAIN_VOICE_API_KEY)</string>
 	<key>CAPTAIN_VOICE_API_URL</key>
@@ -37,8 +35,6 @@
 	</array>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
-	<key>COACH_BRAIN_LLM_API_URL</key>
-	<string>$(COACH_BRAIN_LLM_API_URL)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>

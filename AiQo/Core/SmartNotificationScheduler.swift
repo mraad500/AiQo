@@ -24,13 +24,10 @@ final class SmartNotificationScheduler {
     }
 
     private enum SchedulerError: LocalizedError {
-        case emptyTranslation
         case notificationSchedulingFailed(Error)
 
         var errorDescription: String? {
             switch self {
-            case .emptyTranslation:
-                return "The translation API returned an empty translation."
             case let .notificationSchedulingFailed(error):
                 return "Scheduling the local notification failed: \(error.localizedDescription)"
             }
@@ -42,7 +39,6 @@ final class SmartNotificationScheduler {
     private let calendar: Calendar
     private let captainIntelligenceManager: CaptainIntelligenceManager
     private let notificationComposer: CaptainBackgroundNotificationComposer
-    private let middlewareTranslator: any CoachBrainTranslating
     private let pendingDeveloperNotificationLock = NSLock()
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
@@ -51,10 +47,10 @@ final class SmartNotificationScheduler {
 
     private let coachLanguageKey = "notificationLanguage"
     private let notificationThreadIdentifier = "aiqo.captain.coach-nudges"
-    private let translationSystemPrompt = "Translate this to a friendly, motivational Iraqi Arabic dialect. You are Captain Hamoudi, a smart and caring fitness coach."
     private let defaultEnglishMessage = "Captain Hamoudi says: start with one strong move now and build momentum before the day runs away from you."
     private let defaultArabicMessage = "هلا بطل، خلي هسه حركة صغيرة تعطي يومك روح. قوم وامش دقيقتين وخليها بداية قوية."
     private let developerNudgeDelay: TimeInterval = 5
+    private let defaultStepGoal = 10_000
     private let backgroundInactivityCooldown: TimeInterval = 3 * 60 * 60
     private let lastBackgroundInactivitySentAtKey = "aiqo.notifications.background.lastInactivitySentAt"
 
@@ -65,15 +61,13 @@ final class SmartNotificationScheduler {
         defaults: UserDefaults = .standard,
         calendar: Calendar = .current,
         captainIntelligenceManager: CaptainIntelligenceManager = .shared,
-        notificationComposer: CaptainBackgroundNotificationComposer? = nil,
-        middlewareTranslator: (any CoachBrainTranslating)? = nil
+        notificationComposer: CaptainBackgroundNotificationComposer? = nil
     ) {
         self.center = center
         self.defaults = defaults
         self.calendar = calendar
         self.captainIntelligenceManager = captainIntelligenceManager
         self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
-        self.middlewareTranslator = middlewareTranslator ?? CoachBrainLLMTranslator()
     }
 
     func registerBackgroundTasks() {
@@ -149,24 +143,17 @@ final class SmartNotificationScheduler {
             return false
         }
 
-        let englishMessage = englishCoachMessage(for: loadDummyHealthContext())
         guard !Task.isCancelled else { return false }
 
-        let finalBody: String
-
-        do {
-            finalBody = try await translateToFriendlyIraqiArabic(englishText: englishMessage)
-        } catch {
-            logger.error("developer_nudge_translation_failed error=\(error.localizedDescription, privacy: .public)")
-            finalBody = defaultArabicMessage
-        }
-
-        guard !Task.isCancelled else { return false }
+        let body = coachTemplateBody(
+            for: loadDummyHealthContext(),
+            language: .arabic
+        )
 
         storePendingDeveloperNotification(
             PendingLocalNotification(
                 title: "كابتن حمودي",
-                body: finalBody
+                body: body
             )
         )
         return true
@@ -523,25 +510,11 @@ final class SmartNotificationScheduler {
         }
 
         // Legacy fallback: if ProactiveContext couldn't be built
-        let englishMessage = await simulatedCoachContext()
+        let context = await loadHealthContext()
         guard !Task.isCancelled else { return false }
 
         let preferredLanguage = preferredCoachLanguage()
-        let finalBody: String
-
-        switch preferredLanguage {
-        case .english:
-            finalBody = englishMessage
-        case .arabic:
-            do {
-                finalBody = try await translateToFriendlyIraqiArabic(englishText: englishMessage)
-            } catch {
-                logger.error("coach_nudge_translation_failed error=\(error.localizedDescription, privacy: .public)")
-                finalBody = defaultArabicMessage
-            }
-        }
-
-        guard !Task.isCancelled else { return false }
+        let finalBody = coachTemplateBody(for: context, language: preferredLanguage)
 
         do {
             try await scheduleLocalNotification(
@@ -557,35 +530,34 @@ final class SmartNotificationScheduler {
         }
     }
 
-    private func simulatedCoachContext() async -> String {
-        let context = await loadHealthContext()
-        return englishCoachMessage(for: context)
+    private func coachTemplateBody(
+        for context: HealthContext,
+        language: CoachNotificationLanguage
+    ) -> String {
+        let input = IraqiCoachTemplates.Input(
+            steps: (context.steps / 500) * 500,
+            stepGoal: defaultStepGoal,
+            heartRate: context.heartRate.map { ($0 / 5) * 5 },
+            sleepHours: context.sleepHours > 0
+                ? (context.sleepHours * 2).rounded() / 2
+                : nil,
+            timeOfDay: currentTimeOfDay()
+        )
+
+        return language == .arabic
+            ? IraqiCoachTemplates.iraqi(input)
+            : IraqiCoachTemplates.english(input)
     }
 
-    private func englishCoachMessage(for context: HealthContext) -> String {
-        let sleepText = String(format: "%.1f", context.sleepHours)
-
-        if context.steps < 1500 && context.sleepHours < 6 {
-            return "You slept \(sleepText) hours and only logged \(context.steps) steps so far. Start soft with a 7-minute walk and wake your engine up."
+    private func currentTimeOfDay() -> IraqiCoachTemplates.TimeOfDay {
+        let hour = calendar.component(.hour, from: Date())
+        switch hour {
+        case 5..<11: return .morning
+        case 11..<14: return .midday
+        case 14..<17: return .afternoon
+        case 17..<21: return .evening
+        default: return .night
         }
-
-        if context.steps < 4000 {
-            if let heartRate = context.heartRate, heartRate > 95 {
-                return "Your heart rate is sitting around \(heartRate) bpm and you're at \(context.steps) steps. Reset your rhythm with slow breathing, then walk 5 minutes."
-            }
-
-            return "You're only at \(context.steps) steps today. Stack a quick 10-minute walk now and give your body the spark it needs."
-        }
-
-        if context.steps >= 9000 {
-            return "You already earned \(context.steps) steps today. Finish strong with one more focused push before sunset and lock the win in."
-        }
-
-        if context.sleepHours >= 7.5 {
-            return "You recovered for \(sleepText) hours and your body is ready. Use that advantage and turn the next 15 minutes into clean momentum."
-        }
-
-        return "You're building momentum with \(context.steps) steps today. Keep it moving with one deliberate burst before the evening slows you down."
     }
 
     private func performInactivityCheckAndNotifyIfNeeded(
@@ -726,26 +698,6 @@ final class SmartNotificationScheduler {
         @unknown default:
             return false
         }
-    }
-
-    private func translateToFriendlyIraqiArabic(englishText: String) async throws -> String {
-        let payload = englishText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !payload.isEmpty else {
-            return defaultArabicMessage
-        }
-
-        let translated = try await middlewareTranslator.translate(
-            payload,
-            systemPrompt: translationSystemPrompt,
-            knownUserName: smartNotificationCurrentUserFirstName()
-        )
-
-        let normalizedTranslation = translated.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedTranslation.isEmpty else {
-            throw SchedulerError.emptyTranslation
-        }
-
-        return normalizedTranslation
     }
 
     private func scheduleLocalNotification(
@@ -959,11 +911,3 @@ final class SmartNotificationScheduler {
     }
 }
 
-private func smartNotificationCurrentUserFirstName() -> String? {
-    let raw = UserProfileStore.shared.current.name
-        .components(separatedBy: " ")
-        .first?
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let raw, !raw.isEmpty else { return nil }
-    return raw
-}

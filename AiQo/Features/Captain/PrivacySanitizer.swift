@@ -107,7 +107,7 @@ struct PrivacySanitizer: Sendable {
             ? sanitizeKitchenImageData(request.attachedImageData)
             : nil
 
-        let safeIntent = sanitizeText(request.intentSummary, knownUserName: knownUserName)
+        let safeIntent = sanitizePromptForCloud(request.intentSummary, knownUserName: knownUserName)
         let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return HybridBrainRequest(
@@ -123,6 +123,22 @@ struct PrivacySanitizer: Sendable {
     }
 
     // MARK: - Text Sanitization
+
+    /// Sanitizes a free-text prompt before it leaves the device.
+    /// Pipeline: PII redaction (via `sanitizeText`) + numeric bucketing for HealthKit vitals.
+    /// Input may contain Arabic, English, or mixed numerics; Arabic digits are normalized first.
+    func sanitizePromptForCloud(_ prompt: String, knownUserName: String?) -> String {
+        var result = sanitizeText(prompt, knownUserName: knownUserName)
+        result = convertArabicDigits(in: result)
+        result = bucketHeartRateMentions(in: result)
+        result = bucketStepMentions(in: result)
+        result = bucketDistanceMentions(in: result)
+        result = bucketCalorieMentions(in: result)
+        result = bucketDurationMentions(in: result)
+        result = bucketSleepMentions(in: result)
+        result = bucketZonePercentMentions(in: result)
+        return result
+    }
 
     func sanitizeText(_ text: String, knownUserName: String?) -> String {
         var sanitized = normalizedWhitespace(in: text)
@@ -301,7 +317,7 @@ private extension PrivacySanitizer {
         var sanitized: [CaptainConversationMessage] = []
 
         for message in truncated {
-            let sanitizedContent = sanitizeText(message.content, knownUserName: knownUserName)
+            let sanitizedContent = sanitizePromptForCloud(message.content, knownUserName: knownUserName)
 
             if !sanitizedContent.isEmpty {
                 sanitized.append(CaptainConversationMessage(role: message.role, content: sanitizedContent))
@@ -448,6 +464,127 @@ private extension PrivacySanitizer {
                 return false
             }
         }
+    }
+
+    // MARK: - Numeric Bucketing for Free-Text Vitals
+
+    /// Arabic-Indic digits (٠-٩) and Extended Arabic-Indic digits (۰-۹) → ASCII 0-9.
+    /// Must run before any numeric regex so bucketing catches Arabic numbers too.
+    func convertArabicDigits(in text: String) -> String {
+        var result = ""
+        result.reserveCapacity(text.count)
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x0660...0x0669:
+                result.append(Character(Unicode.Scalar(scalar.value - 0x0660 + 0x30)!))
+            case 0x06F0...0x06F9:
+                result.append(Character(Unicode.Scalar(scalar.value - 0x06F0 + 0x30)!))
+            default:
+                result.unicodeScalars.append(scalar)
+            }
+        }
+        return result
+    }
+
+    func bucketHeartRateMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+)\s*(bpm|نبضة|ن/د)"#,
+            bucket: 5,
+            isDouble: false
+        )
+    }
+
+    func bucketStepMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+)\s*(steps?|خطوة|خطوات)"#,
+            bucket: 500,
+            isDouble: false
+        )
+    }
+
+    func bucketDistanceMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+(?:\.\d+)?)\s*(km|كم|كيلو)"#,
+            bucket: 0.1,
+            isDouble: true
+        )
+    }
+
+    func bucketCalorieMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+)\s*(kcal|سعرة|سعرات|سعر\s*حراري)"#,
+            bucket: 10,
+            isDouble: false
+        )
+    }
+
+    func bucketDurationMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+)\s*(min|minutes?|دقيقة|دقائق)"#,
+            bucket: 5,
+            isDouble: false
+        )
+    }
+
+    func bucketSleepMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+(?:\.\d+)?)\s*(hours?|ساعة|ساعات|h)\b"#,
+            bucket: 0.5,
+            isDouble: true
+        )
+    }
+
+    func bucketZonePercentMentions(in text: String) -> String {
+        bucketNumericMatches(
+            in: text,
+            pattern: #"(\d+)\s*%\s*(zone\s*\d|زون|peak|below)"#,
+            bucket: 5,
+            isDouble: false
+        )
+    }
+
+    /// Walks matches right-to-left so replacements don't invalidate NSRange offsets of earlier matches.
+    func bucketNumericMatches(
+        in text: String,
+        pattern: String,
+        bucket: Double,
+        isDouble: Bool
+    ) -> String {
+        guard bucket > 0,
+              let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return text
+        }
+        let nsText = text as NSString
+        let fullRange = NSRange(location: 0, length: nsText.length)
+        let matches = regex.matches(in: text, options: [], range: fullRange)
+        guard !matches.isEmpty else { return text }
+
+        var result = text
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2 else { continue }
+            let digitRange = match.range(at: 1)
+            guard digitRange.location != NSNotFound,
+                  let digitSwiftRange = Range(digitRange, in: result) else { continue }
+
+            let raw = String(result[digitSwiftRange])
+            guard let rawValue = Double(raw) else { continue }
+
+            let bucketed = (rawValue / bucket).rounded() * bucket
+            let replacement: String
+            if isDouble {
+                replacement = String(format: "%.1f", bucketed)
+            } else {
+                replacement = String(Int(bucketed))
+            }
+            result.replaceSubrange(digitSwiftRange, with: replacement)
+        }
+        return result
     }
 }
 
