@@ -39,6 +39,13 @@ struct BrainOrchestrator: Sendable {
         userName: String?
     ) async throws -> HybridBrainServiceReply {
         let routedRequest = interceptSleepIntent(request)
+        if route(for: routedRequest) == .cloud,
+           !TierGate.shared.canAccess(.captainChat) {
+            return makeTierRequiredReply(
+                language: routedRequest.language,
+                requiredTier: TierGate.shared.requiredTier(for: .captainChat)
+            )
+        }
         let baseReply: HybridBrainServiceReply
 
         switch route(for: routedRequest) {
@@ -189,6 +196,14 @@ private extension BrainOrchestrator {
             logger.notice("cloud_request_succeeded")
             return reply
         } catch {
+            if let brainError = error as? BrainError,
+               case .tierRequired(let requiredTier) = brainError {
+                logger.notice("cloud_request_blocked_by_tier")
+                return makeTierRequiredReply(
+                    language: request.language,
+                    requiredTier: requiredTier
+                )
+            }
             logger.error("cloud_request_failed error=\(error.localizedDescription, privacy: .public)")
 
             // If the cloud call itself failed with a network-level error (bad status, no connection)
@@ -370,6 +385,27 @@ private extension BrainOrchestrator {
         } else {
             message = CaptainFallbackPolicy.genericEnglishFallback()
         }
+
+        let structuredResponse = CaptainStructuredResponse(message: message)
+        let rawText = (try? encode(structuredResponse)) ?? message
+
+        return HybridBrainServiceReply(
+            message: message,
+            quickReplies: nil,
+            workoutPlan: nil,
+            mealPlan: nil,
+            spotifyRecommendation: nil,
+            rawText: rawText
+        )
+    }
+
+    func makeTierRequiredReply(
+        language: AppLanguage,
+        requiredTier: SubscriptionTier
+    ) -> HybridBrainServiceReply {
+        let message = language == .arabic
+            ? "هاي الميزة تحتاج \(requiredTier.displayName)."
+            : "This feature requires \(requiredTier.displayName)."
 
         let structuredResponse = CaptainStructuredResponse(message: message)
         let rawText = (try? encode(structuredResponse)) ?? message

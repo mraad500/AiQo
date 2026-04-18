@@ -94,6 +94,9 @@ enum CaptainVoiceAPI {
     }
 
     static func synthesizeSpeech(for text: String) async throws -> Data {
+        guard TierGate.shared.canAccess(.premiumVoice) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .premiumVoice))
+        }
         try await AICloudConsentGate.requireConsent()
 
         guard let configuration = configuration() else {

@@ -115,6 +115,10 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     func analyzeFridgeImage(image: UIImage) async throws -> [FridgeItem] {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
+
         do {
             let items = try await callVisionAPI(image: image)
             guard !items.isEmpty else {
@@ -129,6 +133,9 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     private func callVisionAPI(image: UIImage) async throws -> [FridgeItem] {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
         try await AICloudConsentGate.requireConsent()
 
         // Resolve API key using the same logic as HybridBrainService

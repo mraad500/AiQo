@@ -273,6 +273,9 @@ final class CaptainIntelligenceManager {
     }
 
     private func generateArabicAPIReply(for userInput: String) async throws -> String {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
         try await AICloudConsentGate.requireConsent()
 
         let configuration = try arabicAPIConfiguration()

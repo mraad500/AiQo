@@ -20,6 +20,7 @@ enum PremiumExpiryNotifier {
     ]
 
     static func scheduleAllNotifications(_ expiresAt: Date) {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         let center = UNUserNotificationCenter.current()
         clearScheduledNotifications(center: center)
 
@@ -47,11 +48,12 @@ enum PremiumExpiryNotifier {
                 trigger: trigger
             )
 
+            guard TierGate.shared.canAccess(.captainNotifications) else { return }
             center.add(request) { error in
                 if let error {
-                    print("🔔 Failed to schedule premium notification \(notification.identifier): \(error)")
+                    diag.error("Failed to schedule premium notification \(notification.identifier)", error: error)
                 } else {
-                    print("🔔 Scheduled premium notification \(notification.identifier) for \(notification.fireDate)")
+                    diag.info("Scheduled premium notification \(notification.identifier) for \(notification.fireDate)")
                 }
             }
         }
@@ -102,6 +104,6 @@ enum PremiumExpiryNotifier {
     private static func clearScheduledNotifications(center: UNUserNotificationCenter) {
         center.removePendingNotificationRequests(withIdentifiers: allIdentifiers)
         center.removeDeliveredNotifications(withIdentifiers: allIdentifiers)
-        print("🔔 Cleared previous premium expiry notifications.")
+        diag.info("Cleared previous premium expiry notifications.")
     }
 }

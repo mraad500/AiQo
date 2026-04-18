@@ -646,6 +646,14 @@ final class CaptainViewModel: ObservableObject {
         for error: Error,
         screenContext: ScreenContext
     ) -> String {
+        if let brainError = error as? BrainError,
+           case .tierRequired(let tier) = brainError {
+            return localizedFallbackMessage(
+                arabic: "هاي الميزة تحتاج \(tier.displayName).",
+                english: "This feature requires \(tier.displayName)."
+            )
+        }
+
         // Handle AiQoError rate-limit and server errors
         if let aiqoError = error as? AiQoError {
             switch aiqoError {

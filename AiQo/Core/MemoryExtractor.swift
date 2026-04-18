@@ -186,6 +186,7 @@ struct MemoryExtractor: Sendable {
         assistantReply: String,
         store: MemoryStore
     ) async {
+        guard TierGate.shared.canAccess(.captainChat) else { return }
         guard await AICloudConsentGate.hasConsent() else { return }
 
         // Privacy-first: sanitize all outgoing text before it leaves the device

@@ -12,7 +12,11 @@ struct KitchenPlanGenerationService {
         fridgeItems: [FridgeItem],
         userGoal: String?,
         cookingTimeMinutes: Int = 30
-    ) async -> String {
+    ) async throws -> String {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
+
         let route = KitchenLanguageRouter.route(for: userMessage)
         let prompt = buildKitchenChatPrompt(
             userMessage: userMessage,
@@ -36,6 +40,8 @@ struct KitchenPlanGenerationService {
                     contextOverride: prompt
                 )
             }
+        } catch let error as BrainError {
+            throw error
         } catch {
             return route == .arabicGPT
                 ? "صار خلل بسيط. جرّب مرة ثانية وبعدها أضبطلك الخيارات حسب الموجود بالثلاجة."
@@ -49,8 +55,13 @@ struct KitchenPlanGenerationService {
         fridgeItems: [FridgeItem],
         userGoal: String?,
         cookingTimeMinutes: Int = 30
-    ) async -> KitchenMealPlan {
+    ) async throws -> KitchenMealPlan {
         let normalizedDays = days == 7 ? 7 : 3
+        let weeks = max(1, Int(ceil(Double(normalizedDays) / 7.0)))
+        guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .multiWeekPlan(weeks: weeks)))
+        }
+
         let route = KitchenLanguageRouter.route(for: triggerText)
         let prompt = buildStructuredPlanPrompt(
             days: normalizedDays,
@@ -80,6 +91,8 @@ struct KitchenPlanGenerationService {
             if let parsed = parsePlan(from: reply, expectedDays: normalizedDays) {
                 return parsed
             }
+        } catch let error as BrainError {
+            throw error
         } catch {
             // Fall back to deterministic local generation.
         }

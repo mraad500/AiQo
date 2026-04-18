@@ -41,6 +41,9 @@ struct CloudBrainService: Sendable {
         request: HybridBrainRequest,
         userName: String?
     ) async throws -> HybridBrainServiceReply {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
         try await AICloudConsentGate.requireConsent()
 
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""

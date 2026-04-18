@@ -75,6 +75,10 @@ final class MorningHabitOrchestrator: NSObject {
     }
 
     func refreshMonitoringState(now: Date = Date()) async {
+        guard TierGate.shared.canAccess(.captainNotifications) else {
+            cancelMorningNotification()
+            return
+        }
         guard let wakeDate = scheduledWakeDate else { return }
         guard isInsideMonitoringWindow(now: now, wakeDate: wakeDate) else { return }
 
@@ -105,7 +109,7 @@ final class MorningHabitOrchestrator: NSObject {
                 body: insight.message
             )
         } catch {
-            print("MorningHabitOrchestrator refresh failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator refresh failed", error: error)
         }
     }
 
@@ -119,7 +123,7 @@ final class MorningHabitOrchestrator: NSObject {
                 stepsSinceWake: nil
             )
         } catch {
-            print("MorningHabitOrchestrator insight generation failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator insight generation failed", error: error)
             return nil
         }
     }
@@ -171,7 +175,7 @@ private extension MorningHabitOrchestrator {
                 frequency: .immediate
             )
         } catch {
-            print("MorningHabitOrchestrator background delivery failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator background delivery failed", error: error)
         }
 
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completionHandler, error in
@@ -181,7 +185,7 @@ private extension MorningHabitOrchestrator {
             }
 
             if let error {
-                print("MorningHabitOrchestrator observer failed:", error.localizedDescription)
+                diag.error("MorningHabitOrchestrator observer failed", error: error)
                 completionHandler()
                 return
             }
@@ -305,6 +309,10 @@ private extension MorningHabitOrchestrator {
         stepsSinceWake: Int,
         body: String
     ) async {
+        guard TierGate.shared.canAccess(.captainNotifications) else {
+            cancelMorningNotification()
+            return
+        }
         guard !FreeTrialManager.shared.isInsideTrialWindow else {
             // Trial Journey owns the morning narrative during the first 7 days.
             return
@@ -336,13 +344,14 @@ private extension MorningHabitOrchestrator {
         )
 
         do {
+            guard TierGate.shared.canAccess(.captainNotifications) else { return }
             try await notificationCenter.add(request)
             await MainActor.run {
                 ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
             }
             userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
         } catch {
-            print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator notification scheduling failed", error: error)
         }
     }
 
@@ -381,7 +390,7 @@ private extension MorningHabitOrchestrator {
             )
             return true
         } catch {
-            print("MorningHabitOrchestrator step authorization failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator step authorization failed", error: error)
             return false
         }
     }

@@ -135,6 +135,11 @@ actor CaptainVoiceCache {
             return
         }
 
+        guard await TierGate.shared.canAccess(.premiumVoice) else {
+            logger.notice("voice_cache_skipped reason=tier_gated")
+            return
+        }
+
         guard await CaptainVoiceAPI.isConfigured else {
             logger.notice("voice_cache_skipped reason=api_not_configured")
             return

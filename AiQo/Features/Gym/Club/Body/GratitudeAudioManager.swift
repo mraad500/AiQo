@@ -85,7 +85,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
-            if CaptainVoiceAPI.isConfigured {
+            if CaptainVoiceAPI.isConfigured && TierGate.shared.canAccess(.premiumVoice) {
                 do {
                     let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: sanitizedText)
                     guard !Task.isCancelled else { return }
@@ -94,7 +94,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
                     return
                 } catch {
                     guard !Task.isCancelled else { return }
-                    print("GratitudeAudioManager: Remote voice failed - \(error.localizedDescription)")
+                    diag.error("GratitudeAudioManager remote voice failed", error: error)
                 }
             }
 
@@ -124,7 +124,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         do {
             try audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
         } catch {
-            print("GratitudeAudioManager: Failed to deactivate audio session - \(error.localizedDescription)")
+            diag.error("GratitudeAudioManager failed to deactivate audio session", error: error)
         }
     }
 
@@ -133,7 +133,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
             try audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])
             try audioSession.setActive(true)
         } catch {
-            print("GratitudeAudioManager: Failed to configure audio session - \(error.localizedDescription)")
+            diag.error("GratitudeAudioManager failed to configure audio session", error: error)
         }
     }
 
@@ -155,7 +155,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
                 return player
             }
         } catch {
-            print("GratitudeAudioManager: Failed to create background player - \(error.localizedDescription)")
+            diag.error("GratitudeAudioManager failed to create background player", error: error)
         }
 
         return nil

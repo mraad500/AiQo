@@ -75,6 +75,9 @@ struct CoachBrainLLMTranslator: CoachBrainTranslating {
     }
 
     func translate(_ text: String, systemPrompt: String, knownUserName: String?) async throws -> String {
+        guard TierGate.shared.canAccess(.captainChat) else {
+            throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+        }
         try await AICloudConsentGate.requireConsent()
 
         let sanitizedText = PrivacySanitizer().sanitizeText(text, knownUserName: knownUserName)

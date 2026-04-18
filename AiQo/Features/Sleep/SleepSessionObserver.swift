@@ -54,7 +54,7 @@ private extension SleepSessionObserver {
                 frequency: .immediate
             )
         } catch {
-            print("SleepSessionObserver background delivery failed:", error.localizedDescription)
+            diag.error("SleepSessionObserver background delivery failed", error: error)
         }
 
         let query = HKObserverQuery(sampleType: sleepType, predicate: nil) { [weak self] _, completionHandler, error in
@@ -64,7 +64,7 @@ private extension SleepSessionObserver {
             }
 
             if let error {
-                print("SleepSessionObserver observer failed:", error.localizedDescription)
+                diag.error("SleepSessionObserver observer failed", error: error)
                 completionHandler()
                 return
             }
@@ -86,13 +86,14 @@ private extension SleepSessionObserver {
     func syncSleepUpdates(shouldNotify: Bool) async {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
         let (samples, newAnchor) = await fetchAnchoredSleepSamples(type: sleepType, anchor: sleepAnchor)
+        let actuallyNotify = shouldNotify && TierGate.shared.canAccess(.captainNotifications)
 
         if let newAnchor {
             sleepAnchor = newAnchor
             persistAnchor(newAnchor)
         }
 
-        guard shouldNotify else { return }
+        guard actuallyNotify else { return }
         guard let latestEndDate = latestRelevantSleepEndDate(in: samples) else { return }
         guard shouldNotifyForSleepSessionEnding(at: latestEndDate) else { return }
 
@@ -119,7 +120,7 @@ private extension SleepSessionObserver {
                 limit: HKObjectQueryNoLimit
             ) { _, samples, _, newAnchor, error in
                 if let error {
-                    print("SleepSessionObserver anchored query failed:", error.localizedDescription)
+                    diag.error("SleepSessionObserver anchored query failed", error: error)
                     continuation.resume(returning: ([], newAnchor))
                     return
                 }
@@ -176,10 +177,11 @@ private extension SleepSessionObserver {
         )
 
         do {
+            guard TierGate.shared.canAccess(.captainNotifications) else { return }
             try await notificationCenter.add(request)
             userDefaults.set(sessionEndedAt.timeIntervalSince1970, forKey: DefaultsKeys.lastNotifiedSleepEnd)
         } catch {
-            print("SleepSessionObserver notification scheduling failed:", error.localizedDescription)
+            diag.error("SleepSessionObserver notification scheduling failed", error: error)
         }
     }
 
@@ -193,7 +195,7 @@ private extension SleepSessionObserver {
             )
             return true
         } catch {
-            print("SleepSessionObserver authorization failed:", error.localizedDescription)
+            diag.error("SleepSessionObserver authorization failed", error: error)
             return false
         }
     }

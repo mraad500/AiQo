@@ -79,6 +79,7 @@ final class NotificationService {
             repeats: false
         )
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         UNUserNotificationCenter.current().add(request)
     }
     
@@ -186,6 +187,7 @@ final class CaptainSmartNotificationService {
     }
 
     func evaluateInactivityAndNotifyIfNeeded() async {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let inactivityMinutes = InactivityTracker.shared.currentInactivityMinutes
@@ -261,6 +263,7 @@ final class CaptainSmartNotificationService {
                 repeats: false
             )
         )
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         UNUserNotificationCenter.current().add(request)
         Task { @MainActor in
             ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
@@ -270,6 +273,7 @@ final class CaptainSmartNotificationService {
     // MARK: - Water Reminder
 
     func evaluateWaterAndNotifyIfNeeded(currentLiters: Double, targetLiters: Double) {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard currentLiters < targetLiters * 0.5 else { return }
 
@@ -304,6 +308,7 @@ final class CaptainSmartNotificationService {
     // MARK: - Meal Time Reminder
 
     func evaluateMealTimeAndNotifyIfNeeded() {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let currentHour = Calendar.current.component(.hour, from: Date())
@@ -354,6 +359,7 @@ final class CaptainSmartNotificationService {
     // MARK: - Step Goal Progress
 
     func evaluateStepGoalAndNotifyIfNeeded(currentSteps: Int, targetSteps: Int) {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard targetSteps > 0 else { return }
 
@@ -419,6 +425,7 @@ final class CaptainSmartNotificationService {
     // MARK: - Sleep Reminder
 
     func evaluateSleepTimeAndNotifyIfNeeded(targetBedtimeHour: Int) {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let now = Date()
@@ -601,6 +608,7 @@ final class AIWorkoutSummaryService {
         endedAt: Date,
         workoutID: String? = nil
     ) async {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         if let workoutID {
@@ -998,6 +1006,7 @@ final class AIWorkoutSummaryService {
             content: content,
             trigger: nil
         )
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         notificationCenter.add(request)
         Task { @MainActor in
             ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")

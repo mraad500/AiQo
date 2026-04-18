@@ -104,6 +104,12 @@ final class SmartNotificationScheduler {
 
     func refreshAutomationState() {
         Task {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                cancelAllAutomatedNotifications()
+                cancelScheduledBackgroundTasks()
+                return
+            }
+
             let granted = await requestPermission()
             guard granted else { return }
 
@@ -137,6 +143,7 @@ final class SmartNotificationScheduler {
 
     func queueDeveloperTestCoachNudge() async -> Bool {
         storePendingDeveloperNotification(nil)
+        guard TierGate.shared.canAccess(.captainNotifications) else { return false }
 
         guard await NotificationService.shared.ensureAuthorizationIfNeeded() else {
             return false
@@ -175,6 +182,7 @@ final class SmartNotificationScheduler {
             notificationType: "coach_nudge_test"
         )
 
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         center.add(request) { [self] error in
             if let error {
                 self.logger.error("developer_nudge_schedule_failed error=\(error.localizedDescription, privacy: .public)")
@@ -385,6 +393,7 @@ final class SmartNotificationScheduler {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        guard TierGate.shared.canAccess(.captainNotifications) else { return }
         center.add(request)
     }
 
@@ -486,6 +495,7 @@ final class SmartNotificationScheduler {
     }
 
     private func generateAndScheduleCoachNudge() async -> Bool {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return true }
         guard AppSettingsStore.shared.notificationsEnabled else { return true }
         guard await hasNotificationAuthorization() else { return true }
         guard canSendAutomatedNotificationNow() else { return true }
@@ -581,6 +591,7 @@ final class SmartNotificationScheduler {
     private func performInactivityCheckAndNotifyIfNeeded(
         now: Date = Date()
     ) async -> Bool {
+        guard TierGate.shared.canAccess(.captainNotifications) else { return true }
         guard AppSettingsStore.shared.notificationsEnabled else { return true }
         guard !Task.isCancelled else { return false }
         guard canSendAutomatedNotificationNow(at: now) else { return true }
@@ -753,6 +764,7 @@ final class SmartNotificationScheduler {
         do {
             let _: Void = try await withCheckedThrowingContinuation {
                 (continuation: CheckedContinuation<Void, Error>) in
+                guard TierGate.shared.canAccess(.captainNotifications) else { continuation.resume(throwing: BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainNotifications))); return }
                 center.add(request) { error in
                     if let error {
                         continuation.resume(throwing: SchedulerError.notificationSchedulingFailed(error))
