@@ -1,0 +1,23 @@
+# P_MERGE_LOST_WORK — COMPLETE (2026-04-18)
+
+## Final State
+- HEAD: 8220b32 (P_MERGE_LOST_WORK + conflict resolutions)
+- Current branch: brain-refactor/p-fix-dev-override (fast-forwarded from merge-lost-work)
+- origin/brain-refactor/merge-lost-work = 8220b32 (pushed)
+- origin/brain-refactor/p-fix-dev-override = 8220b32 (pushed)
+
+## Commits Landed (newest first)
+- 8220b32 P_MERGE_LOST_WORK: recover P0.2/P0.3/P1.1/P1.2/P1.3 + restore P_FIX work
+- 7dd648d P1.3: TierGate single-gate tier API + FeatureFlags validation
+- 6e2e6f0 P1.2: move Brain core files into Brain/ skeleton
+- 874c683 P1.1: Brain folder scaffolding (11 subfolders, 91 stubs)
+- f431f30 P0.3: harden sanitizer regexes + add on-device AuditLogger
+- 19bb0e1 P0.2: kill Arabic API + reroute kitchen + template notifications
+- 869408a (pre-merge base) P2.3 stores + DevOverride gates
+
+## Safety Branch (keep until device-verified)
+safety/pre-merge-20260418-1930 -> 869408a
+
+## Build: ** BUILD SUCCEEDED ** (iOS Debug)
+
+## Full report: P_MERGE_LOST_WORK_RESULT_2026-04-18.md
