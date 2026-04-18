@@ -24,7 +24,7 @@ final class EmbeddingIndexTests: XCTestCase {
         }
     }
 
-    func testCosineSelfIsOne() async {
+    func testCosineSelfIsOne() async throws {
         guard let v = await EmbeddingIndex.shared.embed("workout") else {
             throw XCTSkip("English embedding unavailable on this runtime")
         }
@@ -38,7 +38,7 @@ final class EmbeddingIndexTests: XCTestCase {
         XCTAssertEqual(EmbeddingIndex.cosine(a, b), 0.0, accuracy: 0.0001)
     }
 
-    func testCacheHitDoesNotGrow() async {
+    func testCacheHitDoesNotGrow() async throws {
         guard await EmbeddingIndex.shared.embed("running") != nil else {
             throw XCTSkip("English embedding unavailable on this runtime")
         }
