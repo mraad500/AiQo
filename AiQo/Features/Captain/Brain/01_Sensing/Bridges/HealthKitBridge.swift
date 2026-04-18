@@ -2,6 +2,51 @@ import Foundation
 import HealthKit
 import os.log
 
+/// Thin read-only HealthKit adapter used by Brain/ components.
+/// Delegates heavy lifting to `CaptainHealthSnapshotService` — this type exists
+/// so that other Brain/ modules have a single typed entry point rather than
+/// instantiating `HKHealthStore` themselves.
+actor HealthKitBridge {
+    static let shared = HealthKitBridge()
+
+    private let snapshotService: CaptainHealthSnapshotService
+
+    init(snapshotService: CaptainHealthSnapshotService = .shared) {
+        self.snapshotService = snapshotService
+    }
+
+    /// True when HealthKit reads are possible on this device at all.
+    nonisolated func isHealthDataAvailable() -> Bool {
+        HKHealthStore.isHealthDataAvailable()
+    }
+
+    /// Latest average heart rate (BPM), bucketed to 5 BPM. Returns nil when unavailable.
+    func latestHeartRate() async -> Int? {
+        guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics(),
+              let heartRate = metrics.averageOrCurrentHeartRateBPM else {
+            return nil
+        }
+        return (heartRate / 5) * 5
+    }
+
+    /// Today's step count, bucketed to 500.
+    func todayStepsBucketed() async -> Int {
+        guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics() else {
+            return 0
+        }
+        return (metrics.stepCount / 500) * 500
+    }
+
+    /// Last-night sleep hours, bucketed to 0.5h. Returns nil when no data.
+    func lastNightSleepHours() async -> Double? {
+        guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics(),
+              metrics.sleepHours > 0 else {
+            return nil
+        }
+        return (metrics.sleepHours / 0.5).rounded() * 0.5
+    }
+}
+
 /// يربط بيانات HealthKit بذاكرة الكابتن
 struct HealthKitMemoryBridge {
     private static let logger = Logger(
