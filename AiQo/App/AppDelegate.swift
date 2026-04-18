@@ -30,6 +30,8 @@ struct AiQoApp: App {
                 await EmotionalStore.shared.configure(container: v4Container)
                 await RelationshipStore.shared.configure(container: v4Container)
             }
+            BackgroundCoordinator.shared.registerTasks()
+            BackgroundCoordinator.shared.scheduleNextNightly()
         }
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
