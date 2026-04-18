@@ -148,14 +148,14 @@ final class CaptainContextBuilder {
     private static var trendCacheTimestamp: Date?
     private static let trendCacheDuration: TimeInterval = 1800
 
-    private let intelligenceManager: CaptainIntelligenceManager
+    private let intelligenceManager: CaptainHealthSnapshotService
     private let levelStore: LevelStore
     private let vibeAudioEngine: VibeAudioEngine
     private let spotifyVibeManager: SpotifyVibeManager
     private let calendar: Calendar
 
     init(
-        intelligenceManager: CaptainIntelligenceManager? = nil,
+        intelligenceManager: CaptainHealthSnapshotService? = nil,
         levelStore: LevelStore? = nil,
         vibeAudioEngine: VibeAudioEngine? = nil,
         spotifyVibeManager: SpotifyVibeManager? = nil,

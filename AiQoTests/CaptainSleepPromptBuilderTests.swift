@@ -3,7 +3,7 @@ import XCTest
 
 final class CaptainSleepPromptBuilderTests: XCTestCase {
     func testSleepAnalysisPromptDemandsEvidenceBasedReply() {
-        let builder = CaptainPromptBuilder()
+        let builder = PromptComposer()
         let request = HybridBrainRequest(
             conversation: [
                 CaptainConversationMessage(role: .user, content: "حلل نومي")

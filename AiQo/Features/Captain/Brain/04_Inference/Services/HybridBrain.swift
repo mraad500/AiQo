@@ -185,7 +185,7 @@ private struct GeminiResponse: Decodable {
 
 struct HybridBrainService: Sendable {
     private let session: URLSession
-    private let promptBuilder: CaptainPromptBuilder
+    private let promptBuilder: PromptComposer
     private let jsonParser: LLMJSONParser
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
@@ -205,7 +205,7 @@ struct HybridBrainService: Sendable {
 
     init(
         session: URLSession = HybridBrainService.defaultSession,
-        promptBuilder: CaptainPromptBuilder = CaptainPromptBuilder(),
+        promptBuilder: PromptComposer = PromptComposer(),
         jsonParser: LLMJSONParser = LLMJSONParser()
     ) {
         self.session = session

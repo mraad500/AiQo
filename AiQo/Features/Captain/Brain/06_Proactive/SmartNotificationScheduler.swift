@@ -37,7 +37,7 @@ final class SmartNotificationScheduler {
     private let center: UNUserNotificationCenter
     private let defaults: UserDefaults
     private let calendar: Calendar
-    private let captainIntelligenceManager: CaptainIntelligenceManager
+    private let captainIntelligenceManager: CaptainHealthSnapshotService
     private let notificationComposer: CaptainBackgroundNotificationComposer
     private let pendingDeveloperNotificationLock = NSLock()
     private let logger = Logger(
@@ -60,7 +60,7 @@ final class SmartNotificationScheduler {
         center: UNUserNotificationCenter = .current(),
         defaults: UserDefaults = .standard,
         calendar: Calendar = .current,
-        captainIntelligenceManager: CaptainIntelligenceManager = .shared,
+        captainIntelligenceManager: CaptainHealthSnapshotService = .shared,
         notificationComposer: CaptainBackgroundNotificationComposer? = nil
     ) {
         self.center = center

@@ -212,7 +212,7 @@ final class HandsFreeZone2ManagerViewModel: NSObject, ObservableObject {
         }
     }
 
-    private let intelligenceManager: CaptainIntelligenceManager
+    private let intelligenceManager: CaptainHealthSnapshotService
     private let voiceService: CaptainVoiceService
     private let audioSession: AVAudioSession
     private let audioEngine = AVAudioEngine()
