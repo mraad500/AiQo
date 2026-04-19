@@ -32,6 +32,26 @@ struct AiQoApp: App {
             }
             BackgroundCoordinator.shared.registerTasks()
             BackgroundCoordinator.shared.scheduleNextNightly()
+
+            Task {
+                await TriggerEvaluator.shared.registerAll([
+                    SleepDebtTrigger(),
+                    InactivityTrigger(),
+                    PRTrigger(),
+                    RecoveryTrigger(),
+                    StreakRiskTrigger(),
+                    DisengagementTrigger(),
+                    EngagementMomentumTrigger(),
+                    MemoryCallbackTrigger(),
+                    EmotionalFollowUpTrigger(),
+                    MoodShiftTrigger(),
+                    RelationshipCheckInTrigger(),
+                    MorningKickoffTrigger(),
+                    CircadianNudgeTrigger(),
+                    CulturalTrigger(),
+                    TrialDayTrigger()
+                ])
+            }
         }
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)

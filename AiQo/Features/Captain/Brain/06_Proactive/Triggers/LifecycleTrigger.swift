@@ -1,7 +1,11 @@
 import Foundation
 
-// AiQo Brain OS — 06_Proactive/Triggers
-// Status: SCAFFOLDING (P1.1)
-// TODO: implement per master plan
+/// Trial-day milestone trigger. Returns nil until BATCH 8 wires FreeTrialManager.
+struct TrialDayTrigger: Trigger {
+    let id = "trial_day"
+    let kind = NotificationKind.trialDay
 
-public struct LifecycleTrigger {}
+    func evaluate(context: TriggerContext) async -> TriggerResult? {
+        return nil
+    }
+}
