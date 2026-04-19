@@ -17,7 +17,7 @@ public enum BudgetDecision: Sendable {
         case tierDisabled                      // tier disallows this kind
     }
 
-    public var isAllowed: Bool {
+    public nonisolated var isAllowed: Bool {
         switch self {
         case .allowed, .allowedWithOverride:
             return true

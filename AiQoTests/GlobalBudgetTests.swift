@@ -36,13 +36,16 @@ final class GlobalBudgetTests: XCTestCase {
     }
 
     func testExpiredIntentRejected() async {
-        let past = Date().addingTimeInterval(-60)
+        // Expired-check is gate 1 and short-circuits before quiet hours,
+        // so real Date() works regardless of wall-clock time.
+        let now = Date()
+        let past = now.addingTimeInterval(-60)
         let intent = NotificationIntent(
             kind: .inactivityNudge,
             requestedBy: "test",
             expiresAt: past
         )
-        let decision = await GlobalBudget.shared.evaluate(intent, now: noonToday())
+        let decision = await GlobalBudget.shared.evaluate(intent, now: now)
         if case .rejected(.expired) = decision { /* ok */ } else {
             XCTFail("expected .rejected(.expired), got \(decision)")
         }
