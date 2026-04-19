@@ -256,27 +256,31 @@ final class TrialJourneyOrchestrator {
     }
 
     private func fireImmediate(kind: TrialNotificationKind, ctx: TrialCopyContext) {
-        let language = AppSettingsStore.shared.appLanguage == .arabic ? "ar" : "en"
-        let content = UNMutableNotificationContent()
-        content.title = TrialNotificationCopy.title(for: kind, ctx: ctx, language: language)
-        content.body  = TrialNotificationCopy.body(for: kind, ctx: ctx, language: language)
-        content.sound = .default
-        content.categoryIdentifier = NotificationCategoryManager.trialJourneyCategory
-        content.userInfo = ["trialKind": kind.rawValue]
-
-        let request = UNNotificationRequest(
-            identifier: "trial.\(kind.rawValue).\(Int(Date().timeIntervalSince1970))",
-            content: content,
-            trigger: nil
-        )
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainNotifications) else {
                 diag.info("TrialJourneyOrchestrator immediate blocked by TierGate(.captainNotifications)")
                 return
             }
         }
-        UNUserNotificationCenter.current().add(request) { _ in }
-        AnalyticsService.shared.track(.trialNotificationFired(kind: kind.rawValue))
+        let language = AppSettingsStore.shared.appLanguage == .arabic ? "ar" : "en"
+        let title = TrialNotificationCopy.title(for: kind, ctx: ctx, language: language)
+        let body = TrialNotificationCopy.body(for: kind, ctx: ctx, language: language)
+        let identifier = "trial.\(kind.rawValue).\(Int(Date().timeIntervalSince1970))"
+        let intent = NotificationIntent(
+            kind: .trialDay,
+            requestedBy: "TrialJourneyOrchestrator.fireImmediate"
+        )
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                precomposedTitle: title,
+                precomposedBody: body,
+                categoryIdentifier: NotificationCategoryManager.trialJourneyCategory,
+                userInfo: ["trialKind": kind.rawValue],
+                identifier: identifier
+            )
+            AnalyticsService.shared.track(.trialNotificationFired(kind: kind.rawValue))
+        }
     }
 
     private func scheduleAtDate(_ date: Date, kind: TrialNotificationKind, identifier: String, requireSteps: Bool = false, deepLink: String? = nil) {
@@ -288,29 +292,35 @@ final class TrialJourneyOrchestrator {
                 ctx = makeContext(steps: steps)
             }
 
-            await MainActor.run {
+            let (title, body, canAccess): (String, String, Bool) = await MainActor.run {
                 let language = AppSettingsStore.shared.appLanguage == .arabic ? "ar" : "en"
-                let content = UNMutableNotificationContent()
-                content.title = TrialNotificationCopy.title(for: kind, ctx: ctx, language: language)
-                content.body  = TrialNotificationCopy.body(for: kind, ctx: ctx, language: language)
-                content.sound = .default
-                content.categoryIdentifier = NotificationCategoryManager.trialJourneyCategory
-
-                var info: [String: Any] = ["trialKind": kind.rawValue]
-                if let deepLink { info["deepLink"] = deepLink }
-                content.userInfo = info
-
-                let interval = max(1, date.timeIntervalSinceNow)
-                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
-                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-                if !DevOverride.unlockAllFeatures {
-                    guard TierGate.shared.canAccess(.captainNotifications) else {
-                        diag.info("TrialJourneyOrchestrator scheduled blocked by TierGate(.captainNotifications)")
-                        return
-                    }
-                }
-                UNUserNotificationCenter.current().add(request) { _ in }
+                let t = TrialNotificationCopy.title(for: kind, ctx: ctx, language: language)
+                let b = TrialNotificationCopy.body(for: kind, ctx: ctx, language: language)
+                let access = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainNotifications)
+                return (t, b, access)
             }
+
+            guard canAccess else {
+                diag.info("TrialJourneyOrchestrator scheduled blocked by TierGate(.captainNotifications)")
+                return
+            }
+
+            var info: [String: String] = ["trialKind": kind.rawValue]
+            if let deepLink { info["deepLink"] = deepLink }
+
+            let intent = NotificationIntent(
+                kind: .trialDay,
+                requestedBy: "TrialJourneyOrchestrator.scheduleAtDate"
+            )
+            await NotificationBrain.shared.request(
+                intent,
+                fireDate: date,
+                precomposedTitle: title,
+                precomposedBody: body,
+                categoryIdentifier: NotificationCategoryManager.trialJourneyCategory,
+                userInfo: info,
+                identifier: identifier
+            )
         }
     }
 

@@ -22,9 +22,28 @@ public actor NotificationBrain {
 
     private init() {}
 
-    /// Primary entry point. Legacy senders (BATCH 6) will call this.
+    /// Primary entry point. Legacy senders (BATCH 6) funnel through here.
+    ///
+    /// Optional overrides let legacy senders preserve behavior they can't get
+    /// from the template layer yet:
+    /// - `fireDate`: schedule for a future time instead of firing immediately.
+    /// - `precomposedTitle` / `precomposedBody`: bypass MessageComposer when the
+    ///   caller has its own localized copy (e.g., trial-journey copy).
+    /// - `categoryIdentifier`: override the kind-based default (e.g., the legacy
+    ///   captain category).
+    /// - `userInfo`: preserve legacy payload keys (source, deepLink, trialKind…)
+    ///   so AppDelegate routing keeps working.
+    /// - `identifier`: preserve named identifiers for dedup / cancellation.
     @discardableResult
-    public func request(_ intent: NotificationIntent) async -> DeliveryResult {
+    public func request(
+        _ intent: NotificationIntent,
+        fireDate: Date? = nil,
+        precomposedTitle: String? = nil,
+        precomposedBody: String? = nil,
+        categoryIdentifier: String? = nil,
+        userInfo: [String: String] = [:],
+        identifier: String? = nil
+    ) async -> DeliveryResult {
         let now = Date()
 
         // Gate 1: budget check
@@ -45,29 +64,55 @@ public actor NotificationBrain {
             )
         }
 
-        // Gate 2: compose message via MessageComposer (BATCH 6)
-        let composed = await MessageComposer.shared.compose(intent: intent)
-        let category = categoryIdentifier(for: intent.kind)
+        // Gate 2: compose message. Precomposed override wins; else MessageComposer.
+        let rawTitle: String
+        let rawBody: String
+        if let t = precomposedTitle, let b = precomposedBody {
+            rawTitle = t
+            rawBody = b
+        } else {
+            let composed = await MessageComposer.shared.compose(intent: intent)
+            rawTitle = precomposedTitle ?? composed.title
+            rawBody = precomposedBody ?? composed.body
+        }
+        let category = categoryIdentifier ?? self.categoryIdentifier(for: intent.kind)
 
         // Gate 3: privacy scrub (defensive — composer shouldn't emit PII, but double-check).
         // PrivacySanitizer is MainActor-isolated in this project; hop over to run.
         let (scrubbedTitle, scrubbedBody) = await MainActor.run {
             let sanitizer = PrivacySanitizer()
             return (
-                sanitizer.sanitizeText(composed.title, knownUserName: nil),
-                sanitizer.sanitizeText(composed.body, knownUserName: nil)
+                sanitizer.sanitizeText(rawTitle, knownUserName: nil),
+                sanitizer.sanitizeText(rawBody, knownUserName: nil)
             )
         }
 
         // Gate 4: schedule with iOS
-        let requestID = intent.id.uuidString
+        let requestID = identifier ?? intent.id.uuidString
         let content = UNMutableNotificationContent()
         content.title = scrubbedTitle
         content.body = scrubbedBody
         content.sound = .default
         content.categoryIdentifier = category
+        if !userInfo.isEmpty {
+            content.userInfo = userInfo
+        }
+        if #available(iOS 15.0, *) {
+            switch intent.priority {
+            case .ambient, .low: content.interruptionLevel = .passive
+            case .medium, .high: content.interruptionLevel = .active
+            case .critical:      content.interruptionLevel = .timeSensitive
+            }
+        }
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let timeInterval: TimeInterval = {
+            guard let fireDate else { return 1 }
+            return max(1, fireDate.timeIntervalSinceNow)
+        }()
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: timeInterval,
+            repeats: false
+        )
         let request = UNNotificationRequest(
             identifier: requestID,
             content: content,

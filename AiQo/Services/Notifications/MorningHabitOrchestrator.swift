@@ -324,46 +324,37 @@ private extension MorningHabitOrchestrator {
             return
         }
         let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = "Captain Hamoudi"
-        content.body = body
-        content.sound = nil
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "source": Self.notificationSource,
-            "destination": "captain_chat",
-            "wakeTimestamp": wakeDate.timeIntervalSince1970,
-            "stepsSinceWake": stepsSinceWake
-        ]
 
-        if #available(iOS 15.0, *) {
-            content.interruptionLevel = .passive
-        }
-
-        let request = UNNotificationRequest(
-            identifier: Self.notificationIdentifier,
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, fireDate.timeIntervalSinceNow),
-                repeats: false
-            )
+        // Morning kickoff uses `.low` priority so NotificationBrain maps it to
+        // iOS 15+ `.passive` interruption (preserves the silent legacy behavior).
+        let intent = NotificationIntent(
+            kind: .morningKickoff,
+            priority: .low,
+            requestedBy: "MorningHabitOrchestrator"
+        )
+        let result = await NotificationBrain.shared.request(
+            intent,
+            fireDate: fireDate,
+            precomposedTitle: "Captain Hamoudi",
+            precomposedBody: body,
+            categoryIdentifier: CaptainSmartNotificationService.categoryIdentifier,
+            userInfo: [
+                "source": Self.notificationSource,
+                "destination": "captain_chat",
+                "wakeTimestamp": String(wakeDate.timeIntervalSince1970),
+                "stepsSinceWake": String(stepsSinceWake)
+            ],
+            identifier: Self.notificationIdentifier
         )
 
-        do {
-            if !DevOverride.unlockAllFeatures {
-                guard TierGate.shared.canAccess(.captainNotifications) else {
-                    diag.info("MorningHabitOrchestrator notification add blocked by TierGate(.captainNotifications)")
-                    return
-                }
-            }
-            try await notificationCenter.add(request)
-            await MainActor.run {
-                ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
-            }
-            userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
-        } catch {
-            diag.error("MorningHabitOrchestrator notification scheduling failed", error: error)
+        guard result.deliveredAt != nil else {
+            diag.info("MorningHabitOrchestrator notification not delivered: \(String(describing: result.decision))")
+            return
         }
+        await MainActor.run {
+            ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
+        }
+        userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
     }
 
     func hasScheduledNotification(for wakeDate: Date) -> Bool {

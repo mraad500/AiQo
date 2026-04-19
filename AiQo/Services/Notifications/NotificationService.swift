@@ -67,25 +67,41 @@ final class NotificationService {
     }
 
     func sendImmediateNotification(body: String, type: String) {
-        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = "AiQo"
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["notification_type": type]
-
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(1, fireDate.timeIntervalSinceNow),
-            repeats: false
-        )
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainNotifications) else {
                 diag.info("NotificationService schedule blocked by TierGate(.captainNotifications)")
                 return
             }
         }
-        UNUserNotificationCenter.current().add(request)
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
+        let intent = NotificationIntent(
+            kind: Self.legacyNotificationKind(for: type),
+            requestedBy: "NotificationService.sendImmediateNotification"
+        )
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                fireDate: fireDate,
+                precomposedTitle: "AiQo",
+                precomposedBody: body,
+                userInfo: ["notification_type": type]
+            )
+        }
+    }
+
+    /// Map legacy `type` strings (used by older call sites) to the new
+    /// NotificationKind space. Unknown types fall back to `.inactivityNudge`.
+    fileprivate static func legacyNotificationKind(for type: String) -> NotificationKind {
+        switch type.lowercased() {
+        case "inactivity", "inactive":       return .inactivityNudge
+        case "recovery", "rest":             return .recoveryReminder
+        case "morning":                      return .morningKickoff
+        case "achievement":                  return .achievementUnlocked
+        case "workout", "workout_complete":  return .workoutSummary
+        case "water", "water_reminder":      return .inactivityNudge
+        case "sleep":                        return .sleepDebtAcknowledgment
+        default:                             return .inactivityNudge
+        }
     }
 
     // دالة جديدة لمعالجة البيانات القادمة من الخلفية (اختياري)
@@ -252,36 +268,35 @@ final class CaptainSmartNotificationService {
     }
 
     private func sendCaptainNotification(title: String, body: String, type: String, messageText: String) {
-        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier
-        content.userInfo = [
-            "notification_type": type,
-            "source": "captain_hamoudi",
-            "messageText": messageText,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.smart.\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, fireDate.timeIntervalSinceNow),
-                repeats: false
-            )
-        )
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainNotifications) else {
                 diag.info("NotificationService.sendCaptainNotification blocked by TierGate(.captainNotifications)")
                 return
             }
         }
-        UNUserNotificationCenter.current().add(request)
-        Task { @MainActor in
-            ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
+        let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
+        let intent = NotificationIntent(
+            kind: NotificationService.legacyNotificationKind(for: type),
+            requestedBy: "CaptainSmartNotificationService.sendCaptainNotification"
+        )
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                fireDate: fireDate,
+                precomposedTitle: title,
+                precomposedBody: body,
+                categoryIdentifier: Self.categoryIdentifier,
+                userInfo: [
+                    "notification_type": type,
+                    "source": "captain_hamoudi",
+                    "messageText": messageText,
+                    "deepLink": "aiqo://captain"
+                ],
+                identifier: "aiqo.captain.smart.\(UUID().uuidString)"
+            )
+            await MainActor.run {
+                ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
+            }
         }
     }
 
@@ -881,37 +896,39 @@ final class AIWorkoutSummaryService {
     }
 
     private func scheduleWorkoutSummaryNotification(message: String) {
-        let language = preferredLanguage()
-        let content = UNMutableNotificationContent()
-        content.title = localizedNotificationString(
-            "notification.captain.workout.title",
-            language: language,
-            fallback: "Captain Hamoudi 🫡"
-        )
-        content.body = message
-        content.sound = .default
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "notification_type": "workout_complete",
-            "source": "captain_hamoudi",
-            "messageText": message,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.workout.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainNotifications) else {
                 diag.info("NotificationService captain workout blocked by TierGate(.captainNotifications)")
                 return
             }
         }
-        notificationCenter.add(request)
-        Task { @MainActor in
-            ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")
+        let language = preferredLanguage()
+        let title = localizedNotificationString(
+            "notification.captain.workout.title",
+            language: language,
+            fallback: "Captain Hamoudi 🫡"
+        )
+        let intent = NotificationIntent(
+            kind: .workoutSummary,
+            requestedBy: "AIWorkoutSummaryService.scheduleWorkoutSummaryNotification"
+        )
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                precomposedTitle: title,
+                precomposedBody: message,
+                categoryIdentifier: CaptainSmartNotificationService.categoryIdentifier,
+                userInfo: [
+                    "notification_type": "workout_complete",
+                    "source": "captain_hamoudi",
+                    "messageText": message,
+                    "deepLink": "aiqo://captain"
+                ],
+                identifier: "aiqo.captain.workout.\(UUID().uuidString)"
+            )
+            await MainActor.run {
+                ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")
+            }
         }
     }
 
