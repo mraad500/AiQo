@@ -9,7 +9,7 @@ struct MemoryBundle: Sendable {
     let relationships: [RelationshipSnapshot]
     let retrievedAt: Date
 
-    init(
+    nonisolated init(
         facts: [SemanticFactSnapshot] = [],
         episodes: [EpisodicEntrySnapshot] = [],
         patterns: [ProceduralPatternSnapshot] = [],
@@ -25,9 +25,9 @@ struct MemoryBundle: Sendable {
         self.retrievedAt = retrievedAt
     }
 
-    var totalItems: Int {
+    nonisolated var totalItems: Int {
         facts.count + episodes.count + patterns.count + emotions.count + relationships.count
     }
 
-    var isEmpty: Bool { totalItems == 0 }
+    nonisolated var isEmpty: Bool { totalItems == 0 }
 }

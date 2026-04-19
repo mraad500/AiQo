@@ -6,8 +6,8 @@ import Foundation
 /// Access is internal because TriggerContext exposes internal types
 /// (BioSnapshot, CulturalContextEngine.State, EmotionalReading).
 protocol Trigger: Sendable {
-    var id: String { get }
-    var kind: NotificationKind { get }
+    nonisolated var id: String { get }
+    nonisolated var kind: NotificationKind { get }
 
     /// Evaluate this trigger against the shared context.
     /// - Returns: a `TriggerResult` with score ≥ 0 and a nominated intent, or nil
@@ -24,7 +24,7 @@ struct TriggerContext: Sendable {
     let pendingIntents: [UUID]
     let recentDeliveryKinds: [NotificationKind]
 
-    init(
+    nonisolated init(
         bio: BioSnapshot,
         capturedAt: Date = Date(),
         cultural: CulturalContextEngine.State,

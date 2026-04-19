@@ -1,28 +1,28 @@
 import Foundation
 import os.log
 
-final class DiagnosticsLogger {
-    static let shared = DiagnosticsLogger()
+final class DiagnosticsLogger: @unchecked Sendable {
+    nonisolated static let shared = DiagnosticsLogger()
 
-    private let logger = Logger(subsystem: "app.aiqo", category: "Brain")
+    nonisolated private let logger = Logger(subsystem: "app.aiqo", category: "Brain")
 
-    private init() {}
+    nonisolated private init() {}
 
-    func debug(_ message: String, file: String = #fileID, line: Int = #line) {
+    nonisolated func debug(_ message: String, file: String = #fileID, line: Int = #line) {
 #if DEBUG
         logger.debug("\(Self.loc(file, line), privacy: .public) \(message, privacy: .public)")
 #endif
     }
 
-    func info(_ message: String, file: String = #fileID, line: Int = #line) {
+    nonisolated func info(_ message: String, file: String = #fileID, line: Int = #line) {
         logger.info("\(Self.loc(file, line), privacy: .public) \(message, privacy: .public)")
     }
 
-    func warning(_ message: String, file: String = #fileID, line: Int = #line) {
+    nonisolated func warning(_ message: String, file: String = #fileID, line: Int = #line) {
         logger.warning("\(Self.loc(file, line), privacy: .public) \(message, privacy: .public)")
     }
 
-    func error(_ message: String, error: Error? = nil, file: String = #fileID, line: Int = #line) {
+    nonisolated func error(_ message: String, error: Error? = nil, file: String = #fileID, line: Int = #line) {
         if let error {
             logger.error(
                 "\(Self.loc(file, line), privacy: .public) \(message, privacy: .public): \(error.localizedDescription, privacy: .public)"
@@ -32,7 +32,7 @@ final class DiagnosticsLogger {
         }
     }
 
-    func logTierGate(
+    nonisolated func logTierGate(
         feature: String,
         tier: SubscriptionTier,
         requiredTier: SubscriptionTier,
@@ -48,9 +48,9 @@ final class DiagnosticsLogger {
         }
     }
 
-    private static func loc(_ file: String, _ line: Int) -> String {
+    nonisolated private static func loc(_ file: String, _ line: Int) -> String {
         "[\((file as NSString).lastPathComponent):\(line)]"
     }
 }
 
-let diag = DiagnosticsLogger.shared
+nonisolated let diag = DiagnosticsLogger.shared

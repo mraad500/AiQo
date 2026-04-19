@@ -22,12 +22,12 @@ enum DialectLibrary {
         case recovery
     }
 
-    static func phrase(dialect: Dialect, context: Context) -> String {
+    nonisolated static func phrase(dialect: Dialect, context: Context) -> String {
         let options = bank(dialect: dialect, context: context)
         return options.randomElement() ?? fallback(for: context)
     }
 
-    private static func bank(dialect: Dialect, context: Context) -> [String] {
+    nonisolated private static func bank(dialect: Dialect, context: Context) -> [String] {
         switch (dialect, context) {
         case (.iraqi, .greeting):
             return ["هلا حبيبي", "هلا والله", "شلونك اليوم؟"]
@@ -107,7 +107,7 @@ enum DialectLibrary {
         }
     }
 
-    private static func fallback(for context: Context) -> String {
+    nonisolated private static func fallback(for context: Context) -> String {
         switch context {
         case .greeting:
             return "السلام عليكم"

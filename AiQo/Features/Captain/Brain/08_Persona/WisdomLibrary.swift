@@ -17,7 +17,7 @@ enum WisdomLibrary {
         }
     }
 
-    static func appropriate(
+    nonisolated static func appropriate(
         emotion: EmotionalReading,
         cultural: CulturalContextEngine.State
     ) -> Wisdom? {
@@ -43,7 +43,7 @@ enum WisdomLibrary {
         return nil
     }
 
-    private static let bank: [Wisdom] = [
+    nonisolated private static let bank: [Wisdom] = [
         Wisdom(
             text: "الصبر مفتاح الفرج",
             attribution: "مثل عربي",
@@ -88,7 +88,7 @@ enum WisdomLibrary {
 }
 
 private extension Array {
-    func randomElement(where predicate: (Element) -> Bool) -> Element? {
+    nonisolated func randomElement(where predicate: (Element) -> Bool) -> Element? {
         let matches = filter(predicate)
         return matches.randomElement()
     }

@@ -7,9 +7,14 @@ public enum TemplateLibrary {
     public struct Template: Sendable {
         public let title: String
         public let body: String
+
+        public nonisolated init(title: String, body: String) {
+            self.title = title
+            self.body = body
+        }
     }
 
-    public static func template(
+    public nonisolated static func template(
         for kind: NotificationKind,
         language: String = "ar"
     ) -> Template {

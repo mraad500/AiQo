@@ -11,7 +11,7 @@ enum HumorEngine {
         case playful
     }
 
-    static func intensity(
+    nonisolated static func intensity(
         emotion: EmotionalReading,
         cultural: CulturalContextEngine.State
     ) -> Intensity {
@@ -39,7 +39,7 @@ enum HumorEngine {
         return .subtle
     }
 
-    static func playfulFlourish(dialect: DialectLibrary.Dialect = .iraqi) -> String? {
+    nonisolated static func playfulFlourish(dialect: DialectLibrary.Dialect = .iraqi) -> String? {
         let bank: [String]
         switch dialect {
         case .iraqi:

@@ -966,14 +966,14 @@
 "quests.stage.1.tab" = "Stage 1";
 "quests.stage.1.quest.1.title" = "Kindness Spark (Bonus)";
 "quests.stage.1.quest.1.levels" = "Tier 1";
-"quests.stage.1.quest.2.title" = "Water Spring (Daily)";
-"quests.stage.1.quest.2.levels" = "3.0L / 2.5L / 2.0L";
-"quests.stage.1.quest.3.title" = "Recovery Throne (Daily)";
-"quests.stage.1.quest.3.levels" = "8h / 7.5h / 7h";
-"quests.stage.1.quest.4.title" = "Zone 2 Pulse (Cumulative)";
-"quests.stage.1.quest.4.levels" = "40m / 30m / 20m";
-"quests.stage.1.quest.5.title" = "Kitchen Foundation";
-"quests.stage.1.quest.5.levels" = "Tier 1";
+"quests.stage.1.quest.2.title" = "Learning Spark";
+"quests.stage.1.quest.2.levels" = "Tier 1";
+"quests.stage.1.quest.3.title" = "Zone 2 Pulse (Cumulative)";
+"quests.stage.1.quest.3.levels" = "40m / 30m / 20m";
+"quests.stage.1.quest.4.title" = "Recovery Throne (Daily)";
+"quests.stage.1.quest.4.levels" = "8h / 7.5h / 7h";
+"quests.stage.1.quest.5.title" = "Water Spring (Daily)";
+"quests.stage.1.quest.5.levels" = "3.0L / 2.5L / 2.0L";
 
 "quests.stage.2.title" = "Stage 2: Engine Start";
 "quests.stage.2.tab" = "Stage 2";
@@ -2472,13 +2472,73 @@
 "gym.quest.s1q4.howTo1" = "Log Zone 2 sessions regularly.";
 "gym.quest.s1q4.howTo2" = "Start at 20m then raise to 30m then 40m.";
 "gym.quest.s1q4.howTo3" = "Update minutes from the session log button.";
-"gym.quest.s1q5.explanation" = "One-time setup mission: save your first Kitchen plan so AiQo understands your nutrition baseline.";
-"gym.quest.s1q5.benefit1" = "Builds a daily behavior and reduces random eating.";
-"gym.quest.s1q5.benefit2" = "Helps AiQo give better meal suggestions.";
-"gym.quest.s1q5.benefit3" = "Reduces daily decision fatigue around meals.";
-"gym.quest.s1q5.howTo1" = "Open the Kitchen screen from Home.";
-"gym.quest.s1q5.howTo2" = "Create or save your meal plan.";
-"gym.quest.s1q5.howTo3" = "The quest completes automatically after saving the plan.";
+"gym.quest.s1qLearn.explanation" = "One-time starter mission: complete a short structured course to build your learning habit and prove to yourself that you can start and finish.";
+"gym.quest.s1qLearn.benefit1" = "Builds confidence through real knowledge completion.";
+"gym.quest.s1qLearn.benefit2" = "Establishes a learning habit from day one.";
+"gym.quest.s1qLearn.benefit3" = "Transforms the user from passive to intentional growth.";
+"gym.quest.s1qLearn.howTo1" = "Explore the available courses and pick the path that fits you.";
+"gym.quest.s1qLearn.howTo2" = "Complete the course fully.";
+"gym.quest.s1qLearn.howTo3" = "Submit proof of completion and wait for verification.";
+
+// Learning Quest UI (Learning Spark)
+"gym.quest.source.learning" = "Dual Learning Paths";
+"gym.quest.learning.exploreCourses" = "Explore Courses";
+"gym.quest.learning.submitProof" = "Submit Proof";
+"gym.quest.learning.options.title" = "Learning Options";
+"gym.quest.learning.options.intro" = "Pick the path that fits you. Both courses are free and chosen to help you build a real learning habit.";
+"gym.quest.learning.options.platform" = "Platform";
+"gym.quest.learning.options.language" = "Language";
+"gym.quest.learning.options.free" = "Free";
+"gym.quest.learning.options.openSource" = "Open Source";
+"gym.quest.learning.options.selected" = "Selected";
+"gym.quest.learning.options.selectRequired" = "Pick a learning path first.";
+"gym.quest.learning.language.arabic" = "Arabic";
+"gym.quest.learning.language.english" = "English";
+"gym.quest.learning.option.edraak.provider" = "Edraak";
+"gym.quest.learning.option.edraak.description" = "Build a clear career plan and sharpen your decision-making.";
+"gym.quest.learning.option.english.provider" = "Global Course";
+"gym.quest.learning.option.english.description" = "Learn how your brain actually learns — study smarter, remember more.";
+"gym.quest.learning.proof.title" = "Course Proof";
+"gym.quest.learning.proof.forCourse" = "Proving completion for this course:";
+"gym.quest.learning.proof.certificateHeader" = "Course Certificate";
+"gym.quest.learning.proof.uploadImage" = "Upload certificate image";
+"gym.quest.learning.proof.replaceImage" = "Replace image";
+"gym.quest.learning.proof.linkHeader" = "Certificate Link";
+"gym.quest.learning.proof.linkPlaceholder" = "Paste the certificate URL";
+"gym.quest.learning.proof.submitForVerification" = "Submit Proof";
+"gym.quest.learning.proof.submitting" = "Verifying...";
+"gym.quest.learning.proof.retryVerification" = "Retry verification";
+"gym.quest.learning.proof.verified" = "Completed";
+"gym.quest.learning.proof.errorImageLoad" = "Could not load the selected image.";
+"gym.quest.learning.proof.errorInvalidURL" = "That does not look like a valid URL.";
+"gym.quest.learning.proof.errorDomain" = "The link must come from %@.";
+"gym.quest.learning.status.notSubmitted" = "Not Completed";
+"gym.quest.learning.status.pending" = "Pending Verification";
+"gym.quest.learning.status.verified" = "Completed";
+"gym.quest.learning.status.rejected" = "Rejected — Try Again";
+"gym.quest.learning.status.needsReview" = "Pending Review";
+
+// Consent sheet
+"gym.quest.learning.consent.title" = "Certificate Verification";
+"gym.quest.learning.consent.body" = "Captain Hamoudi verifies your certificate on your device using Apple Intelligence. The image never leaves your phone.";
+"gym.quest.learning.consent.accept" = "Agree, Start";
+"gym.quest.learning.consent.later" = "Later";
+
+// URL badge
+"gym.quest.learning.url.trusted" = "Trusted platform";
+"gym.quest.learning.url.untrusted" = "Unknown platform";
+"gym.quest.learning.url.invalid" = "Invalid URL";
+
+// Progressive UI states
+"gym.quest.learning.change" = "Change";
+"gym.quest.learning.verifying" = "Captain Hamoudi is verifying...";
+"gym.quest.learning.rateLimit.contact" = "Contact support";
+"learning.platform.edraak" = "Edraak";
+"learning.platform.coursera" = "Coursera";
+"learning.platform.rwaq" = "Rwaq";
+"learning.platform.maharah" = "Maharah";
+"learning.platform.edx" = "edX";
+"learning.platform.youtube" = "YouTube";
 "gym.quest.s2q1.explanation" = "Camera-based challenge to measure push-up form accuracy.";
 "gym.quest.s2q1.benefit1" = "Builds upper-body strength.";
 "gym.quest.s2q1.benefit2" = "Improves movement accuracy and control.";

@@ -19,6 +19,7 @@ enum QuestSource: String, Codable, CaseIterable {
     case social
     case kitchen
     case share
+    case learning
 }
 
 enum QuestMetricUnit: String, Codable {
@@ -52,18 +53,14 @@ enum QuestMetricKey: String, Codable {
     case shares
     case comboStreakDays
     case stepDaysInWeek
+    case learningCertificate
 }
 
 enum QuestDeepLinkAction: String, Codable {
     case openKitchen
     case openArena
     case openShare
-}
-
-extension QuestDefinition {
-    var isStageOneBooleanQuest: Bool {
-        stageIndex == 1 && (id == "s1q1" || id == "s1q5")
-    }
+    case openLearningCourse
 }
 
 enum TierRequirement: Codable, Hashable {
@@ -90,6 +87,10 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
     let streakTierTargetsA: [Double]?
     let streakTierTargetsB: [Double]?
 
+    // Allow a quest to display a specific asset decoupled from its questIndex —
+    // used when display order changes but the reward badge must stay the same.
+    let rewardImageOverride: String?
+
     init(
         id: String,
         stageIndex: Int,
@@ -104,7 +105,8 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
         streakDailyTargetA: Double?,
         streakDailyTargetB: Double?,
         streakTierTargetsA: [Double]? = nil,
-        streakTierTargetsB: [Double]? = nil
+        streakTierTargetsB: [Double]? = nil,
+        rewardImageOverride: String? = nil
     ) {
         self.id = id
         self.stageIndex = stageIndex
@@ -120,10 +122,17 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
         self.streakDailyTargetB = streakDailyTargetB
         self.streakTierTargetsA = streakTierTargetsA
         self.streakTierTargetsB = streakTierTargetsB
+        self.rewardImageOverride = rewardImageOverride
     }
 
     var rewardImageName: String {
-        "\(stageIndex).\(questIndex)"
+        rewardImageOverride ?? "\(stageIndex).\(questIndex)"
+    }
+
+    static let learningSparkQuestID = "s1qLearn"
+
+    var isStageOneBooleanQuest: Bool {
+        stageIndex == 1 && (id == "s1q1" || id == QuestDefinition.learningSparkQuestID)
     }
 
     var localizedTitleKey: String {

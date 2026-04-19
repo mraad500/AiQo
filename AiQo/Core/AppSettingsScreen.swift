@@ -185,6 +185,45 @@ struct AppSettingsScreen: View {
                     }
                     .padding(.vertical, 4)
                 }
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(
+                            NSLocalizedString(
+                                "settings.privacy.learningVerification.title",
+                                value: "تحقق كابتن حمودي",
+                                comment: "Captain Hamoudi on-device certificate verification toggle"
+                            )
+                        )
+                        .foregroundStyle(.primary)
+
+                        Text(
+                            NSLocalizedString(
+                                "settings.privacy.learningVerification.subtitle",
+                                value: "تحليل شهادات الكورسات يصير مباشرة على جهازك، الصورة ما تغادر الهاتف.",
+                                comment: "On-device learning verification explanation"
+                            )
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Toggle(
+                        "",
+                        isOn: Binding(
+                            get: { OnDeviceVerificationConsent.hasConsented },
+                            set: { newValue in
+                                if newValue {
+                                    OnDeviceVerificationConsent.grant()
+                                } else {
+                                    OnDeviceVerificationConsent.revoke()
+                                }
+                            }
+                        )
+                    )
+                    .labelsHidden()
+                }
+                .padding(.vertical, 4)
             }
 
             Section("referral.section".localized) {

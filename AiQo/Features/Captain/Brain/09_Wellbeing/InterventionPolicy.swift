@@ -16,7 +16,7 @@ enum InterventionPolicy {
         }
     }
 
-    static func decide(
+    nonisolated static func decide(
         signal: CrisisDetector.Signal,
         recentHistory: [CrisisDetector.Signal],
         language: AppLanguage
@@ -45,7 +45,7 @@ enum InterventionPolicy {
         }
     }
 
-    private static func reflectiveMessage(language: AppLanguage) -> String {
+    nonisolated private static func reflectiveMessage(language: AppLanguage) -> String {
         switch language {
         case .arabic:
             let arabicOptions = [

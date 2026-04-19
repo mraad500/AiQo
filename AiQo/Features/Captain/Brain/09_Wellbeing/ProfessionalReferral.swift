@@ -29,7 +29,7 @@ enum ProfessionalReferral {
         case global
     }
 
-    static func resources(for region: Region = detectRegion()) -> [Resource] {
+    nonisolated static func resources(for region: Region = detectRegion()) -> [Resource] {
         switch region {
         case .uae:
             return [
@@ -105,8 +105,8 @@ enum ProfessionalReferral {
         }
     }
 
-    static func detectRegion(locale: Locale = .current) -> Region {
-        let code = (locale.regionCode ?? "").uppercased()
+    nonisolated static func detectRegion(locale: Locale = .current) -> Region {
+        let code = (locale.region?.identifier ?? "").uppercased()
 
         switch code {
         case "AE":
@@ -122,7 +122,7 @@ enum ProfessionalReferral {
         }
     }
 
-    static func supportMessage(
+    nonisolated static func supportMessage(
         language: AppLanguage,
         urgency: InterventionPolicy.Decision.Urgency,
         region: Region = detectRegion()
@@ -138,7 +138,7 @@ enum ProfessionalReferral {
             .joined(separator: "\n\n")
     }
 
-    private static func emergencyInstruction(
+    nonisolated private static func emergencyInstruction(
         language: AppLanguage,
         region: Region,
         urgency: InterventionPolicy.Decision.Urgency
@@ -168,7 +168,7 @@ enum ProfessionalReferral {
         }
     }
 
-    private static func introduction(
+    nonisolated private static func introduction(
         language: AppLanguage,
         urgency: InterventionPolicy.Decision.Urgency
     ) -> String {
@@ -188,7 +188,7 @@ enum ProfessionalReferral {
         }
     }
 
-    private static func formatted(resource: Resource, language: AppLanguage) -> String {
+    nonisolated private static func formatted(resource: Resource, language: AppLanguage) -> String {
         let phoneLabel = language == .arabic ? "الهاتف" : "Phone"
         let websiteLabel = language == .arabic ? "الموقع" : "Website"
         let availabilityLabel = language == .arabic ? "التوفر" : "Availability"

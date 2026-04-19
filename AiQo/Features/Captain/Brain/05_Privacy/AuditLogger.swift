@@ -35,6 +35,13 @@ actor AuditLogger {
             case sanitizerBlocked
             case consentDenied
             case rateLimit
+            // On-device verification outcomes (Learning Spark).
+            // Back-compat: added as new cases; existing on-disk logs continue to decode.
+            case verified
+            case needsReview
+            case rejected
+            case ocrFailed
+            case reasonerFailed
         }
     }
 

@@ -48,7 +48,7 @@ public actor NotificationBrain {
 
         // Gate 1: budget check
         let decision = await GlobalBudget.shared.evaluate(intent, now: now)
-        await diag.info("NotificationBrain: intent=\(intent.kind.rawValue) decision=\(String(describing: decision)) by=\(intent.requestedBy)")
+        diag.info("NotificationBrain: intent=\(intent.kind.rawValue) decision=\(String(describing: decision)) by=\(intent.requestedBy)")
 
         guard decision.isAllowed else {
             await AuditLogger.shared.record(
@@ -98,7 +98,7 @@ public actor NotificationBrain {
             kind: intent.kind
         )
         if !guardResult.passed {
-            await diag.error(
+            diag.error(
                 "NotificationBrain: PersonaGuard BLOCKED \(intent.kind.rawValue): \(guardResult.violations.joined(separator: ","))"
             )
             return DeliveryResult(
@@ -166,7 +166,7 @@ public actor NotificationBrain {
                 systemRequestID: requestID
             )
         } catch {
-            await diag.error("NotificationBrain: UN add failed: \(error.localizedDescription)")
+            diag.error("NotificationBrain: UN add failed: \(error.localizedDescription)")
             return DeliveryResult(
                 intentID: intent.id,
                 decision: decision,
@@ -263,6 +263,6 @@ extension AuditLogger {
         case .notificationDelivered: verb = "delivered"
         case .notificationRejected:  verb = "rejected"
         }
-        await diag.info("AUDIT [notification]: \(verb) kind=\(kind) by=\(requestedBy)")
+        diag.info("AUDIT [notification]: \(verb) kind=\(kind) by=\(requestedBy)")
     }
 }

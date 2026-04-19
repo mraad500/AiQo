@@ -22,7 +22,7 @@ actor TriggerEvaluator {
     func registeredCount() -> Int { triggers.count }
 
     #if DEBUG
-    struct DebugSnapshot: Sendable, Identifiable {
+    nonisolated struct DebugSnapshot: Sendable, Identifiable {
         let id: String
         let kind: String
         let score: Double?

@@ -4,18 +4,18 @@ import Foundation
 ///
 /// Raw values are stable and persisted (`aiqo.purchases.currentTier` UserDefault):
 /// `.none = 0`, `.max = 1`, `.trial = 2`, `.pro = 3`. Never renumber — rename only.
-enum SubscriptionTier: Int, Codable, Sendable, Comparable {
+nonisolated enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     case none = 0
     case max = 1
     case trial = 2
     case pro = 3
 
-    static func < (lhs: SubscriptionTier, rhs: SubscriptionTier) -> Bool {
+    nonisolated static func < (lhs: SubscriptionTier, rhs: SubscriptionTier) -> Bool {
         lhs.rank < rhs.rank
     }
 
     /// Hierarchy for ≥ comparisons. `.trial` is ranked at Pro-equivalent.
-    private var rank: Int {
+    nonisolated private var rank: Int {
         switch self {
         case .none:  return 0
         case .max:   return 1
@@ -25,13 +25,13 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     }
 
     /// Trial gets Pro-equivalent access; otherwise self.
-    var effectiveAccessTier: SubscriptionTier {
+    nonisolated var effectiveAccessTier: SubscriptionTier {
         self == .trial ? .pro : self
     }
 
-    var isPaid: Bool { self != .none }
+    nonisolated var isPaid: Bool { self != .none }
 
-    static func from(productID: String) -> SubscriptionTier {
+    nonisolated static func from(productID: String) -> SubscriptionTier {
         switch productID {
         case SubscriptionProductIDs.coreMonthly,
              SubscriptionProductIDs.legacyCoreMonthly,
@@ -48,7 +48,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
         }
     }
 
-    var displayName: String {
+    nonisolated var displayName: String {
         switch self {
         case .none:
             return ""
@@ -61,11 +61,11 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
         }
     }
 
-    var arabicDisplayName: String {
+    nonisolated var arabicDisplayName: String {
         displayName
     }
 
-    var monthlyPrice: String {
+    nonisolated var monthlyPrice: String {
         switch self {
         case .none, .trial:
             return ""
@@ -76,7 +76,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
         }
     }
 
-    var productID: String {
+    nonisolated var productID: String {
         switch self {
         case .none, .trial:
             return ""
@@ -95,7 +95,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     // state and avoid a 30+ callsite rename.
 
     /// Captain memory fact cap (user-visible count in Captain Memory settings).
-    var memoryFactLimit: Int {
+    nonisolated var memoryFactLimit: Int {
         switch self {
         case .none: return 50
         case .max: return 200
@@ -104,7 +104,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     }
 
     /// Hard upper bound on Captain-originated local notifications per 24h.
-    var dailyNotificationBudget: Int {
+    nonisolated var dailyNotificationBudget: Int {
         switch self {
         case .none: return 2
         case .max: return 4
@@ -113,7 +113,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     }
 
     /// How many memory entries the retriever may surface per Captain turn.
-    var memoryRetrievalDepth: Int {
+    nonisolated var memoryRetrievalDepth: Int {
         switch self {
         case .none: return 5
         case .max: return 10
@@ -122,7 +122,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     }
 
     /// Rolling window (days) that pattern-mining may reach into.
-    var patternMiningWindowDays: Int {
+    nonisolated var patternMiningWindowDays: Int {
         switch self {
         case .none, .max: return 14
         case .trial, .pro: return 56
@@ -130,7 +130,7 @@ enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     }
 
     /// Approximate Gemini prompt byte budget available to the tier.
-    var geminiContextBudget: Int {
+    nonisolated var geminiContextBudget: Int {
         switch self {
         case .none: return 2_000
         case .max: return 8_000

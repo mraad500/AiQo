@@ -24,7 +24,7 @@ enum CulturalContextEngine {
         }
 
         /// One-line human-readable description for prompt composition.
-        var promptSummary: String {
+        nonisolated var promptSummary: String {
             switch isEid {
             case .eidFitr: return "Eid al-Fitr"
             case .eidAdha: return "Eid al-Adha"
@@ -38,7 +38,7 @@ enum CulturalContextEngine {
         }
     }
 
-    static func current(now: Date = Date()) -> State {
+    nonisolated static func current(now: Date = Date()) -> State {
         let ramadan = isInRamadan(now: now)
         let fasting = ramadan && isFastingHour(now: now)
         let jumuah = isJumuah(now: now)
@@ -61,7 +61,7 @@ enum CulturalContextEngine {
     // MARK: - Detection helpers
 
     /// Ramadan detection via Hijri calendar.
-    private static func isInRamadan(now: Date) -> Bool {
+    nonisolated private static func isInRamadan(now: Date) -> Bool {
         let hijri = Calendar(identifier: .islamicUmmAlQura)
         let month = hijri.component(.month, from: now)
         return month == 9  // 9th Hijri month = Ramadan
@@ -69,18 +69,18 @@ enum CulturalContextEngine {
 
     /// Fasting hour approximation: between Fajr (~04:30) and Maghrib (~19:00) local time.
     /// Real prayer-time APIs require network; this coarse window is sufficient for tone adjustment.
-    private static func isFastingHour(now: Date) -> Bool {
+    nonisolated private static func isFastingHour(now: Date) -> Bool {
         let hour = Calendar.current.component(.hour, from: now)
         return hour >= 4 && hour < 19
     }
 
     /// Jumu'ah = Friday.
-    private static func isJumuah(now: Date) -> Bool {
+    nonisolated private static func isJumuah(now: Date) -> Bool {
         Calendar.current.component(.weekday, from: now) == 6  // 1=Sun, 6=Fri
     }
 
     /// Eid detection via Hijri calendar.
-    private static func currentEid(now: Date) -> State.EidState {
+    nonisolated private static func currentEid(now: Date) -> State.EidState {
         let hijri = Calendar(identifier: .islamicUmmAlQura)
         let month = hijri.component(.month, from: now)
         let day = hijri.component(.day, from: now)
@@ -95,7 +95,7 @@ enum CulturalContextEngine {
     }
 
     /// Gulf weekend is Friday-Saturday.
-    private static func isGulfWeekend(now: Date) -> Bool {
+    nonisolated private static func isGulfWeekend(now: Date) -> Bool {
         let day = Calendar.current.component(.weekday, from: now)
         return day == 6 || day == 7
     }

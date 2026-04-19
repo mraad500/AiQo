@@ -106,7 +106,7 @@ actor BioStateEngine {
 
 extension BioSnapshot.TimeOfDay {
     /// Maps the current local hour into a coarse time-of-day bucket.
-    static func current(clock: @Sendable () -> Date = Date.init) -> Self {
+    nonisolated static func current(clock: @Sendable () -> Date = Date.init) -> Self {
         let hour = Calendar.current.component(.hour, from: clock())
         switch hour {
         case 4..<7:   return .dawn

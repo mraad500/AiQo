@@ -11,7 +11,7 @@ public struct NotificationIntent: Sendable, Identifiable {
     public let requestedAt: Date
     public let expiresAt: Date?          // null = no expiration
 
-    public init(
+    public nonisolated init(
         id: UUID = UUID(),
         kind: NotificationKind,
         priority: Priority = .medium,
@@ -94,7 +94,7 @@ public struct IntentSignals: Sendable, Codable {
     public let emotionSummary: String?
     public let customPayload: [String: String]
 
-    public init(
+    public nonisolated init(
         memoryFactID: UUID? = nil,
         bioSnapshotSummary: String? = nil,
         emotionSummary: String? = nil,
@@ -106,5 +106,5 @@ public struct IntentSignals: Sendable, Codable {
         self.customPayload = customPayload
     }
 
-    public static let empty = IntentSignals()
+    public nonisolated static let empty = IntentSignals()
 }

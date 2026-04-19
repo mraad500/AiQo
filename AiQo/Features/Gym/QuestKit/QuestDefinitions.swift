@@ -22,45 +22,28 @@ enum QuestDefinitions {
             streakDailyTargetB: nil
         ),
         .init(
-            id: "s1q2",
+            id: QuestDefinition.learningSparkQuestID,
             stageIndex: 1,
             questIndex: 2,
-            title: "Water Spring (Daily)",
-            type: .daily,
-            source: .water,
+            title: "Learning Spark",
+            type: .oneTime,
+            source: .learning,
             tiers: [
-                .singleMetric(value: 2.0, unit: .liters),
-                .singleMetric(value: 2.5, unit: .liters),
-                .singleMetric(value: 3.0, unit: .liters)
+                .singleMetric(value: 1, unit: .count),
+                .singleMetric(value: 1, unit: .count),
+                .singleMetric(value: 1, unit: .count)
             ],
-            deepLinkAction: nil,
-            metricAKey: .waterLiters,
+            deepLinkAction: .openLearningCourse,
+            metricAKey: .learningCertificate,
             metricBKey: .none,
             streakDailyTargetA: nil,
-            streakDailyTargetB: nil
-        ),
-        .init(
-            id: "s1q3",
-            stageIndex: 1,
-            questIndex: 3,
-            title: "Recovery Throne (Daily)",
-            type: .daily,
-            source: .healthkit,
-            tiers: [
-                .singleMetric(value: 7.0, unit: .hours),
-                .singleMetric(value: 7.5, unit: .hours),
-                .singleMetric(value: 8.0, unit: .hours)
-            ],
-            deepLinkAction: nil,
-            metricAKey: .sleepHours,
-            metricBKey: .none,
-            streakDailyTargetA: nil,
-            streakDailyTargetB: nil
+            streakDailyTargetB: nil,
+            rewardImageOverride: "First.Learning.Challenge.Award"
         ),
         .init(
             id: "s1q4",
             stageIndex: 1,
-            questIndex: 4,
+            questIndex: 3,
             title: "Zone 2 Pulse (Cumulative)",
             type: .cumulative,
             source: .workout,
@@ -73,25 +56,46 @@ enum QuestDefinitions {
             metricAKey: .zone2Minutes,
             metricBKey: .none,
             streakDailyTargetA: nil,
-            streakDailyTargetB: nil
+            streakDailyTargetB: nil,
+            rewardImageOverride: "1.4"
         ),
         .init(
-            id: "s1q5",
+            id: "s1q3",
             stageIndex: 1,
-            questIndex: 5,
-            title: "Kitchen Foundation",
-            type: .oneTime,
-            source: .kitchen,
+            questIndex: 4,
+            title: "Recovery Throne (Daily)",
+            type: .daily,
+            source: .healthkit,
             tiers: [
-                .singleMetric(value: 1, unit: .count),
-                .singleMetric(value: 1, unit: .count),
-                .singleMetric(value: 1, unit: .count)
+                .singleMetric(value: 7.0, unit: .hours),
+                .singleMetric(value: 7.5, unit: .hours),
+                .singleMetric(value: 8.0, unit: .hours)
             ],
-            deepLinkAction: .openKitchen,
-            metricAKey: .kitchenPlans,
+            deepLinkAction: nil,
+            metricAKey: .sleepHours,
             metricBKey: .none,
             streakDailyTargetA: nil,
-            streakDailyTargetB: nil
+            streakDailyTargetB: nil,
+            rewardImageOverride: "1.3"
+        ),
+        .init(
+            id: "s1q2",
+            stageIndex: 1,
+            questIndex: 5,
+            title: "Water Spring (Daily)",
+            type: .daily,
+            source: .water,
+            tiers: [
+                .singleMetric(value: 2.0, unit: .liters),
+                .singleMetric(value: 2.5, unit: .liters),
+                .singleMetric(value: 3.0, unit: .liters)
+            ],
+            deepLinkAction: nil,
+            metricAKey: .waterLiters,
+            metricBKey: .none,
+            streakDailyTargetA: nil,
+            streakDailyTargetB: nil,
+            rewardImageOverride: "1.2"
         ),
 
         // Stage 2

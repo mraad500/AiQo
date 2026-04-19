@@ -45,8 +45,8 @@ enum CaptainIntelligenceError: LocalizedError {
 /// Privacy-first helper that reads HealthKit metrics on-device and exposes an
 /// on-device Apple Intelligence reply generator.
 /// No cloud transport lives in this class. Cloud flows go through `BrainOrchestrator`.
-final class CaptainHealthSnapshotService {
-    static let shared = CaptainHealthSnapshotService()
+final class CaptainHealthSnapshotService: @unchecked Sendable {
+    nonisolated static let shared = CaptainHealthSnapshotService()
 
     private let healthStore: HKHealthStore
     private let calendar: Calendar

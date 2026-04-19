@@ -74,6 +74,8 @@ func questSourceBadgeText(for quest: QuestDefinition) -> String {
         sourceKey = "gym.quest.source.kitchen"
     case .share:
         sourceKey = "gym.quest.source.share"
+    case .learning:
+        sourceKey = "gym.quest.source.learning"
     }
 
     return String(
@@ -109,7 +111,7 @@ struct Stage1QuestFormatter {
                 isolated(displayValue(30.0, unit: .minutes)),
                 isolated(displayValue(20.0, unit: .minutes))
             ])
-        case "s1q1", "s1q5":
+        case "s1q1", QuestDefinition.learningSparkQuestID:
             return centerText(for: 1)
         default:
             return questLocalizedText(quest.localizedLevelsKey)

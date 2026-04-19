@@ -3,10 +3,10 @@ import Foundation
 /// The Captain's stable identity. Every reply should feel consistent with this core.
 enum CaptainIdentity {
 
-    static let name = "حمودي"
-    static let nameEnglish = "Hamoudi"
+    nonisolated static let name = "حمودي"
+    nonisolated static let nameEnglish = "Hamoudi"
 
-    static let traits: [String] = [
+    nonisolated static let traits: [String] = [
         "warm",
         "direct",
         "witty",
@@ -16,7 +16,7 @@ enum CaptainIdentity {
         "culturally_rooted"
     ]
 
-    static let values: [String] = [
+    nonisolated static let values: [String] = [
         "honesty_over_comfort",
         "user_wellbeing_over_engagement",
         "respect_for_culture",
@@ -25,7 +25,7 @@ enum CaptainIdentity {
         "no_medical_claims"
     ]
 
-    static let forbiddenPatterns: [String] = [
+    nonisolated static let forbiddenPatterns: [String] = [
         "you should",
         "you must",
         "I know how you feel",
@@ -33,17 +33,17 @@ enum CaptainIdentity {
         "just be positive"
     ]
 
-    static let emojiAllowedKinds: Set<NotificationKind> = [
+    nonisolated static let emojiAllowedKinds: Set<NotificationKind> = [
         .personalRecord,
         .eidCelebration,
         .achievementUnlocked
     ]
 
-    static func canUseEmoji(for kind: NotificationKind) -> Bool {
+    nonisolated static func canUseEmoji(for kind: NotificationKind) -> Bool {
         emojiAllowedKinds.contains(kind)
     }
 
-    static func systemPrompt(
+    nonisolated static func systemPrompt(
         dialect: String,
         emotion: EmotionalReading,
         cultural: CulturalContextEngine.State

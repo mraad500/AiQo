@@ -10,11 +10,11 @@ import Foundation
 ///
 /// `AccessManager` continues to serve legacy consumers; this class is the canonical gate
 /// for the Brain stack and any new code.
-final class TierGate {
+final class TierGate: @unchecked Sendable {
 
     // MARK: - Feature catalogue
 
-    enum Feature: Hashable, Sendable {
+    nonisolated enum Feature: Hashable, Sendable {
         // Captain core (Max-tier and above)
         case captainChat
         case captainMemory
@@ -28,7 +28,7 @@ final class TierGate {
         case premiumVoice
         case advancedCulturalAwareness
 
-        var logName: String {
+        nonisolated var logName: String {
             switch self {
             case .captainChat:               return "captainChat"
             case .captainMemory:             return "captainMemory"
@@ -43,25 +43,25 @@ final class TierGate {
         }
     }
 
-    enum MiningCadence: Sendable { case daily, weekly, never }
+    nonisolated enum MiningCadence: Sendable { case daily, weekly, never }
 
     // MARK: - Singleton
 
-    static let shared = TierGate()
+    nonisolated static let shared = TierGate()
 
     private enum Keys {
-        static let currentTier = "aiqo.purchases.currentTier"
+        nonisolated static let currentTier = "aiqo.purchases.currentTier"
     }
 
-    private let defaults: UserDefaults
-    private let trialProvider: @Sendable () -> Bool
+    nonisolated(unsafe) private let defaults: UserDefaults
+    nonisolated private let trialProvider: @Sendable () -> Bool
 
     #if DEBUG
     /// DEBUG-only override used by tests. `nil` = fall through to real sources.
-    private var testOverride: SubscriptionTier?
+    nonisolated(unsafe) private var testOverride: SubscriptionTier?
     #endif
 
-    init(
+    nonisolated init(
         defaults: UserDefaults = .standard,
         trialProvider: @escaping @Sendable () -> Bool = { FreeTrialManager.isTrialActiveSnapshot }
     ) {
@@ -71,7 +71,7 @@ final class TierGate {
 
     // MARK: - Current tier
 
-    var currentTier: SubscriptionTier {
+    nonisolated var currentTier: SubscriptionTier {
         #if DEBUG
         if let testOverride { return testOverride }
         #endif
@@ -84,7 +84,7 @@ final class TierGate {
 
     // MARK: - Feature access
 
-    func requiredTier(for feature: Feature) -> SubscriptionTier {
+    nonisolated func requiredTier(for feature: Feature) -> SubscriptionTier {
         switch feature {
         case .captainChat, .captainMemory, .captainNotifications:
             return .max
@@ -96,7 +96,7 @@ final class TierGate {
         }
     }
 
-    func canAccess(
+    nonisolated func canAccess(
         _ feature: Feature,
         file: String = #fileID,
         line: Int = #line
@@ -117,7 +117,7 @@ final class TierGate {
 
     // MARK: - Tier limits (Master Plan §5.2)
 
-    var maxContextTokens: Int {
+    nonisolated var maxContextTokens: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 32_000
         case .max: return 8_000
@@ -125,7 +125,7 @@ final class TierGate {
         }
     }
 
-    var maxMemoryRetrievalDepth: Int {
+    nonisolated var maxMemoryRetrievalDepth: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 25
         case .max: return 10
@@ -133,7 +133,7 @@ final class TierGate {
         }
     }
 
-    var maxSemanticFacts: Int {
+    nonisolated var maxSemanticFacts: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 500
         case .max: return 200
@@ -141,7 +141,7 @@ final class TierGate {
         }
     }
 
-    var maxNotificationsPerDay: Int {
+    nonisolated var maxNotificationsPerDay: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 7
         case .max: return 4
@@ -150,7 +150,7 @@ final class TierGate {
     }
 
     /// `nil` = unlimited lookback (Pro). Free tiers also return `nil` because they have no memory access.
-    var memoryCallbackLookbackDays: Int? {
+    nonisolated var memoryCallbackLookbackDays: Int? {
         switch currentTier.effectiveAccessTier {
         case .pro: return nil
         case .max: return 30
@@ -158,7 +158,7 @@ final class TierGate {
         }
     }
 
-    var emotionalMiningCadence: MiningCadence {
+    nonisolated var emotionalMiningCadence: MiningCadence {
         switch currentTier.effectiveAccessTier {
         case .pro: return .daily
         case .max: return .weekly
@@ -166,7 +166,7 @@ final class TierGate {
         }
     }
 
-    var patternMiningWindowDays: Int {
+    nonisolated var patternMiningWindowDays: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 56
         case .max: return 14
@@ -174,7 +174,7 @@ final class TierGate {
         }
     }
 
-    var maxWeeksInPlan: Int {
+    nonisolated var maxWeeksInPlan: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 4
         case .max: return 1
@@ -184,11 +184,11 @@ final class TierGate {
 
     // MARK: - Back-compat async hooks (existing callers: EpisodicStore, SemanticStore)
 
-    func memoryFactLimit() async -> Int {
+    nonisolated func memoryFactLimit() async -> Int {
         maxSemanticFacts
     }
 
-    func cappedMemoryFetchLimit(requested: Int, fallback: Int) async -> Int {
+    nonisolated func cappedMemoryFetchLimit(requested: Int, fallback: Int) async -> Int {
         let normalized = requested > 0 ? requested : fallback
         let limit = maxSemanticFacts
         return max(1, min(normalized, limit))
@@ -197,11 +197,11 @@ final class TierGate {
     // MARK: - Testing helpers (DEBUG only)
 
     #if DEBUG
-    func _setTierForTesting(_ tier: SubscriptionTier) {
+    nonisolated func _setTierForTesting(_ tier: SubscriptionTier) {
         testOverride = tier
     }
 
-    func _clearTestOverride() {
+    nonisolated func _clearTestOverride() {
         testOverride = nil
     }
     #endif

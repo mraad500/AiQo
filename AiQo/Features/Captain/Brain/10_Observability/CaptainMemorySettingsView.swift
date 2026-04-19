@@ -7,6 +7,10 @@ struct CaptainMemorySettingsView: View {
     @State private var showClearConfirmation = false
     @State private var weeklyReports: [WeeklyReportEntry] = []
 
+    private var memoryLimitText: String {
+        String(TierGate.shared.currentTier.memoryFactLimit)
+    }
+
     private var groupedMemories: [(String, [CaptainMemorySnapshot])] {
         let grouped = Dictionary(grouping: memories, by: { $0.category })
         return grouped.sorted { $0.key < $1.key }
@@ -79,7 +83,7 @@ struct CaptainMemorySettingsView: View {
                     .multilineTextAlignment(.center)
 
                 if !memories.isEmpty {
-                    Text("\(memories.count) / \(TierGate.shared.memoryFactLimit)")
+                    Text(verbatim: "\(memories.count) / \(memoryLimitText)")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(GymTheme.mint)
                         .padding(.horizontal, 8)

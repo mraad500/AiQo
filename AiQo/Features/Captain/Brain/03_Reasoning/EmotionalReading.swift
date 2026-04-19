@@ -26,7 +26,7 @@ struct EmotionalReading: Sendable, Codable {
         case workoutIntensity(vsBaseline: Double)
     }
 
-    init(
+    nonisolated init(
         primary: EmotionKind = .peace,
         intensity: Double = 0,
         confidence: Double = 0,

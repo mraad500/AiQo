@@ -20,6 +20,10 @@ struct QuestDetailSheet: View {
     @State private var showHealthSetupAlert = false
     @State private var healthSetupAlertMessage = ""
     @State private var timerNow = Date()
+    @State private var showLearningProof = false
+    @State private var showLearningOptions = false
+
+    @ObservedObject private var learningProofStore = LearningProofStore.shared
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -31,10 +35,7 @@ struct QuestDetailSheet: View {
             VStack(alignment: .trailing, spacing: 20) {
 
                 // Badge image — centered, large
-                Image(quest.rewardImageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
+                QuestRewardImageView(quest: quest, size: 100)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 8)
 
@@ -439,7 +440,346 @@ struct QuestDetailSheet: View {
                                 .fill(Color(hex: "EBCF97"))
                         )
                 }
+
+            case .learning:
+                learningActionStack(progress: progress)
             }
+        }
+    }
+
+    // MARK: - Learning Action Stack
+
+    @ViewBuilder
+    private func learningActionStack(progress: QuestProgressRecord) -> some View {
+        let config = LearningChallengeRegistry.config(for: quest.id)
+        let record = learningProofStore.record(for: quest.id)
+        let selectedOption = config.option(withId: record.selectedCourseOptionId)
+        let status = record.lastResult.status
+
+        VStack(spacing: 10) {
+            // State A — no course selected: show only "استعرض الكورسات".
+            if selectedOption == nil {
+                exploreCoursesButton
+            }
+
+            // State B/C/D/E — a course is selected; layout depends on status.
+            if let selectedOption {
+                selectedCoursePill(option: selectedOption)
+
+                switch status {
+                case .pending:
+                    // State C — verification in progress.
+                    verifyingPill
+                case .verified:
+                    // State E — handled by the surrounding `isCompleted` branch which
+                    // renders the common "Completed" card. We still expose the success
+                    // Captain message to let the user read it.
+                    if let message = record.lastResult.notes {
+                        captainMessageCard(text: message, tint: Color(hex: "B7E5D2"))
+                    }
+                case .needsReview:
+                    // State D — needs review. Retry button re-runs the verifier using
+                    // the already-uploaded image stored on disk.
+                    needsReviewRow(record: record, option: selectedOption)
+                case .rejected, .notSubmitted:
+                    // State B — ready to submit proof. Also re-entry from a rejection.
+                    submitProofButton
+                    if status == .rejected, let reason = record.lastResult.rejectionReason {
+                        Text(reason)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color(hex: "B24545"))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: status)
+        .animation(.easeInOut(duration: 0.25), value: record.selectedCourseOptionId)
+        .sheet(isPresented: $showLearningOptions) {
+            LearningCourseOptionsSheet(
+                quest: quest,
+                config: config,
+                proofStore: learningProofStore
+            )
+        }
+        .sheet(isPresented: $showLearningProof) {
+            if let option = selectedOption {
+                LearningProofSubmissionView(
+                    quest: quest,
+                    option: option,
+                    onVerified: {
+                        engine.finishQuestSession(
+                            questId: quest.id,
+                            sessionResult: .manualConfirmed(count: 1)
+                        )
+                        onComplete(quest)
+                    },
+                    proofStore: learningProofStore
+                )
+            }
+        }
+    }
+
+    // MARK: - Learning Sub-Views (5 states)
+
+    /// State A — nothing selected. Single primary CTA opens the internal options sheet.
+    private var exploreCoursesButton: some View {
+        Button(action: { showLearningOptions = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "book.closed.fill")
+                Text(questLocalizedText("gym.quest.learning.exploreCourses"))
+            }
+            .font(.system(size: 17, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "EBCF97"))
+            )
+        }
+    }
+
+    /// Pill showing the currently selected course + a "تغيير" link to re-open the
+    /// options sheet. Always rendered on States B/C/D/E.
+    @ViewBuilder
+    private func selectedCoursePill(option: LearningCourseOption) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+            Text(option.title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+                .lineLimit(1)
+            Spacer()
+            Button(action: { showLearningOptions = true }) {
+                Text(questLocalizedText("gym.quest.learning.change"))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "1A1A1A").opacity(0.7))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(hex: "F5F5F5"))
+        )
+    }
+
+    /// State B — ready to submit proof.
+    private var submitProofButton: some View {
+        Button(action: { showLearningProof = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                Text(questLocalizedText("gym.quest.learning.submitProof"))
+            }
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(hex: "B7E5D2"))
+            )
+        }
+    }
+
+    /// State C — verification in progress. Disabled pill.
+    private var verifyingPill: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+            Text(questLocalizedText("gym.quest.learning.verifying"))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(hex: "FDE2A7").opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(hex: "1A1A1A").opacity(0.08), lineWidth: 0.6)
+        )
+    }
+
+    /// State D — needs review; retry button re-runs verify() using the stored image.
+    @ViewBuilder
+    private func needsReviewRow(record: LearningProofRecord, option: LearningCourseOption) -> some View {
+        if let message = record.lastResult.notes {
+            captainMessageCard(text: message, tint: Color(hex: "FDE2A7"))
+        }
+
+        Button(action: {
+            retryLearningVerification(record: record, option: option)
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise")
+                Text(questLocalizedText("gym.quest.learning.proof.retryVerification"))
+            }
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(hex: "EBCF97"))
+            )
+        }
+    }
+
+    /// Small Captain-voiced message card. Used for State D/E + post-rejection copy.
+    @ViewBuilder
+    private func captainMessageCard(text: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "heart.text.square.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+            Text(text)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(tint.opacity(0.35))
+        )
+    }
+
+    /// Re-runs the on-device verifier using the already-stored certificate image,
+    /// without forcing the user back into the submission sheet. Useful after an iOS
+    /// upgrade that newly exposes Apple Intelligence.
+    private func retryLearningVerification(record: LearningProofRecord, option: LearningCourseOption) {
+        guard let image = learningProofStore.loadCertificateImage(record.certificateImageRelativePath) else {
+            showLearningProof = true
+            return
+        }
+
+        var pending = record
+        pending.lastResult = LearningProofVerificationResult(
+            status: .pending,
+            confidence: nil,
+            extractedName: nil,
+            extractedCourseTitle: nil,
+            extractedProvider: nil,
+            extractedCertificateURL: record.certificateURL,
+            rejectionReason: nil,
+            notes: nil
+        )
+        learningProofStore.updateRecord(pending)
+
+        let firstName = Self.resolveFirstName()
+        Task {
+            let verdict = await CertificateVerifier.shared.verify(
+                image: image,
+                course: option.course,
+                userFirstName: firstName
+            )
+            await MainActor.run {
+                applyRetryVerdict(verdict, questId: quest.id, certificateURL: record.certificateURL ?? "")
+            }
+        }
+    }
+
+    private func applyRetryVerdict(_ verdict: CertificateVerifier.Result, questId: String, certificateURL: String) {
+        switch verdict {
+        case let .verified(confidence, message):
+            let result = LearningProofVerificationResult(
+                status: .verified,
+                confidence: confidence,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: nil,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+            engine.finishQuestSession(
+                questId: questId,
+                sessionResult: .manualConfirmed(count: 1)
+            )
+            onComplete(quest)
+        case let .needsReview(reason, message):
+            let result = LearningProofVerificationResult(
+                status: .needsReview,
+                confidence: nil,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: reason,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+        case let .rejected(reason, message):
+            let result = LearningProofVerificationResult(
+                status: .rejected,
+                confidence: nil,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: reason,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+        }
+    }
+
+    private static func resolveFirstName() -> String {
+        let profile = UserProfileStore.shared.current
+        let trimmed = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return String(trimmed.split(separator: " ").first ?? Substring(trimmed))
+        }
+        let username = (profile.username ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(username.split(separator: " ").first ?? Substring(username))
+    }
+
+    @ViewBuilder
+    private func learningStatusRow(status: LearningProofVerificationStatus) -> some View {
+        HStack {
+            Spacer()
+            Text(learningStatusText(status))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(learningStatusTint(status)))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+        }
+    }
+
+    private func learningStatusText(_ status: LearningProofVerificationStatus) -> String {
+        switch status {
+        case .notSubmitted:
+            return questLocalizedText("gym.quest.learning.status.notSubmitted")
+        case .pending:
+            return questLocalizedText("gym.quest.learning.status.pending")
+        case .verified:
+            return questLocalizedText("gym.quest.learning.status.verified")
+        case .rejected:
+            return questLocalizedText("gym.quest.learning.status.rejected")
+        case .needsReview:
+            return questLocalizedText("gym.quest.learning.status.needsReview")
+        }
+    }
+
+    private func learningStatusTint(_ status: LearningProofVerificationStatus) -> Color {
+        switch status {
+        case .notSubmitted: return Color(hex: "F5F5F5")
+        case .pending: return Color(hex: "FDE2A7").opacity(0.9)
+        case .verified: return Color(hex: "B7E5D2")
+        case .rejected: return Color(hex: "F7C7C7")
+        case .needsReview: return Color(hex: "F6C77A").opacity(0.9)
         }
     }
 
@@ -598,14 +938,14 @@ enum QuestSheetContentProvider {
         switch quest.id {
         case "s1q1":
             return localizedContent(prefix: "gym.quest.s1q1")
+        case QuestDefinition.learningSparkQuestID:
+            return localizedContent(prefix: "gym.quest.s1qLearn")
         case "s1q2":
             return localizedContent(prefix: "gym.quest.s1q2")
         case "s1q3":
             return localizedContent(prefix: "gym.quest.s1q3")
         case "s1q4":
             return localizedContent(prefix: "gym.quest.s1q4")
-        case "s1q5":
-            return localizedContent(prefix: "gym.quest.s1q5")
         case "s2q1":
             return localizedContent(prefix: "gym.quest.s2q1")
         case "s2q2":
@@ -824,6 +1164,18 @@ enum QuestSheetContentProvider {
                 "اختَر إنجازاً لمشاركته.",
                 "اضغط زر المشاركة.",
                 "شارك مع المجتمع."
+            ]
+        case .learning:
+            explanation = questLocalizedText("gym.quest.s1qLearn.explanation")
+            benefits = [
+                questLocalizedText("gym.quest.s1qLearn.benefit1"),
+                questLocalizedText("gym.quest.s1qLearn.benefit2"),
+                questLocalizedText("gym.quest.s1qLearn.benefit3")
+            ]
+            howTo = [
+                questLocalizedText("gym.quest.s1qLearn.howTo1"),
+                questLocalizedText("gym.quest.s1qLearn.howTo2"),
+                questLocalizedText("gym.quest.s1qLearn.howTo3")
             ]
         }
 

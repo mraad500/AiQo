@@ -6,9 +6,14 @@ enum PersonaGuard {
     struct Result: Sendable {
         let passed: Bool
         let violations: [String]
+
+        nonisolated init(passed: Bool, violations: [String]) {
+            self.passed = passed
+            self.violations = violations
+        }
     }
 
-    static func validate(
+    nonisolated static func validate(
         title: String,
         body: String,
         kind: NotificationKind
@@ -50,11 +55,11 @@ enum PersonaGuard {
         return Result(passed: violations.isEmpty, violations: violations)
     }
 
-    private static func containsEmoji(_ value: String) -> Bool {
+    nonisolated private static func containsEmoji(_ value: String) -> Bool {
         value.unicodeScalars.contains(where: isRenderedEmoji)
     }
 
-    private static func isRenderedEmoji(_ scalar: UnicodeScalar) -> Bool {
+    nonisolated private static func isRenderedEmoji(_ scalar: UnicodeScalar) -> Bool {
         scalar.properties.isEmojiPresentation ||
         (scalar.properties.isEmoji && scalar.value > 0x238C)
     }

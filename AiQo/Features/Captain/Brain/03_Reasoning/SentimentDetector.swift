@@ -26,19 +26,19 @@ struct SentimentResult: Codable, Sendable {
 
 final class SentimentDetector: Sendable {
 
-    static let shared = SentimentDetector()
-    private init() {}
+    nonisolated static let shared = SentimentDetector()
+    nonisolated private init() {}
 
     // MARK: - Keyword Lists
 
-    private static let questionKeywords: [String] = [
+    nonisolated private static let questionKeywords: [String] = [
         // Arabic
         "\u{061F}", "شلون", "شنو", "ليش", "متى", "وين", "شكد", "هل", "كيف", "شگد",
         // English
         "?", "how", "what", "why", "when", "where", "should", "can i", "do i"
     ]
 
-    private static let positiveKeywords: [String] = [
+    nonisolated private static let positiveKeywords: [String] = [
         // Arabic
         "حلو", "زين", "تمام", "ممتاز", "يسلمو", "الحمدلله", "خوش", "احسن",
         "فرحان", "مبسوط", "نشيط", "حماس", "يلا", "شكراً", "ماشاءالله",
@@ -48,7 +48,7 @@ final class SentimentDetector: Sendable {
         "great", "good", "awesome", "thanks", "happy", "love", "amazing", "perfect", "nice"
     ]
 
-    private static let negativeKeywords: [String] = [
+    nonisolated private static let negativeKeywords: [String] = [
         // Arabic
         "تعبان", "مريض", "ملّيت", "زهگت", "ما اكدر", "صعب", "مو بمزاج", "كسلان",
         "ما رديت", "خايف", "قلقان", "ما نمت", "ضغط", "مضايق",
@@ -61,7 +61,7 @@ final class SentimentDetector: Sendable {
 
     // MARK: - Detection
 
-    func detect(message: String) -> SentimentResult {
+    nonisolated func detect(message: String) -> SentimentResult {
         let normalized = message.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !normalized.isEmpty else {

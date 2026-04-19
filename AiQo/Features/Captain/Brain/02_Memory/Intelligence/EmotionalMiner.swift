@@ -14,9 +14,12 @@ actor EmotionalMiner {
     func mine(since: Date) async -> Int {
         let tier = TierGate.shared.currentTier
         let cadence = TierGate.shared.emotionalMiningCadence
-        guard cadence != .never else {
+        switch cadence {
+        case .never:
             diag.info("EmotionalMiner: cadence=never (tier=\(tier)) — skipping")
             return 0
+        case .daily, .weekly:
+            break
         }
 
         diag.info("EmotionalMiner: starting (tier=\(tier), cadence=\(cadence))")

@@ -23,45 +23,45 @@ struct IntentReading: Sendable {
 enum IntentClassifier {
 
     // Crisis keywords — checked first, highest priority. APPEND-ONLY.
-    private static let crisisMarkers: [String] = [
+    nonisolated private static let crisisMarkers: [String] = [
         "kill myself", "end it all", "no reason to live",
         "want to die", "hurt myself", "suicide", "suicidal",
         "أنتحر", "ما أبي أعيش", "أموت", "أنهي حياتي", "أذي نفسي"
     ]
 
-    private static let greetingMarkers: [String] = [
+    nonisolated private static let greetingMarkers: [String] = [
         "hi ", "hi!", "hello", "hey ", "good morning", "good evening",
         "سلام", "أهلا", "هلا", "مرحبا", "صباح الخير", "مساء الخير"
     ]
 
-    private static let goalMarkers: [String] = [
+    nonisolated private static let goalMarkers: [String] = [
         "i want to", "my goal", "trying to", "plan to",
         "أبي", "أبغى", "هدفي", "أخطط"
     ]
 
-    private static let ventingMarkers: [String] = [
+    nonisolated private static let ventingMarkers: [String] = [
         "exhausted", "tired of", "nothing works", "fed up", "frustrated",
         "مبسوط مو", "زهقت", "تعبت", "ما أقدر أكمّل"
     ]
 
-    private static let requestMarkers: [String] = [
+    nonisolated private static let requestMarkers: [String] = [
         "give me", "show me", "make a", "plan for", "recommend",
         "اعطني", "سوي", "أعطيني", "اقترح"
     ]
 
-    private static let questionStarts: [String] = [
+    nonisolated private static let questionStarts: [String] = [
         "what ", "how ", "why ", "when ", "where ", "who ",
         "شنو", "كيف", "ليش", "متى", "وين", "منو"
     ]
 
-    private static let familyMarkers: [String] = [
+    nonisolated private static let familyMarkers: [String] = [
         "my mom", "my dad", "my sister", "my brother", "my wife", "my husband",
         "my friend", "my kid", "my son", "my daughter",
         "أمي", "أبوي", "أختي", "أخوي", "زوجتي", "زوجي",
         "صديقي", "ابني", "بنتي", "أطفالي"
     ]
 
-    static func classify(_ text: String) -> IntentReading {
+    nonisolated static func classify(_ text: String) -> IntentReading {
         let lowered = text.lowercased()
         var flags: [String] = []
 
@@ -131,12 +131,12 @@ enum IntentClassifier {
 
     // MARK: - Helpers
 
-    private static func hasQuestionStart(_ text: String) -> Bool {
+    nonisolated private static func hasQuestionStart(_ text: String) -> Bool {
         questionStarts.contains(where: { text.hasPrefix($0) })
     }
 
     /// Extract capitalized words that look like names (simple heuristic).
-    private static func extractNames(from text: String) -> [String] {
+    nonisolated private static func extractNames(from text: String) -> [String] {
         let skip: Set<String> = ["I", "The", "A", "An", "But", "And", "Or", "So", "My", "Your", "His", "Her"]
         let words = text.split(separator: " ")
         var names: [String] = []

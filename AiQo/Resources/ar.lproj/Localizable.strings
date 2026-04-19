@@ -965,14 +965,14 @@
 "quests.stage.1.tab" = "المرحلة 1";
 "quests.stage.1.quest.1.title" = "شرارة الخير (مكافأة)";
 "quests.stage.1.quest.1.levels" = "مركز 1";
-"quests.stage.1.quest.2.title" = "نبع الماء (يومي)";
-"quests.stage.1.quest.2.levels" = "3.0ل / 2.5ل / 2.0ل";
-"quests.stage.1.quest.3.title" = "عرش التعافي (يومي)";
-"quests.stage.1.quest.3.levels" = "8س / 7.5س / 7س";
-"quests.stage.1.quest.4.title" = "نبض زون 2 (تراكمي)";
-"quests.stage.1.quest.4.levels" = "40د / 30د / 20د";
-"quests.stage.1.quest.5.title" = "تأسيس المطبخ";
-"quests.stage.1.quest.5.levels" = "مركز 1";
+"quests.stage.1.quest.2.title" = "شرارة التعلم";
+"quests.stage.1.quest.2.levels" = "مركز 1";
+"quests.stage.1.quest.3.title" = "نبض زون 2 (تراكمي)";
+"quests.stage.1.quest.3.levels" = "40د / 30د / 20د";
+"quests.stage.1.quest.4.title" = "عرش التعافي (يومي)";
+"quests.stage.1.quest.4.levels" = "8س / 7.5س / 7س";
+"quests.stage.1.quest.5.title" = "نبع الماء (يومي)";
+"quests.stage.1.quest.5.levels" = "3.0ل / 2.5ل / 2.0ل";
 
 "quests.stage.2.title" = "المرحلة 2: تشغيل المحرك";
 "quests.stage.2.tab" = "المرحلة 2";
@@ -2471,13 +2471,73 @@
 "gym.quest.s1q4.howTo1" = "سجّل جلسات زون 2 بشكل منتظم.";
 "gym.quest.s1q4.howTo2" = "ابدأ بـ 20د ثم ارفعها إلى 30د ثم 40د.";
 "gym.quest.s1q4.howTo3" = "حدّث الدقائق من زر تسجيل الجلسة.";
-"gym.quest.s1q5.explanation" = "مهمة تأسيس لمرة واحدة: احفظ أول خطة Kitchen حتى يفهم AiQo خطك الغذائي الأساسي.";
-"gym.quest.s1q5.benefit1" = "يثبّت السلوك اليومي ويقلل العشوائية.";
-"gym.quest.s1q5.benefit2" = "يساعد AiQo يعطيك اقتراحات وجبات أفضل.";
-"gym.quest.s1q5.benefit3" = "يقلل تعب القرارات اليومية حول الوجبات.";
-"gym.quest.s1q5.howTo1" = "افتح شاشة Kitchen من الصفحة الرئيسية.";
-"gym.quest.s1q5.howTo2" = "أنشئ/احفظ خطة وجباتك.";
-"gym.quest.s1q5.howTo3" = "تكتمل المهمة تلقائيًا بعد حفظ الخطة.";
+"gym.quest.s1qLearn.explanation" = "مهمة بداية لمرة واحدة: أكمل كورس قصير ومحدد حتى تبني عادة التعلّم وتثبت لنفسك أنك تقدر تبدأ وتكمل.";
+"gym.quest.s1qLearn.benefit1" = "يرفع ثقة المستخدم بنفسه عبر إنجاز معرفي واضح.";
+"gym.quest.s1qLearn.benefit2" = "يزرع عادة التعلّم داخل مسار AiQo من البداية.";
+"gym.quest.s1qLearn.benefit3" = "يحوّل المستخدم من متلقّي إلى شخص يتقدّم بوعي.";
+"gym.quest.s1qLearn.howTo1" = "استعرض الكورسات واختر مسار التعلّم المناسب.";
+"gym.quest.s1qLearn.howTo2" = "أكمل الكورس بالكامل.";
+"gym.quest.s1qLearn.howTo3" = "أرسل إثبات الإنجاز وانتظر التحقق.";
+
+// Learning Quest UI (شرارة التعلم)
+"gym.quest.source.learning" = "مساران للتعلّم";
+"gym.quest.learning.exploreCourses" = "استعرض الكورسات";
+"gym.quest.learning.submitProof" = "أثبت التقدّم";
+"gym.quest.learning.options.title" = "خيارات التعلّم";
+"gym.quest.learning.options.intro" = "اختر المسار اللي يناسبك. كل الكورسات مجانية ومختارة بعناية لتبني عادة التعلّم.";
+"gym.quest.learning.options.platform" = "المنصة";
+"gym.quest.learning.options.language" = "اللغة";
+"gym.quest.learning.options.free" = "مجاني";
+"gym.quest.learning.options.openSource" = "فتح المصدر";
+"gym.quest.learning.options.selected" = "الخيار المختار";
+"gym.quest.learning.options.selectRequired" = "اختر خيار تعلّم أولاً.";
+"gym.quest.learning.language.arabic" = "العربية";
+"gym.quest.learning.language.english" = "الإنجليزية";
+"gym.quest.learning.option.edraak.provider" = "إدراك";
+"gym.quest.learning.option.edraak.description" = "ابنِ خطة واضحة لمسارك المهني وطوّر قرارك الذاتي.";
+"gym.quest.learning.option.english.provider" = "كورس عالمي";
+"gym.quest.learning.option.english.description" = "افهم كيف يعمل دماغك في التعلّم وادرس بذكاء أعلى.";
+"gym.quest.learning.proof.title" = "إثبات الكورس";
+"gym.quest.learning.proof.forCourse" = "تُثبت إنجازك لهذا الكورس:";
+"gym.quest.learning.proof.certificateHeader" = "شهادة الكورس";
+"gym.quest.learning.proof.uploadImage" = "رفع صورة الشهادة";
+"gym.quest.learning.proof.replaceImage" = "استبدال الصورة";
+"gym.quest.learning.proof.linkHeader" = "رابط الشهادة";
+"gym.quest.learning.proof.linkPlaceholder" = "الصق رابط الشهادة هنا";
+"gym.quest.learning.proof.submitForVerification" = "أرسل إثبات الإنجاز";
+"gym.quest.learning.proof.submitting" = "جارٍ التحقق...";
+"gym.quest.learning.proof.retryVerification" = "أعد المحاولة";
+"gym.quest.learning.proof.verified" = "مكتمل";
+"gym.quest.learning.proof.errorImageLoad" = "تعذّر تحميل الصورة";
+"gym.quest.learning.proof.errorInvalidURL" = "الرابط غير صالح.";
+"gym.quest.learning.proof.errorDomain" = "الرابط يجب أن يكون من %@.";
+"gym.quest.learning.status.notSubmitted" = "غير مكتمل";
+"gym.quest.learning.status.pending" = "قيد التحقق";
+"gym.quest.learning.status.verified" = "مكتمل";
+"gym.quest.learning.status.rejected" = "مرفوض — أعد المحاولة";
+"gym.quest.learning.status.needsReview" = "بانتظار المراجعة";
+
+// Consent sheet
+"gym.quest.learning.consent.title" = "التحقق من الشهادة";
+"gym.quest.learning.consent.body" = "كابتن حمودي راح يتحقق من شهادتك مباشرة على جهازك باستخدام ذكاء Apple. الصورة ما تغادر هاتفك أبداً.";
+"gym.quest.learning.consent.accept" = "موافق، ابدأ";
+"gym.quest.learning.consent.later" = "لاحقاً";
+
+// URL badge
+"gym.quest.learning.url.trusted" = "منصة موثوقة";
+"gym.quest.learning.url.untrusted" = "منصة غير معروفة";
+"gym.quest.learning.url.invalid" = "رابط غير صالح";
+
+// Progressive UI states
+"gym.quest.learning.change" = "تغيير";
+"gym.quest.learning.verifying" = "كابتن حمودي يتحقق...";
+"gym.quest.learning.rateLimit.contact" = "تواصل معانا";
+"learning.platform.edraak" = "إدراك";
+"learning.platform.coursera" = "Coursera";
+"learning.platform.rwaq" = "رواق";
+"learning.platform.maharah" = "مهارة";
+"learning.platform.edx" = "edX";
+"learning.platform.youtube" = "يوتيوب";
 "gym.quest.s2q1.explanation" = "تحدي بالكاميرا يقيس دقة أداء الضغط.";
 "gym.quest.s2q1.benefit1" = "يبني قوة الجزء العلوي من الجسم.";
 "gym.quest.s2q1.benefit2" = "يحسّن دقة الحركة والتحكم.";
