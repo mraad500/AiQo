@@ -464,34 +464,10 @@ private extension BrainOrchestrator {
         language: AppLanguage,
         urgency: InterventionPolicy.Decision.Urgency
     ) -> HybridBrainServiceReply {
-        let message: String
-
-        switch (language, urgency) {
-        case (.arabic, .immediate):
-            message = """
-            إذا كنت ممكن تؤذي نفسك الآن أو ما تقدر تبقى بأمان، اتصل بخدمات الطوارئ المحلية فوراً أو تواصل مع شخص قريب منك حالاً.
-
-            تواصل أيضاً مع جهة دعم مهني الآن. إذا تحب، أقدر أكمل وياك خطوة بخطوة بهدوء.
-            """
-        case (.arabic, .suggested):
-            message = """
-            واضح إن الضغط صار ثقيل عليك. أنصحك تتواصل اليوم مع جهة دعم مهني أو شخص تثق بيه وما تبقى وحدك بهالشعور.
-            """
-        case (.arabic, .informational):
-            message = """
-            إذا تحب دعماً إضافياً، يفيدك تتواصل مع جهة دعم مهني أو خط مساعدة موثوق في منطقتك.
-            """
-        case (.english, .immediate):
-            message = """
-            If you might act on these thoughts or cannot stay safe right now, call local emergency services now or contact a trusted person immediately.
-
-            Please reach out to a professional crisis resource now. I can stay with you and take this one step at a time.
-            """
-        case (.english, .suggested):
-            message = "This sounds heavy. Please consider contacting a professional support service or a trusted person today."
-        case (.english, .informational):
-            message = "If extra support would help, please consider reaching out to a licensed professional or a trusted helpline."
-        }
+        let message = ProfessionalReferral.supportMessage(
+            language: language,
+            urgency: urgency
+        )
 
         let structuredResponse = CaptainStructuredResponse(message: message)
         let rawText = (try? encode(structuredResponse)) ?? message

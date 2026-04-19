@@ -275,7 +275,7 @@ final class BrainOrchestratorSafetyTests: XCTestCase {
 
         let reply = try await BrainOrchestrator().processMessage(request: request, userName: nil)
 
-        XCTAssertTrue(reply.message.contains("call local emergency services now"))
+        XCTAssertTrue(reply.message.contains("local emergency services"))
     }
 
     func testAcuteMessageReturnsImmediateSafetyReplyInArabic() async throws {

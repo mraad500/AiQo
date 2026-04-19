@@ -21,6 +21,15 @@ actor TriggerEvaluator {
 
     func registeredCount() -> Int { triggers.count }
 
+    #if DEBUG
+    struct DebugSnapshot: Sendable, Identifiable {
+        let id: String
+        let kind: String
+        let score: Double?
+        let reason: String?
+    }
+    #endif
+
     /// Build a fresh `TriggerContext` and evaluate every registered trigger in parallel.
     /// Returns the highest-ranked `TriggerResult`, or nil if no trigger fires above threshold.
     func evaluateAll(recentDeliveryKinds: [NotificationKind] = []) async -> TriggerResult? {
@@ -63,4 +72,43 @@ actor TriggerEvaluator {
         )
         return sorted.first
     }
+
+    #if DEBUG
+    func debugSnapshot(recentDeliveryKinds: [NotificationKind] = []) async -> [DebugSnapshot] {
+        let bio = await BioStateEngine.shared.current()
+        let cultural = CulturalContextEngine.current()
+        let emotion = await EmotionalEngine.shared.currentReading()
+
+        let context = TriggerContext(
+            bio: bio,
+            cultural: cultural,
+            emotion: emotion,
+            recentDeliveryKinds: recentDeliveryKinds
+        )
+        let localTriggers = triggers
+
+        var snapshots: [DebugSnapshot] = []
+        await withTaskGroup(of: DebugSnapshot.self) { group in
+            for trigger in localTriggers {
+                group.addTask {
+                    let result = await trigger.evaluate(context: context)
+                    return DebugSnapshot(
+                        id: trigger.id,
+                        kind: trigger.kind.rawValue,
+                        score: result?.score,
+                        reason: result?.reason
+                    )
+                }
+            }
+
+            for await snapshot in group {
+                snapshots.append(snapshot)
+            }
+        }
+
+        return snapshots.sorted { lhs, rhs in
+            (lhs.score ?? -1) > (rhs.score ?? -1)
+        }
+    }
+    #endif
 }
