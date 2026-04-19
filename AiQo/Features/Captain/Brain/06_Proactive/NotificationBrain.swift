@@ -71,11 +71,43 @@ public actor NotificationBrain {
             rawTitle = t
             rawBody = b
         } else {
-            let composed = await MessageComposer.shared.compose(intent: intent)
+            let cultural = CulturalContextEngine.current(now: now)
+            let emotion = emotionalReading(for: intent)
+            let userDialect = intent.signals.customPayload["dialect"] ?? "iraqi"
+            let language = intent.signals.customPayload["language"] ?? "ar"
+            let dialect = DialectLibrary.Dialect(rawValue: userDialect) ?? .iraqi
+            let persona = await PersonaAdapter.shared.richDirective(
+                emotion: emotion,
+                cultural: cultural,
+                userDialect: userDialect
+            )
+            let composed = await MessageComposer.shared.composeRich(
+                intent: intent,
+                persona: persona,
+                dialect: dialect,
+                language: language
+            )
             rawTitle = precomposedTitle ?? composed.title
             rawBody = precomposedBody ?? composed.body
         }
         let category = categoryIdentifier ?? self.categoryIdentifier(for: intent.kind)
+
+        let guardResult = PersonaGuard.validate(
+            title: rawTitle,
+            body: rawBody,
+            kind: intent.kind
+        )
+        if !guardResult.passed {
+            await diag.error(
+                "NotificationBrain: PersonaGuard BLOCKED \(intent.kind.rawValue): \(guardResult.violations.joined(separator: ","))"
+            )
+            return DeliveryResult(
+                intentID: intent.id,
+                decision: .rejected(.tierDisabled),
+                deliveredAt: nil,
+                systemRequestID: nil
+            )
+        }
 
         // Gate 3: privacy scrub (defensive — composer shouldn't emit PII, but double-check).
         // PrivacySanitizer is MainActor-isolated in this project; hop over to run.
@@ -165,6 +197,50 @@ public actor NotificationBrain {
         case .circadianNudge:          return "CAPTAIN_CIRCADIAN"
         default:                       return "CAPTAIN_DEFAULT"
         }
+    }
+
+    private func emotionalReading(for intent: NotificationIntent) -> EmotionalReading {
+        if let summary = intent.signals.emotionSummary?.lowercased(),
+           let primary = EmotionKind.allCases.first(where: { summary.contains($0.rawValue) }) {
+            let trend = trend(from: summary)
+            let intensity: Double
+            if summary.contains("high") {
+                intensity = 0.8
+            } else if summary.contains("moderate") {
+                intensity = 0.5
+            } else {
+                intensity = 0.3
+            }
+            return EmotionalReading(
+                primary: primary,
+                intensity: intensity,
+                confidence: 0.6,
+                trend: trend
+            )
+        }
+
+        switch intent.kind {
+        case .personalRecord, .achievementUnlocked, .eidCelebration:
+            return EmotionalReading(primary: .joy, intensity: 0.8, confidence: 0.8, trend: .improving)
+        case .emotionalFollowUp, .moodShift, .disengagement, .streakRisk:
+            return EmotionalReading(primary: .frustration, intensity: 0.6, confidence: 0.7, trend: .declining)
+        case .relationshipCheckIn, .memoryCallback:
+            return EmotionalReading(primary: .love, intensity: 0.4, confidence: 0.6, trend: .stable)
+        case .weeklyInsight, .monthlyReflection, .jumuahSpecial, .ramadanMindful:
+            return EmotionalReading(primary: .peace, intensity: 0.3, confidence: 0.7, trend: .stable)
+        case .sleepDebtAcknowledgment, .recoveryReminder, .circadianNudge:
+            return EmotionalReading(primary: .peace, intensity: 0.2, confidence: 0.7, trend: .stable)
+        default:
+            return EmotionalReading()
+        }
+    }
+
+    private func trend(from summary: String) -> EmotionalReading.Trend {
+        if summary.contains("declining") { return .declining }
+        if summary.contains("improving") { return .improving }
+        if summary.contains("stable") { return .stable }
+        if summary.contains("volatile") { return .volatile }
+        return .unknown
     }
 }
 

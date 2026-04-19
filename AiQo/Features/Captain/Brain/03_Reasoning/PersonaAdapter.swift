@@ -108,3 +108,35 @@ actor PersonaAdapter {
         return "\(emotion.primary.rawValue) (\(level), trend: \(emotion.trend.rawValue))"
     }
 }
+
+extension PersonaAdapter {
+
+    /// Rich directive that composes stable identity + humor + wisdom for outbound copy.
+    func richDirective(
+        emotion: EmotionalReading,
+        cultural: CulturalContextEngine.State,
+        userDialect: String = "iraqi"
+    ) -> RichDirective {
+        let base = directive(emotion: emotion, cultural: cultural, userDialect: userDialect)
+        let humor = HumorEngine.intensity(emotion: emotion, cultural: cultural)
+        let wisdom = WisdomLibrary.appropriate(emotion: emotion, cultural: cultural)
+
+        return RichDirective(
+            base: base,
+            humorIntensity: humor,
+            wisdomCandidate: wisdom,
+            systemPrompt: CaptainIdentity.systemPrompt(
+                dialect: userDialect,
+                emotion: emotion,
+                cultural: cultural
+            )
+        )
+    }
+}
+
+struct RichDirective: Sendable {
+    let base: PersonaDirective
+    let humorIntensity: HumorEngine.Intensity
+    let wisdomCandidate: WisdomLibrary.Wisdom?
+    let systemPrompt: String
+}
