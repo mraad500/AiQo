@@ -45,16 +45,9 @@ public actor NotificationBrain {
             )
         }
 
-        // Gate 2: compose message (BATCH 6 replaces with MessageComposer)
-        guard let composed = composeMessage(for: intent) else {
-            await diag.info("NotificationBrain: no message composed for \(intent.kind.rawValue)")
-            return DeliveryResult(
-                intentID: intent.id,
-                decision: .rejected(.tierDisabled),
-                deliveredAt: nil,
-                systemRequestID: nil
-            )
-        }
+        // Gate 2: compose message via MessageComposer (BATCH 6)
+        let composed = await MessageComposer.shared.compose(intent: intent)
+        let category = categoryIdentifier(for: intent.kind)
 
         // Gate 3: privacy scrub (defensive — composer shouldn't emit PII, but double-check).
         // PrivacySanitizer is MainActor-isolated in this project; hop over to run.
@@ -72,7 +65,7 @@ public actor NotificationBrain {
         content.title = scrubbedTitle
         content.body = scrubbedBody
         content.sound = .default
-        content.categoryIdentifier = composed.categoryIdentifier
+        content.categoryIdentifier = category
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
@@ -106,41 +99,26 @@ public actor NotificationBrain {
         }
     }
 
-    // MARK: - Composition (placeholder — BATCH 6 MessageComposer replaces this)
+    // MARK: - Category mapping
 
-    private struct ComposedMessage {
-        let title: String
-        let body: String
-        let categoryIdentifier: String
-    }
-
-    private func composeMessage(for intent: NotificationIntent) -> ComposedMessage? {
-        // Minimal composition for BATCH 5. BATCH 6 wires MessageComposer for richer copy.
-        switch intent.kind {
-        case .morningKickoff:
-            return ComposedMessage(
-                title: "صباحك نور",
-                body: "جاهز لخطواتك اليوم؟",
-                categoryIdentifier: "CAPTAIN_MORNING"
-            )
-        case .inactivityNudge:
-            return ComposedMessage(
-                title: "حركة خفيفة؟",
-                body: "خطوة صغيرة أحسن من ولا خطوة.",
-                categoryIdentifier: "CAPTAIN_INACTIVITY"
-            )
-        case .memoryCallback:
-            return ComposedMessage(
-                title: "تذكرت شي",
-                body: intent.signals.customPayload["fact_summary"] ?? "رح أشارك وياك شي من قبل.",
-                categoryIdentifier: "CAPTAIN_MEMORY"
-            )
-        default:
-            return ComposedMessage(
-                title: "كابتن حمودي",
-                body: "عندي شي إلك.",
-                categoryIdentifier: "CAPTAIN_DEFAULT"
-            )
+    private func categoryIdentifier(for kind: NotificationKind) -> String {
+        switch kind {
+        case .morningKickoff:          return "CAPTAIN_MORNING"
+        case .inactivityNudge:         return "CAPTAIN_INACTIVITY"
+        case .memoryCallback:          return "CAPTAIN_MEMORY"
+        case .sleepDebtAcknowledgment: return "CAPTAIN_SLEEP"
+        case .personalRecord:          return "CAPTAIN_PR"
+        case .recoveryReminder:        return "CAPTAIN_RECOVERY"
+        case .ramadanMindful,
+             .eidCelebration,
+             .jumuahSpecial:           return "CAPTAIN_CULTURAL"
+        case .emotionalFollowUp,
+             .moodShift:               return "CAPTAIN_EMOTIONAL"
+        case .relationshipCheckIn:     return "CAPTAIN_RELATIONSHIP"
+        case .streakRisk,
+             .streakSave:              return "CAPTAIN_STREAK"
+        case .circadianNudge:          return "CAPTAIN_CIRCADIAN"
+        default:                       return "CAPTAIN_DEFAULT"
         }
     }
 }
