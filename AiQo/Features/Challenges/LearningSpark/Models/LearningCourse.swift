@@ -130,7 +130,73 @@ enum LearningCourseCatalog {
         )
     ]
 
+    /// Stage 2 — LOCKED to these 5 courses. The user picks ONE. Paradox-of-choice
+    /// mitigation: no filters, no search, no categorization in the picker sheet.
+    /// Stage 1 taught them they can finish a course; Stage 2 gives them agency.
+    static let stage2: [LearningCourse] = [
+        LearningCourse(
+            id: "edraak-time-management-v1",
+            titleAr: "إدارة وتنظيم الوقت وتمالك الضغوط",
+            titleEn: "Time and Stress Management",
+            platform: .edraak,
+            language: .arabic,
+            descriptionAr: "تعلّم كيف تتحكم بوقتك، ترتب أولوياتك، وتتعامل مع الضغوط بطريقة صحية.",
+            sourceURL: URL(string: "https://www.edraak.org/programs/course/tsm-vt1_2018/")!,
+            isFree: true,
+            stage: 2,
+            estimatedHours: 3
+        ),
+        LearningCourse(
+            id: "edraak-emotional-intelligence-self-v1",
+            titleAr: "الذكاء العاطفي والذات",
+            titleEn: "Emotional Intelligence and Self",
+            platform: .edraak,
+            language: .arabic,
+            descriptionAr: "طوّر وعيك الذاتي، تعلّم إدارة مشاعرك، وابنِ حياة متوازنة تنسجم مع جلسات الامتنان في AiQo.",
+            sourceURL: URL(string: "https://www.edraak.org/programs/course/ei101-v2019_r1/")!,
+            isFree: true,
+            stage: 2,
+            estimatedHours: 4
+        ),
+        LearningCourse(
+            id: "coursera-science-of-wellbeing-v1",
+            titleAr: "علم السعادة والرفاه النفسي",
+            titleEn: "The Science of Well-Being",
+            platform: .coursera,
+            language: .english,
+            descriptionAr: "كورس جامعة Yale الشهير من البروفيسورة Laurie Santos. يكشف كيف يخدعك عقلك حول السعادة، ويعلّمك عادات مثبتة علمياً لحياة أكثر رضا.",
+            sourceURL: URL(string: "https://www.coursera.org/learn/the-science-of-well-being")!,
+            isFree: true,
+            stage: 2,
+            estimatedHours: 19
+        ),
+        LearningCourse(
+            id: "coursera-mindshift-v1",
+            titleAr: "Mindshift: تجاوز عقبات التعلم",
+            titleEn: "Mindshift: Break Through Obstacles to Learning",
+            platform: .coursera,
+            language: .english,
+            descriptionAr: "من نفس مؤلفة كورس Stage 1 (Barbara Oakley). يعلّمك كيف تغيّر مسارك المهني والشخصي، وتكتشف قدرات ما كنت تعرف إنك تملكها.",
+            sourceURL: URL(string: "https://www.coursera.org/learn/mindshift")!,
+            isFree: true,
+            stage: 2,
+            estimatedHours: 5
+        ),
+        LearningCourse(
+            id: "coursera-learning-how-to-learn-v1",
+            titleAr: "Learning How to Learn",
+            titleEn: "Learning How to Learn",
+            platform: .coursera,
+            language: .english,
+            descriptionAr: "الكورس الأسطوري من Coursera. لو ما أخذته في Stage 1، هنا فرصتك. يعلّمك كيف يعمل دماغك أثناء التعلم، وكيف تدرس بذكاء أعلى.",
+            sourceURL: URL(string: "https://www.coursera.org/learn/learning-how-to-learn")!,
+            isFree: true,
+            stage: 2,
+            estimatedHours: 15
+        )
+    ]
+
     static func course(id: String) -> LearningCourse? {
-        stage1.first(where: { $0.id == id })
+        stage1.first(where: { $0.id == id }) ?? stage2.first(where: { $0.id == id })
     }
 }

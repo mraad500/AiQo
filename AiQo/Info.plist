@@ -118,6 +118,18 @@
 	-->
 	<key>SAFARI_VIEW_CONTROLLER_ENABLED</key>
 	<true/>
+	<!--
+	    Learning Spark Stage 2 — 5-course picker replacing Plank Ladder in Legendary
+	    Challenges Stage 2. Paired-rollback with PLANK_LADDER_CHALLENGE_ENABLED:
+	      (YES, NO)  default   → Learning Spark Stage 2 in slot
+	      (NO,  YES) rollback  → Plank Ladder in slot (dormant but compilable)
+	      (NO,  NO)  emergency → "قريباً" non-interactive placeholder card
+	    Swift is the source of truth — see AiQoFeatureFlags.swift.
+	-->
+	<key>LEARNING_SPARK_STAGE2_ENABLED</key>
+	<true/>
+	<key>PLANK_LADDER_CHALLENGE_ENABLED</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

@@ -68,7 +68,13 @@ struct BattleChallengesView: View {
 
                     if questEngine.isStageUnlocked(selectedStageID) {
                         ForEach(Array(selectedStage.quests.enumerated()), id: \.element.id) { index, quest in
+                            let isPlaceholder = quest.id == QuestDefinition.stage2PlaceholderID
                             Button {
+                                // Emergency-state placeholder is non-interactive. Guard here
+                                // belt-and-suspenders alongside the `.disabled` modifier below —
+                                // prevents any dispatch race between button action and disabled
+                                // state propagation.
+                                guard !isPlaceholder else { return }
                                 questSheetDetent = .fraction(0.5)
                                 selectedQuest = quest
                             } label: {
@@ -81,6 +87,7 @@ struct BattleChallengesView: View {
                                 .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                             }
                             .buttonStyle(AiQoPressButtonStyle())
+                            .disabled(isPlaceholder)
                         }
                     } else {
                         lockedStageMessage

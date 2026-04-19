@@ -938,7 +938,11 @@ enum QuestSheetContentProvider {
         switch quest.id {
         case "s1q1":
             return localizedContent(prefix: "gym.quest.s1q1")
-        case QuestDefinition.learningSparkQuestID:
+        case QuestDefinition.learningSparkQuestID,
+             QuestDefinition.learningSparkStage2QuestID:
+            // Stage 2 Learning Spark reuses Stage 1's explanation/benefits/howTo
+            // strings — the thematic intent is identical (complete a course to
+            // build the learning habit). Per approved design decision 2026-04-19.
             return localizedContent(prefix: "gym.quest.s1qLearn")
         case "s1q2":
             return localizedContent(prefix: "gym.quest.s1q2")

@@ -71,6 +71,10 @@ struct LearningChallengeConfig: Hashable, Sendable {
     static let stageOneDefault: LearningChallengeConfig = .init(
         options: LearningCourseCatalog.stage1.map { LearningCourseOption(course: $0) }
     )
+
+    static let stageTwoDefault: LearningChallengeConfig = .init(
+        options: LearningCourseCatalog.stage2.map { LearningCourseOption(course: $0) }
+    )
 }
 
 enum LearningChallengeRegistry {
@@ -78,8 +82,22 @@ enum LearningChallengeRegistry {
         switch questId {
         case QuestDefinition.learningSparkQuestID:
             return .stageOneDefault
+        case QuestDefinition.learningSparkStage2QuestID:
+            return .stageTwoDefault
         default:
             return .stageOneDefault
+        }
+    }
+
+    /// Stage for a given quest/challenge id. Used by the audit logger to segment
+    /// Stage 1 vs Stage 2 verification outcomes, and by the picker sheet to choose
+    /// the Stage-2-only header copy.
+    static func stage(for questId: String) -> Int {
+        switch questId {
+        case QuestDefinition.learningSparkStage2QuestID:
+            return 2
+        default:
+            return 1
         }
     }
 }

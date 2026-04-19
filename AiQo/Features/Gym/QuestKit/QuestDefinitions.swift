@@ -1,7 +1,11 @@
 import Foundation
 
 enum QuestDefinitions {
-    static let all: [QuestDefinition] = [
+    /// Base quest catalog — every stage's quests EXCEPT the flag-gated Stage 2 slot 3.
+    /// `QuestDefinitions.all` composes this with whichever Stage 2 slot 3 quest the
+    /// `LEARNING_SPARK_STAGE2_ENABLED` / `PLANK_LADDER_CHALLENGE_ENABLED` flag pair
+    /// resolves to via `stage2Slot3Quest`.
+    static let baseDefinitions: [QuestDefinition] = [
         // Stage 1
         .init(
             id: "s1q1",
@@ -135,24 +139,9 @@ enum QuestDefinitions {
             streakDailyTargetA: nil,
             streakDailyTargetB: nil
         ),
-        .init(
-            id: "s2q3",
-            stageIndex: 2,
-            questIndex: 3,
-            title: "Plank Ladder",
-            type: .cumulative,
-            source: .timer,
-            tiers: [
-                .singleMetric(value: 30, unit: .seconds),
-                .singleMetric(value: 60, unit: .seconds),
-                .singleMetric(value: 90, unit: .seconds)
-            ],
-            deepLinkAction: nil,
-            metricAKey: .timerSeconds,
-            metricBKey: .none,
-            streakDailyTargetA: nil,
-            streakDailyTargetB: nil
-        ),
+        // NOTE: Stage 2 slot 3 (questIndex: 3) was "s2q3" Plank Ladder; it's now
+        // extracted as a named `plankLadderQuest` and composed into the public
+        // `all` catalog via `stage2Slot3Quest` (flag-gated). See below.
         .init(
             id: "s2q4",
             stageIndex: 2,
@@ -931,6 +920,102 @@ enum QuestDefinitions {
             streakDailyTargetB: nil
         )
     ]
+
+    // MARK: - Stage 2 slot 3 — flag-gated variants
+    //
+    // The Stage 2 challenges list has five slots. Slot 3 (questIndex: 3) historically
+    // held "Plank Ladder" (id "s2q3"). Feature flags now resolve one of three variants
+    // into the slot at app launch (flag flips require an app restart — QuestEngine.shared
+    // caches `stages` at init). All three variants carry `rewardImageOverride: "2.3"`
+    // to reuse the existing Plank Ladder shield asset verbatim.
+
+    /// Rollback target — the original Plank Ladder challenge. Preserved fully
+    /// compilable. Reached when LEARNING_SPARK_STAGE2_ENABLED is OFF and
+    /// PLANK_LADDER_CHALLENGE_ENABLED is ON. Uses the legacy `quests.stage.2.quest.3.*`
+    /// localization keys (no override), so "سلم البلانك" / "Plank Ladder" copy stays.
+    private static let plankLadderQuest = QuestDefinition(
+        id: "s2q3",
+        stageIndex: 2,
+        questIndex: 3,
+        title: "Plank Ladder",
+        type: .cumulative,
+        source: .timer,
+        tiers: [
+            .singleMetric(value: 30, unit: .seconds),
+            .singleMetric(value: 60, unit: .seconds),
+            .singleMetric(value: 90, unit: .seconds)
+        ],
+        deepLinkAction: nil,
+        metricAKey: .timerSeconds,
+        metricBKey: .none,
+        streakDailyTargetA: nil,
+        streakDailyTargetB: nil
+    )
+
+    /// Default production Stage 2 slot 3 challenge — Learning Spark Stage 2.
+    /// Routes through the existing `source == .learning` dispatch in QuestDetailSheet,
+    /// which reads the 5-course catalog via `LearningChallengeRegistry.config(for:)`.
+    /// Reuses the Plank Ladder shield asset via `rewardImageOverride: "2.3"`.
+    private static let learningSparkStage2Quest = QuestDefinition(
+        id: QuestDefinition.learningSparkStage2QuestID,
+        stageIndex: 2,
+        questIndex: 3,
+        title: "Learning Spark",
+        type: .oneTime,
+        source: .learning,
+        tiers: [.singleMetric(value: 1, unit: .count)],
+        deepLinkAction: .openLearningCourse,
+        metricAKey: .learningCertificate,
+        metricBKey: .none,
+        streakDailyTargetA: nil,
+        streakDailyTargetB: nil,
+        rewardImageOverride: "2.3",
+        localizedTitleKeyOverride: "learningSpark.stage2.title",
+        localizedLevelsKeyOverride: "learningSpark.stage2.levels"
+    )
+
+    /// Emergency safety net — reached only when BOTH flags are OFF. Production never
+    /// ships this state. Non-interactive card (gated in QuestsView via id check).
+    /// Title/levels resolve via Cluster A's `learningSpark.stage2.soon*` localization
+    /// keys (Arabic: "قريباً" / English: "Coming Soon" — "Coming Soon" is arguably
+    /// better for an English user in a degraded state than a raw Arabic string).
+    private static let stage2PlaceholderQuest = QuestDefinition(
+        id: QuestDefinition.stage2PlaceholderID,
+        stageIndex: 2,
+        questIndex: 3,
+        title: "قريباً",
+        type: .oneTime,
+        source: .manual,
+        tiers: [.singleMetric(value: 1, unit: .count)],
+        deepLinkAction: nil,
+        metricAKey: .none,
+        metricBKey: .none,
+        streakDailyTargetA: nil,
+        streakDailyTargetB: nil,
+        rewardImageOverride: "2.3",
+        localizedTitleKeyOverride: "learningSpark.stage2.soon",
+        localizedLevelsKeyOverride: "learningSpark.stage2.soon.subtitle"
+    )
+
+    /// Flag-driven slot resolver. Read once per consumer at init time — flag flips
+    /// require an app restart to propagate through `QuestEngine.shared.stages`.
+    private static var stage2Slot3Quest: QuestDefinition {
+        if FeatureFlags.learningSparkStage2Enabled {
+            return learningSparkStage2Quest
+        } else if FeatureFlags.plankLadderChallengeEnabled {
+            return plankLadderQuest
+        } else {
+            return stage2PlaceholderQuest
+        }
+    }
+
+    /// Public quest catalog consumed by `QuestEngine`, `QuestSwiftDataStore`, etc.
+    /// Converted from `static let` to computed so the flag-gated Stage 2 slot 3
+    /// resolves on first read. Downstream caches (QuestEngine.shared) evaluate this
+    /// once at init — flag flips require an app restart to fully propagate.
+    static var all: [QuestDefinition] {
+        baseDefinitions + [stage2Slot3Quest]
+    }
 
     static func stageModels() -> [QuestStageViewModel] {
         let grouped = Dictionary(grouping: all, by: { $0.stageIndex })

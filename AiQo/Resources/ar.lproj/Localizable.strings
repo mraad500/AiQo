@@ -2931,3 +2931,14 @@
 "captain.offlineBanner.title" = "بدون مشاركة بيانات";
 "captain.offlineBanner.body" = "اخترت ألا تتم مشاركة البيانات مع خدمات الذكاء الاصطناعي السحابية. يمكنك تغيير ذلك من الإعدادات.";
 "captain.offlineBanner.action" = "فتح الإعدادات";
+
+/* Learning Spark Stage 2 — 5-course picker replacing Plank Ladder. URL-optional polish. */
+"learningSpark.stage2.title" = "شرارة التعلم";
+"learningSpark.stage2.subtitle" = "أكمل كورس واحد من خمسة واستمر بمسار التعلّم";
+"learningSpark.stage2.picker.header" = "اختر الكورس اللي يلهمك الآن — تقدر تجرب غيره بالمرحلة الجاية";
+"learningSpark.proof.url.label.optional" = "رابط الشهادة (اختياري)";
+"learningSpark.proof.url.placeholder.optional" = "الصق الرابط هنا إذا أردت (غير مطلوب)";
+"learningSpark.stage2.soon" = "قريباً";
+"learningSpark.stage2.soon.subtitle" = "تحدي جديد قيد التحضير";
+"learningSpark.stage2.levels" = "كورس مجاني واحد";
+"learningSpark.course.duration.with_audit" = "~%d ساعة (مع الـ audit المجاني)";

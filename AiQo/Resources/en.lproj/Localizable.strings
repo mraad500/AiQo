@@ -2932,3 +2932,14 @@
 "captain.offlineBanner.title" = "No data sharing";
 "captain.offlineBanner.body" = "You chose not to share data with cloud AI. You can change this in Settings.";
 "captain.offlineBanner.action" = "Open Settings";
+
+/* Learning Spark Stage 2 — 5-course picker replacing Plank Ladder. URL-optional polish. */
+"learningSpark.stage2.title" = "Learning Spark";
+"learningSpark.stage2.subtitle" = "Complete one course from five and continue your learning journey";
+"learningSpark.stage2.picker.header" = "Pick the course that inspires you now — you can try another in the next stage";
+"learningSpark.proof.url.label.optional" = "Certificate Link (Optional)";
+"learningSpark.proof.url.placeholder.optional" = "Paste the link here if you'd like (not required)";
+"learningSpark.stage2.soon" = "Coming Soon";
+"learningSpark.stage2.soon.subtitle" = "A new challenge is in the works";
+"learningSpark.stage2.levels" = "One free course";
+"learningSpark.course.duration.with_audit" = "~%d hours (with free audit)";

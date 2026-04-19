@@ -177,12 +177,12 @@ struct LearningProofSubmissionView: View {
     @ViewBuilder
     private var certificateLinkBlock: some View {
         VStack(alignment: appLayoutDirection == .rightToLeft ? .trailing : .leading, spacing: 8) {
-            Text(questLocalizedText("gym.quest.learning.proof.linkHeader"))
+            Text(questLocalizedText("learningSpark.proof.url.label.optional"))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(Color(hex: "1A1A1A"))
 
             TextField(
-                questLocalizedText("gym.quest.learning.proof.linkPlaceholder"),
+                questLocalizedText("learningSpark.proof.url.placeholder.optional"),
                 text: $certificateURLText
             )
             .keyboardType(.URL)
@@ -358,18 +358,26 @@ struct LearningProofSubmissionView: View {
 
     private func performSubmit(image: UIImage) {
         let trimmedURL = certificateURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let persistedURL: String?
 
-        guard let url = URL(string: trimmedURL), url.scheme != nil, url.host != nil else {
-            submissionError = questLocalizedText("gym.quest.learning.proof.errorInvalidURL")
-            return
-        }
-
-        guard option.isURLFromAllowedDomain(url) else {
-            submissionError = String(
-                format: questLocalizedText("gym.quest.learning.proof.errorDomain"),
-                questLocalizedText(option.providerDisplayKey)
-            )
-            return
+        if trimmedURL.isEmpty {
+            // URL omitted — that's allowed. Image is the only verification input.
+            persistedURL = nil
+        } else {
+            // User typed something → enforce the same strict validation as before so
+            // garbage text doesn't silently get persisted.
+            guard let url = URL(string: trimmedURL), url.scheme != nil, url.host != nil else {
+                submissionError = questLocalizedText("gym.quest.learning.proof.errorInvalidURL")
+                return
+            }
+            guard option.isURLFromAllowedDomain(url) else {
+                submissionError = String(
+                    format: questLocalizedText("gym.quest.learning.proof.errorDomain"),
+                    questLocalizedText(option.providerDisplayKey)
+                )
+                return
+            }
+            persistedURL = trimmedURL
         }
 
         submissionError = nil
@@ -381,7 +389,7 @@ struct LearningProofSubmissionView: View {
         proofStore.markSubmission(
             questId: quest.id,
             certificateImageRelativePath: relativePath,
-            certificateURL: trimmedURL
+            certificateURL: persistedURL
         )
 
         let userFirstName = Self.firstName(from: resolvedUserDisplayName())
@@ -470,9 +478,9 @@ struct LearningProofSubmissionView: View {
     // MARK: - Derived state
 
     private var canSubmit: Bool {
-        certificateImage != nil
-            && !certificateURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && localStatus != .verified
+        // URL is optional. Image is the only gating input — it's what the on-device
+        // verifier actually needs. Empty URL is valid; `performSubmit` persists nil.
+        certificateImage != nil && localStatus != .verified
     }
 
     private var submitButtonTitle: String {
