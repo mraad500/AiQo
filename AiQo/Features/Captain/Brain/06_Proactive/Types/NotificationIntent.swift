@@ -30,7 +30,7 @@ public struct NotificationIntent: Sendable, Identifiable {
     }
 
     /// True if the intent has expired and should be dropped silently.
-    public func isExpired(now: Date = Date()) -> Bool {
+    public nonisolated func isExpired(now: Date = Date()) -> Bool {
         if let exp = expiresAt, now > exp { return true }
         return false
     }
