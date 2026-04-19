@@ -39,6 +39,15 @@ struct BrainOrchestrator: Sendable {
         userName: String?
     ) async throws -> HybridBrainServiceReply {
         let routedRequest = interceptSleepIntent(request)
+        let safetyDecision = await wellbeingDecision(for: routedRequest)
+
+        if case .professionalReferral(let urgency) = safetyDecision {
+            return makeSafetyReferralReply(
+                language: routedRequest.language,
+                urgency: urgency
+            )
+        }
+
         if !DevOverride.unlockAllFeatures,
            route(for: routedRequest) == .cloud,
            !TierGate.shared.canAccess(.captainChat) {
@@ -58,10 +67,16 @@ struct BrainOrchestrator: Sendable {
             baseReply = await processCloudRoute(request: routedRequest, userName: userName)
         }
 
-        return personalizeReply(
+        let personalizedReply = personalizeReply(
             baseReply,
             userName: userName,
             screenContext: routedRequest.screenContext
+        )
+
+        return applySafetyDecision(
+            safetyDecision,
+            to: personalizedReply,
+            language: routedRequest.language
         )
     }
 
@@ -123,6 +138,20 @@ private extension BrainOrchestrator {
             workingMemorySummary: request.workingMemorySummary,
             attachedImageData: nil,
             purpose: request.purpose
+        )
+    }
+
+    // MARK: - Wellbeing Intervention
+
+    func wellbeingDecision(for request: HybridBrainRequest) async -> InterventionPolicy.Decision {
+        let message = latestUserMessage(in: request).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty else { return .doNothing }
+
+        let signal = await CrisisDetector.shared.evaluate(message: message)
+        await SafetyNet.shared.record(signal)
+        return await SafetyNet.shared.shouldIntervene(
+            for: signal,
+            language: request.language
         )
     }
 
@@ -431,6 +460,52 @@ private extension BrainOrchestrator {
         )
     }
 
+    func makeSafetyReferralReply(
+        language: AppLanguage,
+        urgency: InterventionPolicy.Decision.Urgency
+    ) -> HybridBrainServiceReply {
+        let message: String
+
+        switch (language, urgency) {
+        case (.arabic, .immediate):
+            message = """
+            إذا كنت ممكن تؤذي نفسك الآن أو ما تقدر تبقى بأمان، اتصل بخدمات الطوارئ المحلية فوراً أو تواصل مع شخص قريب منك حالاً.
+
+            تواصل أيضاً مع جهة دعم مهني الآن. إذا تحب، أقدر أكمل وياك خطوة بخطوة بهدوء.
+            """
+        case (.arabic, .suggested):
+            message = """
+            واضح إن الضغط صار ثقيل عليك. أنصحك تتواصل اليوم مع جهة دعم مهني أو شخص تثق بيه وما تبقى وحدك بهالشعور.
+            """
+        case (.arabic, .informational):
+            message = """
+            إذا تحب دعماً إضافياً، يفيدك تتواصل مع جهة دعم مهني أو خط مساعدة موثوق في منطقتك.
+            """
+        case (.english, .immediate):
+            message = """
+            If you might act on these thoughts or cannot stay safe right now, call local emergency services now or contact a trusted person immediately.
+
+            Please reach out to a professional crisis resource now. I can stay with you and take this one step at a time.
+            """
+        case (.english, .suggested):
+            message = "This sounds heavy. Please consider contacting a professional support service or a trusted person today."
+        case (.english, .informational):
+            message = "If extra support would help, please consider reaching out to a licensed professional or a trusted helpline."
+        }
+
+        let structuredResponse = CaptainStructuredResponse(message: message)
+        let rawText = (try? encode(structuredResponse)) ?? message
+
+        return HybridBrainServiceReply(
+            message: structuredResponse.message,
+            quickReplies: nil,
+            workoutPlan: nil,
+            mealPlan: nil,
+            spotifyRecommendation: nil,
+            rawText: rawText
+        )
+    }
+
     // MARK: - Error Classification Helpers
 
     /// Returns true for any HybridBrainServiceError that implies the local Apple Intelligence
@@ -499,6 +574,54 @@ private extension BrainOrchestrator {
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
             rawText: rawText ?? reply.rawText
+        )
+    }
+
+    func applySafetyDecision(
+        _ decision: InterventionPolicy.Decision,
+        to reply: HybridBrainServiceReply,
+        language: AppLanguage
+    ) -> HybridBrainServiceReply {
+        let safetyPrefix: String?
+
+        switch decision {
+        case .doNothing:
+            safetyPrefix = nil
+
+        case .gentleCheckIn:
+            safetyPrefix = language == .arabic
+                ? "بس قبل ما نكمل: شلونك اليوم؟"
+                : "Before we continue: how are you doing today?"
+
+        case .reflectiveMessage(let text):
+            safetyPrefix = text
+
+        case .professionalReferral(let urgency):
+            return makeSafetyReferralReply(language: language, urgency: urgency)
+        }
+
+        guard let safetyPrefix,
+              !safetyPrefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return reply
+        }
+
+        let message = "\(safetyPrefix)\n\n\(reply.message)"
+        let structuredResponse = CaptainStructuredResponse(
+            message: message,
+            quickReplies: reply.quickReplies,
+            workoutPlan: reply.workoutPlan,
+            mealPlan: reply.mealPlan,
+            spotifyRecommendation: reply.spotifyRecommendation
+        )
+        let rawText = (try? encode(structuredResponse)) ?? message
+
+        return HybridBrainServiceReply(
+            message: structuredResponse.message,
+            quickReplies: structuredResponse.quickReplies,
+            workoutPlan: structuredResponse.workoutPlan,
+            mealPlan: structuredResponse.mealPlan,
+            spotifyRecommendation: structuredResponse.spotifyRecommendation,
+            rawText: rawText
         )
     }
 

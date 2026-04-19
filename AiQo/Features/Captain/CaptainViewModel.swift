@@ -229,10 +229,11 @@ final class CaptainViewModel: ObservableObject {
     ) {
         let context = context ?? activeModule
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isEmergencyBypass = IntentClassifier.classify(trimmedText).primary == .crisis
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
 
-        if !DevOverride.unlockAllFeatures {
+        if !DevOverride.unlockAllFeatures && !isEmergencyBypass {
             guard TierGate.shared.canAccess(.captainChat) else {
                 diag.info("CaptainViewModel.sendMessage blocked by TierGate(.captainChat)")
                 showPaywall = true
@@ -240,7 +241,7 @@ final class CaptainViewModel: ObservableObject {
             }
         }
 
-        let requiresCloudConsent = context != .sleepAnalysis
+        let requiresCloudConsent = context != .sleepAnalysis && !isEmergencyBypass
         if requiresCloudConsent, AIDataConsentManager.shared.isInOfflineOnlyMode {
             return
         }
