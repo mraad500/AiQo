@@ -104,12 +104,14 @@ enum LearningCourseCatalog {
     static let stage1: [LearningCourse] = [
         LearningCourse(
             id: "edraak.career-path",
-            // Title matches the exact string on the Misk-issued completion certificate
-            // ("...ناجح" suffix) so Hamoudi's fuzzy course-title match lands cleanly at
-            // `.verified` instead of `.needsReview`. The course ID stays stable —
-            // existing LearningProofRecord entries continue to resolve.
+            // Both titles match the exact strings on the Misk-issued certificate
+            // (Arabic: "...ناجح" suffix / English: "...Successful..." adjective).
+            // This keeps Hamoudi's course-title match landing cleanly at `.verified`
+            // whichever side of the bilingual certificate the user uploads.
+            // The course ID stays stable — existing LearningProofRecord entries
+            // continue to resolve.
             titleAr: "التخطيط لبناء مسار مهني ناجح",
-            titleEn: "Planning a Career Path",
+            titleEn: "Planning a Successful Career Path",
             platform: .edraak,
             language: .arabic,
             descriptionAr: "ابنِ خطة واضحة لمسارك المهني وطوّر قرارك الذاتي.",

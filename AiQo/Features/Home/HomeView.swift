@@ -128,16 +128,18 @@ struct HomeView: View {
     // MARK: - Header View
     
     private var topChrome: some View {
-        AiQoScreenTopChrome(
+        let topIconDrop: CGFloat = 3
+
+        return AiQoScreenTopChrome(
             horizontalInset: 10,
-            profileVerticalOffset: -12,
+            profileVerticalOffset: -12 + topIconDrop,
             onProfileTap: { isProfileSheetPresented = true }
         ) {
             HStack {
                 VibeDashboardTriggerButton {
                     showVibeSheet = true
                 }
-                .offset(y: -16)
+                .offset(y: -16 + topIconDrop)
 
                 Spacer(minLength: 0)
             }
