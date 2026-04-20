@@ -129,49 +129,88 @@ actor HamoudiVerificationReasoner {
         )
     }
 
-    // MARK: - Prompt
+    // MARK: - Hamoudi Copy (Arabic, Swift-side)
+    //
+    // Apple's Foundation Models (iOS 26.x in AR locales) throws "Unsupported
+    // language" when the prompt is in Arabic. We keep the instructions in
+    // English (which the LM supports) and map the model's reason code to a
+    // fixed Iraqi-Arabic Hamoudi message here in Swift. This makes the UX
+    // copy versioned, deterministic, and audit-friendly, and it sidesteps the
+    // locale limitation without leaving the device.
 
-    /// Honest compliant fallback copy (on-device model unavailable). No promise of
-    /// server-side manual review — the image never leaves the device.
+    /// Shown when the on-device model isn't available at all.
     static let iosUnavailableMessage = "حبيبي جهازك الحالي ما يدعم التحقق الذكي. الشهادة محفوظة عندك، جرب من جهاز أحدث أو استنى تحديث iOS جاي."
 
-    /// Used when the reasoner ran but couldn't decide cleanly.
+    /// Fallback when the reasoner ran but produced nothing parseable.
     static let genericUnclearMessage = "شكلها زينة بس خل أتأكد شوية، ارفعها مرة ثانية أو خلي الصورة أوضح."
 
-    /// The exact Arabic prompt provided in the spec. Captain Hamoudi's voice.
-    /// Stored as a constant so any copy audit can diff it directly.
-    static let promptTemplate: String = """
-    أنت الكابتن حمودي، المدرب الذكي لتطبيق AiQo. مستخدمك للتو رفع شهادة إتمام كورس، ومهمتك تتحقق منها.
-
-    حلل النص المستخرج من صورة الشهادة اللي راح يجيك من المستخدم، وحدد:
-
-    1) هل اسم الكورس (عربي أو إنجليزي) موجود بالنص؟ اقبل المطابقة الضبابية (ترجمات، اختصارات).
-    2) هل اسم المستخدم موجود بالنص؟ اقبل اختلافات إملائية (محمد/Mohammad/Mohammed/Muhammad).
-    3) هل النص يحتوي على كلمات مثل "certificate"، "شهادة"، "completion"، "إتمام"، "awarded"، "presented to"؟
-    4) هل النص قصير جداً أو غير مفهوم (يدل على صورة غير واضحة)؟
-
-    ارجع JSON فقط بهذا الشكل الدقيق:
-    {
-      "status": "verified" | "needs_review" | "rejected",
-      "confidence": 0.0 إلى 1.0,
-      "detected_course_name": "...",
-      "detected_user_name": "...",
-      "reason": "... (إنجليزي، تقني، مختصر)",
-      "hamoudi_message_ar": "... (رسالة دافئة باللهجة العراقية، 1-2 جملة)"
+    /// Maps a model-emitted reason code to the warm Iraqi-Arabic message the
+    /// user actually sees. Unknown codes fall back to `genericUnclearMessage`.
+    fileprivate static func hamoudiMessage(forReason reason: String) -> String {
+        switch reason.lowercased() {
+        case "verified":
+            return "فديتك والله، شهادتك وصلت وكلشي تمام! فخور بيك، +XP إلك."
+        case "course_ambiguous", "user_ambiguous", "both_ambiguous":
+            return "شكلها زينة بس خل أتأكد شوية، ارفعها مرة ثانية أو خلي الصورة أوضح."
+        case "wrong_course":
+            return "هاي الشهادة ما تخص الكورس اللي اخترته، تأكد من رفع الشهادة الصحيحة."
+        case "image_unclear", "no_certificate_text":
+            return "حبيبي الصورة مو واضحة، صورها مرة ثانية بإضاءة أحسن."
+        default:
+            return genericUnclearMessage
+        }
     }
 
-    قواعد القرار:
-    - الاثنين (الكورس + الاسم) واضحين → verified (confidence ≥ 0.85)
-    - واحد واضح والثاني غامض → needs_review (confidence 0.5–0.84)
-    - لا الاثنين واضحين أو نص غير مفهوم → rejected (confidence < 0.5)
+    // MARK: - Prompt
 
-    أمثلة صوت حمودي:
-    - verified: "فديتك والله، شهادتك وصلت وكلشي تمام! فخور بيك، +XP إلك."
-    - needs_review: "شكلها زينة بس خل أتأكد شوية، راح أرجعلك قريب."
-    - rejected (غير واضحة): "حبيبي الصورة مو واضحة، صورها مرة ثانية بإضاءة أحسن."
-    - rejected (ما تطابق): "هاي الشهادة ما تخص الكورس اللي اخترته، تأكد من رفع الشهادة الصحيحة."
+    /// English-language instructions for the classifier. Arabic course titles /
+    /// OCR text are embedded as content tokens in the user payload — the model
+    /// matches them as Unicode patterns, not as a language it has to reason in.
+    /// The model is NOT asked to generate Arabic — the Hamoudi copy is set in
+    /// Swift based on the returned `reason` code.
+    static let promptTemplate: String = """
+    You are a certificate verification classifier. Your job: decide whether a user-uploaded course completion certificate matches the expected course.
 
-    مو مسموح تطلع من شخصية حمودي. مو مسموح ترد بالإنجليزي. لازم ترجع واحد من الثلاثة statuses.
+    The OCR text may contain Arabic, English, or both. Accept fuzzy matching — translations, abbreviations, and minor wording differences are OK.
+
+    For each attempt you will receive:
+    - The expected course title in Arabic and English
+    - The expected platform name
+    - The user's first name (may be in Arabic or English)
+    - The extracted OCR text from the certificate image
+
+    Return ONLY valid JSON in this exact shape. No markdown fences, no commentary, no extra keys, no trailing text:
+
+    {
+      "status": "verified" | "needs_review" | "rejected",
+      "confidence": 0.0,
+      "detected_course_name": "...",
+      "detected_user_name": "...",
+      "reason": "one of these exact codes: verified | course_ambiguous | user_ambiguous | both_ambiguous | wrong_course | image_unclear | no_certificate_text"
+    }
+
+    Decision rules (pick the single most specific):
+    - Both expected course AND user first name clearly present → status=verified, confidence ≥ 0.85, reason=verified
+    - Course clear, name missing or ambiguous → status=needs_review, confidence 0.5-0.84, reason=user_ambiguous
+    - Name clear, course missing or ambiguous → status=needs_review, confidence 0.5-0.84, reason=course_ambiguous
+    - Both partial, neither clear → status=needs_review, confidence 0.5-0.84, reason=both_ambiguous
+    - Text clearly references a different course → status=rejected, confidence < 0.5, reason=wrong_course
+    - Text is too short, garbled, or unreadable → status=rejected, confidence < 0.5, reason=image_unclear
+    - No certificate keywords found at all → status=rejected, confidence < 0.5, reason=no_certificate_text
+
+    Certificate keywords (any one is enough evidence this IS a certificate):
+    "certificate", "certification", "completion", "awarded", "presented to", "has successfully completed", "شهادة", "إتمام", "تمنح"
+
+    Name matching rules:
+    - Arabic ↔ English transliterations are the same name: محمد = Mohammad = Mohammed = Muhammad
+    - First-name match is sufficient even if the certificate shows a full name ("محمد رعد" satisfies user first name "محمد")
+
+    Course title matching rules:
+    - Accept exact matches, translations, and minor wording differences
+    - "Planning a Career Path" matches "Planning a Successful Career Path"
+    - "التخطيط لبناء مسار مهني" matches "التخطيط لبناء مسار مهني ناجح"
+
+    Output ONLY the JSON object. No explanation.
     """
 
     private static func makeUserPayload(
@@ -181,14 +220,16 @@ actor HamoudiVerificationReasoner {
     ) -> String {
         let platform = course.platform.canonicalName
         let displayFirstName = userFirstName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let nameLine = displayFirstName.isEmpty ? "(غير متوفر)" : displayFirstName
+        let nameLine = displayFirstName.isEmpty ? "(unknown)" : displayFirstName
+        // English labels, Arabic values — the model matches the Arabic values as
+        // Unicode content, not as a language it needs to "understand".
         return """
-        اسم الكورس بالعربية: \(course.titleAr)
-        اسم الكورس بالإنجليزية: \(course.titleEn)
-        المنصة: \(platform)
-        الاسم الأول للمستخدم: \(nameLine)
+        Expected course (Arabic): \(course.titleAr)
+        Expected course (English): \(course.titleEn)
+        Expected platform: \(platform)
+        User first name: \(nameLine)
 
-        النص اللي استخرجناه من صورة الشهادة:
+        Extracted OCR text from certificate:
         \"\"\"
         \(extractedText)
         \"\"\"
@@ -203,7 +244,6 @@ actor HamoudiVerificationReasoner {
         let detected_course_name: String?
         let detected_user_name: String?
         let reason: String?
-        let hamoudi_message_ar: String?
     }
 
     /// Robust JSON extraction — the model may wrap the JSON in ``` fences or add
@@ -224,32 +264,32 @@ actor HamoudiVerificationReasoner {
         let slice = String(cleaned[firstBrace...lastBrace])
         guard let data = slice.data(using: .utf8) else { return nil }
 
-        guard let raw = try? JSONDecoder().decode(RawVerdict.self, from: data) else {
+        guard let rawVerdict = try? JSONDecoder().decode(RawVerdict.self, from: data) else {
             return nil
         }
 
         let status: Status
-        switch raw.status?.lowercased() {
+        switch rawVerdict.status?.lowercased() {
         case "verified": status = .verified
         case "needs_review", "needsreview": status = .needsReview
         case "rejected": status = .rejected
         default: return nil
         }
 
-        let confidence = max(0, min(1, raw.confidence ?? 0))
-
-        guard let message = raw.hamoudi_message_ar?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !message.isEmpty else {
-            return nil
-        }
+        let confidence = max(0, min(1, rawVerdict.confidence ?? 0))
+        let reason = rawVerdict.reason?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? "unspecified"
 
         return Verdict(
             status: status,
             confidence: confidence,
-            detectedCourseName: raw.detected_course_name,
-            detectedUserName: raw.detected_user_name,
-            reason: raw.reason ?? "unspecified",
-            hamoudiMessageAr: message
+            detectedCourseName: rawVerdict.detected_course_name,
+            detectedUserName: rawVerdict.detected_user_name,
+            reason: reason,
+            // The user-visible Arabic copy is deterministic in Swift, keyed on
+            // the reason code — we never trust the LM to emit Arabic (it may
+            // not support AR locale on the user's device).
+            hamoudiMessageAr: hamoudiMessage(forReason: reason)
         )
     }
 }
