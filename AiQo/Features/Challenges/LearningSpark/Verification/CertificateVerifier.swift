@@ -34,11 +34,32 @@ actor CertificateVerifier {
     ) async -> Result {
         let startedAt = Date()
 
+        // ══════════════════════════════════════════════════════════════════════
+        //  TEMPORARY DEBUG — REMOVE AFTER DIAGNOSIS (2026-04-20).
+        //  Logs the inputs Hamoudi is reasoning over so we can see why a
+        //  legitimate certificate is landing at .needsReview / .rejected.
+        //  All logs stay on-device (os.log → Console.app). Image bytes are
+        //  NEVER logged — only size metadata + extracted text snippet.
+        //  See architectural commitment in AiQoFeatureFlags.swift line 81.
+        // ══════════════════════════════════════════════════════════════════════
+        logger.notice("""
+        debug_verify_input \
+        course_id=\(course.id, privacy: .public) \
+        expected_ar=\(course.titleAr, privacy: .public) \
+        expected_en=\(course.titleEn, privacy: .public) \
+        platform=\(course.platform.canonicalName, privacy: .public) \
+        user_first_name=\(userFirstName, privacy: .public) \
+        quest_id=\(questId, privacy: .public) \
+        image_size=\(Int(image.size.width), privacy: .public)x\(Int(image.size.height), privacy: .public) \
+        image_scale=\(image.scale, privacy: .public)
+        """)
+
         // Rate limit — 3 attempts per hour. Guards the Foundation Models session from
         // abuse and protects the user's battery.
         guard VerificationRateLimiter.canAttempt(now: startedAt) else {
             let minutesRemaining = Int((VerificationRateLimiter.retryAfterSeconds(now: startedAt) / 60).rounded(.up))
             let message = "جربت 3 مرات بالساعة، خل نستريح شوية. جرب بعد \(max(minutesRemaining, 1)) دقيقة أو تواصل معانا لو عندك مشكلة."
+            logger.notice("debug_rate_limited retry_after_min=\(minutesRemaining, privacy: .public)")
             await recordAudit(
                 startedAt: startedAt,
                 outcome: .rateLimit,
@@ -65,12 +86,29 @@ actor CertificateVerifier {
             return .rejected(reason: "ocr_failed", message: message)
         }
 
+        // TEMPORARY DEBUG — see ocr output to diagnose match failures.
+        logger.notice("""
+        debug_ocr_result \
+        char_count=\(ocrResult.extractedText.count, privacy: .public) \
+        text=\(ocrResult.extractedText, privacy: .public)
+        """)
+
         // Stage B — on-device reasoning.
         let verdict = await reasoner.reason(
             extractedText: ocrResult.extractedText,
             course: course,
             userFirstName: userFirstName
         )
+
+        // TEMPORARY DEBUG — see Hamoudi's verdict before mapping to user-visible result.
+        logger.notice("""
+        debug_hamoudi_verdict \
+        status=\(verdict.status.rawValue, privacy: .public) \
+        confidence=\(verdict.confidence, privacy: .public) \
+        reason=\(verdict.reason, privacy: .public) \
+        detected_course=\(verdict.detectedCourseName ?? "nil", privacy: .public) \
+        detected_user=\(verdict.detectedUserName ?? "nil", privacy: .public)
+        """)
 
         let result = Self.mapVerdictToResult(verdict)
         let outcome = Self.mapResultToAudit(result)

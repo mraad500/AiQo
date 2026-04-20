@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -20,6 +21,11 @@ import FoundationModels
 /// Mirrors the `FactExtractor` pattern ([FactExtractor.swift](AiQo/Features/Captain/Brain/02_Memory/Intelligence/FactExtractor.swift))
 /// for Foundation Models gating, so the two entry points stay behaviourally consistent.
 actor HamoudiVerificationReasoner {
+
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "HamoudiVerificationReasoner"
+    )
 
     enum Status: String, Codable, Sendable {
         case verified
@@ -81,14 +87,22 @@ actor HamoudiVerificationReasoner {
                 userFirstName: userFirstName
             )
 
+            // TEMPORARY DEBUG (2026-04-20) — log the exact payload Hamoudi sees so we can
+            // diagnose why legitimate certificates land at needsReview. Stays on-device.
+            logger.notice("debug_hamoudi_payload\n\(payload, privacy: .public)")
+
             do {
                 let session = LanguageModelSession(instructions: instructions)
                 let response = try await session.respond(to: payload)
+                // TEMPORARY DEBUG — raw LM response before JSON extraction/parsing.
+                logger.notice("debug_hamoudi_raw_response\n\(response.content, privacy: .public)")
                 if let verdict = Self.parseVerdict(from: response.content) {
                     return verdict
                 }
+                logger.notice("debug_hamoudi_parse_failed raw_content_unparseable")
                 return fallbackVerdict(reason: "reasoner_parse_failed")
             } catch {
+                logger.error("debug_hamoudi_generation_failed error=\(error.localizedDescription, privacy: .public)")
                 return fallbackVerdict(reason: "reasoner_generation_failed")
             }
         }
