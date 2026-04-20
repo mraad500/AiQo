@@ -51,11 +51,14 @@ actor HamoudiVerificationReasoner {
         userFirstName: String
     ) async -> Verdict {
 
-        // FeatureFlags statics are MainActor-isolated under Swift 6 strict concurrency.
-        // One short MainActor hop to read the Info.plist-backed bool — cheaper than
-        // marking the whole FeatureFlags enum `nonisolated` (which would diverge from
-        // the existing codebase pattern).
-        let onDeviceEnabled = await MainActor.run { FeatureFlags.learningVerificationOnDeviceEnabled }
+        // FeatureFlags + UserProfileStore statics are MainActor-isolated under Swift 6
+        // strict concurrency. One short MainActor hop reads both — cheaper than
+        // marking the whole enums nonisolated (which would diverge from the existing
+        // codebase pattern). Gender feeds the gender-aware Hamoudi copy downstream.
+        let (onDeviceEnabled, gender) = await MainActor.run {
+            (FeatureFlags.learningVerificationOnDeviceEnabled,
+             UserProfileStore.shared.current.gender)
+        }
         if !onDeviceEnabled {
             return Verdict(
                 status: .needsReview,
@@ -96,7 +99,7 @@ actor HamoudiVerificationReasoner {
                 let response = try await session.respond(to: payload)
                 // TEMPORARY DEBUG — raw LM response before JSON extraction/parsing.
                 logger.notice("debug_hamoudi_raw_response\n\(response.content, privacy: .public)")
-                if let verdict = Self.parseVerdict(from: response.content) {
+                if let verdict = Self.parseVerdict(from: response.content, gender: gender) {
                     return verdict
                 }
                 logger.notice("debug_hamoudi_parse_failed raw_content_unparseable")
@@ -146,10 +149,18 @@ actor HamoudiVerificationReasoner {
 
     /// Maps a model-emitted reason code to the warm Iraqi-Arabic message the
     /// user actually sees. Unknown codes fall back to `genericUnclearMessage`.
-    fileprivate static func hamoudiMessage(forReason reason: String) -> String {
+    ///
+    /// For the `.verified` outcome the message is gender-aware: if the user
+    /// set their gender in the profile, Hamoudi addresses them with the
+    /// matching pronoun (بيك / بيج). If gender is unset, a warm neutral line
+    /// is used so the copy doesn't feel broken for users who skipped that field.
+    fileprivate static func hamoudiMessage(
+        forReason reason: String,
+        gender: ActivityNotificationGender?
+    ) -> String {
         switch reason.lowercased() {
         case "verified":
-            return "فديتك والله، شهادتك وصلت وكلشي تمام! فخور بيك، +XP إلك."
+            return verifiedMessage(for: gender)
         case "course_ambiguous", "user_ambiguous", "both_ambiguous":
             return "شكلها زينة بس خل أتأكد شوية، ارفعها مرة ثانية أو خلي الصورة أوضح."
         case "wrong_course":
@@ -158,6 +169,20 @@ actor HamoudiVerificationReasoner {
             return "حبيبي الصورة مو واضحة، صورها مرة ثانية بإضاءة أحسن."
         default:
             return genericUnclearMessage
+        }
+    }
+
+    /// Gender-aware "verified" celebration copy. Warm friend-tone — "حجي" is a
+    /// casual Iraqi vocative; "فخورين بيك/بيج" ("we're proud of you") conveys
+    /// the sense that AiQo stood beside the user through the course.
+    private static func verifiedMessage(for gender: ActivityNotificationGender?) -> String {
+        switch gender {
+        case .male:
+            return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، فخورين بيك."
+        case .female:
+            return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، فخورين بيج."
+        case .none:
+            return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، إنجاز يستاهل الاحتفال."
         }
     }
 
@@ -248,8 +273,11 @@ actor HamoudiVerificationReasoner {
 
     /// Robust JSON extraction — the model may wrap the JSON in ``` fences or add
     /// trailing commentary even when told not to. Mirrors the defensive behavior in
-    /// `LLMJSONParser`.
-    fileprivate static func parseVerdict(from raw: String) -> Verdict? {
+    /// `LLMJSONParser`. `gender` feeds the gender-aware verified message.
+    fileprivate static func parseVerdict(
+        from raw: String,
+        gender: ActivityNotificationGender?
+    ) -> Verdict? {
         let cleaned = raw
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```", with: "")
@@ -289,7 +317,7 @@ actor HamoudiVerificationReasoner {
             // The user-visible Arabic copy is deterministic in Swift, keyed on
             // the reason code — we never trust the LM to emit Arabic (it may
             // not support AR locale on the user's device).
-            hamoudiMessageAr: hamoudiMessage(forReason: reason)
+            hamoudiMessageAr: hamoudiMessage(forReason: reason, gender: gender)
         )
     }
 }
