@@ -172,17 +172,19 @@ actor HamoudiVerificationReasoner {
         }
     }
 
-    /// Gender-aware "verified" celebration copy. Warm friend-tone — "حجي" is a
-    /// casual Iraqi vocative; "فخورين بيك/بيج" ("we're proud of you") conveys
-    /// the sense that AiQo stood beside the user through the course.
+    /// Gender-aware "verified" celebration copy. Warm friend-tone — the male
+    /// line keeps the casual Iraqi "حجي" vocative; the female and
+    /// gender-unset lines drop it since "حجي" is conventionally male-addressing
+    /// in Iraqi dialect. "فخورين بيك/بيج" ("we're proud of you") carries the
+    /// friendship feel — AiQo stood beside the user through the course.
     private static func verifiedMessage(for gender: ActivityNotificationGender?) -> String {
         switch gender {
         case .male:
             return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، فخورين بيك."
         case .female:
-            return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، فخورين بيج."
+            return "الف مبروك! الشهادة وصلت وكلشي تمام، فخورين بيج."
         case .none:
-            return "حجي الف مبروك! الشهادة وصلت وكلشي تمام، إنجاز يستاهل الاحتفال."
+            return "الف مبروك! الشهادة وصلت وكلشي تمام، إنجاز يستاهل الاحتفال."
         }
     }
 
