@@ -399,7 +399,8 @@ struct LearningProofSubmissionView: View {
             let verdict = await CertificateVerifier.shared.verify(
                 image: image,
                 course: course,
-                userFirstName: userFirstName
+                userFirstName: userFirstName,
+                questId: quest.id
             )
             await MainActor.run {
                 applyVerifierResult(verdict)

@@ -29,7 +29,8 @@ actor CertificateVerifier {
     func verify(
         image: UIImage,
         course: LearningCourse,
-        userFirstName: String
+        userFirstName: String,
+        questId: String
     ) async -> Result {
         let startedAt = Date()
 
@@ -41,7 +42,8 @@ actor CertificateVerifier {
             await recordAudit(
                 startedAt: startedAt,
                 outcome: .rateLimit,
-                consentGranted: OnDeviceVerificationConsent.hasConsented
+                consentGranted: OnDeviceVerificationConsent.hasConsented,
+                questId: questId
             )
             return .rejected(reason: "rate_limit", message: message)
         }
@@ -57,7 +59,8 @@ actor CertificateVerifier {
             await recordAudit(
                 startedAt: startedAt,
                 outcome: .ocrFailed,
-                consentGranted: OnDeviceVerificationConsent.hasConsented
+                consentGranted: OnDeviceVerificationConsent.hasConsented,
+                questId: questId
             )
             return .rejected(reason: "ocr_failed", message: message)
         }
@@ -75,7 +78,8 @@ actor CertificateVerifier {
         await recordAudit(
             startedAt: startedAt,
             outcome: outcome,
-            consentGranted: OnDeviceVerificationConsent.hasConsented
+            consentGranted: OnDeviceVerificationConsent.hasConsented,
+            questId: questId
         )
 
         return result
@@ -107,10 +111,15 @@ actor CertificateVerifier {
     private func recordAudit(
         startedAt: Date,
         outcome: AuditLogger.Entry.Outcome,
-        consentGranted: Bool
+        consentGranted: Bool,
+        questId: String
     ) async {
         let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
         let tier = await MainActor.run { AccessManager.shared.activeTier.auditLabel }
+        // Segment the audit purpose by stage so Stage 1 vs Stage 2 completion funnels
+        // can be analyzed later without schema changes. "learningSpark.stage1" or
+        // "learningSpark.stage2" — resolved via LearningChallengeRegistry.
+        let stage = await MainActor.run { LearningChallengeRegistry.stage(for: questId) }
         let entry = AuditLogger.Entry(
             id: UUID(),
             timestamp: startedAt,
@@ -121,7 +130,7 @@ actor CertificateVerifier {
             latencyMs: latencyMs,
             consentGranted: consentGranted,
             sanitizationApplied: false,
-            purpose: "learningSpark",
+            purpose: "learningSpark.stage\(stage)",
             outcome: outcome
         )
         await AuditLogger.shared.record(entry)

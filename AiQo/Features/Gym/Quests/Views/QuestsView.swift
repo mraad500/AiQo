@@ -138,13 +138,16 @@ struct BattleChallengesView: View {
             .presentationCornerRadius(28)
             .presentationBackground(.ultraThinMaterial)
         }
-        .fullScreenCover(item: $completedQuestForCelebration) { quest in
+        .sheet(item: $completedQuestForCelebration) { quest in
             QuestCompletionCelebration(quest: quest) {
                 let completedQuest = quest
                 completedQuestForCelebration = nil
                 saveQuestAchievement(completedQuest)
             }
-            .background(ClearBackground())
+            .presentationDetents([.medium])
+            .presentationBackground(.ultraThinMaterial)
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.84), value: selectedStageID)
         .onAppear {
@@ -285,9 +288,20 @@ struct BattleChallengesView: View {
         )
 
         var achievements = QuestAchievementStore.load()
+        // Idempotency guard — also the gate for XP awarding. The addXP call below
+        // runs exactly once per quest id (Guardrail 6: no zero grants, no double
+        // grants). Subsequent completions of the same quest return early here.
         guard !achievements.contains(where: { $0.questId == quest.id }) else { return }
         achievements.append(achievement)
         QuestAchievementStore.save(achievements)
+
+        // Award XP if the quest has a product-decided value. Quests without a
+        // `QuestXPRewards` entry intentionally skip the grant (see that file's
+        // doc comment) — we never silently award a stage-default.
+        if let xp = QuestXPRewards.xp(for: quest) {
+            LevelStore.shared.addXP(xp)
+            NotificationCenter.default.post(name: NSNotification.Name("XPUpdated"), object: nil)
+        }
     }
 
     private var selectedStage: QuestStageViewModel {

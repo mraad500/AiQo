@@ -681,7 +681,8 @@ struct QuestDetailSheet: View {
             let verdict = await CertificateVerifier.shared.verify(
                 image: image,
                 course: option.course,
-                userFirstName: firstName
+                userFirstName: firstName,
+                questId: quest.id
             )
             await MainActor.run {
                 applyRetryVerdict(verdict, questId: quest.id, certificateURL: record.certificateURL ?? "")

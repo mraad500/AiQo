@@ -2942,3 +2942,4 @@
 "learningSpark.stage2.soon.subtitle" = "تحدي جديد قيد التحضير";
 "learningSpark.stage2.levels" = "كورس مجاني واحد";
 "learningSpark.course.duration.with_audit" = "~%d ساعة (مع الـ audit المجاني)";
+"gym.quest.celebration.today_at.format" = "اليوم الساعة %@";
