@@ -128,16 +128,18 @@ struct HomeView: View {
     // MARK: - Header View
     
     private var topChrome: some View {
-        AiQoScreenTopChrome(
+        let topIconDrop: CGFloat = 5
+
+        return AiQoScreenTopChrome(
             horizontalInset: 10,
-            profileVerticalOffset: -12,
+            profileVerticalOffset: -12 + topIconDrop,
             onProfileTap: { isProfileSheetPresented = true }
         ) {
             HStack {
                 VibeDashboardTriggerButton {
                     showVibeSheet = true
                 }
-                .offset(y: -16)
+                .offset(y: -16 + topIconDrop)
 
                 Spacer(minLength: 0)
             }
@@ -410,10 +412,10 @@ struct MetricDetailSheet: View {
                         .frame(height: 140)
                     }
                     .padding(20)
-                    .background {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    }
+                    .aiqoGlassBackground(
+                        .ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    )
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                 }

@@ -1,0 +1,947 @@
+import BackgroundTasks
+import Foundation
+import UserNotifications
+import os.log
+
+/// Unified orchestration layer for all automated local notifications.
+final class SmartNotificationScheduler {
+    static let shared = SmartNotificationScheduler()
+
+    static let backgroundRefreshIdentifier = "aiqo.notifications.refresh"
+    static let inactivityProcessingTaskIdentifier = "aiqo.notifications.inactivity-check"
+    static let quietHoursStartHour = 23
+    static let quietHoursEndHour = 7
+
+    private struct HealthContext: Sendable {
+        let steps: Int
+        let sleepHours: Double
+        let heartRate: Int?
+    }
+
+    private struct PendingLocalNotification {
+        let title: String
+        let body: String
+    }
+
+    private enum SchedulerError: LocalizedError {
+        case notificationSchedulingFailed(Error)
+
+        var errorDescription: String? {
+            switch self {
+            case let .notificationSchedulingFailed(error):
+                return "Scheduling the local notification failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private let center: UNUserNotificationCenter
+    private let defaults: UserDefaults
+    private let calendar: Calendar
+    private let captainIntelligenceManager: CaptainHealthSnapshotService
+    private let notificationComposer: CaptainBackgroundNotificationComposer
+    private let pendingDeveloperNotificationLock = NSLock()
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "SmartNotificationScheduler"
+    )
+
+    private let coachLanguageKey = "notificationLanguage"
+    private let notificationThreadIdentifier = "aiqo.captain.coach-nudges"
+    private let defaultEnglishMessage = "Captain Hamoudi says: start with one strong move now and build momentum before the day runs away from you."
+    private let defaultArabicMessage = "هلا بطل، خلي هسه حركة صغيرة تعطي يومك روح. قوم وامش دقيقتين وخليها بداية قوية."
+    private let developerNudgeDelay: TimeInterval = 5
+    private let defaultStepGoal = 10_000
+    private let backgroundInactivityCooldown: TimeInterval = 3 * 60 * 60
+    private let lastBackgroundInactivitySentAtKey = "aiqo.notifications.background.lastInactivitySentAt"
+
+    private var pendingDeveloperNotification: PendingLocalNotification?
+
+    private init(
+        center: UNUserNotificationCenter = .current(),
+        defaults: UserDefaults = .standard,
+        calendar: Calendar = .current,
+        captainIntelligenceManager: CaptainHealthSnapshotService = .shared,
+        notificationComposer: CaptainBackgroundNotificationComposer? = nil
+    ) {
+        self.center = center
+        self.defaults = defaults
+        self.calendar = calendar
+        self.captainIntelligenceManager = captainIntelligenceManager
+        self.notificationComposer = notificationComposer ?? CaptainBackgroundNotificationComposer()
+    }
+
+    func registerBackgroundTasks() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.backgroundRefreshIdentifier,
+            using: nil
+        ) { [weak self] task in
+            guard let self, let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+
+            self.handleBackgroundRefresh(task: refreshTask)
+        }
+
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.inactivityProcessingTaskIdentifier,
+            using: nil
+        ) { [weak self] task in
+            guard let self, let processingTask = task as? BGProcessingTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+
+            self.handleInactivityProcessing(task: processingTask)
+        }
+    }
+
+    func refreshAutomationState() {
+        Task {
+            if !DevOverride.unlockAllFeatures {
+                guard TierGate.shared.canAccess(.captainNotifications) else {
+                    diag.info("SmartNotificationScheduler.refreshAutomationState blocked by TierGate(.captainNotifications)")
+                    cancelAllAutomatedNotifications()
+                    cancelScheduledBackgroundTasks()
+                    return
+                }
+            }
+
+            let granted = await requestPermission()
+            guard granted else { return }
+
+            if AppSettingsStore.shared.notificationsEnabled {
+                scheduleRecurringNotifications()
+                scheduleBackgroundTasksIfNeeded()
+            } else {
+                cancelAllAutomatedNotifications()
+                cancelScheduledBackgroundTasks()
+            }
+        }
+    }
+
+    func scheduleSmartNotifications() {
+        refreshAutomationState()
+    }
+
+    func cancelAllSmartNotifications() {
+        cancelRecurringNotifications()
+    }
+
+    func scheduleBackgroundTasksIfNeeded() {
+        scheduleNextBackgroundRefresh()
+        scheduleNextInactivityProcessing()
+    }
+
+    func cancelScheduledBackgroundTasks() {
+        cancelPendingBackgroundRefresh()
+        cancelPendingInactivityProcessing()
+    }
+
+    func queueDeveloperTestCoachNudge() async -> Bool {
+        storePendingDeveloperNotification(nil)
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("SmartNotificationScheduler.queueDeveloperTestCoachNudge blocked by TierGate(.captainNotifications)")
+                return false
+            }
+        }
+
+        guard await NotificationService.shared.ensureAuthorizationIfNeeded() else {
+            return false
+        }
+
+        guard !Task.isCancelled else { return false }
+
+        let body = coachTemplateBody(
+            for: loadDummyHealthContext(),
+            language: .arabic
+        )
+
+        storePendingDeveloperNotification(
+            PendingLocalNotification(
+                title: "كابتن حمودي",
+                body: body
+            )
+        )
+        return true
+    }
+
+    func scheduleQueuedDeveloperNudgeIfNeeded() {
+        guard let pendingNotification = consumePendingDeveloperNotification() else { return }
+
+        let request = makeLocalNotificationRequest(
+            title: pendingNotification.title,
+            body: pendingNotification.body,
+            timeInterval: developerNudgeDelay,
+            notificationType: "coach_nudge_test"
+        )
+
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("SmartNotificationScheduler dev nudge add blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
+        center.add(request) { [self] error in
+            if let error {
+                self.logger.error("developer_nudge_schedule_failed error=\(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    func canSendAutomatedNotificationNow(at date: Date = Date()) -> Bool {
+        !Self.isWithinQuietHours(date: date, calendar: calendar)
+    }
+
+    func adjustedAutomationDate(for date: Date) -> Date {
+        Self.nextAllowedDate(after: date, calendar: calendar)
+    }
+
+    static func isWithinQuietHours(
+        date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> Bool {
+        let hour = calendar.component(.hour, from: date)
+        return hour >= Self.quietHoursStartHour || hour < Self.quietHoursEndHour
+    }
+
+    static func nextAllowedDate(
+        after date: Date,
+        calendar: Calendar = .current
+    ) -> Date {
+        guard isWithinQuietHours(date: date, calendar: calendar) else {
+            return date
+        }
+
+        let startOfDay = calendar.startOfDay(for: date)
+        let nextMorning = calendar.date(
+            bySettingHour: Self.quietHoursEndHour,
+            minute: 0,
+            second: 0,
+            of: startOfDay
+        ) ?? date
+
+        if calendar.component(.hour, from: date) < Self.quietHoursEndHour {
+            return nextMorning
+        }
+
+        return calendar.date(byAdding: .day, value: 1, to: nextMorning) ?? date
+    }
+
+    private func requestPermission() async -> Bool {
+        do {
+            return try await center.requestAuthorization(options: [.alert, .sound, .badge])
+        } catch {
+            logger.error("notification_permission_request_failed error=\(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    private func scheduleRecurringNotifications() {
+        scheduleWaterReminders()
+        scheduleWorkoutMotivation()
+        scheduleSleepReminder()
+        scheduleStreakProtection()
+        scheduleWeeklyReportReminder()
+    }
+
+    private func cancelRecurringNotifications() {
+        [
+            "water_reminder",
+            "workout_motivation",
+            "sleep_reminder",
+            "streak_protection",
+            "weekly_report"
+        ].forEach(cancelCategory)
+    }
+
+    private func cancelAllAutomatedNotifications() {
+        cancelRecurringNotifications()
+        let identifiers = [
+            PremiumExpiryNotifier.twoDaysBeforeIdentifier,
+            PremiumExpiryNotifier.oneDayBeforeIdentifier,
+            PremiumExpiryNotifier.expiredIdentifier
+        ]
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    private func scheduleWaterReminders() {
+        cancelCategory("water_reminder")
+
+        let messages = [
+            "\(UserProfileStore.shared.current.name)! جسمك يحتاج ماء 💧 اشرب كوب الحين",
+            "وقت الماء! 💧 خلّي جسمك رطب",
+            "كابتن حمّودي يقول: اشرب ماي يا بطل 💧",
+            "هيدريشن تايم! 💧 كوب ماء وكمّل يومك",
+            "ما تنسى الماء! جسمك يشكرك 💧",
+        ]
+
+        let hours = [10, 12, 14, 16, 18, 20]
+        for (index, hour) in hours.enumerated() {
+            scheduleRecurringRequest(
+                identifier: "water_reminder_\(hour)",
+                title: "💧 وقت الماء",
+                body: messages[index % messages.count],
+                categoryIdentifier: "water_reminder",
+                threadIdentifier: "aiqo.hydration",
+                hour: hour,
+                minute: 0
+            )
+        }
+    }
+
+    private func scheduleWorkoutMotivation() {
+        cancelCategory("workout_motivation")
+
+        let reminderTime = CaptainPersonalizationStore.shared.workoutReminderTime()
+            ?? CaptainWorkoutTimePreference.evening.reminderTime
+
+        let messages = [
+            "يلا يا بطل! وقت التمرين 💪 جسمك ينتظرك",
+            "كابتن حمّودي جاهز! يلا نتمرن 🔥",
+            "30 دقيقة بس وبتحس بفرق هائل 💪",
+            "التمرين اليوم يبني جسم الغد 🏋️",
+            "ما في عذر اليوم! يلا قوم 🔥",
+            "جسمك يستاهل أحسن نسخة منك 💪",
+            "كابتن حمّودي يقول: يلا نشغّل المحرك! 🚀"
+        ]
+
+        scheduleRecurringRequest(
+            identifier: "workout_motivation_daily",
+            title: "💪 وقت التمرين!",
+            body: messages.randomElement() ?? messages[0],
+            categoryIdentifier: "workout_motivation",
+            threadIdentifier: "aiqo.workout",
+            hour: reminderTime.hour,
+            minute: reminderTime.minute
+        )
+    }
+
+    private func scheduleSleepReminder() {
+        cancelCategory("sleep_reminder")
+
+        let reminderTime = CaptainPersonalizationStore.shared.sleepReminderTime(calendar: calendar)
+            ?? CaptainReminderTime(hour: 22, minute: 30)
+
+        scheduleRecurringRequest(
+            identifier: "sleep_reminder_nightly",
+            title: "😴 وقت النوم",
+            body: "كابتن حمّودي يقول: النوم أهم من التمرين! خلّي جسمك ينتعش الليلة. تصبح على خير 🌙",
+            categoryIdentifier: "sleep_reminder",
+            threadIdentifier: "aiqo.sleep",
+            hour: reminderTime.hour,
+            minute: reminderTime.minute
+        )
+    }
+
+    private func scheduleStreakProtection() {
+        cancelCategory("streak_protection")
+
+        scheduleRecurringRequest(
+            identifier: "streak_protection_evening",
+            title: "🔥 الـ Streak بخطر!",
+            body: "لسه ما حققت هدفك اليوم! مشي سريع 15 دقيقة يكفي. لا تخلي الـ streak ينكسر 💪",
+            categoryIdentifier: "streak_protection",
+            threadIdentifier: "aiqo.streak",
+            hour: 20,
+            minute: 0,
+            interruptionLevel: .timeSensitive
+        )
+    }
+
+    private func scheduleWeeklyReportReminder() {
+        cancelCategory("weekly_report")
+
+        scheduleRecurringRequest(
+            identifier: "weekly_report_friday",
+            title: "📊 تقريرك الأسبوعي جاهز!",
+            body: "كابتن حمّودي حضّر ملخص أسبوعك. تعال شوف شلون كان أداءك! 🏆",
+            categoryIdentifier: "weekly_report",
+            threadIdentifier: "aiqo.report",
+            hour: 10,
+            minute: 0,
+            weekday: 6
+        )
+    }
+
+    private func scheduleRecurringRequest(
+        identifier: String,
+        title: String,
+        body: String,
+        categoryIdentifier: String,
+        threadIdentifier: String,
+        hour: Int,
+        minute: Int,
+        weekday: Int? = nil,
+        interruptionLevel: UNNotificationInterruptionLevel? = nil
+    ) {
+        var dateComponents = DateComponents()
+        dateComponents.weekday = weekday
+        dateComponents.hour = adjustedHourForQuietHours(hour)
+        dateComponents.minute = dateComponents.hour == Self.quietHoursEndHour && isQuietHour(hour) ? 0 : minute
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.categoryIdentifier = categoryIdentifier
+        content.threadIdentifier = threadIdentifier
+        if #available(iOS 15.0, *), let interruptionLevel {
+            content.interruptionLevel = interruptionLevel
+        }
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("SmartNotificationScheduler recurring add blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
+        center.add(request)
+    }
+
+    private func adjustedHourForQuietHours(_ hour: Int) -> Int {
+        isQuietHour(hour) ? Self.quietHoursEndHour : hour
+    }
+
+    private func isQuietHour(_ hour: Int) -> Bool {
+        hour >= Self.quietHoursStartHour || hour < Self.quietHoursEndHour
+    }
+
+    private func cancelCategory(_ category: String) {
+        center.getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.content.categoryIdentifier == category }
+                .map(\.identifier)
+            self.center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    private func scheduleNextBackgroundRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundRefreshIdentifier)
+        request.earliestBeginDate = nextPreferredRefreshDate(after: Date())
+
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundRefreshIdentifier)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            logger.error("background_refresh_submit_failed error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func cancelPendingBackgroundRefresh() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundRefreshIdentifier)
+    }
+
+    private func scheduleNextInactivityProcessing() {
+        let request = BGProcessingTaskRequest(identifier: Self.inactivityProcessingTaskIdentifier)
+        request.earliestBeginDate = nextPreferredInactivityCheckDate(after: Date())
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = false
+
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.inactivityProcessingTaskIdentifier)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            logger.error("background_inactivity_submit_failed error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func cancelPendingInactivityProcessing() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.inactivityProcessingTaskIdentifier)
+    }
+
+    private func handleBackgroundRefresh(task: BGAppRefreshTask) {
+        if AppSettingsStore.shared.notificationsEnabled {
+            scheduleNextBackgroundRefresh()
+        } else {
+            cancelPendingBackgroundRefresh()
+        }
+
+        let operation = Task(priority: .background) { [weak self] in
+            guard let self else { return false }
+            return await self.generateAndScheduleCoachNudge()
+        }
+
+        task.expirationHandler = {
+            operation.cancel()
+        }
+
+        Task {
+            let success = await operation.value
+            task.setTaskCompleted(success: success)
+        }
+    }
+
+    private func handleInactivityProcessing(task: BGProcessingTask) {
+        if AppSettingsStore.shared.notificationsEnabled {
+            scheduleNextInactivityProcessing()
+        } else {
+            cancelPendingInactivityProcessing()
+        }
+
+        let operation = Task(priority: .background) { [weak self] in
+            guard let self else { return false }
+            return await self.performInactivityCheckAndNotifyIfNeeded()
+        }
+
+        task.expirationHandler = {
+            operation.cancel()
+        }
+
+        Task {
+            let success = await operation.value
+            task.setTaskCompleted(success: success)
+        }
+    }
+
+    private func generateAndScheduleCoachNudge() async -> Bool {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("SmartNotificationScheduler.generateAndScheduleCoachNudge blocked by TierGate(.captainNotifications)")
+                return true
+            }
+        }
+        guard AppSettingsStore.shared.notificationsEnabled else { return true }
+        guard await hasNotificationAuthorization() else { return true }
+        guard canSendAutomatedNotificationNow() else { return true }
+
+        // Brain V2: Consult ProactiveEngine for smarter decision
+        if let context = await buildProactiveContext() {
+            let decision = ProactiveEngine.shared.evaluate(context: context)
+            switch decision {
+            case .sendNotification(let content, _, _):
+                do {
+                    try await scheduleLocalNotification(
+                        title: "كابتن حمودي",
+                        body: content,
+                        timeInterval: 2,
+                        notificationType: "coach_nudge"
+                    )
+                    return true
+                } catch {
+                    logger.error("coach_nudge_proactive_failed error=\(error.localizedDescription, privacy: .public)")
+                    // Fall through to legacy path
+                }
+            case .doNothing:
+                return true
+            }
+        }
+
+        // Legacy fallback: if ProactiveContext couldn't be built
+        let context = await loadHealthContext()
+        guard !Task.isCancelled else { return false }
+
+        let preferredLanguage = preferredCoachLanguage()
+        let finalBody = coachTemplateBody(for: context, language: preferredLanguage)
+
+        do {
+            try await scheduleLocalNotification(
+                title: preferredLanguage == .arabic ? "كابتن حمودي" : "Captain Hamoudi",
+                body: finalBody,
+                timeInterval: 2,
+                notificationType: "coach_nudge"
+            )
+            return true
+        } catch {
+            logger.error("coach_nudge_schedule_failed error=\(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    private func coachTemplateBody(
+        for context: HealthContext,
+        language: CoachNotificationLanguage
+    ) -> String {
+        let input = IraqiCoachTemplates.Input(
+            steps: (context.steps / 500) * 500,
+            stepGoal: defaultStepGoal,
+            heartRate: context.heartRate.map { ($0 / 5) * 5 },
+            sleepHours: context.sleepHours > 0
+                ? (context.sleepHours * 2).rounded() / 2
+                : nil,
+            timeOfDay: currentTimeOfDay()
+        )
+
+        return language == .arabic
+            ? IraqiCoachTemplates.iraqi(input)
+            : IraqiCoachTemplates.english(input)
+    }
+
+    private func currentTimeOfDay() -> IraqiCoachTemplates.TimeOfDay {
+        let hour = calendar.component(.hour, from: Date())
+        switch hour {
+        case 5..<11: return .morning
+        case 11..<14: return .midday
+        case 14..<17: return .afternoon
+        case 17..<21: return .evening
+        default: return .night
+        }
+    }
+
+    private func performInactivityCheckAndNotifyIfNeeded(
+        now: Date = Date()
+    ) async -> Bool {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("SmartNotificationScheduler.performInactivityCheck blocked by TierGate(.captainNotifications)")
+                return true
+            }
+        }
+        guard AppSettingsStore.shared.notificationsEnabled else { return true }
+        guard !Task.isCancelled else { return false }
+        guard canSendAutomatedNotificationNow(at: now) else { return true }
+
+        let hour = calendar.component(.hour, from: now)
+        guard hour >= 14 else { return true }
+        guard canSendBackgroundInactivityNotification(now: now) else { return true }
+
+        let metrics: CaptainDailyHealthMetrics
+        do {
+            metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
+        } catch {
+            logger.error("background_inactivity_metrics_failed error=\(error.localizedDescription, privacy: .public)")
+            return true
+        }
+
+        guard metrics.stepCount < 3_000 else { return true }
+        guard !Task.isCancelled else { return false }
+
+        // Brain V2: Consult ProactiveEngine before sending
+        if let context = await buildProactiveContext() {
+            let decision = ProactiveEngine.shared.evaluate(context: context)
+            switch decision {
+            case .sendNotification(let content, _, _):
+                do {
+                    try await scheduleLocalNotification(
+                        title: "كابتن حمودي",
+                        body: content,
+                        timeInterval: 1,
+                        notificationType: "midday_inactivity"
+                    )
+                    defaults.set(now, forKey: lastBackgroundInactivitySentAtKey)
+                    return true
+                } catch {
+                    logger.error("background_inactivity_proactive_failed error=\(error.localizedDescription, privacy: .public)")
+                    // Fall through to legacy path
+                }
+            case .doNothing:
+                return true
+            }
+        }
+
+        // Legacy fallback
+        let body = await notificationComposer.composeInactivityNotification(
+            metrics: metrics,
+            now: now,
+            language: .arabic,
+            level: await MainActor.run { max(LevelStore.shared.level, 1) }
+        )
+
+        do {
+            try await scheduleLocalNotification(
+                title: "كابتن حمودي",
+                body: body,
+                timeInterval: 1,
+                notificationType: "midday_inactivity"
+            )
+            defaults.set(now, forKey: lastBackgroundInactivitySentAtKey)
+            return true
+        } catch {
+            logger.error("background_inactivity_schedule_failed error=\(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    private func loadHealthContext() async -> HealthContext {
+        do {
+            let metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
+            return HealthContext(
+                steps: max(0, metrics.stepCount),
+                sleepHours: max(0, metrics.sleepHours),
+                heartRate: metrics.averageOrCurrentHeartRateBPM
+            )
+        } catch {
+            logger.error("coach_context_fallback error=\(error.localizedDescription, privacy: .public)")
+            return HealthContext(steps: 0, sleepHours: 0, heartRate: nil)
+        }
+    }
+
+    private func loadDummyHealthContext() -> HealthContext {
+        HealthContext(steps: 1320, sleepHours: 5.4, heartRate: 98)
+    }
+
+    private func preferredCoachLanguage() -> CoachNotificationLanguage {
+        CoachNotificationLanguage(preferenceValue: defaults.string(forKey: coachLanguageKey))
+    }
+
+    private func nextPreferredRefreshDate(after date: Date) -> Date {
+        let morning = calendar.date(bySettingHour: 7, minute: 15, second: 0, of: date) ?? date.addingTimeInterval(60 * 60)
+        let sunset = calendar.date(bySettingHour: 17, minute: 30, second: 0, of: date) ?? date.addingTimeInterval(6 * 60 * 60)
+
+        if date < morning {
+            return morning
+        }
+
+        if date < sunset {
+            return sunset
+        }
+
+        return calendar.date(byAdding: .day, value: 1, to: morning) ?? date.addingTimeInterval(12 * 60 * 60)
+    }
+
+    private func nextPreferredInactivityCheckDate(after date: Date) -> Date {
+        let afternoonStart = calendar.date(bySettingHour: 14, minute: 5, second: 0, of: date) ?? date.addingTimeInterval(60 * 60)
+        let eveningCutoff = calendar.date(bySettingHour: 20, minute: 30, second: 0, of: date) ?? date.addingTimeInterval(8 * 60 * 60)
+
+        if date < afternoonStart {
+            return afternoonStart
+        }
+
+        if date < eveningCutoff {
+            return date.addingTimeInterval(2 * 60 * 60)
+        }
+
+        let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: afternoonStart) ?? date.addingTimeInterval(18 * 60 * 60)
+        return adjustedAutomationDate(for: tomorrowStart)
+    }
+
+    private func hasNotificationAuthorization() async -> Bool {
+        let settings: UNNotificationSettings = await withCheckedContinuation {
+            (continuation: CheckedContinuation<UNNotificationSettings, Never>) in
+            center.getNotificationSettings { settings in
+                continuation.resume(returning: settings)
+            }
+        }
+
+        switch settings.authorizationStatus {
+        case .authorized, .ephemeral, .provisional:
+            return true
+        case .denied, .notDetermined:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
+    private func scheduleLocalNotification(
+        title: String,
+        body: String,
+        timeInterval: TimeInterval,
+        notificationType: String
+    ) async throws {
+        let request = makeLocalNotificationRequest(
+            title: title,
+            body: body,
+            timeInterval: timeInterval,
+            notificationType: notificationType
+        )
+
+        do {
+            let _: Void = try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Void, Error>) in
+                if !DevOverride.unlockAllFeatures {
+                    guard TierGate.shared.canAccess(.captainNotifications) else {
+                        diag.info("SmartNotificationScheduler continuation add blocked by TierGate(.captainNotifications)")
+                        continuation.resume(throwing: BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainNotifications)))
+                        return
+                    }
+                }
+                center.add(request) { error in
+                    if let error {
+                        continuation.resume(throwing: SchedulerError.notificationSchedulingFailed(error))
+                    } else {
+                        continuation.resume(returning: ())
+                    }
+                }
+            }
+        } catch let error as SchedulerError {
+            throw error
+        } catch {
+            throw SchedulerError.notificationSchedulingFailed(error)
+        }
+    }
+
+    private func makeLocalNotificationRequest(
+        title: String,
+        body: String,
+        timeInterval: TimeInterval,
+        notificationType: String
+    ) -> UNNotificationRequest {
+        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalBody = trimmedBody.isEmpty ? defaultEnglishMessage : trimmedBody
+        let desiredDate = Date().addingTimeInterval(max(1, timeInterval))
+        let fireDate = adjustedAutomationDate(for: desiredDate)
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = finalBody
+        content.sound = .default
+        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
+        content.threadIdentifier = notificationThreadIdentifier
+        content.userInfo = [
+            "notification_type": notificationType,
+            "source": "captain_hamoudi",
+            "messageText": finalBody,
+            "deepLink": "aiqo://captain"
+        ]
+
+        return UNNotificationRequest(
+            identifier: "\(notificationThreadIdentifier).\(UUID().uuidString)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, fireDate.timeIntervalSinceNow),
+                repeats: false
+            )
+        )
+    }
+
+    private func canSendBackgroundInactivityNotification(now: Date) -> Bool {
+        guard let lastSentAt = defaults.object(forKey: lastBackgroundInactivitySentAtKey) as? Date else {
+            return true
+        }
+
+        return now.timeIntervalSince(lastSentAt) >= backgroundInactivityCooldown
+    }
+
+    private func storePendingDeveloperNotification(_ notification: PendingLocalNotification?) {
+        pendingDeveloperNotificationLock.lock()
+        pendingDeveloperNotification = notification
+        pendingDeveloperNotificationLock.unlock()
+    }
+
+    private func consumePendingDeveloperNotification() -> PendingLocalNotification? {
+        pendingDeveloperNotificationLock.lock()
+        defer { pendingDeveloperNotificationLock.unlock() }
+
+        let notification = pendingDeveloperNotification
+        pendingDeveloperNotification = nil
+        return notification
+    }
+
+    // MARK: - Brain V2: ProactiveContext Builder
+
+    private func buildProactiveContext() async -> ProactiveContext? {
+        let metrics: CaptainDailyHealthMetrics
+        do {
+            metrics = try await captainIntelligenceManager.fetchTodayEssentialMetrics()
+        } catch {
+            return nil
+        }
+
+        // Emotional state
+        let emotionalState = EmotionalStateEngine.shared.evaluate(
+            stepsToday: metrics.stepCount,
+            steps7DayAvg: metrics.stepCount,
+            sleepLastNightHours: metrics.sleepHours > 0 ? metrics.sleepHours : nil,
+            sleep7DayAvgHours: nil,
+            restingHeartRate: metrics.averageOrCurrentHeartRateBPM.map { Double($0) },
+            hrvLatest: nil,
+            hrv7DayAvg: nil,
+            lastWorkoutDate: nil,
+            messageLength: nil,
+            messageTimestamp: Date(),
+            userPreferredBedtime: nil,
+            userPreferredWakeTime: nil
+        )
+
+        // User profile from personalization
+        var userName = ""
+        var bedtimeStr = "23:00"
+        var wakeTimeStr = "07:00"
+        var primaryGoal = ""
+        var favoriteSport = ""
+        var preferredWorkoutTime = ""
+
+        let personalization = CaptainPersonalizationStore.shared.currentSnapshot()
+        if let p = personalization {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            bedtimeStr = formatter.string(from: p.bedtime)
+            wakeTimeStr = formatter.string(from: p.wakeTime)
+            primaryGoal = p.primaryGoalRaw
+            favoriteSport = p.favoriteSportRaw
+            preferredWorkoutTime = p.preferredWorkoutTimeRaw
+        }
+
+        // User name from UserDefaults (same key CaptainViewModel uses)
+        userName = UserDefaults.standard.string(forKey: "aiqo.captain.customization.calling")
+            ?? UserDefaults.standard.string(forKey: "aiqo.captain.customization.name")
+            ?? ""
+        if userName.isEmpty {
+            userName = UserProfileStore.shared.current.name
+        }
+
+        // Subscription tier
+        let subscriptionTier: String
+        let trialDay: Int?
+        let trialManager = await MainActor.run { FreeTrialManager.shared }
+        let currentTrialDay = await MainActor.run { trialManager.currentTrialDay }
+
+        if let day = currentTrialDay {
+            subscriptionTier = "trial"
+            trialDay = day
+        } else {
+            trialDay = nil
+            let entitlement = await MainActor.run {
+                StoreKitEntitlementProvider().snapshot()
+            }
+            if entitlement.hasIntelligenceProAccess {
+                subscriptionTier = "intelligence_pro"
+            } else if entitlement.hasTribeAccess {
+                subscriptionTier = "core"
+            } else {
+                subscriptionTier = "none"
+            }
+        }
+
+        // Notification history from ConversationThread
+        let (sentToday, lastTime, lastOpened, dismissedCount) = await MainActor.run {
+            let manager = ConversationThreadManager.shared
+            let todayNotifs = manager.recentNotifications(withinHours: 24)
+            let sentCount = todayNotifs.filter { $0.entryType == ThreadEntryType.notification.rawValue }.count
+            let lastNotifTime = todayNotifs.first?.timestamp
+            let lastWasOpened: Bool? = {
+                guard let last = todayNotifs.first else { return nil }
+                return last.entryType == ThreadEntryType.notificationOpened.rawValue
+            }()
+            let recentEntries = manager.recentEntries(limit: 5)
+            let dismissed = recentEntries.filter { $0.entryType == ThreadEntryType.notificationDismissed.rawValue }.count
+            return (sentCount, lastNotifTime, lastWasOpened, dismissed)
+        }
+
+        // Step goal from daily record or default
+        let stepGoal = 10_000
+
+        return ProactiveContext(
+            emotionalState: emotionalState,
+            trendSnapshot: nil,
+            notificationsSentToday: sentToday,
+            lastNotificationTime: lastTime,
+            lastNotificationWasOpened: lastOpened,
+            recentDismissedCount: dismissedCount,
+            stepsToday: metrics.stepCount,
+            stepGoal: stepGoal,
+            caloriesBurnedToday: metrics.activeEnergyKilocalories,
+            calorieGoal: 500,
+            waterIntakePercent: 0.5,
+            ringCompletion: Double(metrics.stepCount) / Double(stepGoal),
+            isCurrentlyWorkingOut: false,
+            lastWorkoutEndedAt: nil,
+            userName: userName,
+            primaryGoal: primaryGoal,
+            favoriteSport: favoriteSport,
+            preferredWorkoutTime: preferredWorkoutTime,
+            bedtime: bedtimeStr,
+            wakeTime: wakeTimeStr,
+            trialDay: trialDay,
+            subscriptionTier: subscriptionTier,
+            currentTime: Date()
+        )
+    }
+}
+

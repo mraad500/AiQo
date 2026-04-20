@@ -1,6 +1,6 @@
 import Foundation
 
-enum SubscriptionProductIDs {
+nonisolated enum SubscriptionProductIDs {
     // Live App Store Connect catalog.
     static let coreMonthly = "com.mraad500.aiqo.max"
     static let intelligenceProMonthly = "com.mraad500.aiqo.intelligence.pro"

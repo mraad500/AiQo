@@ -156,6 +156,9 @@ struct CaptainChatView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $globalBrain.showPaywall) {
+            PaywallView(source: .captainGate)
+        }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
         }

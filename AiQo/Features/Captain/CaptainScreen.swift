@@ -244,6 +244,9 @@ struct CaptainScreen: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $viewModel.showPaywall) {
+            PaywallView(source: .captainGate)
+        }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
             Task {

@@ -46,7 +46,7 @@
 "legal.section" = "القانونية";
 "legal.privacy.title" = "سياسة الخصوصية";
 "legal.terms.title" = "شروط الاستخدام";
-"legal.privacy.content" = "سياسة الخصوصية لتطبيق AiQo\n\nآخر تحديث: أبريل 2026\n\n1. البيانات التي نجمعها\nنحن نجمع بيانات الصحة (الخطوات، السعرات، النوم، نبض القلب) من Apple HealthKit بإذنك. نحن أيضاً نجمع معلومات الملف الشخصي التي تقدمها (الاسم، العمر، الطول، الوزن).\n\n2. كيف نستخدم بياناتك\nبيانات الصحة تُستخدم فقط لتقديم تحليلات ونصائح مخصصة داخل التطبيق. لا نبيع بياناتك أبداً لأي طرف ثالث.\n\n3. تخزين البيانات\nبيانات الصحة تُخزن محلياً على جهازك. البيانات المُرسلة لخدمة الذكاء الاصطناعي تُعالج بدون تخزين دائم.\n\n4. خدمات الذكاء الاصطناعي الخارجية\nبموافقتك الصريحة، قد يرسل AiQo بيانات ملخّصة ومجهّلة إلى الخدمات التالية:\n- Google Gemini: رسائل المحادثة وملخص صحي يومي (الخطوات، السعرات، مدة النوم، النبض) لتوفير ردود الذكاء الاصطناعي. يتم حذف المعرّفات الشخصية قبل الإرسال.\n- ElevenLabs: عند تفعيل الصوت، تُرسل ردود الكابتن النصية لتحويلها إلى كلام. لا تُرسل أي بيانات صحية أو شخصية.\n- Spotify: إذا تم الربط، يتواصل AiQo مع تطبيق Spotify على جهازك. لا تُرسل بيانات عبر خوادم AiQo.\nيمكنك منح أو سحب موافقة مشاركة بيانات الذكاء الاصطناعي في أي وقت من الإعدادات > الخصوصية.\n\n5. حقوقك\nيمكنك حذف بياناتك في أي وقت من إعدادات التطبيق. يمكنك سحب إذن HealthKit من إعدادات الجهاز. يمكنك سحب موافقة مشاركة بيانات الذكاء الاصطناعي من الإعدادات.\n\n6. اتصل بنا\nلأي استفسارات حول الخصوصية، تواصل معنا عبر التطبيق.";
+"legal.privacy.content" = "سياسة الخصوصية لتطبيق AiQo\n\nآخر تحديث: أبريل 2026\n\n1. البيانات التي نجمعها\nنحن نجمع بيانات الصحة (الخطوات، السعرات، النوم، نبض القلب) من Apple HealthKit بإذنك. نحن أيضاً نجمع معلومات الملف الشخصي التي تقدمها (الاسم، العمر، الطول، الوزن).\n\n2. كيف نستخدم بياناتك\nبيانات الصحة تُستخدم فقط لتقديم تحليلات ونصائح مخصصة داخل التطبيق. لا نبيع بياناتك أبداً لأي طرف ثالث.\n\n3. تخزين البيانات\nبيانات الصحة تُخزن محلياً على جهازك. البيانات المُرسلة لخدمة الذكاء الاصطناعي تُعالج بدون تخزين دائم.\n\n4. خدمات الذكاء الاصطناعي الخارجية\nبموافقتك الصريحة، قد يرسل AiQo بيانات ملخّصة ومجهّلة إلى الخدمات التالية:\n- Google Gemini: رسائل المحادثة وملخص صحي يومي (الخطوات، السعرات، مدة النوم، النبض) لتوفير ردود الذكاء الاصطناعي. يتم حذف المعرّفات الشخصية قبل الإرسال.\n- Spotify: إذا تم الربط، يتواصل AiQo مع تطبيق Spotify على جهازك. لا تُرسل بيانات عبر خوادم AiQo.\nتشغيل صوت الكابتن يعتمد على محرك تحويل النص إلى كلام المدمج في iOS على جهازك، ولا تُرسل أي بيانات إلى خوادم خارجية.\nيمكنك منح أو سحب موافقة مشاركة بيانات الذكاء الاصطناعي في أي وقت من الإعدادات > الخصوصية.\n\n5. حقوقك\nيمكنك حذف بياناتك في أي وقت من إعدادات التطبيق. يمكنك سحب إذن HealthKit من إعدادات الجهاز. يمكنك سحب موافقة مشاركة بيانات الذكاء الاصطناعي من الإعدادات.\n\n6. اتصل بنا\nلأي استفسارات حول الخصوصية، تواصل معنا عبر التطبيق.";
 "legal.terms.content" = "شروط استخدام تطبيق AiQo\n\nآخر تحديث: أبريل 2026\n\n1. القبول\nباستخدام تطبيق AiQo، أنت توافق على هذه الشروط.\n\n2. الخدمة\nAiQo يقدم تتبع صحي ونصائح بالذكاء الاصطناعي. المحتوى ليس بديلاً عن المشورة الطبية المتخصصة.\n\n3. الاشتراكات\n- التجربة المجانية: 7 أيام\n- AiQo Max: $9.99/شهر\n- AiQo Intelligence Pro: $19.99/شهر\nالاشتراكات تتجدد تلقائياً كل شهر حتى يتم إلغاؤها. يمكنك إدارة أو إلغاء اشتراكك في أي وقت من خلال إعدادات حساب Apple ID الخاص بك. يتم خصم المبلغ من حساب Apple ID عند تأكيد الشراء. يتجدد الاشتراك تلقائياً ما لم يتم إيقاف التجديد التلقائي قبل 24 ساعة على الأقل من نهاية فترة الفوترة الحالية.\n\n4. سلوك المستخدم\nأنت مسؤول عن استخدامك للتطبيق وأي محتوى تنشره في ميزة القبيلة.\n\n5. إخلاء المسؤولية\nAiQo لا يقدم نصائح طبية. استشر طبيبك قبل اتخاذ أي قرارات صحية بناءً على بيانات التطبيق.\n\n6. التعديلات\nنحتفظ بحق تعديل هذه الشروط في أي وقت.";
 
 /* Referral */
@@ -965,14 +965,14 @@
 "quests.stage.1.tab" = "المرحلة 1";
 "quests.stage.1.quest.1.title" = "شرارة الخير (مكافأة)";
 "quests.stage.1.quest.1.levels" = "مركز 1";
-"quests.stage.1.quest.2.title" = "نبع الماء (يومي)";
-"quests.stage.1.quest.2.levels" = "3.0ل / 2.5ل / 2.0ل";
-"quests.stage.1.quest.3.title" = "عرش التعافي (يومي)";
-"quests.stage.1.quest.3.levels" = "8س / 7.5س / 7س";
-"quests.stage.1.quest.4.title" = "نبض زون 2 (تراكمي)";
-"quests.stage.1.quest.4.levels" = "40د / 30د / 20د";
-"quests.stage.1.quest.5.title" = "تأسيس المطبخ";
-"quests.stage.1.quest.5.levels" = "مركز 1";
+"quests.stage.1.quest.2.title" = "شرارة التعلم";
+"quests.stage.1.quest.2.levels" = "مركز 1";
+"quests.stage.1.quest.3.title" = "نبض زون 2 (تراكمي)";
+"quests.stage.1.quest.3.levels" = "40د / 30د / 20د";
+"quests.stage.1.quest.4.title" = "عرش التعافي (يومي)";
+"quests.stage.1.quest.4.levels" = "8س / 7.5س / 7س";
+"quests.stage.1.quest.5.title" = "نبع الماء (يومي)";
+"quests.stage.1.quest.5.levels" = "3.0ل / 2.5ل / 2.0ل";
 
 "quests.stage.2.title" = "المرحلة 2: تشغيل المحرك";
 "quests.stage.2.tab" = "المرحلة 2";
@@ -2208,6 +2208,8 @@
 "memory.category.notes" = "ملاحظات";
 "memory.category.recordProject" = "مشروع كسر الرقم";
 "memory.cat.weekly" = "ذاكرة الأسبوع";
+"memory.cat.challenge" = "التحديات";
+"memory.key.challenge" = "تحدي";
 "memory.key.name" = "الاسم";
 "memory.key.weight" = "الوزن";
 "memory.key.height" = "الطول";
@@ -2471,13 +2473,74 @@
 "gym.quest.s1q4.howTo1" = "سجّل جلسات زون 2 بشكل منتظم.";
 "gym.quest.s1q4.howTo2" = "ابدأ بـ 20د ثم ارفعها إلى 30د ثم 40د.";
 "gym.quest.s1q4.howTo3" = "حدّث الدقائق من زر تسجيل الجلسة.";
-"gym.quest.s1q5.explanation" = "مهمة تأسيس لمرة واحدة: احفظ أول خطة Kitchen حتى يفهم AiQo خطك الغذائي الأساسي.";
-"gym.quest.s1q5.benefit1" = "يثبّت السلوك اليومي ويقلل العشوائية.";
-"gym.quest.s1q5.benefit2" = "يساعد AiQo يعطيك اقتراحات وجبات أفضل.";
-"gym.quest.s1q5.benefit3" = "يقلل تعب القرارات اليومية حول الوجبات.";
-"gym.quest.s1q5.howTo1" = "افتح شاشة Kitchen من الصفحة الرئيسية.";
-"gym.quest.s1q5.howTo2" = "أنشئ/احفظ خطة وجباتك.";
-"gym.quest.s1q5.howTo3" = "تكتمل المهمة تلقائيًا بعد حفظ الخطة.";
+"gym.quest.s1qLearn.explanation" = "مهمة بداية لمرة واحدة: أكمل كورس قصير ومحدد حتى تبني عادة التعلّم وتثبت لنفسك أنك تقدر تبدأ وتكمل.";
+"gym.quest.s1qLearn.benefit1" = "يرفع ثقة المستخدم بنفسه عبر إنجاز معرفي واضح.";
+"gym.quest.s1qLearn.benefit2" = "يزرع عادة التعلّم داخل مسار AiQo من البداية.";
+"gym.quest.s1qLearn.benefit3" = "يحوّل المستخدم من متلقّي إلى شخص يتقدّم بوعي.";
+"gym.quest.s1qLearn.howTo1" = "استعرض الكورسات واختر مسار التعلّم المناسب.";
+"gym.quest.s1qLearn.howTo2" = "أكمل الكورس بالكامل.";
+"gym.quest.s1qLearn.howTo3" = "أرسل إثبات الإنجاز وانتظر التحقق.";
+
+// Learning Quest UI (شرارة التعلم)
+"gym.quest.source.learning" = "مساران للتعلّم";
+"gym.quest.learning.exploreCourses" = "استعرض الكورسات";
+"gym.quest.learning.submitProof" = "أثبت التقدّم";
+"gym.quest.learning.options.title" = "خيارات التعلّم";
+"gym.quest.learning.options.intro" = "اختر المسار اللي يناسبك. كل الكورسات مجانية ومختارة بعناية لتبني عادة التعلّم.";
+"gym.quest.learning.options.platform" = "المنصة";
+"gym.quest.learning.options.language" = "اللغة";
+"gym.quest.learning.options.free" = "مجاني";
+"gym.quest.learning.options.openSource" = "فتح المصدر";
+"gym.quest.learning.options.selected" = "الخيار المختار";
+"gym.quest.learning.options.selectRequired" = "اختر خيار تعلّم أولاً.";
+"gym.quest.learning.language.arabic" = "العربية";
+"gym.quest.learning.language.english" = "الإنجليزية";
+"gym.quest.learning.option.edraak.provider" = "إدراك";
+"gym.quest.learning.option.edraak.description" = "ابنِ خطة واضحة لمسارك المهني وطوّر قرارك الذاتي.";
+"gym.quest.learning.option.english.provider" = "كورس عالمي";
+"gym.quest.learning.option.english.description" = "افهم كيف يعمل دماغك في التعلّم وادرس بذكاء أعلى.";
+"gym.quest.learning.proof.title" = "إثبات الكورس";
+"gym.quest.learning.proof.forCourse" = "تُثبت إنجازك لهذا الكورس:";
+"gym.quest.learning.proof.certificateHeader" = "شهادة الكورس";
+"gym.quest.learning.proof.uploadImage" = "رفع صورة الشهادة";
+"gym.quest.learning.proof.replaceImage" = "استبدال الصورة";
+"gym.quest.learning.proof.linkHeader" = "رابط الشهادة";
+"gym.quest.learning.proof.linkPlaceholder" = "الصق رابط الشهادة هنا";
+"gym.quest.learning.proof.submitForVerification" = "أرسل إثبات الإنجاز";
+"gym.quest.learning.proof.submitting" = "جارٍ التحقق...";
+"gym.quest.learning.proof.retryVerification" = "أعد المحاولة";
+"gym.quest.learning.proof.verified" = "مكتمل";
+"gym.quest.learning.proof.errorImageLoad" = "تعذّر تحميل الصورة";
+"gym.quest.learning.proof.errorInvalidURL" = "الرابط غير صالح.";
+"gym.quest.learning.proof.errorDomain" = "الرابط يجب أن يكون من %@.";
+"gym.quest.learning.status.notSubmitted" = "غير مكتمل";
+"gym.quest.learning.status.pending" = "قيد التحقق";
+"gym.quest.learning.status.verified" = "مكتمل";
+"gym.quest.learning.status.rejected" = "مرفوض — أعد المحاولة";
+"gym.quest.learning.status.needsReview" = "بانتظار المراجعة";
+
+// Consent sheet
+"gym.quest.learning.consent.title" = "التحقق من الشهادة";
+"gym.quest.learning.consent.body" = "كابتن حمودي راح يتحقق من شهادتك مباشرة على جهازك باستخدام ذكاء Apple. الصورة ما تغادر هاتفك أبداً.";
+"gym.quest.learning.consent.accept" = "موافق، ابدأ";
+"gym.quest.learning.consent.later" = "لاحقاً";
+
+// URL badge
+"gym.quest.learning.url.trusted" = "منصة موثوقة";
+"gym.quest.learning.url.untrusted" = "منصة غير معروفة";
+"gym.quest.learning.url.invalid" = "رابط غير صالح";
+
+// Progressive UI states
+"gym.quest.learning.change" = "تغيير";
+"gym.quest.learning.selectedCourse" = "الكورس المختار";
+"gym.quest.learning.verifying" = "كابتن حمودي يتحقق...";
+"gym.quest.learning.rateLimit.contact" = "تواصل معانا";
+"learning.platform.edraak" = "إدراك";
+"learning.platform.coursera" = "Coursera";
+"learning.platform.rwaq" = "رواق";
+"learning.platform.maharah" = "مهارة";
+"learning.platform.edx" = "edX";
+"learning.platform.youtube" = "يوتيوب";
 "gym.quest.s2q1.explanation" = "تحدي بالكاميرا يقيس دقة أداء الضغط.";
 "gym.quest.s2q1.benefit1" = "يبني قوة الجزء العلوي من الجسم.";
 "gym.quest.s2q1.benefit2" = "يحسّن دقة الحركة والتحكم.";
@@ -2828,9 +2891,9 @@
 "ai.consent.title" = "موافقة استخدام بيانات الذكاء الاصطناعي";
 "ai.consent.subtitle" = "قبل أن يرسل AiQo أي سياق شخصي إلى خدمات ذكاء اصطناعي سحابية، نحتاج موافقتك.";
 "ai.consent.what.title" = "ما الذي قد يُرسل";
-"ai.consent.what.detail" = "الرسائل التي تكتبها للكابتن، والسياق المحدود اللازم للإجابة، وملخصات الصحة والعافية عند الحاجة، وصور المطبخ المنقحة لتحليل الطعام أو الثلاجة، والنص المُنشأ الذي يُرسل إلى ElevenLabs فقط عندما تختار تشغيل الصوت.";
+"ai.consent.what.detail" = "الرسائل التي تكتبها للكابتن، والسياق المحدود اللازم للإجابة، وملخصات الصحة والعافية عند الحاجة، وصور المطبخ المنقحة لتحليل الطعام أو الثلاجة. تشغيل صوت الكابتن يعتمد على محرك تحويل النص إلى كلام المدمج في iOS ولا يُرسل أي شيء إلى السحابة.";
 "ai.consent.who.title" = "من يستلم البيانات";
-"ai.consent.who.detail" = "تستلم Google Gemini البيانات لردود الذكاء الاصطناعي والخطط والتحليلات. وتستلم ElevenLabs النص المُنشأ فقط عند استخدام تشغيل الصوت.";
+"ai.consent.who.detail" = "تستلم Google Gemini البيانات لردود الذكاء الاصطناعي والخطط والتحليلات. تشغيل صوت الكابتن يعمل بالكامل على جهازك عبر محرك تحويل النص إلى كلام المدمج في iOS.";
 "ai.consent.why.title" = "لماذا تُرسل";
 "ai.consent.why.detail" = "لإنشاء ردود تدريبية، واقتراحات تمارين أو وجبات، وفهم صور المطبخ، وتشغيل الصوت الاختياري.";
 "ai.consent.notSent.title" = "ما الذي لا يُرسل";
@@ -2871,3 +2934,37 @@
 "captain.offlineBanner.title" = "بدون مشاركة بيانات";
 "captain.offlineBanner.body" = "اخترت ألا تتم مشاركة البيانات مع خدمات الذكاء الاصطناعي السحابية. يمكنك تغيير ذلك من الإعدادات.";
 "captain.offlineBanner.action" = "فتح الإعدادات";
+
+/* Learning Spark Stage 2 — 5-course picker replacing Plank Ladder. URL-optional polish. */
+"learningSpark.stage2.title" = "شرارة التعلم";
+"learningSpark.stage2.subtitle" = "أكمل كورس واحد من خمسة واستمر بمسار التعلّم";
+"learningSpark.stage2.picker.header" = "اختر الكورس اللي يلهمك الآن — تقدر تجرب غيره بالمرحلة الجاية";
+"learningSpark.proof.url.label.optional" = "رابط الشهادة (اختياري)";
+"learningSpark.proof.url.placeholder.optional" = "الصق الرابط هنا إذا أردت (غير مطلوب)";
+"learningSpark.stage2.soon" = "قريباً";
+"learningSpark.stage2.soon.subtitle" = "تحدي جديد قيد التحضير";
+"learningSpark.stage2.levels" = "كورس مجاني واحد";
+"learningSpark.course.duration.with_audit" = "~%d ساعة (مع الـ audit المجاني)";
+"gym.quest.celebration.today_at.format" = "اليوم الساعة %@";
+"gym.quest.detail.reward_xp.format" = "+%d XP عند إكمال التحدي";
+
+"gym.quest.learning.proof.status.a11y" = "حالة الشهادة: {status}";
+"legal.acknowledgements.title" = "شكر للمصادر المفتوحة";
+"settings.legal.acknowledgements" = "شكر للمكتبات مفتوحة المصدر";
+
+// Health screening onboarding gate (Guideline 1.4.1 — age & condition gating)
+"onboarding.healthScreening.title" = "فحص صحي سريع";
+"onboarding.healthScreening.subtitle" = "سؤالين قبل ما كابتن حمّودي يقدر يدرّبك بأمان. إجاباتك تبقى على هاي الجهاز.";
+"onboarding.healthScreening.birthYear.label" = "شنو سنة ميلادك؟";
+"onboarding.healthScreening.birthYear.placeholder" = "مثلاً 1995";
+"onboarding.healthScreening.birthYear.hint" = "AiQo مخصص للكبار +18. ما نحتاج تاريخ الميلاد كامل — فقط السنة.";
+"onboarding.healthScreening.conditions.label" = "أي شي لازم نعرفه؟";
+"onboarding.healthScreening.conditions.hint" = "اختياري بس مهم — إذا أشّرت أي حالة راح يخفّف كابتن التوصيات العالية الشدة.";
+"onboarding.healthScreening.condition.pregnant" = "حامل حالياً";
+"onboarding.healthScreening.condition.heart" = "عندي مرض قلب أو ضغط";
+"onboarding.healthScreening.condition.surgery" = "مريت بعملية جراحية خلال آخر 6 أشهر";
+"onboarding.healthScreening.privacy.footnote" = "الإجابات ما تغادر جهازك. AiQo لا يشخّص ولا يعالج الحالات الطبية — استشر طبيبك قبل أي برنامج جديد.";
+"onboarding.healthScreening.continue" = "متابعة";
+"onboarding.healthScreening.underAge.title" = "AiQo للكبار فوق 18";
+"onboarding.healthScreening.underAge.body" = "AiQo يقدّم تدريب لياقة وعافية عامّة مخصصة للكبار. ما نكدر نعطيك خطة شخصية حالياً.";
+"onboarding.healthScreening.underAge.support" = "إذا تعتقد هذا غلط، تواصل معنا: support@aiqo.app.";

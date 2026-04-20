@@ -12,6 +12,7 @@ struct SmartFridgeScannerView: View {
     @StateObject private var viewModel = SmartFridgeCameraViewModel()
     @State private var persistedResultID: UUID?
     @State private var scanLineTravel: CGFloat = -140
+    @State private var showPaywall = false
 
     private let neonBlue = Color(red: 0.34, green: 0.84, blue: 1.00)
     private let platinum = Color(red: 0.92, green: 0.95, blue: 1.00)
@@ -26,6 +27,9 @@ struct SmartFridgeScannerView: View {
         .background(Color.black.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .statusBarHidden(false)
+        .sheet(isPresented: $showPaywall) {
+            PremiumPaywallView(source: .featureGate)
+        }
         .onAppear {
             startScanner()
         }
@@ -179,6 +183,13 @@ struct SmartFridgeScannerView: View {
                                 .foregroundStyle(platinum.opacity(0.72))
 
                             Button {
+                                if !DevOverride.unlockAllFeatures {
+                                    guard TierGate.shared.canAccess(.captainChat) else {
+                                        diag.info("SmartFridgeScannerView capture blocked by TierGate(.captainChat)")
+                                        showPaywall = true
+                                        return
+                                    }
+                                }
                                 guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else {
                                     return
                                 }
@@ -304,6 +315,9 @@ struct SmartFridgeScannerView: View {
         guard !items.isEmpty else { return }
 
         kitchenStore.addFridgeItems(items)
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.photoAnalysis) else { return }
+        }
 
         let stamp = Date()
         for item in items {

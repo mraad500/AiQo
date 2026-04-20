@@ -249,6 +249,8 @@ struct QuestDetailView: View {
             return isActionCompleted(progress: progress) ? questLocalizedText("gym.quest.done") : questLocalizedText("gym.quest.openKitchen")
         case .share:
             return questLocalizedText("gym.quest.shareAchievement")
+        case .learning:
+            return questLocalizedText("gym.quest.learning.startCourse")
         }
     }
 
@@ -317,6 +319,11 @@ struct QuestDetailView: View {
 
         case .share:
             showShareSheet = true
+
+        case .learning:
+            // Learning quests present their course options via the active QuestDetailSheet
+            // flow; this legacy view does not open external links directly.
+            break
         }
     }
 

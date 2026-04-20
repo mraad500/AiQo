@@ -20,6 +20,10 @@ struct QuestDetailSheet: View {
     @State private var showHealthSetupAlert = false
     @State private var healthSetupAlertMessage = ""
     @State private var timerNow = Date()
+    @State private var showLearningProof = false
+    @State private var showLearningOptions = false
+
+    @ObservedObject private var learningProofStore = LearningProofStore.shared
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -28,93 +32,96 @@ struct QuestDetailSheet: View {
         let cardProgress = engine.cardProgress(for: quest)
 
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .trailing, spacing: 20) {
+            VStack(alignment: .trailing, spacing: 14) {
 
-                // Badge image — centered, large
-                Image(quest.rewardImageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
+                // Badge image — compact so the full detail sheet fits without scroll.
+                QuestRewardImageView(quest: quest, size: 78)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 8)
 
                 // Quest name
                 Text(questLocalizedText(quest.localizedTitleKey))
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color(hex: "1A1A1A"))
 
                 // Source badge
                 Text(sourceText)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color(hex: "666666"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                     .background(
                         Capsule().fill(Color(hex: "F5F5F5"))
                     )
 
+                // XP reward hint — shown only when the quest has a product-decided
+                // XP value in `QuestXPRewards`. Positioned between the source badge
+                // and the "Challenge" section so the user sees the reward up front.
+                if let xp = QuestXPRewards.xp(for: quest) {
+                    rewardXPPill(xp: xp)
+                }
+
                 // Challenge section
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text(questLocalizedText("gym.quest.challenge"))
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
                     Text(content.explanation)
-                        .font(.system(size: 15, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(Color(hex: "444444"))
                         .multilineTextAlignment(.trailing)
-                        .lineSpacing(6)
+                        .lineSpacing(3)
                 }
 
                 // Benefit section
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text(questLocalizedText("gym.quest.benefit"))
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
                     ForEach(content.benefits, id: \.self) { benefit in
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Text(benefit)
-                                .font(.system(size: 14, weight: .regular))
+                                .font(.system(size: 13, weight: .regular))
                                 .foregroundStyle(Color(hex: "444444"))
                                 .multilineTextAlignment(.trailing)
 
                             Circle()
                                 .fill(Color(hex: "B7E5D2"))
-                                .frame(width: 6, height: 6)
+                                .frame(width: 5, height: 5)
                         }
                     }
                 }
 
                 // How to complete section
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text(questLocalizedText("gym.quest.howToComplete"))
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
 
                     ForEach(Array(content.howTo.enumerated()), id: \.offset) { index, step in
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Text(step)
-                                .font(.system(size: 14, weight: .regular))
+                                .font(.system(size: 13, weight: .regular))
                                 .foregroundStyle(Color(hex: "444444"))
                                 .multilineTextAlignment(.trailing)
 
                             Text("\(index + 1)")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.white)
-                                .frame(width: 22, height: 22)
+                                .frame(width: 19, height: 19)
                                 .background(Circle().fill(Color(hex: "EBCF97")))
                         }
                     }
                 }
 
                 // Current progress
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .trailing, spacing: 5) {
                     HStack {
                         Text(statusText(progress: progress))
-                            .font(.system(size: 12, weight: .medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
+                            .font(.system(size: 11, weight: .medium))
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 3)
                             .background(
                                 Capsule().fill(
                                     progress.currentTier >= 3
@@ -126,12 +133,12 @@ struct QuestDetailSheet: View {
                         Spacer()
 
                         Text(questLocalizedText("gym.quest.currentProgress"))
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Color(hex: "1A1A1A"))
                     }
 
                     Text(questProgressText(for: quest, progress: cardProgress))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(hex: "1A1A1A"))
                         .monospacedDigit()
                 }
@@ -142,17 +149,18 @@ struct QuestDetailSheet: View {
 
                 if let healthMessage {
                     Text(healthMessage)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
 
-                Spacer(minLength: 20)
+                Spacer(minLength: 6)
 
                 // Action button
                 actionButton(progress: progress, cardProgress: cardProgress)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 34)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 20)
         }
         .alert(questLocalizedText("quests.vision.camera.denied.title"), isPresented: $cameraPermissionDenied) {
             Button(questLocalizedText("quests.vision.camera.open_settings")) {
@@ -237,6 +245,31 @@ struct QuestDetailSheet: View {
         } message: {
             Text(healthSetupAlertMessage)
         }
+    }
+
+    // MARK: - Reward XP Pill
+
+    /// Sand-toned capsule that makes the XP reward explicit before the user reads the
+    /// challenge details. Matches the celebration-sheet XP pill visual so the user
+    /// sees a consistent "this much XP" token both before and after completion.
+    @ViewBuilder
+    private func rewardXPPill(xp: Int) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 12, weight: .bold))
+            Text(String(
+                format: questLocalizedText("gym.quest.detail.reward_xp.format"),
+                locale: questAppLocale(),
+                xp
+            ))
+            .font(.system(size: 12, weight: .heavy, design: .rounded))
+            .monospacedDigit()
+        }
+        .foregroundStyle(Color(hex: "6B5B2E"))
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Color(hex: "F5E4B4")))
+        .overlay(Capsule().stroke(Color(hex: "EBCF97"), lineWidth: 0.8))
     }
 
     // MARK: - Action Button
@@ -439,7 +472,403 @@ struct QuestDetailSheet: View {
                                 .fill(Color(hex: "EBCF97"))
                         )
                 }
+
+            case .learning:
+                learningActionStack(progress: progress)
             }
+        }
+    }
+
+    // MARK: - Learning Action Stack
+
+    @ViewBuilder
+    private func learningActionStack(progress: QuestProgressRecord) -> some View {
+        let config = LearningChallengeRegistry.config(for: quest.id)
+        let record = learningProofStore.record(for: quest.id)
+        let selectedOption = config.option(withId: record.selectedCourseOptionId)
+        let status = record.lastResult.status
+
+        VStack(spacing: 10) {
+            // State A — no course selected: show only "استعرض الكورسات".
+            if selectedOption == nil {
+                exploreCoursesButton
+            }
+
+            // State B/C/D/E — a course is selected; layout depends on status.
+            if let selectedOption {
+                selectedCoursePill(option: selectedOption)
+
+                switch status {
+                case .pending:
+                    // State C — verification in progress.
+                    verifyingPill
+                case .verified:
+                    // State E — handled by the surrounding `isCompleted` branch which
+                    // renders the common "Completed" card. We still expose the success
+                    // Captain message to let the user read it.
+                    if let message = record.lastResult.notes {
+                        captainMessageCard(text: message, tint: Color(hex: "B7E5D2"))
+                    }
+                case .needsReview:
+                    // State D — needs review. Retry button re-runs the verifier using
+                    // the already-uploaded image stored on disk.
+                    needsReviewRow(record: record, option: selectedOption)
+                case .rejected, .notSubmitted:
+                    // State B — ready to submit proof. Also re-entry from a rejection.
+                    submitProofButton
+                    if status == .rejected, let reason = record.lastResult.rejectionReason {
+                        Text(reason)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color(hex: "B24545"))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: status)
+        .animation(.easeInOut(duration: 0.25), value: record.selectedCourseOptionId)
+        .sheet(isPresented: $showLearningOptions) {
+            LearningCourseOptionsSheet(
+                quest: quest,
+                config: config,
+                proofStore: learningProofStore
+            )
+        }
+        .sheet(isPresented: $showLearningProof) {
+            if let option = selectedOption {
+                LearningProofSubmissionView(
+                    quest: quest,
+                    option: option,
+                    onVerified: {
+                        engine.finishQuestSession(
+                            questId: quest.id,
+                            sessionResult: .manualConfirmed(count: 1)
+                        )
+                        onComplete(quest)
+                    },
+                    proofStore: learningProofStore
+                )
+            }
+        }
+    }
+
+    // MARK: - Learning Sub-Views (5 states)
+
+    /// State A — nothing selected. Single primary CTA opens the internal options sheet.
+    private var exploreCoursesButton: some View {
+        Button(action: { showLearningOptions = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "book.closed.fill")
+                Text(questLocalizedText("gym.quest.learning.exploreCourses"))
+            }
+            .font(.system(size: 17, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "EBCF97"))
+            )
+        }
+    }
+
+    /// Card showing the currently selected course + a "تغيير" action to re-open the
+    /// options sheet. Always rendered on States B/C/D/E. Visual matches the rest of
+    /// the app: rounded 18pt card, white-translucent fill, mint-stroked "selected"
+    /// indicator, content rows for title, platform, and hours.
+    @ViewBuilder
+    private func selectedCoursePill(option: LearningCourseOption) -> some View {
+        VStack(alignment: .trailing, spacing: 8) {
+
+            // Top row — section label + icon on the trailing edge, "Change" action
+            // pill on the leading edge. HStack order is written LTR; SwiftUI mirrors
+            // automatically under the app's RTL environment.
+            HStack(spacing: 8) {
+                Button(action: { showLearningOptions = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.2.circlepath")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(questLocalizedText("gym.quest.learning.change"))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(Color(hex: "1A1A1A"))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color(hex: "EBCF97").opacity(0.55)))
+                    .contentShape(Capsule())
+                    .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 5) {
+                    Text(questLocalizedText("gym.quest.learning.selectedCourse"))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color(hex: "666666"))
+                    Image(systemName: "graduationcap.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color(hex: "6B5B2E"))
+                }
+            }
+
+            // Course title — the primary content of the card.
+            Text(option.title)
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // Metadata row — platform + estimated hours pills.
+            HStack(spacing: 6) {
+                Text(String(
+                    format: questLocalizedText("learningSpark.course.duration.with_audit"),
+                    locale: questAppLocale(),
+                    option.course.estimatedHours
+                ))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "6B5B2E"))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color(hex: "F5E4B4")))
+
+                Text(questLocalizedText(option.providerDisplayKey))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color(hex: "F5F5F5")))
+
+                Spacer()
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(hex: "B7E5D2"), lineWidth: 1.0)
+        )
+        .shadow(color: Color(hex: "B7E5D2").opacity(0.15), radius: 6, x: 0, y: 3)
+    }
+
+    /// State B — ready to submit proof.
+    private var submitProofButton: some View {
+        Button(action: { showLearningProof = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                Text(questLocalizedText("gym.quest.learning.submitProof"))
+            }
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(hex: "B7E5D2"))
+            )
+        }
+    }
+
+    /// State C — verification in progress. Disabled pill.
+    private var verifyingPill: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+            Text(questLocalizedText("gym.quest.learning.verifying"))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(hex: "FDE2A7").opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(hex: "1A1A1A").opacity(0.08), lineWidth: 0.6)
+        )
+    }
+
+    /// State D — needs review; retry button re-runs verify() using the stored image.
+    @ViewBuilder
+    private func needsReviewRow(record: LearningProofRecord, option: LearningCourseOption) -> some View {
+        if let message = record.lastResult.notes {
+            captainMessageCard(text: message, tint: Color(hex: "FDE2A7"))
+        }
+
+        Button(action: {
+            retryLearningVerification(record: record, option: option)
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise")
+                Text(questLocalizedText("gym.quest.learning.proof.retryVerification"))
+            }
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(hex: "1A1A1A"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(hex: "EBCF97"))
+            )
+        }
+    }
+
+    /// Small Captain-voiced message card. Used for State D/E + post-rejection copy.
+    @ViewBuilder
+    private func captainMessageCard(text: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "heart.text.square.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+            Text(text)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(tint.opacity(0.35))
+        )
+    }
+
+    /// Re-runs the on-device verifier using the already-stored certificate image,
+    /// without forcing the user back into the submission sheet. Useful after an iOS
+    /// upgrade that newly exposes Apple Intelligence.
+    private func retryLearningVerification(record: LearningProofRecord, option: LearningCourseOption) {
+        guard let image = learningProofStore.loadCertificateImage(record.certificateImageRelativePath) else {
+            showLearningProof = true
+            return
+        }
+
+        var pending = record
+        pending.lastResult = LearningProofVerificationResult(
+            status: .pending,
+            confidence: nil,
+            extractedName: nil,
+            extractedCourseTitle: nil,
+            extractedProvider: nil,
+            extractedCertificateURL: record.certificateURL,
+            rejectionReason: nil,
+            notes: nil
+        )
+        learningProofStore.updateRecord(pending)
+
+        let firstName = Self.resolveFirstName()
+        Task {
+            let verdict = await CertificateVerifier.shared.verify(
+                image: image,
+                course: option.course,
+                userFirstName: firstName,
+                questId: quest.id
+            )
+            await MainActor.run {
+                applyRetryVerdict(verdict, questId: quest.id, certificateURL: record.certificateURL ?? "")
+            }
+        }
+    }
+
+    private func applyRetryVerdict(_ verdict: CertificateVerifier.Result, questId: String, certificateURL: String) {
+        switch verdict {
+        case let .verified(confidence, message):
+            let result = LearningProofVerificationResult(
+                status: .verified,
+                confidence: confidence,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: nil,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+            engine.finishQuestSession(
+                questId: questId,
+                sessionResult: .manualConfirmed(count: 1)
+            )
+            onComplete(quest)
+        case let .needsReview(reason, message):
+            let result = LearningProofVerificationResult(
+                status: .needsReview,
+                confidence: nil,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: reason,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+        case let .rejected(reason, message):
+            let result = LearningProofVerificationResult(
+                status: .rejected,
+                confidence: nil,
+                extractedName: nil,
+                extractedCourseTitle: nil,
+                extractedProvider: nil,
+                extractedCertificateURL: certificateURL,
+                rejectionReason: reason,
+                notes: message
+            )
+            learningProofStore.applyVerificationResult(questId: questId, result: result)
+        }
+    }
+
+    private static func resolveFirstName() -> String {
+        let profile = UserProfileStore.shared.current
+        let trimmed = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return String(trimmed.split(separator: " ").first ?? Substring(trimmed))
+        }
+        let username = (profile.username ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(username.split(separator: " ").first ?? Substring(username))
+    }
+
+    @ViewBuilder
+    private func learningStatusRow(status: LearningProofVerificationStatus) -> some View {
+        HStack {
+            Spacer()
+            Text(learningStatusText(status))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(learningStatusTint(status)))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+        }
+    }
+
+    private func learningStatusText(_ status: LearningProofVerificationStatus) -> String {
+        switch status {
+        case .notSubmitted:
+            return questLocalizedText("gym.quest.learning.status.notSubmitted")
+        case .pending:
+            return questLocalizedText("gym.quest.learning.status.pending")
+        case .verified:
+            return questLocalizedText("gym.quest.learning.status.verified")
+        case .rejected:
+            return questLocalizedText("gym.quest.learning.status.rejected")
+        case .needsReview:
+            return questLocalizedText("gym.quest.learning.status.needsReview")
+        }
+    }
+
+    private func learningStatusTint(_ status: LearningProofVerificationStatus) -> Color {
+        switch status {
+        case .notSubmitted: return Color(hex: "F5F5F5")
+        case .pending: return Color(hex: "FDE2A7").opacity(0.9)
+        case .verified: return Color(hex: "B7E5D2")
+        case .rejected: return Color(hex: "F7C7C7")
+        case .needsReview: return Color(hex: "F6C77A").opacity(0.9)
         }
     }
 
@@ -598,14 +1027,18 @@ enum QuestSheetContentProvider {
         switch quest.id {
         case "s1q1":
             return localizedContent(prefix: "gym.quest.s1q1")
+        case QuestDefinition.learningSparkQuestID,
+             QuestDefinition.learningSparkStage2QuestID:
+            // Stage 2 Learning Spark reuses Stage 1's explanation/benefits/howTo
+            // strings — the thematic intent is identical (complete a course to
+            // build the learning habit). Per approved design decision 2026-04-19.
+            return localizedContent(prefix: "gym.quest.s1qLearn")
         case "s1q2":
             return localizedContent(prefix: "gym.quest.s1q2")
         case "s1q3":
             return localizedContent(prefix: "gym.quest.s1q3")
         case "s1q4":
             return localizedContent(prefix: "gym.quest.s1q4")
-        case "s1q5":
-            return localizedContent(prefix: "gym.quest.s1q5")
         case "s2q1":
             return localizedContent(prefix: "gym.quest.s2q1")
         case "s2q2":
@@ -824,6 +1257,18 @@ enum QuestSheetContentProvider {
                 "اختَر إنجازاً لمشاركته.",
                 "اضغط زر المشاركة.",
                 "شارك مع المجتمع."
+            ]
+        case .learning:
+            explanation = questLocalizedText("gym.quest.s1qLearn.explanation")
+            benefits = [
+                questLocalizedText("gym.quest.s1qLearn.benefit1"),
+                questLocalizedText("gym.quest.s1qLearn.benefit2"),
+                questLocalizedText("gym.quest.s1qLearn.benefit3")
+            ]
+            howTo = [
+                questLocalizedText("gym.quest.s1qLearn.howTo1"),
+                questLocalizedText("gym.quest.s1qLearn.howTo2"),
+                questLocalizedText("gym.quest.s1qLearn.howTo3")
             ]
         }
 

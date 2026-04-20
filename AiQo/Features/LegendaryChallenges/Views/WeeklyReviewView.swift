@@ -11,6 +11,7 @@ struct WeeklyReviewView: View {
     @State private var isSubmitting = false
     @State private var showResult = false
     @State private var reviewResult: ReviewResult?
+    @State private var showPaywall = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -52,6 +53,9 @@ struct WeeklyReviewView: View {
                     dismiss()
                 }
             }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PremiumPaywallView(source: .featureGate)
         }
     }
 
@@ -257,6 +261,14 @@ struct WeeklyReviewView: View {
     // MARK: - Submit Logic
 
     private func submitReview() {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("WeeklyReviewView.submitReview blocked by TierGate(.captainChat)")
+                showPaywall = true
+                return
+            }
+        }
+
         isSubmitting = true
 
         Task {
@@ -304,6 +316,19 @@ struct WeeklyReviewView: View {
     }
 
     private func sendReviewToLLM() async -> ReviewResult? {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.weeklyInsightsNarrative) else {
+                return WeeklyReviewTemplateGenerator.generate(
+                    project: project,
+                    currentWeight: sanitizedNumber(currentWeight),
+                    bestPerformance: sanitizedNumber(bestPerformance),
+                    feedback: feedback,
+                    weekRating: weekRating,
+                    selectedObstacle: selectedObstacle
+                )
+            }
+        }
+
         let hasConsent = await MainActor.run {
             AIDataConsentManager.shared.ensureConsent(presentIfPossible: true)
         }

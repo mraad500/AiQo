@@ -20,38 +20,43 @@ enum PremiumExpiryNotifier {
     ]
 
     static func scheduleAllNotifications(_ expiresAt: Date) {
-        let center = UNUserNotificationCenter.current()
-        clearScheduledNotifications(center: center)
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("PremiumExpiryNotifier.scheduleAllNotifications blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
+        clearScheduledNotifications(center: .current())
 
         let notifications = plannedNotifications(for: expiresAt)
-        let calendar = Calendar.current
+        let expiresAtString = String(expiresAt.timeIntervalSince1970)
 
         for notification in notifications {
-            let content = UNMutableNotificationContent()
-            content.title = notification.title
-            content.body = notification.body
-            content.sound = .default
-            content.userInfo = [
+            let intent = NotificationIntent(
+                kind: .trialDay,
+                requestedBy: "PremiumExpiryNotifier"
+            )
+            let fireDate = notification.fireDate
+            let userInfo: [String: String] = [
                 "source": "premium_expiry",
-                "expiresAt": expiresAt.timeIntervalSince1970
+                "expiresAt": expiresAtString
             ]
-
-            let dateComponents = calendar.dateComponents(
-                [.year, .month, .day, .hour, .minute, .second],
-                from: notification.fireDate
-            )
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
-            let request = UNNotificationRequest(
-                identifier: notification.identifier,
-                content: content,
-                trigger: trigger
-            )
-
-            center.add(request) { error in
-                if let error {
-                    print("🔔 Failed to schedule premium notification \(notification.identifier): \(error)")
+            let identifier = notification.identifier
+            let title = notification.title
+            let body = notification.body
+            Task {
+                let result = await NotificationBrain.shared.request(
+                    intent,
+                    fireDate: fireDate,
+                    precomposedTitle: title,
+                    precomposedBody: body,
+                    userInfo: userInfo,
+                    identifier: identifier
+                )
+                if result.deliveredAt != nil {
+                    diag.info("Scheduled premium notification \(identifier) for \(fireDate)")
                 } else {
-                    print("🔔 Scheduled premium notification \(notification.identifier) for \(notification.fireDate)")
+                    diag.info("Premium notification \(identifier) not scheduled: \(String(describing: result.decision))")
                 }
             }
         }
@@ -102,6 +107,6 @@ enum PremiumExpiryNotifier {
     private static func clearScheduledNotifications(center: UNUserNotificationCenter) {
         center.removePendingNotificationRequests(withIdentifiers: allIdentifiers)
         center.removeDeliveredNotifications(withIdentifiers: allIdentifiers)
-        print("🔔 Cleared previous premium expiry notifications.")
+        diag.info("Cleared previous premium expiry notifications.")
     }
 }

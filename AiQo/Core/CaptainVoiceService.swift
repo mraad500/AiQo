@@ -21,9 +21,6 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     )
     private let speechSynthesizer = AVSpeechSynthesizer()
 
-    private let voiceCache = CaptainVoiceCache.shared
-
-    private var audioPlayer: AVAudioPlayer?
     private var playContinuation: CheckedContinuation<Void, Never>?
     private var hasActiveSpeechSession = false
     private var externalMixedPlaybackClients = 0
@@ -45,15 +42,10 @@ final class CaptainVoiceService: NSObject, ObservableObject {
             try beginSpeechSession()
             isSpeaking = true
 
-            if await playRemoteSpeechIfAvailable(for: sanitizedText, sequence: speechSequence) {
-                return
-            }
-
             guard speechSequence == activeSpeechSequence else { return }
 
             speechSynthesizer.speak(makeUtterance(for: sanitizedText))
 
-            // Wait for AVSpeechSynthesizer delegate with a safety timeout (max 60s for long text)
             await awaitPlaybackCompletion(timeout: 60)
         } catch {
             if speechSequence == activeSpeechSequence {
@@ -75,11 +67,6 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         if speechSynthesizer.isSpeaking || speechSynthesizer.isPaused {
             speechSynthesizer.stopSpeaking(at: .immediate)
         }
-
-        if audioPlayer?.isPlaying == true {
-            audioPlayer?.stop()
-        }
-        audioPlayer = nil
 
         endSpeechSession()
     }
@@ -105,6 +92,10 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     func endExternalMixedPlayback() {
         externalMixedPlaybackClients = max(0, externalMixedPlaybackClients - 1)
     }
+
+    /// No-op retained for callers that still invoke voice pre-warming. The app now
+    /// uses only the on-device AVSpeechSynthesizer, so there is nothing to pre-cache.
+    func preCacheVoices() async {}
 
     private func sanitizedSpeechText(_ text: String) -> String {
         text
@@ -197,57 +188,6 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         activeSpeechSequence += 1
     }
 
-    /// Maximum time to wait for ElevenLabs TTS before falling back to AVSpeechSynthesizer.
-    /// The network call itself has an 8-second timeout in CaptainVoiceAPI; this is the outer
-    /// safety net that also covers audio decoding and playback start.
-    private static let remoteSpeechTimeout: TimeInterval = 10
-
-    /// **Fix (2026-04-08):** Added timeout race around the entire remote speech path.
-    /// Before: if ElevenLabs hung (QUIC retry loop) or the audio player delegate never fired,
-    /// the `withCheckedContinuation` would suspend forever, leaving `isSpeaking = true` and
-    /// the Main Thread blocked. Now:
-    /// 1. The ElevenLabs call races against a 10-second deadline
-    /// 2. On timeout or any error, returns `false` immediately → caller falls through to AVSpeech
-    /// 3. The continuation has a safety timeout so it can never leak
-    private func playRemoteSpeechIfAvailable(for text: String, sequence: Int) async -> Bool {
-        // Check voice cache first (instant, offline)
-        if let cachedAudio = await voiceCache.matchedAudio(for: text) {
-            guard sequence == activeSpeechSequence else { return true }
-            do {
-                try playRemoteAudio(data: cachedAudio)
-                await awaitPlaybackCompletion(timeout: Self.remoteSpeechTimeout)
-                return true
-            } catch {
-                logger.error("captain_voice_cache_playback_failed error=\(error.localizedDescription, privacy: .public)")
-            }
-        }
-
-        guard CaptainVoiceAPI.isConfigured else { return false }
-
-        do {
-            // Race the network call against a strict timeout
-            let audioData = try await withThrowingTimeout(seconds: Self.remoteSpeechTimeout) {
-                try await CaptainVoiceAPI.synthesizeSpeech(for: text)
-            }
-            guard sequence == activeSpeechSequence else { return true }
-
-            try playRemoteAudio(data: audioData)
-            await awaitPlaybackCompletion(timeout: 30) // audio itself can play for up to 30s
-
-            return true
-        } catch {
-            guard sequence == activeSpeechSequence else { return true }
-
-            logger.error("captain_voice_remote_failed error=\(error.localizedDescription, privacy: .public)")
-            audioPlayer?.stop()
-            audioPlayer = nil
-            completeCurrentPlayback()
-            return false
-        }
-    }
-
-    /// Waits for the audio player delegate to fire, with a hard timeout to prevent
-    /// the continuation from leaking forever if the delegate never calls back.
     private func awaitPlaybackCompletion(timeout: TimeInterval) async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor in
@@ -259,56 +199,11 @@ final class CaptainVoiceService: NSObject, ObservableObject {
                 try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
             }
 
-            // Whichever finishes first wins — cancel the other
             await group.next()
             group.cancelAll()
         }
 
-        // If the timeout won, clean up the leaked continuation
         completeCurrentPlayback()
-    }
-
-    /// Races an async operation against a deadline. Throws on timeout.
-    private func withThrowingTimeout<T: Sendable>(
-        seconds: TimeInterval,
-        operation: @escaping @Sendable () async throws -> T
-    ) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask { try await operation() }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw CancellationError()
-            }
-            guard let result = try await group.next() else {
-                throw CancellationError()
-            }
-            group.cancelAll()
-            return result
-        }
-    }
-
-    /// Pre-caches all common Captain Hamoudi phrases via ElevenLabs.
-    /// Call this on WiFi (e.g., after first login or in background).
-    func preCacheVoices() async {
-        guard await AICloudConsentGate.hasConsent() else { return }
-        await voiceCache.preCacheAllPhrases()
-    }
-
-    private func playRemoteAudio(data: Data) throws {
-        let player = try AVAudioPlayer(data: data)
-        player.delegate = self
-        player.volume = 1
-        player.prepareToPlay()
-
-        guard player.play() else {
-            throw NSError(
-                domain: "CaptainVoiceService",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Unable to play Captain voice audio."]
-            )
-        }
-
-        audioPlayer = player
     }
 
     private func generatedWorkoutPrompt(
@@ -364,7 +259,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     }
 }
 
-extension CaptainVoiceService: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
+extension CaptainVoiceService: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didFinish utterance: AVSpeechUtterance
@@ -380,31 +275,6 @@ extension CaptainVoiceService: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegat
         didCancel utterance: AVSpeechUtterance
     ) {
         Task { @MainActor in
-            completeCurrentPlayback()
-            endSpeechSession()
-        }
-    }
-
-    nonisolated func audioPlayerDidFinishPlaying(
-        _ player: AVAudioPlayer,
-        successfully flag: Bool
-    ) {
-        Task { @MainActor in
-            audioPlayer = nil
-            completeCurrentPlayback()
-            endSpeechSession()
-        }
-    }
-
-    nonisolated func audioPlayerDecodeErrorDidOccur(
-        _ player: AVAudioPlayer,
-        error: Error?
-    ) {
-        Task { @MainActor in
-            if let error {
-                logger.error("captain_voice_audio_decode_failed error=\(error.localizedDescription, privacy: .public)")
-            }
-            audioPlayer = nil
             completeCurrentPlayback()
             endSpeechSession()
         }

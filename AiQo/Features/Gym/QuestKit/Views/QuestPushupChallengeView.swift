@@ -136,9 +136,8 @@ private final class CameraPreviewUIView: UIView {
     }
 
     var previewLayer: AVCaptureVideoPreviewLayer {
-        guard let layer = layer as? AVCaptureVideoPreviewLayer else {
-            fatalError("Expected AVCaptureVideoPreviewLayer")
-        }
-        return layer
+        // Guaranteed by `layerClass` above — force cast mirrors Apple's
+        // AVCam sample and avoids a user-visible crash path.
+        layer as! AVCaptureVideoPreviewLayer
     }
 }

@@ -15,12 +15,11 @@ final class CaptainNotificationHandler: ObservableObject {
         pendingNotificationMessage = UserDefaults.standard.string(forKey: pendingMessageKey)
     }
 
-    func handleIncomingNotification(userInfo: [AnyHashable: Any]) {
-        guard let source = userInfo["source"] as? String, source == "captain_hamoudi" else { return }
-
-        let text = userInfo["messageText"] as? String
-            ?? userInfo["notificationText"] as? String
-            ?? userInfo["text"] as? String
+    func handleIncomingNotification(userInfo: [AnyHashable: Any], fallbackBody: String? = nil) {
+        let text = (userInfo["messageText"] as? String)
+            ?? (userInfo["notificationText"] as? String)
+            ?? (userInfo["text"] as? String)
+            ?? fallbackBody
 
         guard let messageText = text?.trimmingCharacters(in: .whitespacesAndNewlines),
               !messageText.isEmpty else { return }

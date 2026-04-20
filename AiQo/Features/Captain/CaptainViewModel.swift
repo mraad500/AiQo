@@ -97,10 +97,15 @@ final class CaptainViewModel: ObservableObject {
     @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
     @Published var showGratitudeSession: Bool = false
+    @Published var showPaywall: Bool = false
     @Published var customization: CaptainCustomization = .default
     @Published var feedbackTrigger: Int = 0
     @Published var activeModule: ScreenContext = .mainChat
     @Published var quickReplies: [String] = []
+
+    /// Mirrors `TierGate.shared.currentTier`. Views bind to this for
+    /// reactive "Pro-only" badges, trial banners, etc.
+    @Published private(set) var effectiveTier: SubscriptionTier = .none
 
     var isSending: Bool { isLoading }
     var isTyping: Bool { isLoading }
@@ -146,6 +151,17 @@ final class CaptainViewModel: ObservableObject {
         self.morningHabitOrchestrator = morningHabitOrchestrator ?? .shared
         loadCustomization()
         loadPersistedHistory()
+        bindTierGate()
+    }
+
+    private func bindTierGate() {
+        // Seed with the current tier. HEAD's TierGate exposes currentTier
+        // as a computed property (reads UserDefaults live), so a one-shot
+        // read is enough; downstream views re-query on render.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.effectiveTier = TierGate.shared.currentTier
+        }
     }
 
     deinit {
@@ -213,10 +229,19 @@ final class CaptainViewModel: ObservableObject {
     ) {
         let context = context ?? activeModule
         let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isEmergencyBypass = IntentClassifier.classify(trimmedText).primary == .crisis
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
 
-        let requiresCloudConsent = context != .sleepAnalysis
+        if !DevOverride.unlockAllFeatures && !isEmergencyBypass {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("CaptainViewModel.sendMessage blocked by TierGate(.captainChat)")
+                showPaywall = true
+                return
+            }
+        }
+
+        let requiresCloudConsent = context != .sleepAnalysis && !isEmergencyBypass
         if requiresCloudConsent, AIDataConsentManager.shared.isInOfflineOnlyMode {
             return
         }
@@ -646,6 +671,14 @@ final class CaptainViewModel: ObservableObject {
         for error: Error,
         screenContext: ScreenContext
     ) -> String {
+        if let brainError = error as? BrainError,
+           case .tierRequired(let tier) = brainError {
+            return localizedFallbackMessage(
+                arabic: "هاي الميزة تحتاج \(tier.displayName).",
+                english: "This feature requires \(tier.displayName)."
+            )
+        }
+
         // Handle AiQoError rate-limit and server errors
         if let aiqoError = error as? AiQoError {
             switch aiqoError {

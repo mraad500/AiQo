@@ -75,6 +75,13 @@ final class MorningHabitOrchestrator: NSObject {
     }
 
     func refreshMonitoringState(now: Date = Date()) async {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("MorningHabitOrchestrator.refreshMonitoringState blocked by TierGate(.captainNotifications)")
+                cancelMorningNotification()
+                return
+            }
+        }
         guard let wakeDate = scheduledWakeDate else { return }
         guard isInsideMonitoringWindow(now: now, wakeDate: wakeDate) else { return }
 
@@ -105,7 +112,7 @@ final class MorningHabitOrchestrator: NSObject {
                 body: insight.message
             )
         } catch {
-            print("MorningHabitOrchestrator refresh failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator refresh failed", error: error)
         }
     }
 
@@ -119,7 +126,7 @@ final class MorningHabitOrchestrator: NSObject {
                 stepsSinceWake: nil
             )
         } catch {
-            print("MorningHabitOrchestrator insight generation failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator insight generation failed", error: error)
             return nil
         }
     }
@@ -171,7 +178,7 @@ private extension MorningHabitOrchestrator {
                 frequency: .immediate
             )
         } catch {
-            print("MorningHabitOrchestrator background delivery failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator background delivery failed", error: error)
         }
 
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completionHandler, error in
@@ -181,7 +188,7 @@ private extension MorningHabitOrchestrator {
             }
 
             if let error {
-                print("MorningHabitOrchestrator observer failed:", error.localizedDescription)
+                diag.error("MorningHabitOrchestrator observer failed", error: error)
                 completionHandler()
                 return
             }
@@ -305,45 +312,49 @@ private extension MorningHabitOrchestrator {
         stepsSinceWake: Int,
         body: String
     ) async {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("MorningHabitOrchestrator.scheduleMorningNotification blocked by TierGate(.captainNotifications)")
+                cancelMorningNotification()
+                return
+            }
+        }
         guard !FreeTrialManager.shared.isInsideTrialWindow else {
             // Trial Journey owns the morning narrative during the first 7 days.
             return
         }
         let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = "Captain Hamoudi"
-        content.body = body
-        content.sound = nil
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "source": Self.notificationSource,
-            "destination": "captain_chat",
-            "wakeTimestamp": wakeDate.timeIntervalSince1970,
-            "stepsSinceWake": stepsSinceWake
-        ]
 
-        if #available(iOS 15.0, *) {
-            content.interruptionLevel = .passive
-        }
-
-        let request = UNNotificationRequest(
-            identifier: Self.notificationIdentifier,
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, fireDate.timeIntervalSinceNow),
-                repeats: false
-            )
+        // Morning kickoff uses `.low` priority so NotificationBrain maps it to
+        // iOS 15+ `.passive` interruption (preserves the silent legacy behavior).
+        let intent = NotificationIntent(
+            kind: .morningKickoff,
+            priority: .low,
+            requestedBy: "MorningHabitOrchestrator"
+        )
+        let result = await NotificationBrain.shared.request(
+            intent,
+            fireDate: fireDate,
+            precomposedTitle: "Captain Hamoudi",
+            precomposedBody: body,
+            categoryIdentifier: CaptainSmartNotificationService.categoryIdentifier,
+            userInfo: [
+                "source": Self.notificationSource,
+                "destination": "captain_chat",
+                "wakeTimestamp": String(wakeDate.timeIntervalSince1970),
+                "stepsSinceWake": String(stepsSinceWake)
+            ],
+            identifier: Self.notificationIdentifier
         )
 
-        do {
-            try await notificationCenter.add(request)
-            await MainActor.run {
-                ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
-            }
-            userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
-        } catch {
-            print("MorningHabitOrchestrator notification scheduling failed:", error.localizedDescription)
+        guard result.deliveredAt != nil else {
+            diag.info("MorningHabitOrchestrator notification not delivered: \(String(describing: result.decision))")
+            return
         }
+        await MainActor.run {
+            ConversationThreadManager.shared.logNotificationSent(content: body, category: "morning_habit")
+        }
+        userDefaults.set(wakeDate.timeIntervalSince1970, forKey: DefaultsKeys.notificationWakeTimestamp)
     }
 
     func hasScheduledNotification(for wakeDate: Date) -> Bool {
@@ -381,7 +392,7 @@ private extension MorningHabitOrchestrator {
             )
             return true
         } catch {
-            print("MorningHabitOrchestrator step authorization failed:", error.localizedDescription)
+            diag.error("MorningHabitOrchestrator step authorization failed", error: error)
             return false
         }
     }

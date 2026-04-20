@@ -19,6 +19,7 @@ enum QuestSource: String, Codable, CaseIterable {
     case social
     case kitchen
     case share
+    case learning
 }
 
 enum QuestMetricUnit: String, Codable {
@@ -52,18 +53,14 @@ enum QuestMetricKey: String, Codable {
     case shares
     case comboStreakDays
     case stepDaysInWeek
+    case learningCertificate
 }
 
 enum QuestDeepLinkAction: String, Codable {
     case openKitchen
     case openArena
     case openShare
-}
-
-extension QuestDefinition {
-    var isStageOneBooleanQuest: Bool {
-        stageIndex == 1 && (id == "s1q1" || id == "s1q5")
-    }
+    case openLearningCourse
 }
 
 enum TierRequirement: Codable, Hashable {
@@ -90,6 +87,16 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
     let streakTierTargetsA: [Double]?
     let streakTierTargetsB: [Double]?
 
+    // Allow a quest to display a specific asset decoupled from its questIndex —
+    // used when display order changes but the reward badge must stay the same.
+    let rewardImageOverride: String?
+
+    // Decouple localization from (stageIndex, questIndex). Required when multiple
+    // quest variants share the same slot (e.g. Learning Spark Stage 2 reuses the
+    // Plank Ladder slot at (2, 3); each variant needs its own title/levels copy).
+    let localizedTitleKeyOverride: String?
+    let localizedLevelsKeyOverride: String?
+
     init(
         id: String,
         stageIndex: Int,
@@ -104,7 +111,10 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
         streakDailyTargetA: Double?,
         streakDailyTargetB: Double?,
         streakTierTargetsA: [Double]? = nil,
-        streakTierTargetsB: [Double]? = nil
+        streakTierTargetsB: [Double]? = nil,
+        rewardImageOverride: String? = nil,
+        localizedTitleKeyOverride: String? = nil,
+        localizedLevelsKeyOverride: String? = nil
     ) {
         self.id = id
         self.stageIndex = stageIndex
@@ -120,18 +130,29 @@ struct QuestDefinition: Identifiable, Codable, Hashable {
         self.streakDailyTargetB = streakDailyTargetB
         self.streakTierTargetsA = streakTierTargetsA
         self.streakTierTargetsB = streakTierTargetsB
+        self.rewardImageOverride = rewardImageOverride
+        self.localizedTitleKeyOverride = localizedTitleKeyOverride
+        self.localizedLevelsKeyOverride = localizedLevelsKeyOverride
     }
 
     var rewardImageName: String {
-        "\(stageIndex).\(questIndex)"
+        rewardImageOverride ?? "\(stageIndex).\(questIndex)"
+    }
+
+    static let learningSparkQuestID = "s1qLearn"
+    static let learningSparkStage2QuestID = "s2qLearn"
+    static let stage2PlaceholderID = "s2q3_placeholder"
+
+    var isStageOneBooleanQuest: Bool {
+        stageIndex == 1 && (id == "s1q1" || id == QuestDefinition.learningSparkQuestID)
     }
 
     var localizedTitleKey: String {
-        "quests.stage.\(stageIndex).quest.\(questIndex).title"
+        localizedTitleKeyOverride ?? "quests.stage.\(stageIndex).quest.\(questIndex).title"
     }
 
     var localizedLevelsKey: String {
-        "quests.stage.\(stageIndex).quest.\(questIndex).levels"
+        localizedLevelsKeyOverride ?? "quests.stage.\(stageIndex).quest.\(questIndex).levels"
     }
 
     var stageTitleKey: String {

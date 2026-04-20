@@ -10,6 +10,9 @@ struct DeveloperPanelView: View {
                 if accessManager.allowsDeveloperOverrides {
                     previewSection
                     statusSection
+                    #if DEBUG
+                    brainSection
+                    #endif
                 } else {
                     Section {
                         Text("debug.preview.unavailable".localized)
@@ -77,6 +80,16 @@ struct DeveloperPanelView: View {
             )
         }
     }
+
+    #if DEBUG
+    private var brainSection: some View {
+        Section("Brain") {
+            NavigationLink("Open Brain Dashboard") {
+                BrainDashboard()
+            }
+        }
+    }
+    #endif
 
     private func statusRow(title: String, value: String) -> some View {
         HStack {

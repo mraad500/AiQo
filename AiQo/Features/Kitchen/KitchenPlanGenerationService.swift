@@ -1,46 +1,10 @@
 import Foundation
 
 struct KitchenPlanGenerationService {
-    private let intelligenceManager: CaptainIntelligenceManager
+    private let orchestrator: BrainOrchestrator
 
-    init(intelligenceManager: CaptainIntelligenceManager = .shared) {
-        self.intelligenceManager = intelligenceManager
-    }
-
-    func generateKitchenReply(
-        userMessage: String,
-        fridgeItems: [FridgeItem],
-        userGoal: String?,
-        cookingTimeMinutes: Int = 30
-    ) async -> String {
-        let route = KitchenLanguageRouter.route(for: userMessage)
-        let prompt = buildKitchenChatPrompt(
-            userMessage: userMessage,
-            fridgeItems: fridgeItems,
-            userGoal: userGoal,
-            cookingTimeMinutes: cookingTimeMinutes
-        )
-
-        do {
-            switch route {
-            case .arabicGPT:
-                return try await intelligenceManager.generateCaptainResponse(
-                    for: prompt,
-                    forcedRoute: .arabicAPI,
-                    contextOverride: prompt
-                )
-            case .englishAppleIntelligence:
-                return try await intelligenceManager.generateCaptainResponse(
-                    for: prompt,
-                    forcedRoute: .onDevice,
-                    contextOverride: prompt
-                )
-            }
-        } catch {
-            return route == .arabicGPT
-                ? "صار خلل بسيط. جرّب مرة ثانية وبعدها أضبطلك الخيارات حسب الموجود بالثلاجة."
-                : "A temporary error happened. Try again and I will tailor options from your fridge."
-        }
+    init(orchestrator: BrainOrchestrator = BrainOrchestrator()) {
+        self.orchestrator = orchestrator
     }
 
     func generatePlan(
@@ -49,9 +13,18 @@ struct KitchenPlanGenerationService {
         fridgeItems: [FridgeItem],
         userGoal: String?,
         cookingTimeMinutes: Int = 30
-    ) async -> KitchenMealPlan {
+    ) async throws -> KitchenMealPlan {
         let normalizedDays = days == 7 ? 7 : 3
-        let route = KitchenLanguageRouter.route(for: triggerText)
+        let weeks = max(1, Int(ceil(Double(normalizedDays) / 7.0)))
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .multiWeekPlan(weeks: weeks)))
+            }
+        }
+
+        let prefersArabic = KitchenLanguageRouter.route(for: triggerText) == .arabicGPT
+        let language: AppLanguage = prefersArabic ? .arabic : .english
+
         let prompt = buildStructuredPlanPrompt(
             days: normalizedDays,
             triggerText: triggerText,
@@ -60,25 +33,36 @@ struct KitchenPlanGenerationService {
             cookingTimeMinutes: cookingTimeMinutes
         )
 
+        let request = HybridBrainRequest(
+            conversation: [
+                CaptainConversationMessage(role: .user, content: prompt)
+            ],
+            screenContext: .kitchen,
+            language: language,
+            contextData: CaptainContextData(steps: 0, calories: 0, vibe: "General", level: 1),
+            userProfileSummary: "",
+            intentSummary: triggerText,
+            workingMemorySummary: "",
+            attachedImageData: nil,
+            purpose: .kitchen
+        )
+
         do {
-            let reply: String
-            switch route {
-            case .arabicGPT:
-                reply = try await intelligenceManager.generateCaptainResponse(
-                    for: prompt,
-                    forcedRoute: .arabicAPI,
-                    contextOverride: prompt
-                )
-            case .englishAppleIntelligence:
-                reply = try await intelligenceManager.generateCaptainResponse(
-                    for: prompt,
-                    forcedRoute: .onDevice,
-                    contextOverride: prompt
-                )
+            let reply = try await orchestrator.processMessage(
+                request: request,
+                userName: kitchenUserFirstName()
+            )
+
+            if let parsed = parsePlan(from: reply.message, expectedDays: normalizedDays) {
+                return parsed
             }
 
-            if let parsed = parsePlan(from: reply, expectedDays: normalizedDays) {
-                return parsed
+            if let mealPlan = reply.mealPlan,
+               let mapped = mapCaptainMealPlan(
+                   mealPlan,
+                   expectedDays: normalizedDays
+               ) {
+                return mapped
             }
         } catch {
             // Fall back to deterministic local generation.
@@ -86,33 +70,12 @@ struct KitchenPlanGenerationService {
 
         return deterministicFallbackPlan(
             days: normalizedDays,
-            prefersArabic: route == .arabicGPT,
+            prefersArabic: prefersArabic,
             fridgeItems: fridgeItems
         )
     }
 
     // MARK: - Prompt Builders
-
-    private func buildKitchenChatPrompt(
-        userMessage: String,
-        fridgeItems: [FridgeItem],
-        userGoal: String?,
-        cookingTimeMinutes: Int
-    ) -> String {
-        let goal = trimmedOrNil(userGoal) ?? "general fitness"
-
-        return """
-        You are Captain Hamoudi in Kitchen mode.
-        Keep responses practical and brief.
-        Use this kitchen context:
-        - User goal: \(goal)
-        - Preferred cooking time: \(cookingTimeMinutes) minutes
-        - Fridge items: \(fridgeSnapshot(fridgeItems))
-
-        User message:
-        \(userMessage)
-        """
-    }
 
     private func buildStructuredPlanPrompt(
         days: Int,
@@ -125,7 +88,7 @@ struct KitchenPlanGenerationService {
 
         return """
         You are Captain Hamoudi in Kitchen mode.
-        Generate a \(days)-day meal plan and respond ONLY with valid JSON.
+        Generate a \(days)-day meal plan and respond ONLY with valid JSON inside the message field.
 
         Rules:
         - Keep each day practical.
@@ -139,7 +102,7 @@ struct KitchenPlanGenerationService {
         - Fridge items: \(fridgeSnapshot(fridgeItems))
         - User trigger: \(triggerText)
 
-        JSON schema:
+        JSON schema (return this exact shape as the message value):
         {
           "days": \(days),
           "meals": [
@@ -232,6 +195,35 @@ struct KitchenPlanGenerationService {
         guard !mappedMeals.isEmpty else { return nil }
 
         return KitchenMealPlan(startDate: Date(), days: min(max(days, 3), 7), meals: mappedMeals)
+    }
+
+    private func mapCaptainMealPlan(
+        _ mealPlan: MealPlan,
+        expectedDays: Int
+    ) -> KitchenMealPlan? {
+        guard !mealPlan.meals.isEmpty else { return nil }
+
+        var mappedMeals: [KitchenPlannedMeal] = []
+        for (index, meal) in mealPlan.meals.enumerated() {
+            let dayIndex = min(max(index / 3 + 1, 1), expectedDays)
+            let type = KitchenMealType.from(rawValue: meal.type)
+            let title = meal.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { continue }
+
+            mappedMeals.append(
+                KitchenPlannedMeal(
+                    dayIndex: dayIndex,
+                    type: type,
+                    title: title,
+                    calories: meal.calories,
+                    ingredients: [KitchenIngredient(name: "Basic ingredients", amount: nil, unit: nil)]
+                )
+            )
+        }
+
+        guard !mappedMeals.isEmpty else { return nil }
+
+        return KitchenMealPlan(startDate: Date(), days: expectedDays, meals: mappedMeals)
     }
 
     private func extractJSONBlock(from text: String) -> String? {
@@ -402,6 +394,15 @@ struct KitchenPlanGenerationService {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func kitchenUserFirstName() -> String? {
+        let raw = UserProfileStore.shared.current.name
+            .components(separatedBy: " ")
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let raw, !raw.isEmpty else { return nil }
+        return raw
     }
 }
 

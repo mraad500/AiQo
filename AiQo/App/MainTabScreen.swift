@@ -5,10 +5,12 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
+    private let tierGate = TierGate.shared
     private let appTint = Color.aiqoAccent
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
+    @State private var showCaptainPaywall = false
 
     var body: some View {
         Group {
@@ -49,10 +51,25 @@ struct MainTabScreen: View {
             .accessibilityHint(L10n.t("tab.gym.hint"))
 
             NavigationStack {
-                CaptainScreen()
-                    .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
-                        CaptainChatView()
+                Group {
+                    if DevOverride.unlockAllFeatures || tierGate.canAccess(.captainChat) {
+                        CaptainScreen()
+                            .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
+                                CaptainChatView()
+                            }
+                    } else {
+                        CaptainLockedView(config: .init(
+                            title: "محادثة حمودي",
+                            subtitle: "افتح الكابتن حمودي كامل مع اشتراك AiQo. كل الميزات، بلهجتك، في أي وقت.",
+                            iconSystemName: "message.badge.waveform.fill",
+                            tier: tierGate.requiredTier(for: .captainChat),
+                            onUpgradeTap: { showCaptainPaywall = true }
+                        ))
+                        .sheet(isPresented: $showCaptainPaywall) {
+                            PaywallView(source: .captainGate)
+                        }
                     }
+                }
             }
             .tag(MainTabRouter.Tab.captain)
             .tabItem {

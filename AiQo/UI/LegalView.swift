@@ -5,11 +5,13 @@ struct LegalView: View {
     enum LegalType {
         case privacyPolicy
         case termsOfService
+        case acknowledgements
 
         var titleKey: String {
             switch self {
             case .privacyPolicy: return "legal.privacy.title"
             case .termsOfService: return "legal.terms.title"
+            case .acknowledgements: return "legal.acknowledgements.title"
             }
         }
 
@@ -17,6 +19,7 @@ struct LegalView: View {
             switch self {
             case .privacyPolicy: return "legal.privacy.content"
             case .termsOfService: return "legal.terms.content"
+            case .acknowledgements: return ""
             }
         }
     }
@@ -24,10 +27,24 @@ struct LegalView: View {
     let type: LegalType
     @Environment(\.dismiss) private var dismiss
 
+    private var bodyText: String {
+        switch type {
+        case .acknowledgements:
+            guard let url = Bundle.main.url(forResource: "ACKNOWLEDGEMENTS", withExtension: "md"),
+                  let text = try? String(contentsOf: url, encoding: .utf8)
+            else {
+                return "ACKNOWLEDGEMENTS.md not bundled."
+            }
+            return text
+        default:
+            return type.contentKey.localized
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                Text(type.contentKey.localized)
+                Text(bodyText)
                     .font(.system(size: 15, weight: .regular, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(20)

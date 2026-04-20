@@ -466,7 +466,7 @@ final class QuestEngine: ObservableObject {
                     record.metricAValue = totalShares
                 }
 
-            case .camera, .timer, .manual:
+            case .camera, .timer, .manual, .learning:
                 break
             }
 
@@ -582,6 +582,10 @@ final class QuestEngine: ObservableObject {
     private func hydrateProgress(from loaded: [String: QuestProgressRecord], now: Date) {
         var hydrated = loaded
         let definitions = Array(definitionById.values)
+        let validIds = Set(definitions.map(\.id))
+
+        // Drop records for quests that no longer exist (e.g., removed "s1q5" kitchen).
+        hydrated = hydrated.filter { validIds.contains($0.key) }
 
         for definition in definitions where hydrated[definition.id] == nil {
             hydrated[definition.id] = evaluator.initialRecord(for: definition.id, now: now)

@@ -67,21 +67,43 @@ final class NotificationService {
     }
 
     func sendImmediateNotification(body: String, type: String) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService schedule blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = "AiQo"
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["notification_type": type]
-
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(1, fireDate.timeIntervalSinceNow),
-            repeats: false
+        let intent = NotificationIntent(
+            kind: Self.legacyNotificationKind(for: type),
+            requestedBy: "NotificationService.sendImmediateNotification"
         )
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                fireDate: fireDate,
+                precomposedTitle: "AiQo",
+                precomposedBody: body,
+                userInfo: ["notification_type": type]
+            )
+        }
     }
-    
+
+    /// Map legacy `type` strings (used by older call sites) to the new
+    /// NotificationKind space. Unknown types fall back to `.inactivityNudge`.
+    fileprivate static func legacyNotificationKind(for type: String) -> NotificationKind {
+        switch type.lowercased() {
+        case "inactivity", "inactive":       return .inactivityNudge
+        case "recovery", "rest":             return .recoveryReminder
+        case "morning":                      return .morningKickoff
+        case "achievement":                  return .achievementUnlocked
+        case "workout", "workout_complete":  return .workoutSummary
+        case "water", "water_reminder":      return .inactivityNudge
+        case "sleep":                        return .sleepDebtAcknowledgment
+        default:                             return .inactivityNudge
+        }
+    }
+
     // دالة جديدة لمعالجة البيانات القادمة من الخلفية (اختياري)
     func handleRemoteNotification(userInfo: [AnyHashable: Any]) {
         // إذا كنت تريد تنفيذ شيء معين عند وصول إشعار صامت
@@ -174,7 +196,6 @@ final class CaptainSmartNotificationService {
             options: [.customDismissAction]
         )
     }
-    private let intelligenceManager = CaptainIntelligenceManager.shared
     private let defaults = UserDefaults.standard
     private let lastInactivitySentAtKey = "aiqo.captain.lastInactivitySentAt"
     private let inactivityCooldownSeconds: TimeInterval = 45 * 60
@@ -186,7 +207,14 @@ final class CaptainSmartNotificationService {
     }
 
     func evaluateInactivityAndNotifyIfNeeded() async {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("CaptainSmartNotificationService blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard await MainActor.run(body: { TierGate.shared.canAccess(.captainNotifications) }) else { return }
 
         let inactivityMinutes = InactivityTracker.shared.currentInactivityMinutes
         guard inactivityMinutes >= 45 else { return }
@@ -202,7 +230,7 @@ final class CaptainSmartNotificationService {
 
         let language = resolvedCoachNotificationLanguage(defaults: defaults)
         let currentSteps = HealthKitManager.shared.todaySteps
-        let message = await generateInactivityMessage(
+        let message = generateInactivityMessage(
             currentSteps: currentSteps,
             language: language
         )
@@ -240,36 +268,47 @@ final class CaptainSmartNotificationService {
     }
 
     private func sendCaptainNotification(title: String, body: String, type: String, messageText: String) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService.sendCaptainNotification blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         let fireDate = SmartNotificationScheduler.shared.adjustedAutomationDate(for: Date().addingTimeInterval(1))
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier
-        content.userInfo = [
-            "notification_type": type,
-            "source": "captain_hamoudi",
-            "messageText": messageText,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.smart.\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, fireDate.timeIntervalSinceNow),
-                repeats: false
-            )
+        let intent = NotificationIntent(
+            kind: NotificationService.legacyNotificationKind(for: type),
+            requestedBy: "CaptainSmartNotificationService.sendCaptainNotification"
         )
-        UNUserNotificationCenter.current().add(request)
-        Task { @MainActor in
-            ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                fireDate: fireDate,
+                precomposedTitle: title,
+                precomposedBody: body,
+                categoryIdentifier: Self.categoryIdentifier,
+                userInfo: [
+                    "notification_type": type,
+                    "source": "captain_hamoudi",
+                    "messageText": messageText,
+                    "deepLink": "aiqo://captain"
+                ],
+                identifier: "aiqo.captain.smart.\(UUID().uuidString)"
+            )
+            await MainActor.run {
+                ConversationThreadManager.shared.logNotificationSent(content: body, category: "captain")
+            }
         }
     }
 
     // MARK: - Water Reminder
 
     func evaluateWaterAndNotifyIfNeeded(currentLiters: Double, targetLiters: Double) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateWaterAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard currentLiters < targetLiters * 0.5 else { return }
 
@@ -304,6 +343,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Meal Time Reminder
 
     func evaluateMealTimeAndNotifyIfNeeded() {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateMealTimeAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let currentHour = Calendar.current.component(.hour, from: Date())
@@ -354,6 +399,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Step Goal Progress
 
     func evaluateStepGoalAndNotifyIfNeeded(currentSteps: Int, targetSteps: Int) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateStepGoalAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
         guard targetSteps > 0 else { return }
 
@@ -419,6 +470,12 @@ final class CaptainSmartNotificationService {
     // MARK: - Sleep Reminder
 
     func evaluateSleepTimeAndNotifyIfNeeded(targetBedtimeHour: Int) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("evaluateSleepTimeAndNotifyIfNeeded blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
 
         let now = Date()
@@ -489,31 +546,7 @@ final class CaptainSmartNotificationService {
     private func generateInactivityMessage(
         currentSteps: Int,
         language: CoachNotificationLanguage
-    ) async -> String {
-        let prompt = String(
-            format: localizedNotificationString(
-                "notification.inactivity.prompt",
-                language: language,
-                fallback: """
-                User inactivity alert context:
-                - Current steps today: %d
-                - The user has been inactive for at least 45 minutes.
-                Provide one short English motivational line (max 14 words) with one concrete next action.
-                """
-            ),
-            max(0, currentSteps)
-        )
-
-        do {
-            let message = try await intelligenceManager.generateCaptainResponse(for: prompt)
-            let compact = message.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !compact.isEmpty {
-                return compact
-            }
-        } catch {
-            // Fall back to deterministic local text.
-        }
-
+    ) -> String {
         if currentSteps < 2000 {
             return localizedNotificationString(
                 "notification.inactivity.fallback.low",
@@ -560,7 +593,6 @@ final class AIWorkoutSummaryService {
     private let healthStore = HKHealthStore()
     private let notificationCenter = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
-    private let intelligenceManager = CaptainIntelligenceManager.shared
 
     private let workoutAnchorKey = "aiqo.ai.workout.anchor"
     private let processedWorkoutIDsKey = "aiqo.ai.workout.processed.ids"
@@ -601,7 +633,14 @@ final class AIWorkoutSummaryService {
         endedAt: Date,
         workoutID: String? = nil
     ) async {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService workout summary blocked by TierGate(.captainNotifications)")
+                return
+            }
+        }
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard await MainActor.run(body: { TierGate.shared.canAccess(.captainNotifications) }) else { return }
 
         if let workoutID {
             guard !processedWorkoutIDs.contains(workoutID) else { return }
@@ -617,34 +656,14 @@ final class AIWorkoutSummaryService {
         guard !shouldSkipFingerprint(fingerprint, endedAt: endedAt) else { return }
 
         let language = preferredLanguage()
-        let prompt = buildPrompt(
+        let message = fallbackMessage(
             language: language,
             workoutType: workoutType,
             duration: duration,
             keyMetrics: keyMetrics
         )
 
-        let rawMessage: String
-        do {
-            rawMessage = try await intelligenceManager.generateCaptainResponse(for: prompt)
-        } catch {
-            rawMessage = fallbackMessage(
-                language: language,
-                workoutType: workoutType,
-                duration: duration,
-                keyMetrics: keyMetrics
-            )
-        }
-
-        let finalMessage = normalizedToTwentyWords(
-            rawMessage,
-            language: language,
-            workoutType: workoutType,
-            duration: duration,
-            keyMetrics: keyMetrics
-        )
-
-        scheduleWorkoutSummaryNotification(message: finalMessage)
+        scheduleWorkoutSummaryNotification(message: message)
     }
 
     // MARK: - Workout Monitoring
@@ -847,67 +866,6 @@ final class AIWorkoutSummaryService {
         return (lower, upper)
     }
 
-    private func buildPrompt(
-        language: CoachNotificationLanguage,
-        workoutType: String,
-        duration: TimeInterval,
-        keyMetrics: [String: Double]
-    ) -> String {
-        let minutes = max(1, Int((duration / 60).rounded()))
-        let calories = Int((keyMetrics["calories"] ?? 0).rounded())
-        let averageHR = Int((keyMetrics["averageHeartRate"] ?? 0).rounded())
-        let zone2 = Int((keyMetrics["zone2Percent"] ?? 0).rounded())
-        let below = Int((keyMetrics["belowPercent"] ?? 0).rounded())
-        let peak = Int((keyMetrics["peakPercent"] ?? 0).rounded())
-        let distance = String(format: "%.2f", keyMetrics["distanceKm"] ?? 0)
-
-        if language == .arabic {
-            let direction: String
-            if zone2 >= 55 {
-                direction = "إذا قضى معظم الوقت في Zone 2 امدحه."
-            } else if peak >= 35 {
-                direction = "إذا دفع النبض فوق الحد كثيراً شجعه يهدّي الإيقاع."
-            } else {
-                direction = "شجعه يثبت الإيقاع ويرفع الجودة بالحصة الجاية."
-            }
-
-            return """
-            أنت كابتن حمودي. اكتب ملخص تحفيزي باللهجة العراقية من 20 كلمة بالضبط، جملة واحدة فقط.
-            بيانات التمرين:
-            النوع: \(workoutType)
-            المدة: \(minutes) دقيقة
-            السعرات: \(calories)
-            معدل النبض: \(averageHR) bpm
-            المسافة: \(distance) كم
-            توزيع النبض: تحت \(below)% | زون2 \(zone2)% | فوق/بيك \(peak)%
-            \(direction)
-            ممنوع الهاشتاك والإيموجي.
-            """
-        }
-
-        let direction: String
-        if zone2 >= 55 {
-            direction = "Praise their pacing because they stayed mostly in Zone 2."
-        } else if peak >= 35 {
-            direction = "Encourage better control because they pushed too hard for too long."
-        } else {
-            direction = "Encourage steady progression and cleaner pacing next session."
-        }
-
-        return """
-        You are Captain Hamoudi. Write exactly 20 words in English, one sentence only.
-        Workout data:
-        Type: \(workoutType)
-        Duration: \(minutes) minutes
-        Calories: \(calories)
-        Average HR: \(averageHR) bpm
-        Distance: \(distance) km
-        HR zones: Below \(below)% | Zone2 \(zone2)% | Peak/Above \(peak)%
-        \(direction)
-        No hashtags and no emoji.
-        """
-    }
-
     private func fallbackMessage(
         language: CoachNotificationLanguage,
         workoutType: String,
@@ -937,70 +895,40 @@ final class AIWorkoutSummaryService {
         return "Solid \(workoutType) effort for \(minutes) minutes. Stay consistent, pace smartly, and stack quality sessions to unlock bigger performance gains."
     }
 
-    private func normalizedToTwentyWords(
-        _ text: String,
-        language: CoachNotificationLanguage,
-        workoutType: String,
-        duration: TimeInterval,
-        keyMetrics: [String: Double]
-    ) -> String {
-        let compact = text
-            .replacingOccurrences(of: "\n", with: " ")
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        var words = compact.split(whereSeparator: \.isWhitespace).map(String.init)
-        if words.count < 8 {
-            words = fallbackMessage(
-                language: language,
-                workoutType: workoutType,
-                duration: duration,
-                keyMetrics: keyMetrics
-            ).split(whereSeparator: \.isWhitespace).map(String.init)
-        }
-
-        if words.count > 20 {
-            words = Array(words.prefix(20))
-        } else if words.count < 20 {
-            let fillers = language == .arabic
-                ? ["عفية", "استمر", "بثبات", "وتنفس", "أقوى"]
-                : ["keep", "steady", "strong", "and", "focused"]
-            var index = 0
-            while words.count < 20 {
-                words.append(fillers[index % fillers.count])
-                index += 1
+    private func scheduleWorkoutSummaryNotification(message: String) {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainNotifications) else {
+                diag.info("NotificationService captain workout blocked by TierGate(.captainNotifications)")
+                return
             }
         }
-
-        return words.joined(separator: " ")
-    }
-
-    private func scheduleWorkoutSummaryNotification(message: String) {
         let language = preferredLanguage()
-        let content = UNMutableNotificationContent()
-        content.title = localizedNotificationString(
+        let title = localizedNotificationString(
             "notification.captain.workout.title",
             language: language,
             fallback: "Captain Hamoudi 🫡"
         )
-        content.body = message
-        content.sound = .default
-        content.categoryIdentifier = CaptainSmartNotificationService.categoryIdentifier
-        content.userInfo = [
-            "notification_type": "workout_complete",
-            "source": "captain_hamoudi",
-            "messageText": message,
-            "deepLink": "aiqo://captain"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "aiqo.captain.workout.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
+        let intent = NotificationIntent(
+            kind: .workoutSummary,
+            requestedBy: "AIWorkoutSummaryService.scheduleWorkoutSummaryNotification"
         )
-        notificationCenter.add(request)
-        Task { @MainActor in
-            ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")
+        Task {
+            await NotificationBrain.shared.request(
+                intent,
+                precomposedTitle: title,
+                precomposedBody: message,
+                categoryIdentifier: CaptainSmartNotificationService.categoryIdentifier,
+                userInfo: [
+                    "notification_type": "workout_complete",
+                    "source": "captain_hamoudi",
+                    "messageText": message,
+                    "deepLink": "aiqo://captain"
+                ],
+                identifier: "aiqo.captain.workout.\(UUID().uuidString)"
+            )
+            await MainActor.run {
+                ConversationThreadManager.shared.logNotificationSent(content: message, category: "captain")
+            }
         }
     }
 

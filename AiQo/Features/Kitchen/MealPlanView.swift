@@ -5,6 +5,7 @@ struct MealPlanView: View {
 
     @State private var selectedDays: Int = 3
     @State private var isGenerating: Bool = false
+    @State private var showPaywall = false
 
     private let generationService = KitchenPlanGenerationService()
 
@@ -23,6 +24,9 @@ struct MealPlanView: View {
         .safeAreaPadding(.bottom, 16)
         .navigationTitle("kitchen.mealplan.title".localized)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showPaywall) {
+            PremiumPaywallView(source: .featureGate)
+        }
         .onAppear {
             if let pinnedPlan = kitchenStore.pinnedPlan {
                 selectedDays = pinnedPlan.days
@@ -407,6 +411,13 @@ private extension MealPlanView {
 
     func generatePlan() {
         guard !isGenerating else { return }
+        let weeks = max(1, Int(ceil(Double(max(selectedDays, 1)) / 7.0)))
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.multiWeekPlan(weeks: weeks)) else {
+                showPaywall = true
+                return
+            }
+        }
         guard AIDataConsentManager.shared.ensureConsent(presentIfPossible: true) else { return }
 
         isGenerating = true
@@ -416,18 +427,31 @@ private extension MealPlanView {
             : "kitchen.quick.3days".localized
 
         Task {
-            let plan = await generationService.generatePlan(
-                days: selectedDays,
-                triggerText: trigger,
-                fridgeItems: kitchenStore.fridgeItems,
-                userGoal: goal,
-                cookingTimeMinutes: 30
-            )
+            do {
+                let plan = try await generationService.generatePlan(
+                    days: selectedDays,
+                    triggerText: trigger,
+                    fridgeItems: kitchenStore.fridgeItems,
+                    userGoal: goal,
+                    cookingTimeMinutes: 30
+                )
 
-            await MainActor.run {
-                kitchenStore.setPinnedPlan(plan)
-                selectedDays = plan.days
-                isGenerating = false
+                await MainActor.run {
+                    kitchenStore.setPinnedPlan(plan)
+                    selectedDays = plan.days
+                    isGenerating = false
+                }
+            } catch let error as BrainError {
+                await MainActor.run {
+                    isGenerating = false
+                    if case .tierRequired = error {
+                        showPaywall = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isGenerating = false
+                }
             }
         }
     }

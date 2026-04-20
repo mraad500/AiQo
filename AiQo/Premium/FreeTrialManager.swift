@@ -12,7 +12,7 @@ final class FreeTrialManager: ObservableObject {
 
     private let defaults: UserDefaults
     private let nowProvider: () -> Date
-    static let trialDurationDays = 7
+    nonisolated static let trialDurationDays = 7
 
     enum TrialState: Equatable {
         case notStarted
@@ -52,6 +52,19 @@ final class FreeTrialManager: ObservableObject {
     var isTrialActive: Bool {
         if case .active = trialState { return true }
         return false
+    }
+
+    /// Nonisolated snapshot of trial status. Reads Keychain first, falling back to UserDefaults —
+    /// same source of truth as `trialStartDate`, but reachable from `@Sendable` / non-main contexts
+    /// where the `@Published`-backed `isTrialActive` is off-limits.
+    nonisolated static var isTrialActiveSnapshot: Bool {
+        let startDate: Date? = {
+            if let keychainDate = KeychainTrialHelper.readTrialStartDate() { return keychainDate }
+            return UserDefaults.standard.object(forKey: Keys.trialStartDate) as? Date
+        }()
+        guard let start = startDate else { return false }
+        let end = Calendar.current.date(byAdding: .day, value: trialDurationDays, to: start) ?? start
+        return Date() < end
     }
 
     /// هل المستخدم جرب التطبيق قبل (بدأ trial سابقاً)؟
@@ -142,16 +155,16 @@ final class FreeTrialManager: ObservableObject {
     #endif
 
     private enum Keys {
-        static let trialStartDate = "aiqo.freeTrial.startDate"
+        nonisolated static let trialStartDate = "aiqo.freeTrial.startDate"
     }
 
     // MARK: - Keychain Helper (persists across app reinstalls)
 
     private enum KeychainTrialHelper {
-        private static let service = "com.aiqo.trial"
-        private static let account = "trialStartDate"
+        nonisolated static let service = "com.aiqo.trial"
+        nonisolated static let account = "trialStartDate"
 
-        static func readTrialStartDate() -> Date? {
+        nonisolated static func readTrialStartDate() -> Date? {
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
@@ -165,7 +178,7 @@ final class FreeTrialManager: ObservableObject {
             return try? JSONDecoder().decode(Date.self, from: data)
         }
 
-        static func writeTrialStartDate(_ date: Date) {
+        nonisolated static func writeTrialStartDate(_ date: Date) {
             guard let data = try? JSONEncoder().encode(date) else { return }
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,

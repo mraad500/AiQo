@@ -115,6 +115,13 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     func analyzeFridgeImage(image: UIImage) async throws -> [FridgeItem] {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("SmartFridgeCameraViewModel.analyzeFridgeImage blocked by TierGate(.captainChat)")
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+            }
+        }
+
         do {
             let items = try await callVisionAPI(image: image)
             guard !items.isEmpty else {
@@ -129,6 +136,12 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     private func callVisionAPI(image: UIImage) async throws -> [FridgeItem] {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                diag.info("SmartFridgeCameraViewModel.callVisionAPI blocked by TierGate(.captainChat)")
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+            }
+        }
         try await AICloudConsentGate.requireConsent()
 
         // Resolve API key using the same logic as HybridBrainService

@@ -10,6 +10,7 @@ struct AppSettingsScreen: View {
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
+    @State private var showAcknowledgements = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
     #if DEBUG
     @State private var isPreparingTestWhisper = false
@@ -185,6 +186,45 @@ struct AppSettingsScreen: View {
                     }
                     .padding(.vertical, 4)
                 }
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(
+                            NSLocalizedString(
+                                "settings.privacy.learningVerification.title",
+                                value: "تحقق كابتن حمودي",
+                                comment: "Captain Hamoudi on-device certificate verification toggle"
+                            )
+                        )
+                        .foregroundStyle(.primary)
+
+                        Text(
+                            NSLocalizedString(
+                                "settings.privacy.learningVerification.subtitle",
+                                value: "تحليل شهادات الكورسات يصير مباشرة على جهازك، الصورة ما تغادر الهاتف.",
+                                comment: "On-device learning verification explanation"
+                            )
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Toggle(
+                        "",
+                        isOn: Binding(
+                            get: { OnDeviceVerificationConsent.hasConsented },
+                            set: { newValue in
+                                if newValue {
+                                    OnDeviceVerificationConsent.grant()
+                                } else {
+                                    OnDeviceVerificationConsent.revoke()
+                                }
+                            }
+                        )
+                    )
+                    .labelsHidden()
+                }
+                .padding(.vertical, 4)
             }
 
             Section("referral.section".localized) {
@@ -248,6 +288,20 @@ struct AppSettingsScreen: View {
             Section("legal.section".localized) {
                 LegalLinksView()
                     .padding(.vertical, 4)
+                Button {
+                    showAcknowledgements = true
+                } label: {
+                    HStack {
+                        Text("settings.legal.acknowledgements".localized)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
             }
 
             #if DEBUG
@@ -394,6 +448,9 @@ struct AppSettingsScreen: View {
         }
         .sheet(isPresented: $showDeveloperPanel) {
             DeveloperPanelView()
+        }
+        .sheet(isPresented: $showAcknowledgements) {
+            LegalView(type: .acknowledgements)
         }
     }
 

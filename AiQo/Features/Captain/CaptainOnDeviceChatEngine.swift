@@ -58,7 +58,8 @@ actor CaptainOnDeviceChatEngine {
             }
 
             let liveContext = await fetchLiveHealthContext()
-            let instructions = buildDynamicSystemPrompt(with: liveContext)
+            let healthScreening = await MainActor.run { HealthScreeningStore.load() }
+            let instructions = buildDynamicSystemPrompt(with: liveContext, healthScreening: healthScreening)
 
             logger.notice("captain_on_device_started")
 
@@ -97,7 +98,15 @@ actor CaptainOnDeviceChatEngine {
         throw CaptainOnDeviceChatError.foundationModelsUnavailable
     }
 
-    private func buildDynamicSystemPrompt(with context: LiveHealthContext) -> String {
+    private func buildDynamicSystemPrompt(
+        with context: LiveHealthContext,
+        healthScreening: HealthScreeningAnswers?
+    ) -> String {
+        let healthContextLine = healthScreening?.captainContextLine ?? ""
+        let healthBlock = healthContextLine.isEmpty
+            ? ""
+            : "\n        --- USER HEALTH CONTEXT (MANDATORY) ---\n        \(healthContextLine)\n"
+
         return """
         You are Captain Hammoudi, the elite Iraqi AI guide inside 'AiQo'.
 
@@ -122,7 +131,7 @@ actor CaptainOnDeviceChatEngine {
         - End with ONE direct question to keep the flow.
         - NEVER invent stats. Use ONLY the live data provided.
         - DO NOT repeat phrases like "ما واصلني" repeatedly.
-
+        \(healthBlock)
         --- LIVE USER DATA ---
         Steps: \(context.currentSteps)
         Heart Rate: \(context.currentHeartRateBPM) bpm

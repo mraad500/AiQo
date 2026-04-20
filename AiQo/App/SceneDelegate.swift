@@ -15,6 +15,7 @@ enum OnboardingKeys {
     static let didSelectLanguage = "didSelectLanguage"
     static let didCompleteAIConsent = "didCompleteAIConsent"
     static let didAcknowledgeMedicalDisclaimer = "didAcknowledgeMedicalDisclaimer"
+    static let didCompleteHealthScreening = "didCompleteHealthScreening"
 }
 
 @MainActor
@@ -28,6 +29,7 @@ final class AppFlowController: ObservableObject {
         case legacy
         case aiConsent
         case medicalDisclaimer
+        case healthScreening
         case captainPersonalization
         case featureIntro
         case main
@@ -120,6 +122,11 @@ final class AppFlowController: ObservableObject {
         transition(to: Self.resolveCurrentScreen())
     }
 
+    func finalizeHealthScreening() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteHealthScreening)
+        transition(to: Self.resolveCurrentScreen())
+    }
+
     func didCompleteCaptainPersonalization() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
         transition(to: .featureIntro)
@@ -186,6 +193,10 @@ final class AppFlowController: ObservableObject {
             UserDefaults.standard.set(false, forKey: OnboardingKeys.didContinueWithoutAccount)
             UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteAIConsent)
             UserDefaults.standard.removeObject(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+            UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteHealthScreening)
+
+            LearningProofStore.shared.deleteAllLocalData()
+            HealthScreeningStore.clear()
 
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .login)
@@ -219,6 +230,7 @@ final class AppFlowController: ObservableObject {
             || didCompleteFeatureIntro
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+        let didCompleteHealthScreening = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
 
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
@@ -252,6 +264,10 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
+        if !didCompleteHealthScreening {
+            return .healthScreening
+        }
+
         if !didCompleteCaptainPersonalization {
             return .captainPersonalization
         }
@@ -271,6 +287,7 @@ final class AppFlowController: ObservableObject {
             || didCompleteFeatureIntro
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+        let didCompleteHealthScreening = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -286,6 +303,10 @@ final class AppFlowController: ObservableObject {
 
         if !didAcknowledgeMedicalDisclaimer {
             return .medicalDisclaimer
+        }
+
+        if !didCompleteHealthScreening {
+            return .healthScreening
         }
 
         if !didCompleteCaptainPersonalization {
@@ -360,6 +381,9 @@ struct AppRootView: View {
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .medicalDisclaimer:
             MedicalDisclaimerOnboardingView(onAcknowledge: { flow.finalizeMedicalDisclaimer() })
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+        case .healthScreening:
+            HealthScreeningOnboardingView(onContinue: { flow.finalizeHealthScreening() })
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .captainPersonalization:
             CaptainPersonalizationOnboardingView()

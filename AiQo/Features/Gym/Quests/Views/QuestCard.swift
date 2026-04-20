@@ -9,10 +9,7 @@ struct QuestCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(quest.rewardImageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 102, height: 102)
+            QuestRewardImageView(quest: quest, size: 102)
 
             VStack(alignment: .leading, spacing: 7) {
                 Text(questLocalizedText(quest.localizedTitleKey))
