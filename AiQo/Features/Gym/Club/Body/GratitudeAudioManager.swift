@@ -41,7 +41,6 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
     private let speechSynthesizer = AVSpeechSynthesizer()
 
     private var backgroundPlayer: AVAudioPlayer?
-    private var spokenAudioPlayer: AVAudioPlayer?
     private var speechTask: Task<Void, Never>?
 
     override init() {
@@ -77,27 +76,8 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
             speechSynthesizer.stopSpeaking(at: .immediate)
         }
 
-        if spokenAudioPlayer?.isPlaying == true {
-            spokenAudioPlayer?.stop()
-        }
-        spokenAudioPlayer = nil
-
         speechTask = Task { @MainActor [weak self] in
             guard let self else { return }
-
-            if CaptainVoiceAPI.isConfigured && (DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.premiumVoice)) {
-                do {
-                    let audioData = try await CaptainVoiceAPI.synthesizeSpeech(for: sanitizedText)
-                    guard !Task.isCancelled else { return }
-                    try playRemoteSpeech(data: audioData)
-                    speechTask = nil
-                    return
-                } catch {
-                    guard !Task.isCancelled else { return }
-                    diag.error("GratitudeAudioManager remote voice failed", error: error)
-                }
-            }
-
             guard !Task.isCancelled else { return }
             playLocalSpeech(sanitizedText, language: language)
             speechTask = nil
@@ -108,11 +88,6 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechTask?.cancel()
         speechTask = nil
         speechSynthesizer.stopSpeaking(at: .immediate)
-
-        if spokenAudioPlayer?.isPlaying == true {
-            spokenAudioPlayer?.stop()
-        }
-        spokenAudioPlayer = nil
 
         if let backgroundPlayer, backgroundPlayer.isPlaying {
             backgroundPlayer.setVolume(0, fadeDuration: 0.35)
@@ -172,45 +147,6 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechSynthesizer.speak(utterance)
     }
 
-    private func playRemoteSpeech(data: Data) throws {
-        let player = try AVAudioPlayer(data: data)
-        player.delegate = self
-        player.volume = Self.speechVolume
-        player.prepareToPlay()
-
-        guard player.play() else {
-            throw NSError(
-                domain: "GratitudeAudioManager",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Unable to play gratitude voice audio."]
-            )
-        }
-
-        spokenAudioPlayer = player
-    }
 }
 
-extension GratitudeAudioManager: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
-    nonisolated func audioPlayerDidFinishPlaying(
-        _ player: AVAudioPlayer,
-        successfully flag: Bool
-    ) {
-        Task { @MainActor in
-            spokenAudioPlayer = nil
-            speechTask = nil
-        }
-    }
-
-    nonisolated func audioPlayerDecodeErrorDidOccur(
-        _ player: AVAudioPlayer,
-        error: Error?
-    ) {
-        Task { @MainActor in
-            spokenAudioPlayer = nil
-            speechTask = nil
-            if let error {
-                print("GratitudeAudioManager: Voice decode failed - \(error.localizedDescription)")
-            }
-        }
-    }
-}
+extension GratitudeAudioManager: AVSpeechSynthesizerDelegate {}

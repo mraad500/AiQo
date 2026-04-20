@@ -128,6 +128,11 @@ struct LearningProofSubmissionView: View {
                     Capsule().fill(statusBadgeTint)
                 )
                 .foregroundStyle(statusBadgeForeground)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(
+                    questLocalizedText("gym.quest.learning.proof.status.a11y")
+                        .replacingOccurrences(of: "{status}", with: statusLabel)
+                ))
             Spacer()
         }
     }

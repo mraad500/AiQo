@@ -46,7 +46,7 @@
 "legal.section" = "Legal";
 "legal.privacy.title" = "Privacy Policy";
 "legal.terms.title" = "Terms of Service";
-"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: April 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party AI Services\nWith your explicit consent, AiQo may send summarized and anonymized data to the following third-party services:\n- Google Gemini: Your conversation messages and a summarized daily health snapshot (steps, calories, sleep duration, heart rate) are sent for AI-powered coaching responses. Personal identifiers are redacted before transmission.\n- ElevenLabs: When voice playback is enabled, Captain's text responses are sent to ElevenLabs for text-to-speech synthesis. No health or personal data is included.\n- Spotify: If connected, AiQo communicates with the Spotify app on your device for music playback. No data is sent to Spotify through AiQo servers.\nYou can grant or revoke AI data sharing consent at any time from Settings > Privacy.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings. You can revoke AI data sharing consent from Settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
+"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: April 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party AI Services\nWith your explicit consent, AiQo may send summarized and anonymized data to the following third-party services:\n- Google Gemini: Your conversation messages and a summarized daily health snapshot (steps, calories, sleep duration, heart rate) are sent for AI-powered coaching responses. Personal identifiers are redacted before transmission.\n- Spotify: If connected, AiQo communicates with the Spotify app on your device for music playback. No data is sent to Spotify through AiQo servers.\nCaptain voice playback uses the on-device iOS text-to-speech engine and does not send any data to third parties.\nYou can grant or revoke AI data sharing consent at any time from Settings > Privacy.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings. You can revoke AI data sharing consent from Settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
 "legal.terms.content" = "AiQo Terms of Service\n\nLast updated: April 2026\n\n1. Acceptance\nBy using AiQo, you agree to these terms.\n\n2. Service\nAiQo provides health tracking and AI-powered coaching. Content is not a substitute for professional medical advice.\n\n3. Subscriptions\n- Free trial: 7 days\n- AiQo Max: $9.99/month\n- AiQo Intelligence Pro: $19.99/month\nSubscriptions auto-renew monthly until cancelled. You can manage or cancel your subscription at any time through your Apple ID settings. Payment is charged to your Apple ID account at confirmation of purchase. The subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current billing period.\n\n4. User Conduct\nYou are responsible for your use of the app and any content you post in the Tribe feature.\n\n5. Disclaimer\nAiQo does not provide medical advice. Consult your doctor before making health decisions based on app data.\n\n6. Changes\nWe reserve the right to modify these terms at any time.";
 
 /* Referral */
@@ -2209,6 +2209,8 @@
 "memory.category.notes" = "Notes";
 "memory.category.recordProject" = "Record-breaking project";
 "memory.cat.weekly" = "Weekly memory";
+"memory.cat.challenge" = "Challenges";
+"memory.key.challenge" = "Challenge";
 "memory.key.name" = "Name";
 "memory.key.weight" = "Weight";
 "memory.key.height" = "Height";
@@ -2890,9 +2892,9 @@
 "ai.consent.title" = "AI Data Use Consent";
 "ai.consent.subtitle" = "Before AiQo sends any personal context to cloud AI services, we need your permission.";
 "ai.consent.what.title" = "What may be sent";
-"ai.consent.what.detail" = "Messages you type to Captain, limited app context needed to answer, summarized health and wellness context when relevant, sanitized kitchen images for food or fridge analysis, and generated text sent to ElevenLabs only when you choose voice playback.";
+"ai.consent.what.detail" = "Messages you type to Captain, limited app context needed to answer, summarized health and wellness context when relevant, and sanitized kitchen images for food or fridge analysis. Captain voice playback uses the on-device iOS text-to-speech engine and is never sent to the cloud.";
 "ai.consent.who.title" = "Who receives it";
-"ai.consent.who.detail" = "Google Gemini receives data for AI replies, plans, and analysis. ElevenLabs receives generated text only when voice playback is used.";
+"ai.consent.who.detail" = "Google Gemini receives data for AI replies, plans, and analysis. Captain voice playback runs entirely on-device using the iOS text-to-speech engine.";
 "ai.consent.why.title" = "Why it is sent";
 "ai.consent.why.detail" = "To generate coaching replies, workout or meal suggestions, kitchen image understanding, and optional voice playback.";
 "ai.consent.notSent.title" = "What is not sent";
@@ -2946,3 +2948,24 @@
 "learningSpark.course.duration.with_audit" = "~%d hours (with free audit)";
 "gym.quest.celebration.today_at.format" = "Today at %@";
 "gym.quest.detail.reward_xp.format" = "+%d XP on completion";
+
+"gym.quest.learning.proof.status.a11y" = "Certificate status: {status}";
+"legal.acknowledgements.title" = "Open-Source Acknowledgements";
+"settings.legal.acknowledgements" = "Open-source credits";
+
+// Health screening onboarding gate (Guideline 1.4.1 — age & condition gating)
+"onboarding.healthScreening.title" = "Quick Health Check";
+"onboarding.healthScreening.subtitle" = "Two questions before Captain Hamoudi can coach you safely. Your answers stay on this device.";
+"onboarding.healthScreening.birthYear.label" = "What year were you born?";
+"onboarding.healthScreening.birthYear.placeholder" = "e.g. 1995";
+"onboarding.healthScreening.birthYear.hint" = "AiQo is an 18+ wellness coach. We don't collect a full birth date — just the year.";
+"onboarding.healthScreening.conditions.label" = "Anything we should know?";
+"onboarding.healthScreening.conditions.hint" = "Optional but recommended — Captain will tone down high-intensity suggestions if any of these apply.";
+"onboarding.healthScreening.condition.pregnant" = "I'm currently pregnant";
+"onboarding.healthScreening.condition.heart" = "I have a heart or blood-pressure condition";
+"onboarding.healthScreening.condition.surgery" = "I had surgery in the last 6 months";
+"onboarding.healthScreening.privacy.footnote" = "Answers never leave your device. AiQo cannot diagnose or treat medical conditions — always consult your doctor before starting any new programme.";
+"onboarding.healthScreening.continue" = "Continue";
+"onboarding.healthScreening.underAge.title" = "AiQo is 18+";
+"onboarding.healthScreening.underAge.body" = "AiQo provides general fitness and wellness coaching intended for adults. We can't offer you a personalised plan right now.";
+"onboarding.healthScreening.underAge.support" = "If you believe this is a mistake, reach out at support@aiqo.app.";

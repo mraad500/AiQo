@@ -10,6 +10,7 @@ struct AppSettingsScreen: View {
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
+    @State private var showAcknowledgements = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
     #if DEBUG
     @State private var isPreparingTestWhisper = false
@@ -287,6 +288,20 @@ struct AppSettingsScreen: View {
             Section("legal.section".localized) {
                 LegalLinksView()
                     .padding(.vertical, 4)
+                Button {
+                    showAcknowledgements = true
+                } label: {
+                    HStack {
+                        Text("settings.legal.acknowledgements".localized)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
             }
 
             #if DEBUG
@@ -433,6 +448,9 @@ struct AppSettingsScreen: View {
         }
         .sheet(isPresented: $showDeveloperPanel) {
             DeveloperPanelView()
+        }
+        .sheet(isPresented: $showAcknowledgements) {
+            LegalView(type: .acknowledgements)
         }
     }
 

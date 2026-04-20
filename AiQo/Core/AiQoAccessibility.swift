@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Accessibility View Modifiers
 
@@ -66,6 +67,39 @@ enum AiQoAccessibility {
     /// هل المستخدم يفضل حركات مخففة؟
     static var prefersReducedMotion: Bool {
         UIAccessibility.isReduceMotionEnabled
+    }
+}
+
+// MARK: - Glass / Liquid-Glass Background Helpers
+
+extension View {
+    /// Applies a Liquid-Glass background that collapses to an opaque colour when
+    /// the user has enabled **Settings → Accessibility → Reduce Transparency**.
+    /// Prefer this over raw `.background(.ultraThinMaterial)` in navigation and
+    /// chrome layers. SwiftUI's `Material` already adapts in many contexts, but
+    /// this modifier guarantees the contract and surfaces the intent at the
+    /// call-site.
+    func aiqoGlassBackground(
+        _ material: Material = .ultraThinMaterial,
+        fallback: Color = Color(UIColor.systemBackground),
+        in shape: some Shape = Rectangle()
+    ) -> some View {
+        modifier(AiQoGlassBackgroundModifier(material: material, fallback: fallback, shape: AnyShape(shape)))
+    }
+}
+
+private struct AiQoGlassBackgroundModifier: ViewModifier {
+    let material: Material
+    let fallback: Color
+    let shape: AnyShape
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content.background(fallback, in: shape)
+        } else {
+            content.background(material, in: shape)
+        }
     }
 }
 

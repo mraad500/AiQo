@@ -348,21 +348,22 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let userInfo = response.notification.request.content.userInfo
+        let content = response.notification.request.content
+        let userInfo = content.userInfo
         let notifType = (userInfo["source"] as? String) ?? response.notification.request.identifier
         AnalyticsService.shared.track(.notificationTapped(type: notifType))
 
-        if let source = userInfo["source"] as? String, source == "captain_hamoudi" {
-            CaptainNotificationHandler.shared.handleIncomingNotification(userInfo: userInfo)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                CaptainNavigationHelper.shared.navigateToCaptainScreen()
-            }
-        } else if let source = userInfo["source"] as? String, source == MorningHabitOrchestrator.notificationSource {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                AppRootManager.shared.openCaptainChat()
-            }
-        } else {
-            NotificationService.shared.handle(response: response)
+        if let trialKind = userInfo["trialKind"] as? String {
+            AnalyticsService.shared.track(.trialNotificationOpened(kind: trialKind))
+        }
+
+        CaptainNotificationHandler.shared.handleIncomingNotification(
+            userInfo: userInfo,
+            fallbackBody: content.body
+        )
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            CaptainNavigationHelper.shared.navigateToCaptainScreen()
         }
 
         completionHandler()

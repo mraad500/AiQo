@@ -439,9 +439,31 @@ final class QuestDailyStore: ObservableObject {
             )
         )
 
+        persistChallengeMemory(challenge: challenge, proof: proof)
+        ChallengeCompletionNotifier.shared.scheduleCongratulation(for: challenge)
+
         if !challenge.isBoss {
             refreshBossProgress()
         }
+    }
+
+    private func persistChallengeMemory(challenge: Challenge, proof: String) {
+        guard MemoryStore.shared.isEnabled else { return }
+
+        let key = "challenge_\(challenge.id)"
+        let timestamp = Date().formatted(date: .abbreviated, time: .shortened)
+        let trimmedProof = proof.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = trimmedProof.isEmpty
+            ? "\(challenge.title) · \(timestamp)"
+            : "\(challenge.title) · \(trimmedProof) · \(timestamp)"
+
+        MemoryStore.shared.set(
+            key,
+            value: value,
+            category: "challenge",
+            source: "user_explicit",
+            confidence: 0.95
+        )
     }
 
     private func refreshBossProgress() {

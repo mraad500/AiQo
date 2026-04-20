@@ -102,9 +102,9 @@ struct CaptainMemorySettingsView: View {
         Section {
             Toggle(isOn: $isEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(NSLocalizedString("memory.enable", comment: ""))
+                    Text(NSLocalizedString("memory.enableToggle", comment: ""))
                         .font(.system(size: 15, weight: .semibold))
-                    Text(NSLocalizedString("memory.enableSubtitle", comment: ""))
+                    Text(NSLocalizedString("memory.enableDesc", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -196,6 +196,7 @@ struct CaptainMemorySettingsView: View {
         case "insight": return NSLocalizedString("memory.cat.insight", comment: "")
         case "active_record_project": return NSLocalizedString("memory.cat.recordProject", comment: "")
         case "weekly": return NSLocalizedString("memory.cat.weekly", comment: "")
+        case "challenge": return NSLocalizedString("memory.cat.challenge", comment: "")
         default: return category
         }
     }
@@ -227,6 +228,13 @@ struct CaptainMemorySettingsView: View {
         case "resting_heart_rate": return NSLocalizedString("memory.key.heartRate", comment: "")
         default:
             if key.hasPrefix("injury_") { return NSLocalizedString("memory.key.injury", comment: "") }
+            if key.hasPrefix("challenge_") {
+                let challengeID = String(key.dropFirst("challenge_".count))
+                if let challenge = Challenge.all.first(where: { $0.id == challengeID }) {
+                    return challenge.title
+                }
+                return NSLocalizedString("memory.key.challenge", comment: "")
+            }
             return key
         }
     }

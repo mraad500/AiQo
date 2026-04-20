@@ -128,7 +128,7 @@ struct HomeView: View {
     // MARK: - Header View
     
     private var topChrome: some View {
-        let topIconDrop: CGFloat = 3
+        let topIconDrop: CGFloat = 5
 
         return AiQoScreenTopChrome(
             horizontalInset: 10,
@@ -412,10 +412,10 @@ struct MetricDetailSheet: View {
                         .frame(height: 140)
                     }
                     .padding(20)
-                    .background {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    }
+                    .aiqoGlassBackground(
+                        .ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    )
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                 }

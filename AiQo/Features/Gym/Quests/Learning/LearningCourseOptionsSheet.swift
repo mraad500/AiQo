@@ -138,7 +138,7 @@ struct LearningCourseOptionsSheet: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color(hex: "F5E4B4")))
-                    .foregroundStyle(Color(hex: "6B5B2E"))
+                    .foregroundStyle(Color(hex: "3D2E10"))
                 if option.language == .arabic { Spacer() }
             }
 

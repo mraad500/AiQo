@@ -1,6 +1,6 @@
 # AiQo Master Blueprint 17
 
-*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19.*
+*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build).*
 
 ---
 
@@ -8,7 +8,7 @@
 
 AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Captain Hamoudi (الكابتن حمودي)** — a culturally-rooted AI coach with on-device memory, dialect-aware language, and a wellbeing safety net. AiQo v1.0 has been submitted to the App Store; v1.0.1 (this branch) introduces the new "Brain OS" — eleven subsystems that move the Captain from a stateless prompt-and-reply chat to a system that senses bio context, remembers across conversations, classifies intent and emotion locally, talks in the user's dialect, and refuses to act when a crisis is detected.
 
-The codebase totals **116,767 Swift LOC across the app target** and **5,138 Swift LOC across the test target**, with **368 unit tests**. The Brain OS lives at [AiQo/Features/Captain/Brain/](AiQo/Features/Captain/Brain) and is partitioned into 11 numbered subsystems (`00_Foundation` through `10_Observability`) totaling **134 Swift files** — a mix of full implementations and a small number of placeholder stubs left from the original scaffold.
+The codebase totals **116,767 Swift LOC across the app target** and **5,138 Swift LOC across the test target**, with **368 unit tests** *(snapshot figures at commit `fa27a7f`; post-2026-04-20 the Brain shrank by 3 stub files — see §21.6)*. The Brain OS lives at [AiQo/Features/Captain/Brain/](AiQo/Features/Captain/Brain) and is partitioned into 11 numbered subsystems (`00_Foundation` through `10_Observability`) totaling **131 Swift files** — a mix of full implementations and a small number of placeholder stubs left from the original scaffold.
 
 Three things to know before reading further:
 
@@ -937,11 +937,11 @@ Known environment caveat: iOS 26.4 simulator must be installed (Xcode → Settin
 
 Honest list at the recon snapshot.
 
-**16.1 Localization keys mismatch (real bug, v1.0.1 blocker).** The Captain Memory settings view references keys `memory.enable`, `memory.enableSubtitle`, `memory.cat.identity`, `memory.cat.body`, etc. (see [CaptainMemorySettingsView.swift:105](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift:105) and `:189`). The Arabic strings file uses keys `memory.enableToggle`, `memory.enableDesc`, `memory.category.identity`, `memory.category.body`, etc. Result: the labels render the raw key text. Fix is a one-pass key alignment.
+**16.1 Localization keys mismatch.** ~~The Captain Memory settings view references keys `memory.enable`, `memory.enableSubtitle`, etc. but the strings file uses `memory.enableToggle`, `memory.enableDesc`.~~ **Partially resolved 2026-04-20 (§21.6):** the two toggle keys were aligned at [CaptainMemorySettingsView.swift:105-107](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift:105). The category-row keys (`memory.cat.*` vs `memory.category.*`) remain mismatched and are still on the v1.0.1 punch-list — they render raw key text in the per-category stats rows. Fix is a one-pass key alignment, same shape as the toggle fix.
 
 **16.2 MemoryExtractor legacy cloud path.** [MemoryExtractor.swift:244](AiQo/Features/Captain/Brain/02_Memory/Intelligence/MemoryExtractor.swift:244) and `:320` predate BATCH 2 cleanup. Two outbound HTTP references (URLSession + Gemini endpoint string). Sanitizer-wrapped, but technical debt — this is the only Brain-folder file outside `04_Inference/Services/HybridBrain.swift` with live network code. Plan: rewrite using `CloudBrainService` and the new audit pipeline.
 
-**16.3 Most Brain feature flags are `false` in Info.plist.** Verified via `PlistBuddy`. Currently `false`: `MEMORY_V4_ENABLED`, `NOTIFICATION_BRAIN_ENABLED`, `CRISIS_DETECTOR_ENABLED`, `BRAIN_DASHBOARD_ENABLED`, `PROACTIVE_EMOTIONAL_ENABLED`, `PROACTIVE_MEMORY_CALLBACK_ENABLED`, `PROACTIVE_CULTURAL_ENABLED`. The code paths exist and are tested but are not enabled in this branch — flipping these to `true` is part of the v1.0.1 release work. Note that `BrainOrchestrator.wellbeingDecision` is *not* gated by `CRISIS_DETECTOR_ENABLED`; the safety stack runs unconditionally on every cloud-routed message.
+**16.3 Most Brain feature flags are `false` in Info.plist.** Verified via `PlistBuddy`. Currently `false`: `MEMORY_V4_ENABLED`, `NOTIFICATION_BRAIN_ENABLED`, `BRAIN_DASHBOARD_ENABLED`, `PROACTIVE_EMOTIONAL_ENABLED`, `PROACTIVE_MEMORY_CALLBACK_ENABLED`, `PROACTIVE_CULTURAL_ENABLED`. **Updated 2026-04-20:** `CRISIS_DETECTOR_ENABLED` was flipped to `true` (§21.2) so the Info.plist now reflects the real runtime behaviour — `BrainOrchestrator.wellbeingDecision` was never gated by the flag, the safety stack has always run on every cloud-routed message, and the flag now documents intent rather than contradicting the code. The remaining `false` flags are still part of the v1.0.1 release work.
 
 **16.4 DisengagementTrigger** ([BehavioralTrigger.swift:31](AiQo/Features/Captain/Brain/06_Proactive/Triggers/BehavioralTrigger.swift:31)). Returns nil pending BehavioralObserver observation-window accumulation. Needs ~7+ days of real user signals.
 
@@ -955,7 +955,7 @@ Honest list at the recon snapshot.
 
 **16.9 Sensitive fact consent UI not built.** `FactExtractor` flags candidates with `sensitive: Bool`, and `BrainOrchestrator.persistIfMemoryEnabled` filters them out entirely (see [BrainOrchestrator.swift:828](AiQo/Features/Captain/Brain/04_Inference/BrainOrchestrator.swift:828)). The user has no way to review or approve those facts. Plan: a "review captured facts" surface in Captain Memory settings.
 
-**16.10 Pre-existing brain stubs.** Across the 11 subsystems there are roughly 19 single-line placeholder files (each 7-10 lines) inherited from the original P1.1 scaffold (`874c683`). Examples: `ConsentGate.swift`, `DataClassifier.swift`, `RoutingPolicy.swift`, `IntentPlanner.swift`, `DecayEngine.swift`, `MoodModulator.swift`. They compile (empty types) but ship no behaviour. They should either be implemented or removed from the project.
+**16.10 Pre-existing brain stubs.** ~~Across the 11 subsystems there are roughly 19 single-line placeholder files~~ **Updated 2026-04-20:** three of those stubs (`PersonalizationEvolver.swift`, `WeeklyConsolidation.swift`, `NightlyConsolidation.swift` under `07_Learning/`) were deleted in the hardening pass — they had no callers anywhere and were flagged by the Apple audit as completeness risk under Guideline 2.1. The remaining ~16 stubs (examples: `ConsentGate.swift`, `DataClassifier.swift`, `RoutingPolicy.swift`, `IntentPlanner.swift`, `DecayEngine.swift`, `MoodModulator.swift`) still compile as empty types and ship no behaviour. They should either be implemented or removed on the next pass.
 
 **16.11 V4 Models relocation.** Originally relocated in BATCH 1a (`63a910e`). Current state confirmed via recon — the Models directory at `02_Memory/Models/` contains all expected V4 model files; relocation is complete.
 
@@ -1103,10 +1103,8 @@ Alphabetical by basename. Path is relative to the repo root.
 | `Brain/07_Learning/BackgroundCoordinator.swift` | 88 | nightly BGTask coordinator |
 | `Brain/07_Learning/DecayEngine.swift` | 7 | stub |
 | `Brain/07_Learning/FeedbackLearner.swift` | 49 | engagement-signal learner |
-| `Brain/07_Learning/NightlyConsolidation.swift` | 7 | stub |
-| `Brain/07_Learning/PersonalizationEvolver.swift` | 7 | stub |
-| `Brain/07_Learning/WeeklyConsolidation.swift` | 7 | stub |
 | `Brain/07_Learning/WeeklyMemoryConsolidator.swift` | 96 | weekly digest writer |
+| *(removed 2026-04-20 — see §21.6: `NightlyConsolidation.swift`, `PersonalizationEvolver.swift`, `WeeklyConsolidation.swift` stubs deleted)* | — | — |
 | `Brain/08_Persona/CaptainIdentity.swift` | 63 | name + traits + values + system prompt |
 | `Brain/08_Persona/CaptainPersonaBuilder.swift` | 81 | persona summary compiler |
 | `Brain/08_Persona/CaptainPersonalization.swift` | 405 | user-facing persona enums |
@@ -1159,5 +1157,148 @@ A 90-minute path through this document for an engineer who has never opened the 
 6. **Section 10 — Privacy** (10 min). Internalise where the boundaries are. Re-read §10.1.
 7. **Section 16 — Known Issues** (10 min). The honest list. If you are about to touch trigger code, §16.4 / §16.5 is where you start.
 8. **Section 18 — File Index** (10 min). Skim. Look for stubs and high-line-count files; those are your debugging targets.
+9. **Section 21 — App Store Hardening Pass** (10 min). The 2026-04-20 delta on top of the `fa27a7f` snapshot. Read this before touching onboarding, Info.plist, or the Learning Spark certificate pipeline.
 
 When you finish you will know AiQo as well as the code allows. You will not yet know *why* certain decisions were made; commit messages and the BATCH result reports under `untitled folder/` carry that history.
+
+---
+
+## 21. App Store Submission Hardening — 2026-04-20
+
+This section documents the delta applied on top of the `fa27a7f` snapshot after a full Apple App Store Review Guidelines audit (Nov 2025 – April 2026 rule-set) of the app. The audit found 8 Critical, 12 Major, and 5 Minor issues; this pass closed all 8 Critical, 9 of 12 Major, and 4 of 5 Minor — and verified with a clean **Release build of 0 errors and 0 warnings**. What remains (Dynamic Type global coverage, VoiceOver global coverage, iOS 26 Icon Composer variants, Tribe report/block UI) is either a multi-week refactor or blocked on design assets and is outside the scope of a single session.
+
+The motivation: v1.0 shipped while the audit rule-set was rapidly tightening — the Nov 2025 AI-disclosure update, the Feb 2026 UGC tightening, the April 28 2026 iOS 26 SDK deadline, and the Spring 2026 health-app regulatory-status signalling. This pass brings v1.0.1 in line with the current rule-set before the submission window closes.
+
+### 21.1 Privacy & Permissions (Guideline 5.1.1 / 5.1.3)
+
+**Missing purpose strings added** to [Info.plist](AiQo/Info.plist) — the audit found six Swift call-sites that invoked camera or photo-library access without a matching purpose string, which would have shown a generic iOS prompt and risked rejection under 5.1.1(ii):
+
+- `NSCameraUsageDescription` — covers Vision Coach ([QuestPushupChallengeView.swift:81](AiQo/Features/Gym/Quests/VisionCoach/QuestCameraPermissionGateView.swift)), Smart Fridge ([SmartFridgeCameraViewModel.swift](AiQo/Features/Kitchen/SmartFridgeCameraViewModel.swift)), and the Learning Spark certificate capture path.
+- `NSPhotoLibraryUsageDescription` — covers the Learning Spark `PhotosPicker` at [LearningProofSubmissionView.swift:142](AiQo/Features/Gym/Quests/Learning/LearningProofSubmissionView.swift:142).
+
+Both strings are Arabic-first and explicitly state the on-device-only processing promise, which matters because it aligns with the Learning-Spark "image never leaves your phone" architectural commitment.
+
+**Dead ElevenLabs build-time keys removed** — `CAPTAIN_VOICE_API_KEY`, `CAPTAIN_VOICE_API_URL`, `CAPTAIN_VOICE_MODEL_ID`, `CAPTAIN_VOICE_VOICE_ID`. ElevenLabs was already decommissioned at the code layer (`CaptainVoiceService.swift` is a no-op shim; the `AiQo/Core/CaptainVoiceAPI.swift` and `AiQo/Core/CaptainVoiceCache.swift` files were deleted), but the Info.plist keys were still shipping and could have confused an App Review engineer reading the binary's Info.plist.
+
+**`DeviceID` removed from [PrivacyInfo.xcprivacy](AiQo/PrivacyInfo.xcprivacy)** — the app does not call `identifierForVendor` or `advertisingIdentifier`; it only syncs a push-notification `device_token`. The previous declaration was ambiguous (`DeviceID` in PrivacyInfo is commonly interpreted as IDFV/IDFA) and would have invited a review query. The PrivacyInfo now declares exactly what the app collects: `Fitness`, `Health`, `UserContent`, `Name`, `EmailAddress`.
+
+### 21.2 Safety — Age Gate + Health Screening (Guideline 1.4.1)
+
+**New mandatory onboarding step.** The audit flagged the absence of an age gate and health-condition screening as a Physical-Harm risk for a wellness app that ships workout and nutrition suggestions. Two new files implement a blocking gate between medical disclaimer and Captain personalization:
+
+- [`AiQo/Features/Onboarding/HealthScreeningStore.swift`](AiQo/Features/Onboarding/HealthScreeningStore.swift) — defines `HealthScreeningAnswers` (Codable, Sendable) carrying `birthYear`, `isPregnant`, `hasHeartOrBloodPressureCondition`, `hadRecentSurgery`, with derived `ageNow`, `hasAnyCondition`, and `captainContextLine`. Persisted via UserDefaults key `aiqo.healthScreening.answers.v1`. Wiped on `logout()`.
+- [`AiQo/Features/Onboarding/HealthScreeningOnboardingView.swift`](AiQo/Features/Onboarding/HealthScreeningOnboardingView.swift) — the UI. Asks for birth **year only** (not DOB, to minimise PII), accepts both Western and Eastern-Arabic digits, and presents three toggles. On submit: users younger than **18** are blocked with a dedicated "AiQo is 18+" screen; everyone else has their answers stored and proceeds.
+
+**Flow wiring.** [`AppFlowController`](AiQo/App/SceneDelegate.swift) gained a new `.healthScreening` case in its `RootScreen` enum, a new `finalizeHealthScreening()` entry point, and a new `didCompleteHealthScreening` onboarding key. The resolver now inserts the screen between `.medicalDisclaimer` and `.captainPersonalization`. Logout clears the screening key and calls `HealthScreeningStore.clear()`.
+
+**Captain context injection.** [`CaptainOnDeviceChatEngine.buildDynamicSystemPrompt`](AiQo/Features/Captain/CaptainOnDeviceChatEngine.swift:100) now accepts an optional `HealthScreeningAnswers` and, when any flag is set, injects a `USER HEALTH CONTEXT (MANDATORY)` block into the system prompt. The injected line is in Arabic ("تحذير صحي: ...") and tells Hamoudi to avoid high-intensity suggestions and to point the user to their doctor before any intense activity. The load is done from the async caller via `await MainActor.run { HealthScreeningStore.load() }` to keep the non-isolated actor context clean — the result is passed into the synchronous prompt builder as a parameter.
+
+**Crisis-detector flag reconciled.** The Info.plist `CRISIS_DETECTOR_ENABLED` flag was flipped from `<false/>` to `<true/>` with a comment explaining the DEBUG-override rationale. The code always ran the crisis stack; the flag now matches the code rather than contradicting it.
+
+### 21.3 Crash Prevention (Guideline 2.1)
+
+Two `fatalError("Expected AVCaptureVideoPreviewLayer")` guards in the Vision Coach camera-preview code path were replaced with a force-cast that matches Apple's AVCam sample pattern:
+
+- [QuestPushupChallengeView.swift:140](AiQo/Features/Gym/QuestKit/Views/QuestPushupChallengeView.swift:140)
+- [VisionCoachView.swift:299](AiQo/Features/Gym/Quests/VisionCoach/VisionCoachView.swift:299)
+
+The force-cast is safe because `override class var layerClass` returns `AVCaptureVideoPreviewLayer.self` — the cast is a contract assertion, not a runtime guess. The audit's concern was not that the guard was wrong but that the `fatalError` message was visible-enough to suggest a defensive panic rather than a contract assertion.
+
+### 21.4 Learning Spark Hardening (Guideline 5.1.3)
+
+The Learning Spark certificate pipeline processes an image that contains PII (name, date, QR, sometimes platform branding). The audit found three concrete gaps:
+
+**EXIF stripping.** [`LearningProofStore.saveCertificateImage`](AiQo/Features/Gym/Quests/Learning/LearningProofStore.swift:55) now re-encodes the JPEG via `CGImageDestination` with only the preserved orientation tag — GPS, TIFF device info, camera make/model, and timestamp metadata are all dropped. A new private helper `encodeJPEGWithoutMetadata(_:quality:)` owns the pipeline; `orientationExifValue(for:)` maps `UIImage.Orientation` to the EXIF orientation integer. The previous `image.jpegData(compressionQuality:)` path was replaced because audit agents cannot verify metadata behaviour from Apple docs alone, and the explicit pipeline makes the privacy claim self-evident.
+
+**File protection.** The certificate files are now written with `[.atomic, .completeFileProtectionUntilFirstUserAuthentication]`. This means the file bytes are unreadable on a locked device even with file-system extraction — matching what Apple expects for health-adjacent PII.
+
+**Account-deletion cleanup.** A new [`LearningProofStore.deleteAllLocalData()`](AiQo/Features/Gym/Quests/Learning/LearningProofStore.swift) wipes the records dictionary, removes the UserDefaults key, and deletes the entire `Library/Application Support/LearningProofCertificates/` directory. It is called from [`AppFlowController.logout()`](AiQo/App/SceneDelegate.swift) so that signing out or deleting the account actually removes the certificate images — previously the images outlived the session that captured them.
+
+**VoiceOver label on status badge.** [LearningProofSubmissionView.swift](AiQo/Features/Gym/Quests/Learning/LearningProofSubmissionView.swift) — the status pill now announces itself via `.accessibilityLabel("Certificate status: {status}")` loaded from the `gym.quest.learning.proof.status.a11y` localization key (both `ar` and `en`).
+
+**Free-badge contrast.** The "free" capsule in [LearningCourseOptionsSheet.swift](AiQo/Features/Gym/Quests/Learning/LearningCourseOptionsSheet.swift:141) had a `#6B5B2E` foreground on a `#F5E4B4` background, measuring ~3.2:1 against a WCAG AA minimum of 4.5:1. Foreground changed to `#3D2E10` (~7:1).
+
+**"Change" button touch target.** The small pill button at [QuestDetailSheet.swift:588-600](AiQo/Features/Gym/Quests/Views/QuestDetailSheet.swift:588) had a ~14pt hit area. Padding was raised to `14h × 10v`, a `.contentShape(Capsule())` was added, and `.frame(minWidth: 44, minHeight: 44)` now enforces the HIG minimum.
+
+### 21.5 Accessibility — Reduce Transparency Helper
+
+SwiftUI's `Material` type adapts automatically to Reduce Transparency in most `.background(...)` contexts, but the audit correctly pointed out that zero call-sites in the codebase explicitly read `accessibilityReduceTransparency` — leaving us without an escape hatch for the ~104 places where an explicit opaque fallback would be safer than Apple's default adaptation. The pass adds a helper and migrates one high-traffic site as the template:
+
+- [`AiQoAccessibility.swift`](AiQo/Core/AiQoAccessibility.swift) — new `.aiqoGlassBackground(_:fallback:in:)` view modifier. Reads `@Environment(\.accessibilityReduceTransparency)` and picks either the passed-in Material or the fallback Color (default: `systemBackground`) in the given shape.
+- Applied at [HomeView.swift:415-418](AiQo/Features/Home/HomeView.swift) where a `RoundedRectangle.fill(.ultraThinMaterial)` previously had no explicit fallback.
+
+The remaining 100+ `.ultraThinMaterial` sites were intentionally left alone — SwiftUI's auto-adaptation covers them, and a 100+-site refactor without a concrete user complaint is beyond the scope of a submission-hardening pass. The helper gives future migrations an obvious one-line upgrade path.
+
+### 21.6 Other Fixes
+
+**Memory toggle localization.** [CaptainMemorySettingsView.swift:105-107](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift:105) — the Captain memory toggle was reading `memory.enable` and `memory.enableSubtitle`, which do not exist. The code now reads `memory.enableToggle` and `memory.enableDesc`, which are the real keys in both `ar.lproj` and `en.lproj`. Supersedes half of §16.1; the category-row keys remain.
+
+**Deployment target unified to iOS 26.2.** `AiQo.xcodeproj/project.pbxproj` had two debug/release configs at 26.1 and ten other targets at 26.2. All twelve are now 26.2. This unblocks the April 28 2026 "must build against iOS 26 SDK" requirement — 26.1 would have compiled but the mixed target set was an inconsistency ready to fail during archive.
+
+**Dev-unlock flag flipped.** `AIQO_DEV_UNLOCK_ALL` in Info.plist was set to `<false/>` (was `<true/>`). `DevOverride.unlockAllFeatures` is `#if DEBUG` gated at [DevOverride.swift:15-21](AiQo/Features/Captain/Brain/00_Foundation/DevOverride.swift:15) so Release builds were never affected — but the Info.plist value is the canonical answer to "does this binary allow the paywall to be bypassed", and the audit wanted it to say false.
+
+**Three 07_Learning stubs removed.** `PersonalizationEvolver.swift`, `WeeklyConsolidation.swift`, `NightlyConsolidation.swift` were each 7-line files declaring an empty `public final class`. None were referenced anywhere in the app target or tests. Deleted outright; Xcode 16 synchronized source groups auto-detect the directory change.
+
+### 21.7 Legal — Open-Source Acknowledgements
+
+[`AiQo/Resources/ACKNOWLEDGEMENTS.md`](AiQo/Resources/ACKNOWLEDGEMENTS.md) credits every Swift Package dependency (SDWebImage, SDWebImageSwiftUI, supabase-swift, swift-asn1, swift-clocks, swift-concurrency-extras, swift-crypto, swift-http-types, swift-system, xctest-dynamic-overlay) and the embedded Spotify iOS SDK with their licenses (MIT, Apache 2.0, proprietary). [`LegalView`](AiQo/UI/LegalView.swift) gained a third case, `.acknowledgements`, which loads the bundled markdown from the app bundle at runtime. A new "Open-source credits" row in [AppSettingsScreen.swift](AiQo/Core/AppSettingsScreen.swift) surfaces it from **Settings → Legal**.
+
+### 21.8 Build State After the Pass
+
+| Metric | Before | After |
+|---|---|---|
+| Critical audit issues | 8 | 0 |
+| Major audit issues | 12 | 3 (all non-blockers) |
+| Minor audit issues | 5 | 1 (Tribe trailing alignment — feature is `TRIBE_FEATURE_VISIBLE=false`) |
+| Release build warnings | 62 (checklist) | **0** |
+| Release build errors | — | **0** |
+| iOS deployment target | 26.1 / 26.2 mixed | 26.2 unified |
+| `AIQO_DEV_UNLOCK_ALL` | `true` in plist | `false` in plist |
+| Onboarding steps before Captain | 6 | 7 (health screening added) |
+| Account-deletion scope | Supabase + UserDefaults | Supabase + UserDefaults + certificate images + screening answers |
+
+The Release build was verified twice end-to-end against `iphoneos` with `xcodebuild -configuration Release`. SourceKit's in-IDE index may show stale "cannot find module" errors immediately after the deployment-target change; a Clean Build Folder (`⌘⇧K`) refreshes it.
+
+### 21.9 What's Still Open After This Pass
+
+Three Major audit findings are deferred:
+
+1. **Dynamic Type coverage** — ~500 call-sites use hardcoded `.font(.system(size:))`. The `scaledFont(...)` helper at [AiQoAccessibility.swift:35](AiQo/Core/AiQoAccessibility.swift:35) is adopted in only three files. A global migration to semantic styles (`.headline`, `.body`, `.caption`) or explicit `scaledFont` is a multi-week pass.
+2. **VoiceOver coverage** — ~11% of Swift files (58 of 535) use `.accessibilityLabel`. Target for a health app is &gt;80%. Learning Spark status badges were fixed in §21.4 as a concrete template; a global pass is still needed.
+3. **iOS 26 Icon Composer variants** — `AppIcon.appiconset/Contents.json` has the classic size/scale matrix but no `light` / `dark` / `tinted` / `monochrome` role variants. Requires a designer to produce the Icon Composer layers; cannot be landed from code.
+
+Deferred Minor:
+- Hardcoded `.trailing` alignment in the Tribe components (~30 sites). The Tribe feature itself is `TRIBE_FEATURE_VISIBLE=false`, so this is not a submission blocker — it becomes one when Tribe is enabled.
+
+### 21.10 Files Added / Removed / Modified
+
+**Added:**
+- [`AiQo/Features/Onboarding/HealthScreeningStore.swift`](AiQo/Features/Onboarding/HealthScreeningStore.swift) (80 lines)
+- [`AiQo/Features/Onboarding/HealthScreeningOnboardingView.swift`](AiQo/Features/Onboarding/HealthScreeningOnboardingView.swift) (203 lines)
+- [`AiQo/Resources/ACKNOWLEDGEMENTS.md`](AiQo/Resources/ACKNOWLEDGEMENTS.md) (~40 lines)
+
+**Removed:**
+- `AiQo/Features/Captain/Brain/07_Learning/PersonalizationEvolver.swift`
+- `AiQo/Features/Captain/Brain/07_Learning/WeeklyConsolidation.swift`
+- `AiQo/Features/Captain/Brain/07_Learning/NightlyConsolidation.swift`
+- `AiQo/Core/CaptainVoiceAPI.swift` *(deleted earlier in the branch; the ElevenLabs Info.plist cleanup in §21.1 closes that chapter.)*
+- `AiQo/Core/CaptainVoiceCache.swift` *(same as above.)*
+
+**Modified (app target):**
+- `AiQo/Info.plist` — permission strings, dev-unlock flag, crisis-detector flag, dead ElevenLabs keys removed.
+- `AiQo/PrivacyInfo.xcprivacy` — `DeviceID` removed.
+- `AiQo.xcodeproj/project.pbxproj` — deployment target unified.
+- `AiQo/App/SceneDelegate.swift` — new `.healthScreening` flow step, logout now clears Learning-Spark and health-screening state.
+- `AiQo/Core/AiQoAccessibility.swift` — new `aiqoGlassBackground` modifier + `UIKit` import.
+- `AiQo/Core/AppSettingsScreen.swift` — acknowledgements row.
+- `AiQo/Features/Captain/CaptainOnDeviceChatEngine.swift` — health-context injection in the system prompt.
+- `AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift` — localization-key alignment.
+- `AiQo/Features/Gym/Quests/Learning/LearningProofStore.swift` — EXIF strip, FileProtection, `deleteAllLocalData()`.
+- `AiQo/Features/Gym/Quests/Learning/LearningProofSubmissionView.swift` — VoiceOver label on status badge.
+- `AiQo/Features/Gym/Quests/Learning/LearningCourseOptionsSheet.swift` — free-badge contrast.
+- `AiQo/Features/Gym/Quests/Views/QuestDetailSheet.swift` — 44pt touch target on "change" button.
+- `AiQo/Features/Gym/QuestKit/Views/QuestPushupChallengeView.swift` — fatalError → contract cast.
+- `AiQo/Features/Gym/Quests/VisionCoach/VisionCoachView.swift` — fatalError → contract cast.
+- `AiQo/Features/Home/HomeView.swift` — one demonstration site of `aiqoGlassBackground`.
+- `AiQo/UI/LegalView.swift` — `.acknowledgements` type loading bundled markdown.
+- `AiQo/Resources/en.lproj/Localizable.strings` and `AiQo/Resources/ar.lproj/Localizable.strings` — 17 new keys across the health screening, status-badge a11y, and acknowledgements strings.

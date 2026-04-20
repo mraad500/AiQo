@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>AIQO_DEV_UNLOCK_ALL</key>
-	<true/>
+	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>aiqo.notifications.refresh</string>
@@ -12,14 +12,6 @@
 	</array>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
-	<key>CAPTAIN_VOICE_API_KEY</key>
-	<string>$(CAPTAIN_VOICE_API_KEY)</string>
-	<key>CAPTAIN_VOICE_API_URL</key>
-	<string>$(CAPTAIN_VOICE_API_URL)</string>
-	<key>CAPTAIN_VOICE_MODEL_ID</key>
-	<string>$(CAPTAIN_VOICE_MODEL_ID)</string>
-	<key>CAPTAIN_VOICE_VOICE_ID</key>
-	<string>$(CAPTAIN_VOICE_VOICE_ID)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -50,6 +42,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>يحتاج AiQo الكاميرا لعدّ تمارين الضغط، تسجيل المكوّنات في الثلاجة الذكية، والتحقق من صور الشهادات على جهازك فقط.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يستخدم AiQo مكتبة الصور لاختيار صورة شهادة إنجازك أو صور الطعام — الصور تُعالَج على جهازك فقط ولا تُرفَع لأي سيرفر.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.</string>
 	<key>NSHealthUpdateUsageDescription</key>
@@ -91,8 +87,12 @@
 	<false/>
 	<key>PROACTIVE_CULTURAL_ENABLED</key>
 	<false/>
+	<!-- Crisis detection is always on in production. The detector watches for
+	     distress signals and routes to region-aware professional helplines
+	     (UAE MOHAP, Saudi NCMH, Iraq IASP, global fallback). This flag exists
+	     only so DEBUG builds can disable it for test automation. -->
 	<key>CRISIS_DETECTOR_ENABLED</key>
-	<false/>
+	<true/>
 	<key>BRAIN_DASHBOARD_ENABLED</key>
 	<false/>
 	<key>AUDIT_LOGGER_VERBOSE</key>

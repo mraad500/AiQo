@@ -593,9 +593,11 @@ struct QuestDetailSheet: View {
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(Color(hex: "1A1A1A"))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
                     .background(Capsule().fill(Color(hex: "EBCF97").opacity(0.55)))
+                    .contentShape(Capsule())
+                    .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
 
