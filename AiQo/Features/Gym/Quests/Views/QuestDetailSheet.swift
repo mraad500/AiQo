@@ -54,6 +54,13 @@ struct QuestDetailSheet: View {
                         Capsule().fill(Color(hex: "F5F5F5"))
                     )
 
+                // XP reward hint — shown only when the quest has a product-decided
+                // XP value in `QuestXPRewards`. Positioned between the source badge
+                // and the "Challenge" section so the user sees the reward up front.
+                if let xp = QuestXPRewards.xp(for: quest) {
+                    rewardXPPill(xp: xp)
+                }
+
                 // Challenge section
                 VStack(alignment: .trailing, spacing: 8) {
                     Text(questLocalizedText("gym.quest.challenge"))
@@ -238,6 +245,31 @@ struct QuestDetailSheet: View {
         } message: {
             Text(healthSetupAlertMessage)
         }
+    }
+
+    // MARK: - Reward XP Pill
+
+    /// Sand-toned capsule that makes the XP reward explicit before the user reads the
+    /// challenge details. Matches the celebration-sheet XP pill visual so the user
+    /// sees a consistent "this much XP" token both before and after completion.
+    @ViewBuilder
+    private func rewardXPPill(xp: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .bold))
+            Text(String(
+                format: questLocalizedText("gym.quest.detail.reward_xp.format"),
+                locale: questAppLocale(),
+                xp
+            ))
+            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            .monospacedDigit()
+        }
+        .foregroundStyle(Color(hex: "6B5B2E"))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Capsule().fill(Color(hex: "F5E4B4")))
+        .overlay(Capsule().stroke(Color(hex: "EBCF97"), lineWidth: 0.8))
     }
 
     // MARK: - Action Button

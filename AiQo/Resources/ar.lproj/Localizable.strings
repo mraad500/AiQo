@@ -2943,3 +2943,4 @@
 "learningSpark.stage2.levels" = "كورس مجاني واحد";
 "learningSpark.course.duration.with_audit" = "~%d ساعة (مع الـ audit المجاني)";
 "gym.quest.celebration.today_at.format" = "اليوم الساعة %@";
+"gym.quest.detail.reward_xp.format" = "+%d XP عند إكمال التحدي";

@@ -2944,3 +2944,4 @@
 "learningSpark.stage2.levels" = "One free course";
 "learningSpark.course.duration.with_audit" = "~%d hours (with free audit)";
 "gym.quest.celebration.today_at.format" = "Today at %@";
+"gym.quest.detail.reward_xp.format" = "+%d XP on completion";
