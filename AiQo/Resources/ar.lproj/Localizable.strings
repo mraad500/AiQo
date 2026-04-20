@@ -2530,6 +2530,7 @@
 
 // Progressive UI states
 "gym.quest.learning.change" = "تغيير";
+"gym.quest.learning.selectedCourse" = "الكورس المختار";
 "gym.quest.learning.verifying" = "كابتن حمودي يتحقق...";
 "gym.quest.learning.rateLimit.contact" = "تواصل معانا";
 "learning.platform.edraak" = "إدراك";

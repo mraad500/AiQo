@@ -573,32 +573,86 @@ struct QuestDetailSheet: View {
         }
     }
 
-    /// Pill showing the currently selected course + a "تغيير" link to re-open the
-    /// options sheet. Always rendered on States B/C/D/E.
+    /// Card showing the currently selected course + a "تغيير" action to re-open the
+    /// options sheet. Always rendered on States B/C/D/E. Visual matches the rest of
+    /// the app: rounded 18pt card, white-translucent fill, mint-stroked "selected"
+    /// indicator, content rows for title, platform, and hours.
     @ViewBuilder
     private func selectedCoursePill(option: LearningCourseOption) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "graduationcap.fill")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Color(hex: "1A1A1A"))
-            Text(option.title)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color(hex: "1A1A1A"))
-                .lineLimit(1)
-            Spacer()
-            Button(action: { showLearningOptions = true }) {
-                Text(questLocalizedText("gym.quest.learning.change"))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: "1A1A1A").opacity(0.7))
+        VStack(alignment: .trailing, spacing: 12) {
+
+            // Top row — section label + icon on the trailing edge, "Change" action
+            // pill on the leading edge. HStack order is written LTR; SwiftUI mirrors
+            // automatically under the app's RTL environment.
+            HStack(spacing: 8) {
+                Button(action: { showLearningOptions = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.2.circlepath")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(questLocalizedText("gym.quest.learning.change"))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(Color(hex: "1A1A1A"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color(hex: "EBCF97").opacity(0.55)))
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    Text(questLocalizedText("gym.quest.learning.selectedCourse"))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color(hex: "666666"))
+                    Image(systemName: "graduationcap.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color(hex: "6B5B2E"))
+                }
             }
-            .buttonStyle(.plain)
+
+            // Course title — the primary content of the card.
+            Text(option.title)
+                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color(hex: "1A1A1A"))
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // Metadata row — platform + estimated hours pills.
+            HStack(spacing: 8) {
+                Text(String(
+                    format: questLocalizedText("learningSpark.course.duration.with_audit"),
+                    locale: questAppLocale(),
+                    option.course.estimatedHours
+                ))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "6B5B2E"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color(hex: "F5E4B4")))
+
+                Text(questLocalizedText(option.providerDisplayKey))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: "1A1A1A"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color(hex: "F5F5F5")))
+
+                Spacer()
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(16)
+        .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(hex: "F5F5F5"))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.9))
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color(hex: "B7E5D2"), lineWidth: 1.2)
+        )
+        .shadow(color: Color(hex: "B7E5D2").opacity(0.18), radius: 8, x: 0, y: 4)
     }
 
     /// State B — ready to submit proof.

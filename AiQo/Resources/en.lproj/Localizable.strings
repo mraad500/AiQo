@@ -2531,6 +2531,7 @@
 
 // Progressive UI states
 "gym.quest.learning.change" = "Change";
+"gym.quest.learning.selectedCourse" = "Selected course";
 "gym.quest.learning.verifying" = "Captain Hamoudi is verifying...";
 "gym.quest.learning.rateLimit.contact" = "Contact support";
 "learning.platform.edraak" = "Edraak";
