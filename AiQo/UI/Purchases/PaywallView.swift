@@ -373,8 +373,8 @@ struct PaywallView: View {
             .foregroundStyle(.white)
 
             Text(copy(
-                ar: "بطاقتان فقط: Core للسرعة والتتبع اليومي الكامل، وIntelligence Pro لكل شيء مع ميزة القمم وذاكرة ممتدة للكابتن.",
-                en: "Just two cards: Core for speed and complete everyday tracking, or Intelligence Pro for the full experience with Peaks and expanded Captain memory."
+                ar: "بطاقتان فقط: AiQo Max للسرعة والتتبع اليومي الكامل، وAiQo Intelligence Pro لكل شيء مع ميزة القمم وذاكرة ممتدة للكابتن.",
+                en: "Just two cards: AiQo Max for speed and complete everyday tracking, or AiQo Intelligence Pro for the full experience with Peaks and expanded Captain memory."
             ))
             .font(.system(size: 14, weight: .medium, design: .rounded))
             .foregroundStyle(Color.white.opacity(0.62))
@@ -632,14 +632,15 @@ struct PaywallView: View {
     }
 
     private var purchaseActionBar: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Text(copy(
-                ar: "لن تدخل إلى لوحة AiQo الرئيسية حتى تبدأ التجربة المجانية على واحدة من هذه الباقات.",
-                en: "You won’t enter the main AiQo dashboard until you start your free trial on one of these tiers."
+                ar: "تجربة مجانية 7 أيام، ثم يتجدد الاشتراك شهرياً تلقائياً حتى تلغيه. يمكنك الإلغاء بأي وقت من الإعدادات > Apple ID > الاشتراكات.",
+                en: "7-day free trial, then auto-renews monthly until canceled. Cancel anytime in Settings > Apple ID > Subscriptions."
             ))
-            .font(.system(size: 12, weight: .medium, design: .rounded))
-            .foregroundStyle(Color.white.opacity(0.58))
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(Color.white.opacity(0.62))
             .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
 
             Button {
                 purchaseSelectedProduct()
@@ -890,14 +891,14 @@ struct PaywallView: View {
                 title: "AiQo Intelligence Pro",
                 eyebrow: copy(ar: "الأقوى لكسر الأرقام والتحليل", en: "The full analytical stack"),
                 summary: copy(
-                    ar: "كل ما في Core وأكثر: ميزة القمم، ذاكرة ممتدة للكابتن، وذكاء اصطناعي تحليلي أعمق يقود التجربة بالكامل.",
-                    en: "Everything in Core and more: Peaks, extended Captain memory, and deeper analytical AI for the complete AiQo experience."
+                    ar: "كل ما في AiQo Max وأكثر: ميزة القمم، ذاكرة ممتدة للكابتن، وذكاء اصطناعي تحليلي أعمق يقود التجربة بالكامل.",
+                    en: "Everything in AiQo Max and more: Peaks, extended Captain memory, and deeper analytical AI for the complete AiQo experience."
                 ),
                 features: [
                     PaywallFeature(icon: "mountain.2.fill", text: copy(ar: "ميزة القمم (Peaks) لكسر الأرقام القياسية والتحديات الأسطورية", en: "Peaks for record-breaking legendary challenges")),
                     PaywallFeature(icon: "brain.head.profile", text: copy(ar: "ذاكرة ممتدة للكابتن لفهم تاريخك، أهدافك، وسياقك على مدى أطول", en: "Expanded Captain memory for longer-term context across your goals and history")),
                     PaywallFeature(icon: "point.3.connected.trianglepath.dotted", text: copy(ar: "ذكاء اصطناعي تحليلي أعمق باستخدام نموذج reasoning أقوى", en: "Deeper analytical AI powered by a stronger reasoning model")),
-                    PaywallFeature(icon: "sparkles.rectangle.stack.fill", text: copy(ar: "كل مزايا Core مع كابتن أكثر فهماً وتخطيطاً", en: "All Core features plus a smarter, more strategic Captain"))
+                    PaywallFeature(icon: "sparkles.rectangle.stack.fill", text: copy(ar: "كل مزايا AiQo Max مع كابتن أكثر فهماً وتخطيطاً", en: "All AiQo Max features plus a smarter, more strategic Captain"))
                 ],
                 badge: copy(ar: "الأكثر اختياراً", en: "Most chosen"),
                 icon: "crown.fill",
