@@ -4,14 +4,20 @@
 <dict>
 	<key>AIQO_DEV_UNLOCK_ALL</key>
 	<false/>
+	<key>AUDIT_LOGGER_VERBOSE</key>
+	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>aiqo.notifications.refresh</string>
 		<string>aiqo.notifications.inactivity-check</string>
 		<string>aiqo.brain.nightly</string>
 	</array>
+	<key>BRAIN_DASHBOARD_ENABLED</key>
+	<false/>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
+	<key>CAPTAIN_BRAIN_V2_ENABLED</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,6 +34,14 @@
 	</array>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
+	<key>CRISIS_DETECTOR_ENABLED</key>
+	<true/>
+	<key>LEARNING_CHALLENGE_V2_ENABLED</key>
+	<true/>
+	<key>LEARNING_SPARK_STAGE2_ENABLED</key>
+	<true/>
+	<key>LEARNING_VERIFICATION_ON_DEVICE_ENABLED</key>
+	<true/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>
@@ -35,6 +49,10 @@
 		<string>instagram-stories</string>
 		<string>instagram</string>
 	</array>
+	<key>MEMORY_V4_ENABLED</key>
+	<false/>
+	<key>NOTIFICATION_BRAIN_ENABLED</key>
+	<false/>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>AiQo uses alarm access to save your smart wake time as an alarm on your device.</string>
 	<key>NSAppTransportSecurity</key>
@@ -42,14 +60,6 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSCameraUsageDescription</key>
-	<string>يحتاج AiQo الكاميرا لعدّ تمارين الضغط، تسجيل المكوّنات في الثلاجة الذكية، والتحقق من صور الشهادات على جهازك فقط.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>يستخدم AiQo مكتبة الصور لاختيار صورة شهادة إنجازك أو صور الطعام — الصور تُعالَج على جهازك فقط ولا تُرفَع لأي سيرفر.</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.aiqo.startWalk</string>
@@ -61,74 +71,27 @@
 		<string>com.aiqo.openKitchen</string>
 		<string>com.aiqo.weeklyReport</string>
 	</array>
+	<key>PLANK_LADDER_CHALLENGE_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_CULTURAL_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_EMOTIONAL_ENABLED</key>
+	<false/>
+	<key>PROACTIVE_MEMORY_CALLBACK_ENABLED</key>
+	<false/>
+	<key>SAFARI_VIEW_CONTROLLER_ENABLED</key>
+	<true/>
 	<key>SPOTIFY_CLIENT_ID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
-	<key>CAPTAIN_BRAIN_V2_ENABLED</key>
-	<true/>
-	<key>MEMORY_V4_ENABLED</key>
-	<false/>
 	<key>TRIBE_BACKEND_ENABLED</key>
 	<false/>
 	<key>TRIBE_FEATURE_VISIBLE</key>
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
-	<false/>
-	<key>NOTIFICATION_BRAIN_ENABLED</key>
-	<false/>
-	<key>MEMORY_V4_ENABLED</key>
-	<false/>
-	<key>PROACTIVE_MEMORY_CALLBACK_ENABLED</key>
-	<false/>
-	<key>PROACTIVE_EMOTIONAL_ENABLED</key>
-	<false/>
-	<key>PROACTIVE_CULTURAL_ENABLED</key>
-	<false/>
-	<!-- Crisis detection is always on in production. The detector watches for
-	     distress signals and routes to region-aware professional helplines
-	     (UAE MOHAP, Saudi NCMH, Iraq IASP, global fallback). This flag exists
-	     only so DEBUG builds can disable it for test automation. -->
-	<key>CRISIS_DETECTOR_ENABLED</key>
-	<true/>
-	<key>BRAIN_DASHBOARD_ENABLED</key>
-	<false/>
-	<key>AUDIT_LOGGER_VERBOSE</key>
-	<false/>
-	<!-- Learning Spark (Stage 1) — master kill switch for the V2 challenge flow. -->
-	<key>LEARNING_CHALLENGE_V2_ENABLED</key>
-	<true/>
-	<!--
-	    On-device certificate verification toggle.
-	    ON  (default): CertificateVerifier runs the local OCR + Foundation Models pipeline.
-	    OFF          : HamoudiVerificationReasoner short-circuits and returns .needsReview
-	                   with the honest "device doesn't support verification" Arabic copy.
-	                   It does NOT fall back to the deprecated Gemini path. Re-enabling the
-	                   cloud verifier requires a manual code change in LearningProofSubmissionView;
-	                   AiQo's architecture commitment is zero-cloud-verification, permanently.
-	-->
-	<key>LEARNING_VERIFICATION_ON_DEVICE_ENABLED</key>
-	<true/>
-	<!--
-	    When ON, external course URLs open inside SFSafariViewController (Apple's sanctioned
-	    in-app browser — inherits Safari cookies, no extra privacy labels). When OFF, falls
-	    back to UIApplication.shared.open which jumps out to Safari.
-	-->
-	<key>SAFARI_VIEW_CONTROLLER_ENABLED</key>
-	<true/>
-	<!--
-	    Learning Spark Stage 2 — 5-course picker replacing Plank Ladder in Legendary
-	    Challenges Stage 2. Paired-rollback with PLANK_LADDER_CHALLENGE_ENABLED:
-	      (YES, NO)  default   → Learning Spark Stage 2 in slot
-	      (NO,  YES) rollback  → Plank Ladder in slot (dormant but compilable)
-	      (NO,  NO)  emergency → "قريباً" non-interactive placeholder card
-	    Swift is the source of truth — see AiQoFeatureFlags.swift.
-	-->
-	<key>LEARNING_SPARK_STAGE2_ENABLED</key>
-	<true/>
-	<key>PLANK_LADDER_CHALLENGE_ENABLED</key>
 	<false/>
 	<key>UIBackgroundModes</key>
 	<array>

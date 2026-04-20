@@ -2,7 +2,7 @@ import Foundation
 
 nonisolated enum SubscriptionProductIDs {
     // Live App Store Connect catalog.
-    static let coreMonthly = "com.mraad500.aiqo.max"
+    static let coreMonthly = "com.mraad5000.aiqo.max"
     static let intelligenceProMonthly = "com.mraad500.aiqo.intelligence.pro"
 
     // Retired middle-tier SKU kept only to grandfather older entitlements.
