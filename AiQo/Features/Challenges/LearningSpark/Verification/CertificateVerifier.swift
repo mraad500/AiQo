@@ -56,6 +56,16 @@ actor CertificateVerifier {
 
         // Rate limit — 3 attempts per hour. Guards the Foundation Models session from
         // abuse and protects the user's battery.
+        //
+        // DEBUG builds skip the rate limiter entirely so developers can iterate on
+        // certificate verification during diagnosis. Release builds (production) still
+        // enforce the cap strictly. This block's `#if DEBUG` branch also clears any
+        // stored attempt history so re-running on a DEBUG build doesn't carry
+        // rate-limit state from a previous session.
+        #if DEBUG
+        VerificationRateLimiter.reset()
+        logger.notice("debug_rate_limiter_bypassed reason=debug_build")
+        #else
         guard VerificationRateLimiter.canAttempt(now: startedAt) else {
             let minutesRemaining = Int((VerificationRateLimiter.retryAfterSeconds(now: startedAt) / 60).rounded(.up))
             let message = "جربت 3 مرات بالساعة، خل نستريح شوية. جرب بعد \(max(minutesRemaining, 1)) دقيقة أو تواصل معانا لو عندك مشكلة."
@@ -69,6 +79,7 @@ actor CertificateVerifier {
             return .rejected(reason: "rate_limit", message: message)
         }
         VerificationRateLimiter.recordAttempt(now: startedAt)
+        #endif
 
         // Stage A — on-device OCR.
         let ocrResult: CertificateOCR.Result
