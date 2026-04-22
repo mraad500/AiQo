@@ -605,20 +605,47 @@ final class LiveWorkoutSession: ObservableObject {
         pushLiveActivityUpdateIfNeeded(force: true)
     }
 
+    /// Emits on zone transitions only — per-session Combine publisher. Any
+    /// in-session UI can bind to this directly; `@Published` guarantees one
+    /// emission per actual zone change because the assignment below is
+    /// gated by a value comparison.
+    @Published private(set) var zoneTransitionState: WorkoutActivityAttributes.HeartRateState = .neutral
+
     private var liveActivityHeartRateState: WorkoutActivityAttributes.HeartRateState {
+        let state: WorkoutActivityAttributes.HeartRateState
         switch zone2AuraState {
         case .inactive:
-            return .neutral
+            state = .neutral
         case .warmingUp:
-            return .warmingUp
+            state = .warmingUp
         case .inZone2:
-            return .zone2
+            state = .zone2
         case .tooFast:
-            return .aboveZone2
+            state = .aboveZone2
         case .tooSlow:
-            return .belowZone2
+            state = .belowZone2
         }
+
+        if state != zoneTransitionState {
+            zoneTransitionState = state
+            Self.captainVoiceZoneTransitions.send(CaptainVoiceZoneSnapshot(
+                state: state,
+                currentBPM: Int(heartRate),
+                zone2LowerBPM: Int(zone2LowerBoundBPM),
+                zone2UpperBPM: Int(zone2UpperBoundBPM)
+            ))
+        }
+        return state
     }
+
+    /// App-global broadcast point for zone transitions. `LiveWorkoutSession`
+    /// is instantiated per-workout (not a singleton), so the coaching voice
+    /// service — which lives outside any single workout scope — can't subscribe
+    /// to an instance property. Every session instance pushes its transitions
+    /// here, and `ZoneCoachingVoiceService` subscribes at app launch.
+    /// The payload type `CaptainVoiceZoneSnapshot` is defined in
+    /// `AiQo/Features/Captain/Voice/CaptainVoiceZoneSnapshot.swift`.
+    static let captainVoiceZoneTransitions = PassthroughSubject<CaptainVoiceZoneSnapshot, Never>()
 
     private func pushLiveActivityUpdateIfNeeded(force: Bool = false) {
         guard phase == .running || phase == .paused || phase == .ending else { return }

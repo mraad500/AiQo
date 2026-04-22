@@ -20,6 +20,8 @@
 	<string>$(CAPTAIN_API_KEY)</string>
 	<key>CAPTAIN_BRAIN_V2_ENABLED</key>
 	<true/>
+	<key>CAPTAIN_VOICE_CLOUD_ENABLED</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

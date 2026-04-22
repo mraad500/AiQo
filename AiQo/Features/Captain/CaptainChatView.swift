@@ -5,6 +5,10 @@ struct CaptainChatView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @ObservedObject private var consentManager = AIDataConsentManager.shared
     @ObservedObject private var voiceService = CaptainVoiceService.shared
+    /// Hybrid voice router — dispatches speaker-icon taps to either Apple TTS
+    /// (default) or MiniMax (commit 2, consent-gated). Observed so the
+    /// `enhancedVoiceActive` badge and accessibility label reflect live state.
+    @ObservedObject private var voiceRouter = CaptainVoiceRouter.shared
     @State private var showAIPrivacySettings = false
     @State private var showHealthSources = false
 
@@ -258,13 +262,14 @@ private extension CaptainChatView {
                     } : nil,
                     onSpeak: message.isUser ? nil : {
                         Task {
-                            await CaptainVoiceService.shared.speak(text: message.text)
+                            await CaptainVoiceRouter.shared.speak(text: message.text, tier: .premium)
                         }
                     },
                     onAccessoryTap: message.accessory == .morningGratitude ? {
                         globalBrain.startMorningGratitudeSession()
                     } : nil,
-                    ttsDimmed: !voiceService.isTTSAvailable
+                    ttsDimmed: !voiceService.isTTSAvailable,
+                    enhancedVoiceActive: voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking
                 )
                 .id(message.id)
                 .padding(.bottom, spacing(forIndex: index))
@@ -425,6 +430,10 @@ private struct ChatMessageRow: View {
     var onSpeak: (() -> Void)?
     var onAccessoryTap: (() -> Void)?
     var ttsDimmed: Bool = false
+    /// True when the `CaptainVoiceRouter` is currently routing through the
+    /// MiniMax cloud provider. Drives the subtle mint badge on the speaker
+    /// icon and the "enhanced voice" accessibility label variant.
+    var enhancedVoiceActive: Bool = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
@@ -466,17 +475,29 @@ private struct ChatMessageRow: View {
                                 Spacer(minLength: 0)
 
                                 Button(action: onSpeak) {
-                                    Image(systemName: "speaker.wave.2")
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(ttsDimmed ? 0.4 : 0.68))
-                                        .padding(8)
-                                        .background(
+                                    ZStack(alignment: .bottomTrailing) {
+                                        Image(systemName: "speaker.wave.2")
+                                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(Color.black.opacity(ttsDimmed ? 0.4 : 0.68))
+                                            .padding(8)
+                                            .background(
+                                                Circle()
+                                                    .fill(Color.white.opacity(ttsDimmed ? 0.18 : 0.34))
+                                            )
+                                        if enhancedVoiceActive {
                                             Circle()
-                                                .fill(Color.white.opacity(ttsDimmed ? 0.18 : 0.34))
-                                        )
+                                                .fill(AiQoColors.mintSoft)
+                                                .frame(width: 4, height: 4)
+                                                .offset(x: 1, y: 1)
+                                                .accessibilityHidden(true)
+                                        }
+                                    }
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(speakerAccessibilityLabel(ttsDimmed: ttsDimmed))
+                                .accessibilityLabel(speakerAccessibilityLabel(
+                                    ttsDimmed: ttsDimmed,
+                                    enhancedVoiceActive: enhancedVoiceActive
+                                ))
                             }
                         }
                     }
@@ -491,12 +512,15 @@ private struct ChatMessageRow: View {
         }
     }
 
-    private func speakerAccessibilityLabel(ttsDimmed: Bool) -> String {
+    private func speakerAccessibilityLabel(ttsDimmed: Bool, enhancedVoiceActive: Bool) -> String {
         let arabic = AppSettingsStore.shared.appLanguage == .arabic
         if ttsDimmed {
             return arabic ? "الصوت غير متاح" : "Audio unavailable"
         }
-        return arabic ? "استمع للرسالة" : "Listen to message"
+        if enhancedVoiceActive {
+            return arabic ? "استمع بالصوت المحسّن" : "Play with enhanced voice"
+        }
+        return arabic ? "استمع بالصوت المحلي" : "Play with local voice"
     }
 }
 

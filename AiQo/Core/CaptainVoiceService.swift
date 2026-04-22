@@ -78,6 +78,15 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         }
     }
 
+    /// Entry point for `CaptainVoiceRouter` to surface a transient toast
+    /// through the same pipe the chat view observes. Used when the cloud
+    /// voice provider falls back to local TTS so the user sees a single
+    /// "switched to local voice" notice — the router throttles this to
+    /// at most one per app launch, so no additional pacing is needed here.
+    func presentRouterFallbackToast(_ message: String) {
+        presentToast(message)
+    }
+
     func speakAndWait(text: String) async {
         await speak(text: text)
     }

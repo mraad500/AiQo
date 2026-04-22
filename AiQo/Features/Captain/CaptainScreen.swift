@@ -572,9 +572,26 @@ struct ChatBubbleView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var sizeClass
     @ObservedObject private var voiceService = CaptainVoiceService.shared
+    /// Hybrid voice router — the speaker tap routes `.premium` to this so
+    /// MiniMax takes over when consent + feature flag + configuration allow.
+    /// Observed for the mint-dot badge + accessibility label variant.
+    @ObservedObject private var voiceRouter = CaptainVoiceRouter.shared
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    private var enhancedVoiceActive: Bool {
+        voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking
+    }
+    private var speakerAccessibilityLabel: String {
+        let arabic = AppSettingsStore.shared.appLanguage == .arabic
+        if !voiceService.isTTSAvailable {
+            return arabic ? "الصوت غير متاح" : "Audio unavailable"
+        }
+        if enhancedVoiceActive {
+            return arabic ? "استمع بالصوت المحسّن" : "Play with enhanced voice"
+        }
+        return arabic ? "استمع بالصوت المحلي" : "Play with local voice"
     }
 
     // v1.1 brand tokens — Apple resubmission palette.
@@ -630,18 +647,27 @@ struct ChatBubbleView: View {
                 if canSpeakReply {
                     Button {
                         Task {
-                            await CaptainVoiceService.shared.speak(text: text)
+                            await CaptainVoiceRouter.shared.speak(text: text, tier: .premium)
                         }
                     } label: {
-                        Image(systemName: voiceService.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .contentShape(Rectangle())
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(systemName: voiceRouter.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .contentShape(Rectangle())
+                            if enhancedVoiceActive {
+                                Circle()
+                                    .fill(AiQoColors.mintSoft)
+                                    .frame(width: 4, height: 4)
+                                    .offset(x: 1, y: 1)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(voiceService.isTTSAvailable ? "استمع للرسالة" : "الصوت غير متاح")
+                    .accessibilityLabel(speakerAccessibilityLabel)
                 }
             }
 

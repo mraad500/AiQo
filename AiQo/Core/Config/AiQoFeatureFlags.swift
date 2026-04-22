@@ -173,4 +173,22 @@ enum FeatureFlags {
     // (`HydrationSettings.smartTrackingEnabled`, UserDefaults-backed).
     @FeatureFlag("SMART_WATER_TRACKING_ENABLED", default: true)
     static var smartWaterTrackingEnabled: Bool
+
+    // MARK: - Captain Voice (hybrid Apple + MiniMax) — flag added 2026-04-22
+    //
+    // Compile-time-constant kill switch for the MiniMax cloud voice tier.
+    // When ON (default), `.premium`-tier calls to `CaptainVoiceRouter` route
+    // through `MiniMaxTTSProvider` provided the user has granted voice
+    // cloud consent (see `CaptainVoiceConsent`) and the MiniMax provider is
+    // configured (API key in Keychain, non-placeholder voiceID/model/baseURL).
+    // When OFF, the router always routes every call — including `.premium` —
+    // to the Apple on-device TTS path; no consent sheet is presented, no
+    // network call is ever made, the Settings voice row shows a
+    // "coming soon" state.
+    //
+    // The `.realtime` tier is not affected by this flag — Zone 2 coaching,
+    // stand nudges, and other latency-sensitive phrases always use
+    // on-device Apple TTS regardless of this setting.
+    @FeatureFlag("CAPTAIN_VOICE_CLOUD_ENABLED", default: true)
+    static var captainVoiceCloudEnabled: Bool
 }
