@@ -214,6 +214,14 @@ struct PrivacySanitizer: Sendable {
 
     // MARK: - Name Injection (post-generation, into Captain's reply)
 
+    /// Replaces explicit name tokens with the user's first name.
+    ///
+    /// Apple v1.1 rejection fix: previously this function also prepended the
+    /// user's name to the front of every assistant reply when no placeholder
+    /// was found, producing screenshots like "John, Got it. 60kg is..." that
+    /// Apple Review flagged under Guideline 4.0.0. The prepend path is gone.
+    /// Hamoudi now says the user's name only if he naturally writes it (via
+    /// one of the explicit placeholder tokens inside his own generated reply).
     func injectUserName(into response: String, userName: String) -> String {
         let trimmedResponse = response.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -224,26 +232,12 @@ struct PrivacySanitizer: Sendable {
 
         let firstName = trimmedName.components(separatedBy: " ").first ?? trimmedName
 
-        // Replace explicit placeholders
-        let placeholders = ["[USER_NAME]", "{{userName}}", "{{user_name}}", "%USER_NAME%"]
-        for placeholder in placeholders where trimmedResponse.contains(placeholder) {
-            return trimmedResponse.replacingOccurrences(of: placeholder, with: firstName)
+        let placeholders = ["[USER_NAME]", "{{userName}}", "{{user_name}}", "{USER_NAME}", "%USER_NAME%"]
+        var result = trimmedResponse
+        for placeholder in placeholders where result.contains(placeholder) {
+            result = result.replacingOccurrences(of: placeholder, with: firstName)
         }
-
-        // Don't double-prepend if name already present
-        let lowercasedResponse = trimmedResponse.lowercased()
-        let lowercasedFirstName = firstName.lowercased()
-        let prefixTokens = ["،", ",", ":", " "]
-
-        if prefixTokens.contains(where: { lowercasedResponse.hasPrefix(lowercasedFirstName + $0) }) {
-            return trimmedResponse
-        }
-        if trimmedResponse.hasPrefix("يا \(firstName)") {
-            return trimmedResponse
-        }
-
-        let separator = containsArabicCharacters(in: trimmedResponse) ? "، " : ", "
-        return "\(firstName)\(separator)\(trimmedResponse)"
+        return result
     }
 
     // MARK: - Kitchen Image Sanitization (strips EXIF/GPS via re-encoding)

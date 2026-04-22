@@ -4,109 +4,38 @@ import UIKit
 struct CaptainChatView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @ObservedObject private var consentManager = AIDataConsentManager.shared
+    @ObservedObject private var voiceService = CaptainVoiceService.shared
     @State private var showAIPrivacySettings = false
+    @State private var showHealthSources = false
 
     private let bottomAnchorID = "captain-chat-bottom"
 
+    /// v1.1 kill switch — Info.plist `AIQO_CHAT_V1_1_ENABLED`. When off, the
+    /// new fixed header + persistent safety banner retract and the chat falls
+    /// back to a scroll-embedded header like v1.0 so Apple Review can see the
+    /// pre-v1.1 UX if we need to roll back without shipping a new binary.
+    private var isChatV1_1Enabled: Bool { FeatureFlags.captainChatV1_1Enabled }
+
     var body: some View {
         VStack(spacing: 0) {
+            if isChatV1_1Enabled {
+                headerBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+
+                CaptainSafetyBanner()
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+            }
+
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: true) {
-                    LazyVStack(spacing: 14) {
-                        headerCard
-
-                        if consentManager.isInOfflineOnlyMode {
-                            CaptainOfflineModeBanner {
-                                showAIPrivacySettings = true
-                            }
-                        }
-
-                        HealthComplianceCard(compact: true)
-
-                        ForEach(globalBrain.messages) { message in
-                            ChatMessageRow(
-                                message: message,
-                                onAppearRead: message.isEphemeral && !message.isRead ? {
-                                    globalBrain.markEphemeralMessageRead(messageID: message.id)
-                                } : nil,
-                                onSpeak: message.isUser ? nil : {
-                                    Task {
-                                        await CaptainVoiceService.shared.speak(text: message.text)
-                                    }
-                                },
-                                onAccessoryTap: message.accessory == .morningGratitude ? {
-                                    globalBrain.startMorningGratitudeSession()
-                                } : nil
-                            )
-                            .id(message.id)
-
-                            if !message.isUser, let spotifyRec = message.spotifyRecommendation {
-                                VibeMiniBubble(
-                                    vibeName: spotifyRec.vibeName,
-                                    description: spotifyRec.description
-                                ) {
-                                    SpotifyVibeManager.shared.playVibe(
-                                        uri: spotifyRec.spotifyURI,
-                                        vibeTitle: spotifyRec.vibeName
-                                    )
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 4)
-                                .padding(.leading, 38)
-                            }
-                        }
-
-                        if let plan = globalBrain.currentWorkoutPlan {
-                            WorkoutPlanReadyCard(plan: plan)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-
-                        if globalBrain.isLoading {
-                            CaptainTypingRow()
-                                .id("typing-indicator")
-                                .transition(.asymmetric(
-                                    insertion: .opacity.combined(with: .move(edge: .bottom)),
-                                    removal: .opacity
-                                ))
-                        }
-
-                        // Quick Reply Chips
-                        if !globalBrain.quickReplies.isEmpty && !globalBrain.isTyping {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(globalBrain.quickReplies, id: \.self) { reply in
-                                        Button {
-                                            HapticEngine.light()
-                                            globalBrain.sendMessage(reply)
-                                        } label: {
-                                            Text(reply)
-                                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                .foregroundStyle(Color(hex: "EBCF97"))
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 8)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(Color(hex: "EBCF97").opacity(0.15))
-                                                        .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
-                                                )
-                                        }
-                                        .buttonStyle(AiQoPressButtonStyle())
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: globalBrain.quickReplies)
-                        }
-
-                        Color.clear
-                            .frame(height: 1)
-                            .id(bottomAnchorID)
-                    }
-                    // CHANGED: horizontal padding from 14 to 16pt — messages flow directly on screen background, no container box
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                    messagesList
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 20)
                 }
                 .scrollDismissesKeyboard(.immediately)
                 .safeAreaPadding(.bottom, 8)
@@ -130,8 +59,22 @@ struct CaptainChatView: View {
                 }
             }
         }
-        .navigationTitle("Captain Hamoudi")
+        .overlay(alignment: .bottom) {
+            if let toast = voiceService.displayedToast {
+                Text(toast)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 96)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: voiceService.displayedToast)
+        .navigationTitle(isChatV1_1Enabled ? "" : "Captain Hamoudi")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(isChatV1_1Enabled ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ChatComposerBar(isSending: globalBrain.isLoading) { text in
                 globalBrain.sendMessage(text, context: .mainChat)
@@ -156,6 +99,12 @@ struct CaptainChatView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
         }
+        .sheet(isPresented: $showHealthSources) {
+            HealthSourcesView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
         .sheet(isPresented: $globalBrain.showPaywall) {
             PaywallView(source: .captainGate)
         }
@@ -169,8 +118,74 @@ struct CaptainChatView: View {
 }
 
 private extension CaptainChatView {
-    // CHANGED: Title HStack is now leading-aligned (shifts left on screen in RTL context)
-    var headerCard: some View {
+
+    // MARK: - Header
+
+    private var isArabicUI: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    var headerBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                globalBrain.showChatHistory = true
+            } label: {
+                headerIcon("clock.arrow.circlepath")
+            }
+            .accessibilityLabel(isArabicUI ? "سجل المحادثات" : "Chat history")
+
+            Button {
+                showHealthSources = true
+            } label: {
+                headerIcon("book.closed")
+            }
+            .accessibilityLabel(isArabicUI ? "الدليل" : "Health sources")
+
+            Spacer()
+
+            VStack(spacing: 2) {
+                Text(isArabicUI ? "كابتن حمودي" : "Captain Hamoudi")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                Text(statusSubtitle)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            }
+
+            Spacer()
+
+            CaptainChatAvatarView(size: 36)
+                .accessibilityLabel(isArabicUI ? "صورة كابتن حمودي" : "Captain Hamoudi avatar")
+        }
+        .frame(height: 56)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var statusSubtitle: String {
+        if globalBrain.isLoading {
+            return isArabicUI ? "يفكر الحين" : "Thinking…"
+        }
+        return isArabicUI ? "متصل الآن" : "Online now"
+    }
+
+    private var legacyStatusText: String {
+        if globalBrain.isLoading {
+            return isArabicUI ? "يفكر هسه" : "Thinking"
+        }
+        return isArabicUI ? "جاهز" : "Ready"
+    }
+
+    private func headerIcon(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 17, weight: .medium))
+            .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+    }
+
+    /// v1.0 scroll-embedded header. Surfaced only when the v1.1 kill switch is
+    /// off so the old UX can return without shipping a new binary.
+    var legacyHeaderCard: some View {
         HStack(spacing: 12) {
             CaptainChatAvatarView(size: 40)
 
@@ -194,17 +209,13 @@ private extension CaptainChatView {
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
                     .frame(width: 30, height: 30)
                     .background(.ultraThinMaterial, in: Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.22), lineWidth: 0.7)
-                    )
             }
 
             HStack(spacing: 6) {
                 Circle()
                     .fill(Color.aiqoMint)
                     .frame(width: 8, height: 8)
-                Text(globalBrain.isLoading ? "يفكر هسه" : "جاهز")
+                Text(legacyStatusText)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
             }
@@ -215,10 +226,127 @@ private extension CaptainChatView {
                     .fill(Color.white.opacity(0.22))
             )
         }
-        // CHANGED: leading-aligned instead of centered, pushes title toward left side of screen
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 2)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Messages list
+
+    @ViewBuilder
+    var messagesList: some View {
+        LazyVStack(spacing: 0) {
+            if !isChatV1_1Enabled {
+                legacyHeaderCard
+                    .padding(.bottom, 14)
+                HealthComplianceCard(compact: true)
+                    .padding(.bottom, 14)
+            }
+
+            if consentManager.isInOfflineOnlyMode {
+                CaptainOfflineModeBanner {
+                    showAIPrivacySettings = true
+                }
+                .padding(.bottom, 12)
+            }
+
+            ForEach(Array(globalBrain.messages.enumerated()), id: \.element.id) { index, message in
+                ChatMessageRow(
+                    message: message,
+                    onAppearRead: message.isEphemeral && !message.isRead ? {
+                        globalBrain.markEphemeralMessageRead(messageID: message.id)
+                    } : nil,
+                    onSpeak: message.isUser ? nil : {
+                        Task {
+                            await CaptainVoiceService.shared.speak(text: message.text)
+                        }
+                    },
+                    onAccessoryTap: message.accessory == .morningGratitude ? {
+                        globalBrain.startMorningGratitudeSession()
+                    } : nil,
+                    ttsDimmed: !voiceService.isTTSAvailable
+                )
+                .id(message.id)
+                .padding(.bottom, spacing(forIndex: index))
+
+                if !message.isUser, let spotifyRec = message.spotifyRecommendation {
+                    VibeMiniBubble(
+                        vibeName: spotifyRec.vibeName,
+                        description: spotifyRec.description
+                    ) {
+                        SpotifyVibeManager.shared.playVibe(
+                            uri: spotifyRec.spotifyURI,
+                            vibeTitle: spotifyRec.vibeName
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.leading, 38)
+                    .padding(.bottom, 12)
+                }
+            }
+
+            if let plan = globalBrain.currentWorkoutPlan {
+                WorkoutPlanReadyCard(plan: plan)
+                    .padding(.top, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            if globalBrain.isLoading {
+                CaptainTypingRow()
+                    .id("typing-indicator")
+                    .padding(.top, 8)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .bottom)),
+                        removal: .opacity
+                    ))
+            }
+
+            if !globalBrain.quickReplies.isEmpty && !globalBrain.isTyping {
+                quickReplyRow
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .animation(.spring(response: 0.28, dampingFraction: 0.86), value: globalBrain.quickReplies)
+            }
+
+            Color.clear
+                .frame(height: 1)
+                .id(bottomAnchorID)
+        }
+    }
+
+    private func spacing(forIndex index: Int) -> CGFloat {
+        let messages = globalBrain.messages
+        guard index < messages.count - 1 else { return 8 }
+        let sameRole = messages[index].isUser == messages[index + 1].isUser
+        return sameRole ? 6 : 18
+    }
+
+    var quickReplyRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(globalBrain.quickReplies, id: \.self) { reply in
+                    Button {
+                        HapticEngine.light()
+                        globalBrain.sendMessage(reply)
+                    } label: {
+                        Text(reply)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color(hex: "EBCF97"))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hex: "EBCF97").opacity(0.15))
+                                    .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
+                            )
+                    }
+                    .buttonStyle(AiQoPressButtonStyle())
+                    .accessibilityLabel(reply)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
     }
 
     func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
@@ -296,6 +424,7 @@ private struct ChatMessageRow: View {
     var onAppearRead: (() -> Void)?
     var onSpeak: (() -> Void)?
     var onAccessoryTap: (() -> Void)?
+    var ttsDimmed: Bool = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
@@ -339,14 +468,15 @@ private struct ChatMessageRow: View {
                                 Button(action: onSpeak) {
                                     Image(systemName: "speaker.wave.2")
                                         .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(0.68))
+                                        .foregroundStyle(Color.black.opacity(ttsDimmed ? 0.4 : 0.68))
                                         .padding(8)
                                         .background(
                                             Circle()
-                                                .fill(Color.white.opacity(0.34))
+                                                .fill(Color.white.opacity(ttsDimmed ? 0.18 : 0.34))
                                         )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(speakerAccessibilityLabel(ttsDimmed: ttsDimmed))
                             }
                         }
                     }
@@ -359,6 +489,14 @@ private struct ChatMessageRow: View {
         .onAppear {
             onAppearRead?()
         }
+    }
+
+    private func speakerAccessibilityLabel(ttsDimmed: Bool) -> String {
+        let arabic = AppSettingsStore.shared.appLanguage == .arabic
+        if ttsDimmed {
+            return arabic ? "الصوت غير متاح" : "Audio unavailable"
+        }
+        return arabic ? "استمع للرسالة" : "Listen to message"
     }
 }
 
@@ -388,7 +526,9 @@ private struct CaptainTypingRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("الكابتن يكتب")
+        .accessibilityLabel(
+            AppSettingsStore.shared.appLanguage == .arabic ? "الكابتن يكتب" : "Captain is typing"
+        )
     }
 }
 
@@ -536,7 +676,7 @@ private struct CaptainChatAvatarView: View {
         .clipShape(Circle())
         .overlay(
             Circle()
-                .stroke(Color.white.opacity(0.78), lineWidth: 1)
+                .stroke(Color(red: 0.718, green: 0.898, blue: 0.824).opacity(0.4), lineWidth: 1.5)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
@@ -628,7 +768,7 @@ private struct ChatComposerBar: View {
                 .frame(height: 8)
 
             HStack(alignment: .bottom, spacing: 12) {
-                TextField("اكتب رسالتك للكابتن...", text: $text, axis: .vertical)
+                TextField(composerPlaceholder, text: $text, axis: .vertical)
                     .focused($isFocused)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)
@@ -673,6 +813,7 @@ private struct ChatComposerBar: View {
                 .buttonStyle(.plain)
                 .disabled(isDisabled)
                 .opacity(isDisabled ? 0.55 : 1)
+                .accessibilityLabel(sendAccessibilityLabel)
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -708,6 +849,18 @@ private struct ChatComposerBar: View {
 
     private var isDisabled: Bool {
         trimmed.isEmpty || isSending
+    }
+
+    private var isArabic: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    private var composerPlaceholder: String {
+        isArabic ? "اكتب رسالتك للكابتن..." : "Write your message to the captain…"
+    }
+
+    private var sendAccessibilityLabel: String {
+        isArabic ? "إرسال الرسالة" : "Send message"
     }
 
     private func send() {

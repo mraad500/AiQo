@@ -161,6 +161,30 @@ struct AppSettingsScreen: View {
                 )
             ) {
                 NavigationLink {
+                    MedicalDisclaimerDetailView(mode: .settings)
+                } label: {
+                    let isArabic = AppSettingsStore.shared.appLanguage == .arabic
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(isArabic ? "الإخلاء الطبي" : "Medical disclaimer")
+                                .foregroundStyle(.primary)
+
+                            Text(isArabic
+                                 ? "AiQo ليس جهازاً طبياً — راجع التنبيه الكامل"
+                                 : "AiQo is not a medical device — review the full notice")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "heart.text.square")
+                            .foregroundStyle(Color(red: 0.718, green: 0.898, blue: 0.824))
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                NavigationLink {
                     AIDataPrivacySettingsView()
                 } label: {
                     HStack(spacing: 12) {

@@ -55,6 +55,16 @@ enum FeatureFlags {
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
 
+    /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
+    /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat
+    /// uses the Mint/Sand brand-token bubbles, persistent safety banner, fixed
+    /// header, and the revised Gemini system prompt. When OFF, falls back to
+    /// the v1.0 legacy chat — but note that prompt / name-injection / model
+    /// fixes are unconditional because they are bug fixes. This flag only
+    /// gates the visible rebuild.
+    @FeatureFlag("AIQO_CHAT_V1_1_ENABLED", default: true)
+    static var captainChatV1_1Enabled: Bool
+
     @FeatureFlag("HAMOUDI_BLEND_ENABLED", default: false)
     static var hamoudiBlendEnabled: Bool
 

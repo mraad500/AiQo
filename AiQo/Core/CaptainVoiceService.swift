@@ -12,6 +12,13 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     static let shared = CaptainVoiceService()
 
     @Published private(set) var isSpeaking = false
+    /// v1.1 — surfaces TTS health to the chat view so the speaker icon dims
+    /// when playback is unavailable. Flips false on failure, flips back true
+    /// next time audio playback succeeds.
+    @Published private(set) var isTTSAvailable = true
+    /// Transient Arabic status surfaced above the composer when TTS fails.
+    /// Cleared automatically after ~2.5s. Chat view observes this.
+    @Published private(set) var displayedToast: String?
 
     private let audioSession = AVAudioSession.sharedInstance()
     private let audioManager = AiQoAudioManager.shared
@@ -25,6 +32,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     private var hasActiveSpeechSession = false
     private var externalMixedPlaybackClients = 0
     private var activeSpeechSequence = 0
+    private var toastDismissalTask: Task<Void, Never>?
 
     private override init() {
         super.init()
@@ -41,6 +49,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         do {
             try beginSpeechSession()
             isSpeaking = true
+            isTTSAvailable = true
 
             guard speechSequence == activeSpeechSequence else { return }
 
@@ -52,7 +61,20 @@ final class CaptainVoiceService: NSObject, ObservableObject {
                 logger.error("captain_voice_failed error=\(error.localizedDescription, privacy: .public)")
                 completeCurrentPlayback()
                 endSpeechSession()
+                isTTSAvailable = false
+                let arabic = AppSettingsStore.shared.appLanguage == .arabic
+                presentToast(arabic ? "الصوت غير متاح حالياً" : "Audio is unavailable right now")
             }
+        }
+    }
+
+    private func presentToast(_ message: String) {
+        displayedToast = message
+        toastDismissalTask?.cancel()
+        toastDismissalTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.displayedToast = nil }
         }
     }
 

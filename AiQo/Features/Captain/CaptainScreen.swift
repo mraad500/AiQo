@@ -206,6 +206,17 @@ struct CaptainScreen: View {
         viewModel.messages.contains(where: \.isUser)
     }
 
+    private var isArabicUI: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    fileprivate var captainStatusSubtitle: String {
+        if viewModel.isLoading {
+            return isArabicUI ? "يفكر الحين" : "Thinking…"
+        }
+        return isArabicUI ? "متصل الآن" : "Online now"
+    }
+
     var body: some View {
         ZStack {
             CaptainBackgroundView()
@@ -220,7 +231,13 @@ struct CaptainScreen: View {
         }
         .animation(.spring(response: 0.55, dampingFraction: 0.85), value: hasUserStartedChat)
         .safeAreaInset(edge: .top, spacing: 0) {
-            topChrome
+            VStack(spacing: 10) {
+                topChrome
+                CaptainSafetyBanner()
+                    .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 4)
+            .background(Color.clear)
         }
         .fontDesign(.rounded)
         .onTapGesture { hideKeyboard() }
@@ -317,18 +334,18 @@ struct CaptainScreen: View {
 
             HStack(spacing: 10) {
                 CaptainAvatarView(breathes: false)
-                    .frame(width: 120, height: 120)
+                    .frame(width: 56, height: 56)
                     .clipShape(Circle())
                     .overlay(
                         Circle().stroke(Color.white.opacity(0.55), lineWidth: 1)
                     )
-                    .shadow(color: .black.opacity(0.10), radius: 10, x: 0, y: 5)
+                    .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
                     .matchedGeometryEffect(id: "captain-avatar", in: avatarNamespace)
 
                 Spacer()
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 4)
             .environment(\.layoutDirection, .leftToRight)
 
             CaptainInputView(
@@ -342,32 +359,39 @@ struct CaptainScreen: View {
     private var topChrome: some View {
         AiQoScreenTopChrome(
             horizontalInset: 10,
-            profileVerticalOffset: -12,
+            profileVerticalOffset: -2,
             onProfileTap: { viewModel.showProfile = true }
         ) {
-            HStack(alignment: .top) {
-                Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(theme.text)
-                    .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
+            // Single horizontal row: action buttons lead, title center-trailing.
+            // In RTL the buttons visually appear on the right of the title,
+            // balancing the profile avatar pulled in by AiQoScreenTopChrome on
+            // the opposite side.
+            HStack(alignment: .center, spacing: 8) {
+                chromeCircleButton(
+                    systemImage: "clock.arrow.circlepath",
+                    accessibilityLabel: NSLocalizedString("captain.history.button", value: "Chat history", comment: "")
+                ) {
+                    viewModel.showChatHistory = true
+                }
+
+                chromeCircleButton(
+                    systemImage: "text.book.closed.fill",
+                    accessibilityLabel: NSLocalizedString("health.sources.button", value: "Health sources", comment: "")
+                ) {
+                    showHealthSources = true
+                }
 
                 Spacer(minLength: 0)
 
-                VStack(spacing: 8) {
-                    chromeCircleButton(
-                        systemImage: "clock.arrow.circlepath",
-                        accessibilityLabel: NSLocalizedString("captain.history.button", value: "Chat history", comment: "")
-                    ) {
-                        viewModel.showChatHistory = true
-                    }
-
-                    chromeCircleButton(
-                        systemImage: "text.book.closed.fill",
-                        accessibilityLabel: NSLocalizedString("health.sources.button", value: "Health sources", comment: "")
-                    ) {
-                        showHealthSources = true
-                    }
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(theme.text)
+                    Text(captainStatusSubtitle)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(theme.subtext)
                 }
+                .lineLimit(1)
             }
             .environment(\.layoutDirection, .rightToLeft)
         }
@@ -547,10 +571,16 @@ struct ChatBubbleView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @ObservedObject private var voiceService = CaptainVoiceService.shared
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+
+    // v1.1 brand tokens — Apple resubmission palette.
+    private let mintFill = Color(red: 0.718, green: 0.898, blue: 0.824) // #B7E5D2
+    private let sandFill = Color(red: 0.922, green: 0.812, blue: 0.592).opacity(0.35) // #EBCF97 @ 35%
+    private let ink      = Color(red: 0.059, green: 0.090, blue: 0.129) // #0F1721
 
     /// Cap on bubble width. Avoids `UIScreen.main` (deprecated in iOS 26) by
     /// keying off the size class instead — compact = phone, regular = iPad.
@@ -558,19 +588,44 @@ struct ChatBubbleView: View {
         sizeClass == .regular ? 520 : 300
     }
 
+    private var bubbleShape: UnevenRoundedRectangle {
+        if isUser {
+            return UnevenRoundedRectangle(
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 18,
+                bottomTrailingRadius: 6,
+                topTrailingRadius: 18,
+                style: .continuous
+            )
+        } else {
+            return UnevenRoundedRectangle(
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 6,
+                bottomTrailingRadius: 18,
+                topTrailingRadius: 18,
+                style: .continuous
+            )
+        }
+    }
+
     var body: some View {
-        // Positions swapped: Captain bubbles align to the LEFT of the row,
-        // user bubbles align to the RIGHT (flipped from the previous layout).
-        HStack {
+        HStack(alignment: .bottom, spacing: 8) {
             if !isUser { Spacer(minLength: 52) }
 
-            VStack(alignment: isUser ? .leading : .trailing, spacing: 8) {
+            VStack(alignment: isUser ? .leading : .trailing, spacing: 4) {
                 Text(text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(theme.chatBubbleText)
+                    .foregroundStyle(ink)
                     .lineSpacing(3)
                     .multilineTextAlignment(isUser ? .leading : .trailing)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .leading : .trailing)
+                    .background(bubbleShape.fill(isUser ? mintFill : sandFill))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(isUser ? "User message" : "Captain message")
+                    .accessibilityValue(text)
 
                 if canSpeakReply {
                     Button {
@@ -578,34 +633,17 @@ struct ChatBubbleView: View {
                             await CaptainVoiceService.shared.speak(text: text)
                         }
                     } label: {
-                        Image(systemName: "speaker.wave.2")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .padding(7)
-                            .background(.ultraThinMaterial, in: Circle())
+                        Image(systemName: voiceService.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(voiceService.isTTSAvailable ? "استمع للرسالة" : "الصوت غير متاح")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            // Cap the bubble width so short messages hug their content instead
-            // of stretching to fill the row. Size-class-based cap keeps phones
-            // and iPads correct without depending on the deprecated `UIScreen.main`.
-            .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .leading : .trailing)
-            .fixedSize(horizontal: true, vertical: true)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(isUser ? theme.userBubble : theme.captainBubble)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill((isUser ? theme.userBubble : theme.captainBubble).opacity(colorScheme == .dark ? 0.10 : 0.20))
-                    )
-            )
-            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(isUser ? "User message" : "Captain message")
-            .accessibilityValue(text)
 
             if isUser { Spacer(minLength: 52) }
         }
@@ -639,11 +677,12 @@ struct TypingIndicatorView: View {
     }
 
     private var thinkingLabel: String {
+        let arabic = AppSettingsStore.shared.appLanguage == .arabic
         switch state {
         case .readingMessage:
-            return "الكابتن يقرا..."
+            return arabic ? "الكابتن يقرا..." : "Captain is reading…"
         default:
-            return "الكابتن يفكر..."
+            return arabic ? "الكابتن يفكر..." : "Captain is thinking…"
         }
     }
 }

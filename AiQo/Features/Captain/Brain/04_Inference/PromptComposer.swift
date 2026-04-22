@@ -15,6 +15,8 @@ struct PromptComposer: Sendable {
         let firstName = extractFirstName(from: request.userProfileSummary)
 
         return [
+            layerReplyLanguageLock(language: request.language),
+            layerSafetyRules(language: request.language),
             layerIdentity(language: request.language, firstName: firstName, screenContext: request.screenContext),
             layerStableProfile(profileSummary: request.userProfileSummary),
             layerWorkingMemory(
@@ -30,6 +32,61 @@ struct PromptComposer: Sendable {
         ]
         .filter { !$0.isEmpty }
         .joined(separator: "\n\n")
+    }
+
+    // MARK: - Reply Language Lock (prepended before all other layers)
+
+    /// Hard language lock derived from both the app's selected language (source
+    /// of truth) and the device Locale. Prepended before everything else so the
+    /// LLM cannot drift to the wrong language mid-conversation. Added v1.1 in
+    /// response to App Store Submission 49728905 where Hamoudi replied in
+    /// English while the app UI was Arabic.
+    private func layerReplyLanguageLock(language: AppLanguage) -> String {
+        let localeCode = Locale.current.language.languageCode?.identifier ?? "ar"
+        let localeIsArabic = localeCode == "ar"
+        let shouldSpeakArabic = language == .arabic || (language != .english && localeIsArabic)
+
+        if shouldSpeakArabic {
+            return """
+            === REPLY LANGUAGE (ABSOLUTE) ===
+            Reply ONLY in Iraqi/Gulf Arabic dialect. Never use English except for feature names
+            (My Vibe, Zone 2, Alchemy Kitchen, Arena, Tribe). Any English sentence is a failure.
+            """
+        }
+
+        return """
+        === REPLY LANGUAGE (ABSOLUTE) ===
+        Reply ONLY in English. Do not use Arabic. Any Arabic sentence is a failure.
+        """
+    }
+
+    // MARK: - Non-Negotiable Safety Rules (Apple 1.4.1)
+
+    /// Apple Guideline 1.4.1 — Physical Harm. Prevents Hamoudi from sounding
+    /// like a clinician. Added v1.1.
+    private func layerSafetyRules(language: AppLanguage) -> String {
+        if language == .arabic {
+            return """
+            === قواعد السلامة (غير قابلة للتفاوض) ===
+            - انت مدرب عافية ونمط حياة، مو طبيب.
+            - ممنوع تعطي تشخيص. ممنوع تصف أدوية. ممنوع تنصح بجرعات أو علاجات.
+            - للأرقام الدقيقة لفقدان الوزن أو السعرات أو الأعراض الطبية، حوّل المحادثة: "هذا يحتاج رأي طبيب مختص — أنا هنا للتحفيز والدعم العام."
+            - قدّم التمارين والتغذية كإرشادات عامة للعافية فقط.
+            - إذا ذكرت رقماً صحياً، اربطه بمصدر موثوق (WHO أو ACSM).
+            - ممنوع تدّعي إنك بديل عن استشارة طبية.
+            """
+        }
+
+        return """
+        === SAFETY RULES (NON-NEGOTIABLE) ===
+        - You are a wellness coach, NOT a doctor.
+        - Never diagnose. Never prescribe. Never recommend medication or dosages.
+        - For specific weight-loss numbers, calorie targets, or medical symptoms, redirect:
+          "This needs a qualified physician — I'm here for motivation and general support."
+        - Frame exercise and nutrition as general wellness guidance only.
+        - When citing numerical health claims, reference WHO or ACSM.
+        - Never claim to replace medical consultation.
+        """
     }
 
     // MARK: - Layer 1: Identity (Elite AI Mentor — Iraqi Arabic Dialect)
@@ -509,28 +566,27 @@ struct PromptComposer: Sendable {
 
     // MARK: - Medical Disclaimer Layer (Apple Guideline 1.4.1)
 
+    /// v1.1 — The persistent `CaptainSafetyBanner` at the top of the chat
+    /// handles the user-facing "wellness, not medical" framing, so the hard
+    /// "⚕️ This is educational info — consult your doctor" trailer no longer
+    /// appears inside message bubbles. We still instruct the model to ground
+    /// numerical health claims in WHO/ACSM so replies stay responsible.
     private func layerMedicalDisclaimer(language: AppLanguage) -> String {
         if language == .arabic {
             return """
-            === تنويه طبي (إلزامي) ===
-            عند تقديم أي نصيحة صحية أو معلومة طبية:
-            1. اذكر دائماً أن هذه المعلومات للأغراض التعليمية فقط وليست بديلاً عن استشارة طبيب مختص.
-            2. أضف مصدر علمي موثوق لكل نصيحة صحية رئيسية (مثل: WHO، Mayo Clinic، NHS، أو مجلات طبية معروفة).
-            3. مثال: "حسب توصيات منظمة الصحة العالمية (WHO)، البالغين يحتاجون 150 دقيقة نشاط بدني أسبوعياً."
-            4. إذا كانت النصيحة تتعلق بالنوم، استخدم مصادر مثل: American Academy of Sleep Medicine أو Sleep Foundation.
-            5. إذا كانت تتعلق بالتمارين، استخدم مصادر مثل: ACSM أو WHO Physical Activity Guidelines.
-            6. اختم الرد الصحي بعبارة: "⚕️ هذي معلومات تثقيفية — استشر طبيبك للحالات الخاصة."
+            === إرشادات صحية ===
+            - إذا ذكرت رقماً صحياً، اربطه بمصدر موثوق (WHO، ACSM، Sleep Foundation).
+            - مثال: "حسب WHO، البالغين يحتاجون 150 دقيقة نشاط بدني أسبوعياً."
+            - لا تضيف أي تنبيه طبي بذيل الرسالة — الواجهة تعرض تنبيه دائم فوق الشات.
+            - لا تكتب عبارات مثل "هذي معلومات تثقيفية" أو "استشر طبيبك" بذيل الرد.
             """
         } else {
             return """
-            === MEDICAL DISCLAIMER (MANDATORY) ===
-            When providing any health advice or medical information:
-            1. Always state that information is for educational purposes only and not a substitute for professional medical advice.
-            2. Include a credible scientific source for each major health recommendation (e.g., WHO, Mayo Clinic, NHS, ACSM, or peer-reviewed journals).
-            3. Example: "According to WHO guidelines, adults need at least 150 minutes of moderate physical activity per week."
-            4. For sleep advice, cite sources like: American Academy of Sleep Medicine or Sleep Foundation.
-            5. For exercise advice, cite sources like: ACSM or WHO Physical Activity Guidelines.
-            6. End health-related replies with: "⚕️ This is educational info — consult your doctor for personal medical advice."
+            === HEALTH GUIDANCE ===
+            - When citing a health number, reference a trusted source (WHO, ACSM, Sleep Foundation).
+            - Example: "According to WHO, adults need 150 minutes of moderate activity per week."
+            - Do NOT append any medical disclaimer tail to the message — the app shows a persistent banner above the chat.
+            - Do NOT write phrases like "This is educational info" or "consult your doctor" at the end of a reply.
             """
         }
     }

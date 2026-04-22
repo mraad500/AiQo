@@ -833,7 +833,29 @@ final class CaptainViewModel: ObservableObject {
             english: "Sorry, something went wrong with the connection. Could you say that again?"
         )
 
-        return replyJSONParser.cleanDisplayText(from: rawReply, fallback: fallback)
+        let parsed = replyJSONParser.cleanDisplayText(from: rawReply, fallback: fallback)
+        return Self.stripInlineMedicalDisclaimerTail(parsed)
+    }
+
+    /// v1.1 Apple rejection fix: the persistent `CaptainSafetyBanner` above
+    /// the chat now carries the wellness/medical framing, so any trailing
+    /// disclaimer sentence leaking into a bubble is redundant. Strip it here
+    /// as a backstop in case an older cached prompt or remote config still
+    /// instructs the LLM to emit it.
+    nonisolated static func stripInlineMedicalDisclaimerTail(_ text: String) -> String {
+        let patterns: [String] = [
+            #"(?i)\n?⚕️?\s*This is educational info[^\n]*"#,
+            #"(?i)\n?⚕️?\s*هذي معلومات تثقيفية[^\n]*"#,
+            #"(?i)\n?⚕️?\s*استشر طبيب[^\n]*"#,
+            #"(?i)\n?⚕️?\s*consult (your )?doctor[^\n]*"#
+        ]
+        var result = text
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { continue }
+            let range = NSRange(result.startIndex..<result.endIndex, in: result)
+            result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: "")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {
