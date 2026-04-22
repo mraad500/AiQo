@@ -6,6 +6,9 @@ struct AppSettingsScreen: View {
     @State private var notificationsEnabled = AppSettingsStore.shared.notificationsEnabled
     @State private var appLanguage = AppSettingsStore.shared.appLanguage
     @StateObject private var aiConsentManager = AIDataConsentManager.shared
+    /// Observed so the "Captain Voice" row's subtitle updates live when the
+    /// user grants or revokes cloud-voice consent from `VoiceSettingsScreen`.
+    @StateObject private var voiceConsent = CaptainVoiceConsent.shared
     @State private var showDeveloperPanel = false
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
@@ -210,6 +213,8 @@ struct AppSettingsScreen: View {
                     }
                     .padding(.vertical, 4)
                 }
+
+                captainVoiceRow
 
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -541,6 +546,45 @@ private extension AppSettingsScreen {
             value: "Review what is shared before using cloud AI features",
             comment: "AI consent missing status"
         )
+    }
+
+    /// Dedicated "Captain Voice" row under Privacy & AI Data. The subtitle
+    /// reflects live state from `CaptainVoiceConsent` so the user can tell
+    /// at a glance whether cloud voice is active, local-only, or gated off
+    /// by the `CAPTAIN_VOICE_CLOUD_ENABLED` feature flag.
+    @ViewBuilder
+    var captainVoiceRow: some View {
+        NavigationLink {
+            VoiceSettingsScreen()
+        } label: {
+            let isArabic = AppSettingsStore.shared.appLanguage == .arabic
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isArabic ? "صوت الكابتن" : "Captain Voice")
+                        .foregroundStyle(.primary)
+
+                    Text(captainVoiceSubtitle(isArabic: isArabic))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "waveform")
+                    .foregroundStyle(AiQoColors.mintSoft)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    func captainVoiceSubtitle(isArabic: Bool) -> String {
+        if !FeatureFlags.captainVoiceCloudEnabled {
+            return isArabic ? "قريباً" : "Coming soon"
+        }
+        if voiceConsent.isGranted {
+            return isArabic ? "الصوت المحسّن مفعّل" : "Enhanced voice on"
+        }
+        return isArabic ? "الصوت المحلي فقط" : "Local voice only"
     }
 }
 

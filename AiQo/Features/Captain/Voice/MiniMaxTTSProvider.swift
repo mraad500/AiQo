@@ -8,7 +8,8 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
 
     private let session: URLSession
     private let sanitizer: PrivacySanitizer
-    private let consentManager: AIDataConsentManager
+    private let consent: CaptainVoiceConsent
+    private let cache: VoiceCacheStore
     private let audioSession = AVAudioSession.sharedInstance()
     private let audioManager = AiQoAudioManager.shared
     private let logger = Logger(
@@ -33,11 +34,13 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
     init(
         session: URLSession,
         sanitizer: PrivacySanitizer,
-        consentManager: AIDataConsentManager
+        consent: CaptainVoiceConsent,
+        cache: VoiceCacheStore
     ) {
         self.session = session
         self.sanitizer = sanitizer
-        self.consentManager = consentManager
+        self.consent = consent
+        self.cache = cache
         super.init()
     }
 
@@ -45,17 +48,18 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
         self.init(
             session: Self.defaultSession,
             sanitizer: PrivacySanitizer(),
-            consentManager: .shared
+            consent: .shared,
+            cache: .shared
         )
     }
 
     func speak(text: String) async throws {
         let sanitizedText = normalizedSpeechText(text)
         guard !sanitizedText.isEmpty else { return }
-        guard sanitizedText.count <= 10_000 else {
+        guard sanitizedText.count <= 4_000 else {
             throw VoiceProviderError.tooLong
         }
-        guard consentManager.ensureConsent() else {
+        guard consent.isGranted else {
             throw VoiceProviderError.consentMissing
         }
         guard let configuration = MiniMaxVoiceConfiguration.resolved() else {
@@ -67,7 +71,7 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
 
         do {
             let outgoingText = sanitizedOutgoingText(sanitizedText)
-            let audioData = try await synthesizeAudio(
+            let audioData = try await resolveAudioData(
                 text: outgoingText,
                 configuration: configuration
             )
@@ -87,6 +91,70 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
             logger.error("minimax_tts_unexpected_failure message=\(error.localizedDescription, privacy: .public)")
             throw VoiceProviderError.networkFailed
         }
+    }
+
+    /// Pre-fetch and cache audio for `text` without playing. Used by the
+    /// router's `warmCache(text:)` for premium-tier utterances that we know
+    /// are coming (e.g. a workout summary voice-over staged before the
+    /// summary screen appears). No-op if consent is missing, the
+    /// configuration is incomplete, text is too long, or the cache already
+    /// contains the key.
+    func warmCache(text: String) async {
+        let trimmed = normalizedSpeechText(text)
+        guard !trimmed.isEmpty, trimmed.count <= 4_000 else { return }
+        guard consent.isGranted else { return }
+        guard let configuration = MiniMaxVoiceConfiguration.resolved() else { return }
+
+        let outgoing = sanitizedOutgoingText(trimmed)
+        let key = VoiceCacheStore.cacheKey(
+            voiceID: configuration.voiceID,
+            model: configuration.modelID,
+            text: outgoing
+        )
+
+        if await cache.lookup(key: key) != nil {
+            return
+        }
+
+        do {
+            let data = try await synthesizeAudio(text: outgoing, configuration: configuration)
+            _ = try await cache.store(key: key, data: data)
+            await cache.evict()
+        } catch {
+            logger.error("minimax_warm_cache_failed message=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Cache-first audio resolution. Returns cached bytes on hit; synthesizes,
+    /// stores, and evicts on miss. A cache write failure is logged but never
+    /// propagated — we still have the freshly-fetched audio and can proceed
+    /// to playback.
+    private func resolveAudioData(
+        text: String,
+        configuration: MiniMaxVoiceConfiguration.Resolved
+    ) async throws -> Data {
+        let key = VoiceCacheStore.cacheKey(
+            voiceID: configuration.voiceID,
+            model: configuration.modelID,
+            text: text
+        )
+
+        if let cachedURL = await cache.lookup(key: key),
+           let cached = try? Data(contentsOf: cachedURL),
+           !cached.isEmpty {
+            return cached
+        }
+
+        let fresh = try await synthesizeAudio(text: text, configuration: configuration)
+
+        do {
+            _ = try await cache.store(key: key, data: fresh)
+            await cache.evict()
+        } catch {
+            logger.error("minimax_cache_store_failed message=\(error.localizedDescription, privacy: .public)")
+        }
+
+        return fresh
     }
 
     func stop() {
@@ -198,7 +266,7 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
                 throw VoiceProviderError.playbackFailed
             }
 
-            let result = try await group.next()
+            let result: Void? = try await group.next()
             group.cancelAll()
             _ = result
         }

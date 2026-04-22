@@ -88,6 +88,23 @@ struct PrivacySanitizer: Sendable {
         RedactionRule(
             pattern: #"\b[a-z0-9]{24,128}\b"#,
             template: "[REDACTED]"
+        ),
+        // `sk-`-prefixed API keys (OpenAI / Anthropic / MiniMax convention).
+        // Added 2026-04-22 as a backstop for the cloud-voice integration —
+        // the MiniMax key lives in Keychain + Info.plist, but any accidental
+        // surfacing in a log line or prompt context must be redacted before
+        // it leaves the device. Template is fixed rather than keeping the
+        // prefix so partial leaks don't fingerprint the key.
+        RedactionRule(
+            pattern: #"\bsk-[A-Za-z0-9_\-\.]{8,200}\b"#,
+            template: "[REDACTED_API_KEY]"
+        ),
+        // `Bearer …` auth headers — same backstop class. Matches the
+        // scheme token plus a bounded opaque value so header leaks in
+        // debug logs or error bodies do not reach the cloud.
+        RedactionRule(
+            pattern: #"\bBearer\s+[A-Za-z0-9_\-\.]{8,400}\b"#,
+            template: "Bearer [REDACTED]"
         )
     ]
 

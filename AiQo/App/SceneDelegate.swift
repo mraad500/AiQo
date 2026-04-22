@@ -199,6 +199,13 @@ final class AppFlowController: ObservableObject {
             LearningProofStore.shared.deleteAllLocalData()
             HealthScreeningStore.clear()
 
+            // Voice teardown: wipe synthesized-audio cache and delete the
+            // MiniMax API key from Keychain so the next account doesn't
+            // inherit cloud-voice credentials or cached replies from the
+            // previous one.
+            await VoiceCacheStore.shared.wipeAll()
+            CaptainVoiceKeychain.deleteMiniMaxAPIKey()
+
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .login)
         }
