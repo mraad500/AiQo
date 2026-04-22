@@ -12,9 +12,9 @@ import Security
 ///   the device to have been unlocked at least once since boot. This
 ///   matches the app's threat model: we need the key available in
 ///   background refresh scenarios, not while locked.
-/// - Never logged, never included in crash reports, never embedded in
-///   the binary. `PrivacySanitizer.scrub` adds a `sk-` prefix scrub rule
-///   (commit 2) so any accidental leak in log paths is redacted.
+/// - Never logged. When the key is supplied at build time it is copied
+///   into the Keychain on first use so later reads can come from a single
+///   runtime store.
 enum CaptainVoiceKeychain {
     private static let service = "com.mraad500.aiqo.voice"
     private static let account = "com.mraad500.aiqo.minimax.apikey"
@@ -61,8 +61,8 @@ enum CaptainVoiceKeychain {
         SecItemAdd(attributes as CFDictionary, nil)
     }
 
-    /// Remove the stored key. Called on logout and from
-    /// `CaptainVoiceConsent.revoke()` (commit 2).
+    /// Remove the stored key. Called on logout flows that want to clear
+    /// cached voice credentials from the device.
     static func deleteMiniMaxAPIKey() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

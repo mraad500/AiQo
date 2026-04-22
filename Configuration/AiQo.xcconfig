@@ -1,17 +1,18 @@
 // Shared build settings for the main AiQo app target.
 // Secrets.xcconfig can override these defaults locally when needed.
 
-CAPTAIN_API_KEY =
+CAPTAIN_API_KEY = AIzaSyBJIxtdMe_wqGlJEdXHTL9FyZPY3kKu8Uo
 CAPTAIN_ARABIC_API_URL =
 COACH_BRAIN_LLM_API_KEY =
 COACH_BRAIN_LLM_API_URL =
-CAPTAIN_VOICE_API_KEY =
-CAPTAIN_VOICE_API_URL =
-CAPTAIN_VOICE_MODEL_ID =
-CAPTAIN_VOICE_VOICE_ID =
-SPOTIFY_CLIENT_ID =
-SUPABASE_URL =
-SUPABASE_ANON_KEY =
+CAPTAIN_VOICE_API_KEY = sk-api-Uz6-aDE35LEXsSIUciHljgmjeaetxm0wbjzyemiUs60JsfIPBkWzRUM6Pn3dTOhmrCoMh4Jj862c0ymFKoU6u14PzJZa2xfs2MBTgs4ZH-Es__h4jSHk5p4
+
+CAPTAIN_VOICE_API_URL = https://www.minimax.io/audio/text-to-speech
+CAPTAIN_VOICE_MODEL_ID = speech-2.8-hd New
+CAPTAIN_VOICE_VOICE_ID = Arabic_FriendlyGuy
+SPOTIFY_CLIENT_ID = b55c2098adc8411e83eee55a905e42f3
+SUPABASE_URL = https://zidbsrepqpbucqzxnwgk.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZGJzcmVwcXBidWNxenhud2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3OTc0NjAsImV4cCI6MjA3ODM3MzQ2MH0.bZYBbhHS90Leb84Ijnq1BV5XZx6uk6-DCNEPmBFnn5M
 
 // Work around Xcode explicit-module failures from SDWebImageSwiftUI.
 CLANG_ENABLE_EXPLICIT_MODULES = NO

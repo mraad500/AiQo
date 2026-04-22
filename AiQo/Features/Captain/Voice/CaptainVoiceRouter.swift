@@ -47,8 +47,8 @@ final class CaptainVoiceRouter: ObservableObject {
     @Published private(set) var activeProvider: VoiceProviderKind = .appleTTS
 
     private let appleTTSProvider: VoiceProvider
-    /// Cloud provider. Nil in commit 1; replaced with `MiniMaxTTSProvider()`
-    /// in commit 2. When nil, every `.premium` call falls back to Apple TTS.
+    /// Cloud provider. When unavailable or misconfigured, `.premium` silently
+    /// falls back to Apple TTS.
     private var miniMaxProvider: VoiceProvider?
 
     /// Feature-flag closure. Prod reads `FeatureFlags.captainVoiceCloudEnabled`
@@ -79,12 +79,12 @@ final class CaptainVoiceRouter: ObservableObject {
         self.featureFlagEnabled = featureFlagEnabled
     }
 
-    /// Production default — wires in the real Apple TTS provider, no
-    /// MiniMax (filled in commit 2), and the live feature-flag lookup.
+    /// Production default — wires in the real Apple TTS provider, the
+    /// MiniMax cloud provider, and the live feature-flag lookup.
     convenience init() {
         self.init(
             appleTTSProvider: AppleTTSProvider(),
-            miniMaxProvider: nil,
+            miniMaxProvider: MiniMaxTTSProvider(),
             featureFlagEnabled: { FeatureFlags.captainVoiceCloudEnabled }
         )
     }
@@ -106,7 +106,8 @@ final class CaptainVoiceRouter: ObservableObject {
         do {
             try await provider.speak(text: trimmed)
         } catch VoiceProviderError.consentMissing,
-                VoiceProviderError.configurationMissing {
+                VoiceProviderError.configurationMissing,
+                VoiceProviderError.tooLong {
             // Silent fallback — these are expected states, not runtime
             // failures. No toast, no accounting.
             activeProvider = .appleTTS

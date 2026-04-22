@@ -18,13 +18,21 @@
 	<false/>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
-	<key>CAPTAIN_BRAIN_V2_ENABLED</key>
-	<true/>
-	<key>CAPTAIN_VOICE_CLOUD_ENABLED</key>
-	<true/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
+		<key>CAPTAIN_BRAIN_V2_ENABLED</key>
+		<true/>
+		<key>CAPTAIN_VOICE_API_KEY</key>
+		<string>$(CAPTAIN_VOICE_API_KEY)</string>
+		<key>CAPTAIN_VOICE_API_URL</key>
+		<string>$(CAPTAIN_VOICE_API_URL)</string>
+		<key>CAPTAIN_VOICE_CLOUD_ENABLED</key>
+		<true/>
+		<key>CAPTAIN_VOICE_MODEL_ID</key>
+		<string>$(CAPTAIN_VOICE_MODEL_ID)</string>
+		<key>CAPTAIN_VOICE_VOICE_ID</key>
+		<string>$(CAPTAIN_VOICE_VOICE_ID)</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>

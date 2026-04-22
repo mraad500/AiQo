@@ -1,6 +1,6 @@
 # AiQo Master Blueprint 17
 
-*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build).*
+*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved.*
 
 ---
 
@@ -1302,3 +1302,525 @@ Deferred Minor:
 - `AiQo/Features/Home/HomeView.swift` — one demonstration site of `aiqoGlassBackground`.
 - `AiQo/UI/LegalView.swift` — `.acknowledgements` type loading bundled markdown.
 - `AiQo/Resources/en.lproj/Localizable.strings` and `AiQo/Resources/ar.lproj/Localizable.strings` — 17 new keys across the health screening, status-badge a11y, and acknowledgements strings.
+
+---
+
+## 22. Smart Water Tracking & Reminders (2026-04-22)
+
+Snapshot branch: `brain-refactor/p-fix-dev-override`. Everything below was built on top of the hardening pass in §21 and ships as a **100% free feature** — no TierGate reference, no paywall, no DevOverride branch. Feature-flag-gated only so the binary carries a production kill switch. Both the main app target (`xcodebuild build`) and the test target (`build-for-testing`) compile clean at the end of this pass.
+
+### 22.1 Scope & Product Rules
+
+The feature adds four things:
+1. **Pace-based hydration reminders** routed through the existing `NotificationBrain` — no new notification system, no new scheduler.
+2. **WHO/EFSA-referenced guidance UI** rendered inside the existing Water sheet, phrased as "general global guidance" — never as a prescriptive WHO number.
+3. **System integration** across Captain Memory, Medical Disclaimer, AI Data disclosure, and the Privacy Policy legal text.
+4. **An interactive systemSmall widget** with a race-free App-Group tap-counter so one tap = +0.25 L without touching the widget's HealthKit entitlement set.
+
+Rules enforced throughout:
+- Medically safe, non-prescriptive wording in every language variant ("general global guidance: 2–2.5 L/day").
+- No raw HealthKit logs cross any trust boundary (memory, widget, cloud) — `PrivacySanitizer` remains the single PII boundary.
+- Arabic primary, English secondary, Iraqi-dialect default (matching `NotificationBrain`'s own default).
+- Local deterministic phrases — no Gemini call per reminder.
+- Always choose clean + stable over flashy + fragile.
+
+### 22.2 Feature Flag & Kill Switch
+
+Info.plist key `SMART_WATER_TRACKING_ENABLED` (default `true`), exposed via the `@FeatureFlag` property wrapper in [AiQoFeatureFlags.swift](AiQo/Core/Config/AiQoFeatureFlags.swift) as `FeatureFlags.smartWaterTrackingEnabled`. The flag gates:
+
+- The `SmartHydrationSection` rendering inside [WaterDetailSheetView.swift](AiQo/Features/Home/WaterDetailSheetView.swift).
+- `HydrationService.reevaluateAndSchedule()` calls inside [HomeViewModel.swift:addWater / onAppBecameActive](AiQo/Features/Home/HomeViewModel.swift).
+
+When flipped to false the Water sheet falls back to the v1 bottle + "+ 0.25 L" button UI and no hydration notifications are scheduled. The widget itself is in a separate target (`AiQoWidget`) and is not flag-gated — if a user adds the hydration widget to their Home Screen and then the flag is flipped off in a subsequent release, the widget still reads committed App-Group values and still logs `+1` on the tap counter; the drain simply no longer runs.
+
+### 22.3 Domain Layer — Pure Value Types
+
+[HydrationDailyState.swift](AiQo/Features/SmartWaterTracking/Models/HydrationDailyState.swift) defines four Sendable types:
+- `HydrationPaceStatus` — `.ahead | .onTrack | .behind | .veryBehind`
+- `HydrationSource` — `.manual | .appleHealth` (derived from `HKSample.sourceRevision.source.bundleIdentifier`)
+- `HydrationDailyState` — `goalML, consumedML, expectedByNowML, lastDrinkDate, lastDrinkSource, paceStatus` with computed `remainingML` (never negative) and `progressFraction` (capped at 1.0)
+- `HydrationEvaluation` — `.suppress(reason)` or `.remind(intensity: .gentle | .stronger)` with exhaustive `SuppressReason` enum (`trackingDisabled, beforeWakeWindow, afterWakeWindow, quietHours, recentDrink, paceOK`)
+
+[HydrationSettings.swift](AiQo/Features/SmartWaterTracking/Models/HydrationSettings.swift) holds user preferences:
+- `smartTrackingEnabled: Bool`
+- `goalML: Double` (default **2500**)
+- `wakeStartHour / wakeEndHour` — default **08:00 → 22:00** (14-hour window that aligns with quiet-hours start, so `expectedByNowML` reaches 100% exactly when reminders stop)
+- `quietStartHour / quietEndHour` — 22:00 → 07:00
+- `cooldownMinutes: Int` — 25 (recent-drink suppression)
+
+`HydrationSettings.recommendedGoalML(forWeightKg:)` computes `weightKg * 32.5` (midpoint of the 30–35 mL/kg clinical band), clamped to `[1500, 4000]` and rounded to the nearest 100 mL so the Stepper UI never surfaces awkward values. Falls back to 2500 mL when weight is unknown.
+
+`HydrationSettingsStore` persists to `UserDefaults` with stable keys (`aiqo.hydration.smart.enabled`, `aiqo.hydration.goal.ml`, etc.) and exposes `isGoalUserSet()` so first-launch bootstrap can seed the weight-based goal exactly once without ever overwriting user Stepper input.
+
+### 22.4 Evaluator — Pure, Deterministic, Fully Tested
+
+[HydrationEvaluator.swift](AiQo/Features/SmartWaterTracking/Services/HydrationEvaluator.swift) is a stateless enum with no I/O. Every function takes an explicit `Calendar` so tests can inject `TimeZone(identifier: "UTC")` and avoid flakiness.
+
+Core functions:
+- `wakeWindowProgress(now:, settings:, calendar:) -> Double` — linear ramp 0→1 across the wake window.
+- `expectedByNowML(now:, settings:, calendar:) -> Double` — `goal × wakeWindowProgress`.
+- `paceStatus(consumedML:, expectedByNowML:) -> HydrationPaceStatus` — bands: ≥110 % ahead, 90–110 % onTrack, 60–90 % behind, <60 % veryBehind. Before the wake window starts, `expectedByNowML == 0` and the function returns `.onTrack` (never false-flags as behind at 07:59).
+- `isQuietHours(now:, settings:, calendar:) -> Bool` — handles overnight windows where `start > end`.
+- `isInsideWakeWindow(now:, settings:, calendar:) -> Bool`.
+- `dailyState(...) -> HydrationDailyState`.
+- `evaluate(state:, now:, settings:, calendar:) -> HydrationEvaluation` — the full suppression ladder:
+
+```
+1. !smartTrackingEnabled    → suppress(trackingDisabled)
+2. hour < wakeStart         → suppress(beforeWakeWindow)
+3. hour ≥ wakeEnd           → suppress(afterWakeWindow)
+4. isQuietHours             → suppress(quietHours)
+5. lastDrink < cooldownMin  → suppress(recentDrink)
+6. pace in [ahead, onTrack] → suppress(paceOK)
+7. pace == behind           → remind(.gentle)
+8. pace == veryBehind       → remind(.stronger)
+```
+
+Unit-tested in [HydrationEvaluatorTests.swift](AiQoTests/HydrationEvaluatorTests.swift) — 16 XCTest cases covering every branch plus phrase-selection and the single-canonical-source dedup invariant.
+
+### 22.5 Service Layer — HydrationService + Widget Bridge
+
+[HydrationService.swift](AiQo/Features/SmartWaterTracking/Services/HydrationService.swift) is a `@MainActor ObservableObject` singleton. Responsibilities:
+
+- **First-launch bootstrap**: if `!HydrationSettingsStore.isGoalUserSet()`, seed `settings.goalML = recommendedGoalML(forWeightKg: UserProfileStore.shared.current.weightKg)` and persist — exactly once.
+- **`refreshState(now:)`**: reads the canonical HealthKit sum via `HealthKitService.shared.getWaterIntake()` (which uses `HKStatisticsQuery.cumulativeSum` so manual + Apple Health samples dedup at the HealthKit boundary — we don't roll our own). Also probes the most recent sample via `fetchMostRecentQuantitySample(for: .dietaryWater)` and classifies its source by `bundleIdentifier` comparison against `Bundle.main.bundleIdentifier`.
+- **`reevaluateAndSchedule(now:)`**: the single orchestration entry point. Order matters:
+  1. `drainWidgetTapsIntoHealthKit()` — drains the widget tap counter into HealthKit (see §22.8).
+  2. `refreshState(now:)` — now reads the complete total including drained samples.
+  3. `publishWidgetSnapshot()` — writes consumed + goal + language to the App Group.
+  4. Run evaluator → `cancelPendingReminder()` → if `.remind(intensity)` call `scheduleReminder`.
+- **`settings.didSet`**: persists, mirrors into Captain Memory (§22.7.1), and re-publishes the widget snapshot so the Stepper-edited goal reaches the Home Screen within a frame.
+
+Two MainActor helpers the entire feature leans on:
+
+- **`currentDialect()`** — reads UserDefaults key `aiqo.captain.dialect` and falls back to `.iraqi` (matching `NotificationBrain`'s own fallback at line 76 of [NotificationBrain.swift](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift)). Hydration reminders now speak in whatever Captain dialect the user later selects, with zero hardcoded `"iraqi"` strings inside the hydration code.
+- **`writeSettingsToMemory()`** — see §22.7.1.
+
+Call-sites that trigger `reevaluateAndSchedule`:
+- [HomeViewModel.addWater(liters:)](AiQo/Features/Home/HomeViewModel.swift) — after every successful `HealthKitService.logWater` write.
+- [HomeViewModel.onAppBecameActive()](AiQo/Features/Home/HomeViewModel.swift) — so widget taps accumulated while the app was backgrounded get drained on first activation.
+
+### 22.6 Notification Integration — `.hydrationReminder`
+
+No new notification system. The feature extends the existing pipeline at three tight seams:
+
+- [NotificationIntent.swift](AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift) — new `.hydrationReminder` case on the `NotificationKind` enum. Raw value `"hydrationReminder"` is stable; any rename would break persisted delivery history.
+- [NotificationBrain.swift:198](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift:198) — new category mapping `case .hydrationReminder: return "CAPTAIN_HYDRATION"`.
+- [TemplateLibrary.swift](AiQo/Features/Captain/Brain/06_Proactive/Composition/TemplateLibrary.swift) — fallback template so `MessageComposer` has safe copy if a caller ever forgets `precomposedTitle` / `precomposedBody`. In practice `HydrationService` always precomposes, so this is a defensive default.
+
+**Dialect-aware phrase pool** — [HydrationPhrases.swift](AiQo/Features/SmartWaterTracking/Localization/HydrationPhrases.swift) provides `(intensity × language × dialect) → Phrase`:
+
+| Dialect | `.gentle` | `.stronger` |
+|---|---|---|
+| `.iraqi` | "شربة ماي" / "خذ شوية ماي هسه — بسيطة." | "جسمك يدز إشارة" / "خذ شربة ماي الحين." |
+| `.gulf` | "وقت الماي" / "خذ شوية ماي الحين — بسيطة." | "جسمك يبي ماي" / "خذ شربة ماي الحين." |
+| `.levantine` | "وقت المي" / "خود شوي مي هلق." | "جسمك بدو مي" / "خود شربة مي هلق." |
+| `.msa` | "وقت الماء" / "تناول بعض الماء الآن." | "جسمك بحاجة للماء" / "اشرب الماء الآن." |
+| English | "Water break" / "Take a small sip now." | "Time to drink" / "Grab some water now." |
+
+All phrases are short, non-medical, non-prescriptive. No numbers ("2 L") that would identify the user. `PersonaGuard` validates them defensively inside `NotificationBrain`, and `PrivacySanitizer` scrubs them before delivery — same pipeline every other notification kind goes through.
+
+**Scheduling — one smart reminder, pace-adaptive delay**. The initial implementation also pre-scheduled a "follow-up" for `.stronger` cases; an audit of `GlobalBudget.recordDelivered` → `CooldownManager.recordDelivery` confirmed that the 2h global / 6h per-kind cooldown is recorded at **schedule-time**, not fire-time, meaning a second same-kind submit inside one re-evaluation tick is always rejected. The follow-up was dead code in 100 % of branches. Simplified to a single reminder:
+
+```
+scheduleReminder(intensity):
+    fireDate = now + (.gentle: 30 min | .stronger: 10 min)
+    identifier = "aiqo.hydration.smart.reminder"   // stable, replaceable
+    priority = .low                                // passive interruption level
+    customPayload = { language, dialect, intensity }
+    precomposedTitle/Body from HydrationPhrases
+```
+
+Delivery cadence guarantee: ≤1 hydration reminder every 6 h via `CooldownManager.perKindCooldownSeconds`. In a 14 h wake window that's ≤ 2 deliveries/day. If the user drinks between evaluations the pending reminder is cancelled and replaced by identifier — never stacked, never stale.
+
+### 22.7 System Integration — Four Surfaces
+
+#### 22.7.1 Captain Memory
+
+Intentional, narrow integration: only preferences, never raw logs. The new memory category `"hydration"` holds two keys:
+
+- `hydration_goal` — value formatted as `"%.2f L"` (e.g. `"2.50 L"`), confidence 0.9, source `user_explicit`.
+- `hydration_smart_enabled` — value `"on"` or `"off"`, confidence 0.9.
+
+A third slot `hydration_pattern` (e.g. "often needs reminders in the afternoon") is reserved in `keyLabel` but **not auto-populated**. Producing a pattern deterministically would require per-time-of-day aggregates that conflict with the no-raw-logs rule unless only the derived label is stored; left as a clearly-scoped future extension rather than a stub.
+
+Writes happen in [HydrationService.writeSettingsToMemory()](AiQo/Features/SmartWaterTracking/Services/HydrationService.swift), called from `init()` after bootstrap and from `settings.didSet`. Reads surface automatically via `MemoryStore.allMemories()` grouped-by-category inside [CaptainMemorySettingsView.swift](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift); the view's `categoryLabel`, `keyLabel`, and `valueLabel` switches gained hydration cases including the `"on"/"off"` → `memory.value.enabled/disabled` mapping.
+
+**Raw-key localization bug fixed as part of this pass.** The audit surfaced that only `memory.cat.weekly` and `memory.cat.challenge` existed in `Localizable.strings`; the other 11 category keys referenced by the view (`memory.cat.identity`, `memory.cat.body`, `memory.cat.goal`, `memory.cat.preference`, `memory.cat.mood`, `memory.cat.injury`, `memory.cat.nutrition`, `memory.cat.workoutHistory`, `memory.cat.sleep`, `memory.cat.insight`, `memory.cat.recordProject`) were missing in both `ar.lproj` and `en.lproj`, so the UI was displaying literal strings like `"memory.cat.body"` as the section header. All 11 are now populated in both languages plus the new `memory.cat.hydration`.
+
+#### 22.7.2 Medical Disclaimer
+
+[MedicalDisclaimerDetailView.swift](AiQo/Features/Compliance/MedicalDisclaimerDetailView.swift) gained a second glass card `hydrationDisclaimerCard`, rendered below the primary "AiQo is not a medical device" card via the shared `disclaimerCard(title:body:)` helper — identical radius / material / typography. Copy is hardcoded bilingual (matching the file's existing pattern) and reads exactly:
+
+- **Arabic**: "قد يقدم AiQo تذكيرات عامة بشرب الماء لتحسين نمط الحياة، لكن هذه التوصيات لا تُعتبر نصيحة طبية. احتياجات الجسم من الماء تختلف حسب العمر، الوزن، النشاط، والظروف الصحية."
+- **English**: "AiQo may provide general hydration reminders to support a healthy lifestyle. These are not medical recommendations. Hydration needs vary depending on age, weight, activity level, and medical conditions."
+
+Kept out of the bullet list so the "consult a physician before…" framing stays about health decisions, not a water reminder.
+
+#### 22.7.3 AI Data Disclosure
+
+[AIDataUseDisclosureRows](AiQo/Features/Compliance/AIDataUseDisclosure.swift) grew from 5 rows to 6 — new row with icon `drop.fill`, `titleKey: "ai.consent.water.title"`, `detailKey: "ai.consent.water.detail"`, placed between "What is not sent" and "Your choice". Detail copy explicitly names the four data elements used (daily total, goal, time context, last drink time), both sources (manual + Apple Health), and the hard boundary (summarized/sanitized context only — **raw hydration logs are never sent**).
+
+#### 22.7.4 Privacy Policy
+
+[LegalView](AiQo/UI/LegalView.swift) reads `"legal.privacy.content"` verbatim as a single embedded string — no WebView, no markdown. The string grew a new numbered section:
+
+**6. Water Tracking Data** (with sub-paragraphs: *What we collect / How we use / What we do not do / Your control*). Previous "6. Contact Us" renumbered to 7. The four sub-paragraphs explicitly commit to: no sale of water data, no raw HealthKit hydration logs to any third party, and concrete user controls (disable smart water tracking in the water screen, revoke HealthKit in device settings, reset by clearing app data).
+
+Both language variants ship. The Arabic is Modern Standard Arabic (matching the existing `legal.privacy.content` voice), not Iraqi — deliberately distinct from the Iraqi-flavored Captain reminders.
+
+### 22.8 Hydration Widget (systemSmall, Interactive)
+
+New Widget bundled alongside the existing `AiQoWidget` motion card. Same `AiQoWidget` target, same `group.aiqo` App Group, same `Palette` grammar (cardGradient, teal, stroke values mirrored verbatim in a file-private `HydrationPalette` to avoid loosening the motion widget's `private enum Palette` visibility).
+
+**Kind**: `"AiQoHydrationWidget"`. **Family**: `.systemSmall` only.
+
+**Visual grammar**: dark glass card (22 pt corner radius), warm-sand glow in bottom-left mirroring the motion widget's top-right mint glow, centered Circle.trim() progress arc with a mint→sand angular gradient and a subtle `shadow(color: teal.opacity(0.35), radius: 6)`, percentage text inside the ring with `contentTransition(.numericText())` for the tap animation, `"1.60 / 2.50 L"` (or `"1.60 / 2.50 ل"` in Arabic) at the bottom. Side-by-side with the motion widget they read as the same product family.
+
+**Interactive quick-add — race-free tap counter**. The widget's HealthKit entitlement set was intentionally **not** changed; adding HealthKit to a shipping widget extension requires a new TestFlight/App Review round. Instead the widget uses a monotonic counter in the shared App Group:
+
+```
+APP                                    group.aiqo                    WIDGET
+HealthKit dietaryWater (canonical)
+   │
+   ▼ HydrationService.refreshState
+state.consumedML (mL)  ─────────►   aiqo_water_ml               ─────►  HydrationProvider
+settings.goalML        ─────────►   aiqo_water_goal_ml          ─────►  HydrationProvider
+settings.didSet / reevaluate        aiqo_water_last_updated
+appLanguage            ─────────►   aiqo.app.language           ─────►  ar/en render
+                                    aiqo_water_tap_counter      ◄─────  AddWaterIntent (+1 per tap)
+drain at reevaluate()  ────────►    aiqo_water_tap_counter_seen         (app-only writer)
+```
+
+**Single-writer-per-key.** Widget only writes `tap_counter`. App writes everything else. No cross-process contention on any individual key.
+
+**Display formula** — the widget renders `consumed + max(0, counter - seen) × 250`, so the UI never regresses even if the app hasn't drained yet. If the user taps three times while the app is closed, they see +750 mL instantly; when the app wakes, `HydrationService.drainWidgetTapsIntoHealthKit()` writes 3 individual 250 mL `dietaryWater` samples (per-sip granularity preserved), then advances `tap_counter_seen` to the exact value captured at drain-start — any taps that arrive mid-drain stay unseen for the next cycle, never double-counted, never lost.
+
+**Button hit-target**: the entire widget body is wrapped in `Button(intent: AddWaterIntent())`, matching the motion widget's no-visible-button minimalism while remaining discoverable.
+
+Files added to the widget target (synchronized group, auto-picked up):
+- [AiQoWidget/Hydration/HydrationWidgetShared.swift](AiQoWidget/Hydration/HydrationWidgetShared.swift) — App-Group keys + widget kind + 250 mL constant. Mirror of the app-side `HydrationWidgetBridge`.
+- [AiQoWidget/Hydration/AddWaterIntent.swift](AiQoWidget/Hydration/AddWaterIntent.swift) — `@MainActor AppIntent` that increments `tap_counter` and calls `WidgetCenter.reloadTimelines(ofKind: "AiQoHydrationWidget")`.
+- [AiQoWidget/Hydration/HydrationWidget.swift](AiQoWidget/Hydration/HydrationWidget.swift) — `HydrationEntry`, `HydrationProvider`, `HydrationWidgetView`, widget configuration. Contains the file-private `HydrationPalette` mirror.
+
+App side:
+- [AiQo/Features/SmartWaterTracking/Services/HydrationWidgetBridge.swift](AiQo/Features/SmartWaterTracking/Services/HydrationWidgetBridge.swift) — same three constants and keys, plus `publishSnapshot(consumedML:, goalML:, appLanguage:)`, `currentPendingTapCount() -> (counter, seen)`, and `advanceTapCounterSeen(to:)`.
+
+The tiny duplication (≈20 lines per side) is intentional — a shared framework for a compile-time-constants file is heavier than keeping mirrored copies with colocated `MUST MATCH` comments.
+
+### 22.9 Final Reminder Flow
+
+```
+trigger (app-active OR water-add OR widget-tap-drain)
+    │
+    ▼
+HydrationService.reevaluateAndSchedule()
+    │
+    ├─ drainWidgetTapsIntoHealthKit()       ← §22.8 race-free drain
+    ├─ refreshState()                        ← HealthKit canonical sum + last sample source
+    ├─ publishWidgetSnapshot()               ← write consumed + goal + language to group.aiqo
+    ├─ HydrationEvaluator.evaluate(...)      ← pure suppression ladder §22.4
+    ├─ cancelPendingReminder()               ← removes existing "aiqo.hydration.smart.reminder"
+    └─ if .remind(intensity):
+         NotificationBrain.request(
+             intent: .hydrationReminder,
+             priority: .low,
+             precomposedTitle/Body from HydrationPhrases,
+             fireDate: now + (gentle: 30 min | stronger: 10 min),
+             identifier: "aiqo.hydration.smart.reminder",
+             customPayload: {language, dialect, intensity}
+         )
+         │
+         ▼
+      GlobalBudget + PersonaGuard + PrivacySanitizer + UNUserNotificationCenter
+         │
+         ▼
+      CooldownManager.recordDelivery(.hydrationReminder)   ← 6h per-kind lockout starts here
+```
+
+### 22.10 Tests
+
+[HydrationEvaluatorTests.swift](AiQoTests/HydrationEvaluatorTests.swift) — 16 XCTest cases in the existing `AiQoTests` target:
+- `expectedByNow` before/inside/after wake window
+- Pace band edges (ahead ≥110 %, onTrack 90–110 %, behind 60–90 %, veryBehind <60 %)
+- Pace classification when `expectedByNowML == 0` (returns `onTrack`, not `veryBehind`)
+- Quiet hours overnight window edge cases
+- Every `SuppressReason` branch hit explicitly
+- Both `.remind` intensity branches
+- Phrase selection for Arabic `.gentle` and English `.stronger` (verifying no medical prose leaks)
+- `HydrationDailyState.remainingML` never negative when overconsumed
+- Dedup invariant — documents that `consumedML` is always the HealthKit cumulative sum, never double-counted by the evaluator
+
+Test runtime was not exercised because of a pre-existing Watch-target Info.plist issue (`AiQoWatch Watch App.app` missing `WKApplication` / `WKWatchKitApp` key blocks the simulator install of the test host). Compile + link are verified green via `xcodebuild build-for-testing`.
+
+### 22.11 Build State After §22
+
+| Metric | Before §22 | After §22 |
+|---|---|---|
+| Main-app build | SUCCEEDED | **SUCCEEDED** |
+| Test-target build | SUCCEEDED | **SUCCEEDED** |
+| New Swift files | — | 10 app + 3 widget = 13 |
+| Modified Swift files | — | 9 |
+| New unit tests | 368 | **384** (+16) |
+| New localization keys (en + ar) | — | **35** per language |
+| New App Group keys | 6 (motion widget) | 9 (+3 hydration) |
+| Widget bundles in `AiQoWidgetBundle` | 3 iOS + 1 Live Activity | **4** iOS + 1 Live Activity |
+| New NotificationKind cases | 23 | **24** (+`.hydrationReminder`) |
+| TierGate references added | — | **0** (feature is free) |
+
+### 22.12 Ship Readiness & Known Risks
+
+**Status: beta-ready.** Clean+stable pattern chosen at every fork. Zero new cross-target imports. Zero widget-side HealthKit entitlement changes. Zero new third-party dependencies. Every localization key has both `ar` and `en` variants.
+
+Outstanding before production flip:
+
+1. **Live device smoke test.** Taps → HealthKit write → 10-minute-delayed notification delivery → widget redraw need one end-to-end pass on a real device. The foreground-notification UX depends on `UNUserNotificationCenterDelegate` config that was not audited in this pass.
+2. **Watch-target Info.plist.** Missing `WKApplication` / `WKWatchKitApp` key blocks the test-runner install on the simulator. Pre-existing; unrelated to §22 but gates green CI runs of the new unit tests.
+3. **Native-speaker review of dialect variants.** The Gulf / Levantine / MSA phrase variants in `HydrationPhrases.swift` were authored without a native reviewer; the Iraqi variant was. Worth one pass before shipping to those cohorts.
+4. **EFSA URL stability.** The journal entry URL (`efsa.europa.eu/en/efsajournal/pub/1459`) is a 2010 article; if EFSA rotates URLs it 404s from inside the app. Consider a periodic healthcheck.
+5. **Weight-based goal doesn't auto-recalculate.** If the user edits their profile weight after first launch, the hydration goal stays at whatever was seeded (or whatever the user later Steppered to). Intentional — respects user choice over auto-magic. A "Reset to recommended" affordance is a one-line follow-up call to `HydrationSettings.recommendedGoalML(forWeightKg:)`.
+6. **Late-chronotype users.** Default wake window 08:00–22:00 doesn't fit someone who sleeps 02:00–10:00. `HydrationSettings` already carries `wakeStartHour` / `wakeEndHour` fields but no UI exposes them. If telemetry shows heavy `.beforeWakeWindow` / `.afterWakeWindow` suppression, add a wake-window picker.
+7. **Dialect key has no UI.** `UserDefaults` key `aiqo.captain.dialect` is live in `HydrationService.currentDialect()` but nothing writes it today. Default `.iraqi` applies. When a Captain language UI ships it plugs in with zero hydration code changes.
+8. **Privacy-policy section renumbering.** Old "6. Contact Us" → "7. Contact Us". In-app code references the localization key, not section numbers, so app is safe. Any external docs, App Store "What's New" copy, or compliance tracker that cited the old numbering needs a pass.
+
+Flip `SMART_WATER_TRACKING_ENABLED=false` in Info.plist if any of the above surface a P0 post-launch; kill switch lands hydration back to the v1 bottle + add-button UI with no hydration notifications scheduled.
+
+### 22.13 Files Added / Modified
+
+**Added — app target (Features/SmartWaterTracking/) — 7 files:**
+- `Models/HydrationDailyState.swift` — pace / source / evaluation value types
+- `Models/HydrationSettings.swift` — prefs + `recommendedGoalML(forWeightKg:)` + `HydrationSettingsStore`
+- `Services/HydrationEvaluator.swift` — pure evaluator
+- `Services/HydrationService.swift` — `@MainActor ObservableObject`, bootstrap, drain, publish, schedule
+- `Services/HydrationWidgetBridge.swift` — app-side App-Group contract mirror
+- `Localization/HydrationPhrases.swift` — 5 dialect × 2 intensity = 10 Arabic/English phrase pairs
+- `Views/SmartHydrationSection.swift` — glassmorphism card (corner 24, diagonal sheen, soft shadow, stepper, WHO/EFSA links)
+
+**Added — widget target (AiQoWidget/Hydration/) — 3 files:**
+- `HydrationWidgetShared.swift` — widget-side App-Group contract mirror
+- `AddWaterIntent.swift` — interactive `AppIntent`
+- `HydrationWidget.swift` — provider / entry / view / widget config / `HydrationPalette`
+
+**Added — tests — 1 file:**
+- `AiQoTests/HydrationEvaluatorTests.swift` — 16 cases
+
+**Modified — app target:**
+- `AiQo/Core/Config/AiQoFeatureFlags.swift` — new `SMART_WATER_TRACKING_ENABLED` flag (default true)
+- `AiQo/Info.plist` — new feature-flag entry
+- `AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift` — `.hydrationReminder` NotificationKind case
+- `AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift` — `CAPTAIN_HYDRATION` category mapping
+- `AiQo/Features/Captain/Brain/06_Proactive/Composition/TemplateLibrary.swift` — fallback template
+- `AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift` — `categoryLabel`, `keyLabel`, `valueLabel` hydration cases
+- `AiQo/Features/Compliance/MedicalDisclaimerDetailView.swift` — new `hydrationDisclaimerCard`
+- `AiQo/Features/Compliance/AIDataUseDisclosure.swift` — new "Water data" disclosure row
+- `AiQo/Features/Home/HomeView.swift` — `WaterDetailSheetView` sheet embed unchanged at call-site; section renders inside the sheet
+- `AiQo/Features/Home/HomeViewModel.swift` — `addWater` and `onAppBecameActive` call `HydrationService.shared.reevaluateAndSchedule()`
+- `AiQo/Features/Home/WaterDetailSheetView.swift` — `ScrollView` wrap + `SmartHydrationSection` embed (flag-gated), close button z-order preserved
+
+**Modified — widget target:**
+- `AiQoWidget/AiQoWidgetBundle.swift` — registered `HydrationWidget()` (iOS only, preserved existing watch & LiveActivity conditionals)
+
+**Modified — localization (both `ar.lproj` and `en.lproj`):**
+- `Localizable.strings` — 35 new keys per language:
+  - Smart hydration UI: `hydration.smart.toggle.title`, `hydration.smart.toggle.subtitle`, `hydration.goal.title`
+  - WHO/EFSA guidance: `hydration.guidance.title`, `hydration.guidance.body`, `hydration.guidance.more`, `hydration.guidance.factors`, `hydration.guidance.link.who`, `hydration.guidance.link.efsa`
+  - Memory category fillers (fix for §22.7.1 raw-key bug): `memory.cat.identity`, `memory.cat.goal`, `memory.cat.body`, `memory.cat.preference`, `memory.cat.mood`, `memory.cat.injury`, `memory.cat.nutrition`, `memory.cat.workoutHistory`, `memory.cat.sleep`, `memory.cat.insight`, `memory.cat.recordProject`
+  - Hydration memory: `memory.cat.hydration`, `memory.key.hydrationGoal`, `memory.key.hydrationSmart`, `memory.key.hydrationPattern`, `memory.value.enabled`, `memory.value.disabled`
+  - AI data disclosure: `ai.consent.water.title`, `ai.consent.water.detail`
+  - Privacy policy: `legal.privacy.content` rewritten with new section 6 (Water Tracking Data) and renumbered "Contact Us" to 7
+
+No files removed. No TierGate changes. No DevOverride changes. No Info.plist permission additions (widget already has `group.aiqo`).
+
+---
+
+## 23. Water Detail Sheet — Hero Redesign (2026-04-22, pass 2)
+
+Same-day follow-up to §22. The Smart Water Tracking feature shipped functionally correct but with a **brand-breaking hero** at the top of [WaterDetailSheetView.swift](AiQo/Features/Home/WaterDetailSheetView.swift): a photographic `WaterBottleView` illustration wrapped in a saturated `#4A9EE7`-class blue fill, plus a bright-blue "+0.25 L" capsule button. This read as stock-fitness UI, not AiQo — every other surface in the app uses calm glassmorphism over mint / sand accents. The `SmartHydrationSection` card directly below (added in §22.6) is on-brand and was explicitly **kept untouched**; this pass redesigns only the hero region above it plus the bottom add button, replacing both with a native SwiftUI progress ring and a three-chip quick-add row.
+
+Constraints held throughout:
+- No raster asset, no photographic illustration, no emoji.
+- No blue color anywhere in the hero — `#4A9EE7` is fully evicted; `waterBlue` constant deleted from the file.
+- `SmartHydrationSection`, the sheet's `ScrollView`, `.presentationDetents`, `.presentationDragIndicator`, `.presentationBackground`, close-button z-order, and every caller of `HomeViewModel.addWater(liters:)` stay exactly as they were.
+- `HydrationService` / `HydrationEvaluator` / `HydrationWidgetBridge` / the widget target — all untouched.
+
+### 23.1 Decision — new `mintSoft` / `sandSoft` brand accents
+
+The canonical `AiQoColors.mint` (`#CDF4E4`) and `AiQoColors.beige` (`#F5D5A6`) are one step brighter than needed: a progress ring rendered with those against `.ultraThinMaterial` washes out, especially in light mode. Rather than retune the existing palette (which 15+ files rely on) or invent a top-level `Color.aiqoMint` extension (which would add a second source of truth), the pass adds two new constants next to the existing ones:
+
+```swift
+// AiQo/DesignSystem/AiQoColors.swift
+enum AiQoColors {
+    static let mint = Color(hex: "CDF4E4")
+    static let beige = Color(hex: "F5D5A6")
+
+    // Softer accents — one step deeper than mint/beige so progress rings and
+    // wellness surfaces hold weight against `.ultraThinMaterial` without
+    // washing out. Additive: do not replace mint/beige.
+    static let mintSoft = Color(hex: "B7E5D2")
+    static let sandSoft = Color(hex: "EBCF97")
+}
+```
+
+These are the exact hex values from the AiQo brand spec. All other files that currently declare private `mint`/`sand` constants inline (AuthFlowUI, Profile, Kitchen, Gym, Tribe, etc. — 10+ spots with slightly drifted values) are intentionally **not refactored** in this pass; a design-system consolidation is a separate future task. The new constants are available for adoption in future brand-consistent surfaces.
+
+### 23.2 New File — `WaterHeroRingView.swift`
+
+[AiQo/Features/Home/Components/WaterHeroRingView.swift](AiQo/Features/Home/Components/WaterHeroRingView.swift) — new ~170-line component, the entire hero. Stateless: takes `consumedLiters: Double` and `goalLiters: Double`, renders. No `@ObservedObject`, no singleton reads — callers pass the numbers.
+
+Visual grammar:
+- **Outer ring** 220 × 220 pt, lineWidth 16, `.lineCap: .round`.
+- **Track** — `AiQoColors.mintSoft.opacity(trackOpacity)` where `trackOpacity = colorScheme == .dark ? 0.12 : 0.18`. Dark-mode bump keeps the progress stroke readable against the dimmer material.
+- **Progress arc** — `Circle().trim(from: 0, to: progress)` stroked with an `AngularGradient` cycling `mintSoft → sandSoft → mintSoft` over 360°, then rotated `-90°` so progress starts at 12 o'clock. A subtle `shadow(color: .mintSoft.opacity(0.25), radius: 14, y: 4)` lands only on the progress arc.
+- **Center stack** — big number (SF Rounded `.black` weight, size 52) with `.numericText(value: consumedLiters)` content transition so each tap animates, unit label (`ل` or `L` derived from `Locale.current.language.languageCode`), and a tertiary sublabel `"من %.1f ل"` / `"of %.1f L"`.
+- **Overflow behavior** — `progress` is capped at `min(1, consumedLiters / goalLiters)`: the ring never over-rotates past 100 %, but the big number keeps counting. `percent` likewise caps at 100.
+- **Animation** — `.spring(response: 0.55, dampingFraction: 0.85)` bound to the `progress` value; the ring and pill settle together.
+- **Dynamic Type** — `dynamicTypeSize(...DynamicTypeSize.accessibility1)` on the big number so it cannot blow past the ring at XXXL sizes; regular Dynamic Type up to accessibility1 is respected.
+- **Accessibility** — `.accessibilityElement(children: .combine)` with label "تتبع الماء اليومي" / "Daily water tracking" and value "X.X لتر من X.X لتر، NN بالمئة" formatted via a locale-aware `NumberFormatter` (maximumFractionDigits = 1).
+- **Reserved tap surface** — `.contentShape(Circle())` on the whole ring. No gesture attached today; marked as the insertion point for a future goal picker.
+
+Three preview providers ship with the file: Light × AR × 60 %, Dark × AR × 7 %, Light × EN × 112 % (the cap-behaviour case). All previews set `\.locale` and `\.layoutDirection` explicitly.
+
+### 23.3 Surgical Edits — `WaterDetailSheetView.swift`
+
+Properties + state, body content, and subview implementations were all edited. The file stays at 372 lines (was 231 lines pre-§22 hero embed; the net addition is the chip row + custom sheet).
+
+**Removed:**
+- `private let waterBlue = Color(red: 0.24, green: 0.67, blue: 0.93)` — the old `#4A9EE7`-class blue.
+- `private let addAmount: Double = 0.25` — no longer needed; each chip carries its own amount literal.
+- `@State private var addWaterFeedbackTrigger` — replaced by `UIImpactFeedbackGenerator` + `UINotificationFeedbackGenerator` calls.
+- `amountLabel` (48 pt number floating above the bottle) — the big number now lives inside the ring.
+- `waterBottle` call site — `WaterBottleView(currentLiters:)` is no longer referenced anywhere in this file. **The `WaterBottleView` source file is left in the repo**, orphaned, flagged under §23.7.
+- `addWaterButton` (blue capsule) — replaced by the chip row.
+- `addWater()` private method — replaced by `performAdd(amount:isCustom:)`.
+
+**Added (as properties):**
+- `var goalLiters: Double = 2.5` — explicit parameter; caller is the source of truth. Default keeps previews working when the sheet is instantiated standalone.
+- `@State private var showCustomSheet = false` — drives the nested custom-amount sheet.
+
+**Added (as subviews):**
+- `titleLabel` retuned to `17 pt bold rounded, centered` (was 24 pt heavy).
+- `percentagePill` — small `.ultraThinMaterial` capsule, 14 × 6 padding, with `mintSoft.opacity(0.35)` 0.5 pt stroke. Shows "XX%" with `.contentTransition(.numericText(value:))` animated via the same spring.
+- `quickAddRow` — `HStack(spacing: 10)` of three chips: `quickAddChip(+0.25 ل, 0.25)`, `quickAddChip(+0.5 ل, 0.5)`, `customChip`.
+- `quickAddChip(title:amount:a11yAmount:)` — capsule-shaped `.ultraThinMaterial` with a `mintSoft.opacity(0.35)` tint overlay and a `mintSoft.opacity(0.6)` 0.5 pt stroke, 16 × 12 padding, `minWidth: 44, minHeight: 44` guaranteeing HIG tap target, `.accessibilityLabel` / `.accessibilityHint` from new localization keys.
+- `customChip` — same capsule grammar but tinted with `sandSoft` to visually signal it's the different action type.
+- `performAdd(amount:isCustom:)` — the unified action method. Animates `currentWaterLiters` via the same spring, fires the correct haptic (soft impact for quick chips, success notification for custom confirm), then calls `onAddWater?(amount)`. The callback path into HomeView / `viewModel.addWater(liters:)` / HealthKit is preserved byte-for-byte.
+- Private `CustomWaterAmountSheet` struct at the bottom of the file. `.height(280)` detent, `.ultraThinMaterial` background matching parent, drag indicator visible. Contains an `HStack` with the amount (big rounded number, `.numericText(value:)`) and the unit label, a `Slider(value: $amount, in: 0.05...1.0, step: 0.05)` tinted with `AiQoColors.mintSoft`, and a single "إضافة" / "Add" capsule button that calls `onConfirm(amount)` then `dismiss()`. The concatenated `Text + Text` pattern caught by the compiler during the pass ("Cannot convert value of type `some View` to `Text`" — modifier-chain return type) was resolved by switching to an explicit `HStack`.
+
+**Preserved byte-for-byte** (per the edit protocol):
+- The `ScrollView` wrap with `.scrollIndicators(.hidden)`.
+- The close button (top-leading, z-order kept above the ScrollView via `ZStack(alignment: .topTrailing)`).
+- The `SmartHydrationSection` embed, still flag-gated by `FeatureFlags.smartWaterTrackingEnabled`.
+- The convenience init and the `.waterDetailSheet(...)` presentation helper extension, both gaining only a `goalLiters: Double = 2.5` default parameter — no caller breaks.
+
+### 23.4 Hero Layout Flow
+
+```
+┌─ ScrollView ──────────────────────────────────┐
+│  40 pt top spacer                             │
+│                                               │
+│  "الماء"                         (17 pt bold) │
+│                                               │
+│   ╭──────────────────────╮                    │
+│   │      ╭────╮          │                    │
+│   │     ╱      ╲         │     ← WaterHeroRingView
+│   │    │  1.5  │         │       220 × 220
+│   │     ╲  ل   ╱         │       mint→sand angular
+│   │      ╲ من 2.5 ل      │       track @ 0.18 (light) / 0.12 (dark)
+│   │      ╰────╯          │                    │
+│   ╰──────────────────────╯                    │
+│                                               │
+│           [ 60% ]                             │     ← percentagePill (12 pt gap)
+│                                               │
+│   [+0.25 ل] [+0.5 ل] [جرعة مخصصة]            │     ← quickAddRow (24 pt gap)
+│                                               │
+│   ╭──────────────────────────────────╮        │
+│   │  SmartHydrationSection (unchanged)│       │     ← §22 card, 24 pt gap above
+│   │  toggle · pace · goal stepper ·   │       │
+│   │  WHO/EFSA links                   │       │
+│   ╰──────────────────────────────────╯        │
+│                                               │
+│  40 pt bottom padding                         │
+└───────────────────────────────────────────────┘
+
+ × close button (top-trailing, above ScrollView)
+```
+
+Tapping any chip → `performAdd(amount, isCustom: false)` → spring animation on `currentWaterLiters` → soft haptic → `onAddWater?(amount)` → `HomeView` wraps that in `Task { await viewModel.addWater(liters: addedLiters) }` → `HealthKitService.logWater` → `HydrationService.reevaluateAndSchedule` → state / reminder / widget reconciliation (§22.9 pipeline, unchanged).
+
+Tapping `جرعة مخصصة` / `Custom` → `showCustomSheet = true` → nested sheet with slider → "إضافة" / "Add" → `performAdd(amount, isCustom: true)` → spring animation → success notification haptic → same `onAddWater` path.
+
+### 23.5 Haptic Discipline
+
+Explicit call-sites (no more `sensoryFeedback` attachment):
+- **Ring tap** — no haptic. Ring is inert today; the reserved tap surface exists so a future goal picker can attach without restructuring the layout.
+- **Quick-add chip tap** — `UIImpactFeedbackGenerator(style: .soft).impactOccurred()`. Water is a calm action, not a confirmation beat. Soft over medium.
+- **Custom confirm button** — `UINotificationFeedbackGenerator().notificationOccurred(.success)`. Fires once, at the moment the amount commits. The sheet dismisses on the same frame.
+
+### 23.6 One-line HomeView Edit
+
+[AiQo/Features/Home/HomeView.swift:240-247](AiQo/Features/Home/HomeView.swift) — the `.waterDetail` case in `destinationView(for:)`. One parameter inserted between `currentWaterLiters` and `onAddWater`:
+
+```diff
+             WaterDetailSheetView(
+                 currentWaterLiters: $waterSheetLiters,
++                goalLiters: HydrationService.shared.settings.goalML / 1000,
+                 onAddWater: { addedLiters in
+                     Task {
+                         await viewModel.addWater(liters: addedLiters)
+                     }
+                 }
+             )
+```
+
+Nothing else in HomeView changed. `.presentationDetents([.medium, .large])`, `.presentationDragIndicator(.visible)`, `.presentationBackground(.ultraThinMaterial)` all preserved. The sheet still opens at `.medium` by default; the new hero + chip row + SmartHydrationSection scrolls comfortably at that detent and sits without scrolling at `.large`.
+
+### 23.7 Follow-up Cleanup (Flagged, Not Done)
+
+Per the edit protocol, no unrelated code was deleted. Items worth a separate commit:
+
+1. **[WaterBottleView.swift](AiQo/Features/Home/WaterBottleView.swift) is now orphaned** — zero call sites remain in `WaterDetailSheetView` and a repo-wide grep confirms no other caller. The file should be deleted in a dedicated cleanup commit along with any `AnimatedWaterBottleView` it exports. Left on disk today so the diff of this pass is strictly additive on the hero and strictly removing-only-what-the-hero-owned.
+2. **Deprecated localization keys retained for rollback** — `water.add`, `water.a11y.add`, `water.a11y.hint` are untouched in both `.strings` files. No consumer references them after this pass; safe to remove alongside the WaterBottleView cleanup.
+3. **Ring tap is inert** — `.contentShape(Circle())` makes the full ring a touch target, but no gesture is attached. Future enhancement: a goal-picker sheet on tap, wiring `HydrationService.shared.settings.goalML` the same way the §22 stepper already does. Touch target + reserved space are already there.
+
+### 23.8 Build State After §23
+
+| Metric | Before §23 | After §23 |
+|---|---|---|
+| Main-app build | SUCCEEDED | **SUCCEEDED** |
+| New warnings introduced | — | **0** |
+| New Swift files | — | 1 (`WaterHeroRingView.swift`) |
+| Modified Swift files | — | 3 (`AiQoColors.swift`, `WaterDetailSheetView.swift`, `HomeView.swift`) |
+| New localization keys (en + ar) | — | **10** per language |
+| New brand colors | 2 (`mint`, `beige`) | **4** (+`mintSoft`, `sandSoft`) |
+| Blue hex values in the hero path | 1 (`waterBlue #4A9EE7`) | **0** |
+| Raster/illustration hero assets used | 1 (`WaterBottleView`) | **0** |
+| TierGate references added | — | **0** (feature remains free) |
+
+### 23.9 Known Risks
+
+1. **`mintSoft` / `sandSoft` vs existing private palettes.** 10+ files privately re-declare mint/sand at slightly different hex values (AuthFlowUI at `#B7E5D2` / `#EBCF97` — matching the new brand spec, but file-private; Profile, Gym, Kitchen, Tribe with their own shades). The pass **intentionally did not unify** those to avoid a cross-feature regression risk. Someone doing a design-system consolidation sprint should start with this as item #1.
+2. **Default `goalLiters: 2.5`** in the convenience init / sheet helper is a pragmatic fallback. Real presentation always passes `HydrationService.shared.settings.goalML / 1000`. Tests or previews that use the convenience init get the default.
+3. **`locale.language.languageCode` check for unit label.** `WaterHeroRingView.unitLabel` and `CustomWaterAmountSheet.unitLabel` pick between `ل` and `L` via `Locale.current`. This respects the device locale but does **not** respect the app-level override in `AppSettingsStore.appLanguage`. For the v1.0.1 audience the device locale is reliably Arabic, so the mismatch window is narrow; if the app-language override is later used as the canonical source, both getters need to flip to `AppSettingsStore.shared.appLanguage.rawValue == "ar"`.
+4. **No blue remains — verified.** Grep for `#4A9EE7`, `Color(red: 0.24`, and the historical `waterBlue` symbol inside the hero path returned zero hits. `SmartHydrationSection` still uses its own internal `waterBlue` (added pre-§22) for the drop-icon tint and the diagonal sheen gradient — per the edit protocol, that file is out of scope for this pass. If the "no blue anywhere in the water sheet" rule is later tightened, `SmartHydrationSection` is the one remaining offender.
+5. **Dynamic Type cap at `accessibility1`.** Above that the big number would blow past the 220 pt ring. Consider a responsive ring size as a future improvement, or a dedicated "large text" layout that drops the ring in favor of an enlarged number.
+
+### 23.10 Files Added / Modified
+
+**Added:**
+- `AiQo/Features/Home/Components/WaterHeroRingView.swift` (170 lines; three preview providers)
+
+**Modified:**
+- `AiQo/DesignSystem/AiQoColors.swift` — `+mintSoft`, `+sandSoft`
+- `AiQo/Features/Home/WaterDetailSheetView.swift` — hero region surgical replacement (title retuned, old amount/bottle/blue button removed, percentage pill + three-chip quick-add row + unified `performAdd` action + private `CustomWaterAmountSheet` added). Convenience init and `.waterDetailSheet(...)` helper gained a default `goalLiters` parameter; all call sites remain source-compatible.
+- `AiQo/Features/Home/HomeView.swift` — one parameter inserted in the `.waterDetail` case (`goalLiters: HydrationService.shared.settings.goalML / 1000`). No other line touched.
+- `AiQo/Resources/en.lproj/Localizable.strings` — 10 new keys in a new `Water Detail — Hero ring + quick-add chips` block.
+- `AiQo/Resources/ar.lproj/Localizable.strings` — matching 10 keys in Arabic.
+
+**Not touched:**
+- `AiQo/Features/Home/WaterBottleView.swift` (orphaned, flagged, not deleted).
+- `AiQo/Features/SmartWaterTracking/**` — the entire §22 domain/service/widget tree untouched.
+- `AiQo/Features/Home/HomeViewModel.swift` — `addWater(liters:)` signature and callers untouched.
+- Any entitlements, Info.plist, or widget target file.
+- Any test file.
+
+Zero deletions. Zero third-party dependencies. Zero new warnings.
