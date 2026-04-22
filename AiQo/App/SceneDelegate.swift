@@ -119,6 +119,7 @@ final class AppFlowController: ObservableObject {
 
     func finalizeMedicalDisclaimer() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+        UserDefaults.standard.set(true, forKey: "aiqo.medicalDisclaimer.acknowledgedV1")
         transition(to: Self.resolveCurrentScreen())
     }
 
@@ -330,6 +331,7 @@ struct AppRootView: View {
     @StateObject private var aiConsentManager = AIDataConsentManager.shared
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("aiqo.medicalDisclaimer.acknowledgedV1") private var medicalDisclaimerV1Acknowledged = false
 
     private var currentDirection: LayoutDirection {
         AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
@@ -357,6 +359,20 @@ struct AppRootView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .fullScreenCover(isPresented: medicalDisclaimerCoverBinding) {
+            MedicalDisclaimerDetailView(mode: .firstRun)
+        }
+    }
+
+    /// v1.1 gate: show the fullscreen disclaimer only once onboarding is fully
+    /// complete AND the user has not yet acknowledged the v1.1 wording. This
+    /// covers legacy users who completed v1.0 onboarding before the new gate
+    /// existed. Non-dismissible by gesture until "فهمت وأوافق" is tapped.
+    private var medicalDisclaimerCoverBinding: Binding<Bool> {
+        Binding(
+            get: { flow.currentScreen == .main && !medicalDisclaimerV1Acknowledged },
+            set: { _ in }
+        )
     }
 
     @ViewBuilder

@@ -197,6 +197,7 @@ struct CaptainMemorySettingsView: View {
         case "active_record_project": return NSLocalizedString("memory.cat.recordProject", comment: "")
         case "weekly": return NSLocalizedString("memory.cat.weekly", comment: "")
         case "challenge": return NSLocalizedString("memory.cat.challenge", comment: "")
+        case "hydration": return NSLocalizedString("memory.cat.hydration", comment: "")
         default: return category
         }
     }
@@ -226,6 +227,9 @@ struct CaptainMemorySettingsView: View {
         case "sleep_avg": return NSLocalizedString("memory.key.sleepAvg", comment: "")
         case "active_calories_avg": return NSLocalizedString("memory.key.caloriesAvg", comment: "")
         case "resting_heart_rate": return NSLocalizedString("memory.key.heartRate", comment: "")
+        case "hydration_goal": return NSLocalizedString("memory.key.hydrationGoal", comment: "")
+        case "hydration_smart_enabled": return NSLocalizedString("memory.key.hydrationSmart", comment: "")
+        case "hydration_pattern": return NSLocalizedString("memory.key.hydrationPattern", comment: "")
         default:
             if key.hasPrefix("injury_") { return NSLocalizedString("memory.key.injury", comment: "") }
             if key.hasPrefix("challenge_") {
@@ -247,6 +251,11 @@ struct CaptainMemorySettingsView: View {
             return CaptainSportPreference.localizedValue(forStoredValue: memory.value) ?? memory.value
         case "preferred_training_time":
             return CaptainWorkoutTimePreference.localizedValue(forStoredValue: memory.value) ?? memory.value
+        case "hydration_smart_enabled":
+            let key = memory.value.lowercased() == "on"
+                ? "memory.value.enabled"
+                : "memory.value.disabled"
+            return NSLocalizedString(key, comment: "")
         default:
             return memory.value
         }

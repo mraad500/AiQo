@@ -147,4 +147,20 @@ enum FeatureFlags {
     /// it reappears in its original position. Code is retained fully compilable.
     @FeatureFlag("PLANK_LADDER_CHALLENGE_ENABLED", default: false)
     static var plankLadderChallengeEnabled: Bool
+
+    // MARK: - Smart Water Tracking (free feature) — flag added 2026-04-22
+    //
+    // Kill switch for the Smart Water Tracking & Reminders feature. When ON
+    // (default), `WaterDetailSheetView` renders the `SmartHydrationSection`
+    // (pace summary, WHO/EFSA guidance, toggle) and `HomeViewModel` schedules
+    // pace-based hydration reminders through `NotificationBrain`. When OFF,
+    // the Water sheet falls back to the v1 bottle + add-button UI and no
+    // hydration notifications are scheduled.
+    //
+    // The feature is 100% free — no paywall or subscription gating. This flag
+    // exists only as a production kill switch if the reminder logic misbehaves
+    // in the wild. Users still control the feature via the in-app toggle
+    // (`HydrationSettings.smartTrackingEnabled`, UserDefaults-backed).
+    @FeatureFlag("SMART_WATER_TRACKING_ENABLED", default: true)
+    static var smartWaterTrackingEnabled: Bool
 }

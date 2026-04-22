@@ -46,7 +46,7 @@
 "legal.section" = "Legal";
 "legal.privacy.title" = "Privacy Policy";
 "legal.terms.title" = "Terms of Service";
-"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: April 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party AI Services\nWith your explicit consent, AiQo may send summarized and anonymized data to the following third-party services:\n- Google Gemini: Your conversation messages and a summarized daily health snapshot (steps, calories, sleep duration, heart rate) are sent for AI-powered coaching responses. Personal identifiers are redacted before transmission.\n- Spotify: If connected, AiQo communicates with the Spotify app on your device for music playback. No data is sent to Spotify through AiQo servers.\nCaptain voice playback uses the on-device iOS text-to-speech engine and does not send any data to third parties.\nYou can grant or revoke AI data sharing consent at any time from Settings > Privacy.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings. You can revoke AI data sharing consent from Settings.\n\n6. Contact Us\nFor privacy inquiries, reach out through the app.";
+"legal.privacy.content" = "AiQo Privacy Policy\n\nLast updated: April 2026\n\n1. Data We Collect\nWe collect health data (steps, calories, sleep, heart rate) from Apple HealthKit with your permission. We also collect profile information you provide (name, age, height, weight).\n\n2. How We Use Your Data\nHealth data is used solely to provide personalized insights and coaching within the app. We never sell your data to third parties.\n\n3. Data Storage\nHealth data is stored locally on your device. Data sent to AI services is processed without permanent storage.\n\n4. Third-Party AI Services\nWith your explicit consent, AiQo may send summarized and anonymized data to the following third-party services:\n- Google Gemini: Your conversation messages and a summarized daily health snapshot (steps, calories, sleep duration, heart rate) are sent for AI-powered coaching responses. Personal identifiers are redacted before transmission.\n- Spotify: If connected, AiQo communicates with the Spotify app on your device for music playback. No data is sent to Spotify through AiQo servers.\nCaptain voice playback uses the on-device iOS text-to-speech engine and does not send any data to third parties.\nYou can grant or revoke AI data sharing consent at any time from Settings > Privacy.\n\n5. Your Rights\nYou can delete your data at any time from the app settings. You can revoke HealthKit permissions from device settings. You can revoke AI data sharing consent from Settings.\n\n6. Water Tracking Data\nWhat we collect: water intake you enter manually, your daily hydration goal, your reminder preferences, and — if you grant permission — hydration data from Apple Health.\nHow we use it: to track your progress, generate pace-based reminders, and personalize insights shown inside the app.\nWhat we do not do: we do not sell water tracking data, and we do not send raw HealthKit hydration logs to any third party. Only summarized, sanitized context may be used when cloud AI is engaged.\nYour control: you can disable smart water tracking at any time in the water screen, revoke HealthKit access from device settings, or reset hydration settings by clearing app data.\n\n7. Contact Us\nFor privacy inquiries, reach out through the app.";
 "legal.terms.content" = "AiQo Terms of Service\n\nLast updated: April 2026\n\n1. Acceptance\nBy using AiQo, you agree to these terms.\n\n2. Service\nAiQo provides health tracking and AI-powered coaching. Content is not a substitute for professional medical advice.\n\n3. Subscriptions\n- Free trial: 7 days\n- AiQo Max: $9.99/month\n- AiQo Intelligence Pro: $19.99/month\nSubscriptions auto-renew monthly until cancelled. You can manage or cancel your subscription at any time through your Apple ID settings. Payment is charged to your Apple ID account at confirmation of purchase. The subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current billing period.\n\n4. User Conduct\nYou are responsible for your use of the app and any content you post in the Tribe feature.\n\n5. Disclaimer\nAiQo does not provide medical advice. Consult your doctor before making health decisions based on app data.\n\n6. Changes\nWe reserve the right to modify these terms at any time.";
 
 /* Referral */
@@ -1744,6 +1744,19 @@
 "water.a11y.add" = "Add 0.25 liters of water";
 "water.a11y.hint" = "Double tap to log water intake";
 
+/* ─── Smart Hydration (free feature) ─── */
+"hydration.smart.toggle.title" = "Smart Water Tracking & Reminders";
+"hydration.smart.toggle.subtitle" = "Pace-based, never spammy.";
+"hydration.goal.title" = "Daily goal";
+"hydration.guidance.title" = "General global guidance";
+"hydration.guidance.body" = "General global guidance: 2–2.5 liters per day (varies by body and activity).";
+"hydration.guidance.more" = "Why it varies";
+"hydration.guidance.factors" = "Your needs depend on body weight, activity level, climate, and any health condition. This is general information, not medical advice.";
+"hydration.guidance.link.who" = "WHO – Healthy diet";
+"hydration.guidance.link.efsa" = "EFSA – Water intake";
+"hydration.remaining.format" = "%.2f L remaining";
+"hydration.consumed.format" = "%.2f of %.2f L consumed";
+
 /* ─── Streak Badge ─── */
 "streak.a11y" = "streak %d consecutive days";
 "streak.commitment" = "Commitment";
@@ -2210,6 +2223,23 @@
 "memory.category.recordProject" = "Record-breaking project";
 "memory.cat.weekly" = "Weekly memory";
 "memory.cat.challenge" = "Challenges";
+"memory.cat.identity" = "Identity";
+"memory.cat.goal" = "Goals";
+"memory.cat.body" = "Body";
+"memory.cat.preference" = "Preferences";
+"memory.cat.mood" = "Mood";
+"memory.cat.injury" = "Injuries";
+"memory.cat.nutrition" = "Nutrition";
+"memory.cat.workoutHistory" = "Workout history";
+"memory.cat.sleep" = "Sleep";
+"memory.cat.insight" = "Insights";
+"memory.cat.recordProject" = "Record projects";
+"memory.cat.hydration" = "Hydration";
+"memory.key.hydrationGoal" = "Daily water goal";
+"memory.key.hydrationSmart" = "Smart tracking";
+"memory.key.hydrationPattern" = "Hydration pattern";
+"memory.value.enabled" = "Enabled";
+"memory.value.disabled" = "Disabled";
 "memory.key.challenge" = "Challenge";
 "memory.key.name" = "Name";
 "memory.key.weight" = "Weight";
@@ -2899,6 +2929,8 @@
 "ai.consent.why.detail" = "To generate coaching replies, workout or meal suggestions, kitchen image understanding, and optional voice playback.";
 "ai.consent.notSent.title" = "What is not sent";
 "ai.consent.notSent.detail" = "Raw HealthKit history is not sent by default. AiQo minimizes and sanitizes data before cloud requests, and your data is not sold or used for tracking.";
+"ai.consent.water.title" = "Water data";
+"ai.consent.water.detail" = "AiQo may use your daily water total, goal, time context, and last drink time to power smart hydration reminders. Sources are manual entries and — if you grant permission — Apple Health. Only summarized, sanitized context may be used in cloud requests; raw hydration logs are never sent.";
 "ai.consent.control.title" = "Your choice";
 "ai.consent.control.detail" = "Tap I Agree to enable cloud AI features. Tap Not now to keep using local features and review this disclosure later in Settings > Privacy & AI Data.";
 "ai.consent.agree" = "I Agree";

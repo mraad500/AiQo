@@ -195,6 +195,7 @@ public actor NotificationBrain {
         case .streakRisk,
              .streakSave:              return "CAPTAIN_STREAK"
         case .circadianNudge:          return "CAPTAIN_CIRCADIAN"
+        case .hydrationReminder:       return "CAPTAIN_HYDRATION"
         default:                       return "CAPTAIN_DEFAULT"
         }
     }

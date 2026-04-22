@@ -73,6 +73,8 @@
 	</array>
 	<key>PLANK_LADDER_CHALLENGE_ENABLED</key>
 	<false/>
+	<key>SMART_WATER_TRACKING_ENABLED</key>
+	<true/>
 	<key>PROACTIVE_CULTURAL_ENABLED</key>
 	<false/>
 	<key>PROACTIVE_EMOTIONAL_ENABLED</key>
