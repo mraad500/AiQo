@@ -239,6 +239,7 @@ struct HomeView: View {
             // Water Sheet with medium/large detents (Goal #5)
             WaterDetailSheetView(
                 currentWaterLiters: $waterSheetLiters,
+                goalLiters: HydrationService.shared.settings.goalML / 1000,
                 onAddWater: { addedLiters in
                     Task {
                         await viewModel.addWater(liters: addedLiters)

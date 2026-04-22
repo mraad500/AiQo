@@ -1743,6 +1743,18 @@
 "water.a11y.add" = "أضف 0.25 لتر ماء";
 "water.a11y.hint" = "اضغط مرتين لتسجيل شرب الماء";
 
+/* ─── Water Detail — Hero ring + quick-add chips (2026-04-22) ─── */
+"water.hero.a11y.label" = "تتبع الماء اليومي";
+"water.hero.a11y.value.format" = "%@ لتر من %@ لتر، %d بالمئة";
+"water.hero.goal.format" = "من %.1f ل";
+"water.add.quarter" = "+0.25 ل";
+"water.add.half" = "+0.5 ل";
+"water.add.custom" = "جرعة مخصصة";
+"water.add.a11y.format" = "أضف %@ لتر ماء";
+"water.add.a11y.hint" = "يضيف إلى إجمالي الماء اليومي";
+"water.custom.sheet.title" = "جرعة مخصصة";
+"water.custom.confirm" = "إضافة";
+
 /* ─── Smart Hydration (free feature) ─── */
 "hydration.smart.toggle.title" = "تتبع وتذكير الماء الذكي";
 "hydration.smart.toggle.subtitle" = "حسب إيقاعك — بدون إزعاج.";

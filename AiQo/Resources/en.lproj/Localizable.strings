@@ -1744,6 +1744,18 @@
 "water.a11y.add" = "Add 0.25 liters of water";
 "water.a11y.hint" = "Double tap to log water intake";
 
+/* ─── Water Detail — Hero ring + quick-add chips (2026-04-22) ─── */
+"water.hero.a11y.label" = "Daily water tracking";
+"water.hero.a11y.value.format" = "%@ liters of %@ liters, %d percent";
+"water.hero.goal.format" = "of %.1f L";
+"water.add.quarter" = "+0.25 L";
+"water.add.half" = "+0.5 L";
+"water.add.custom" = "Custom";
+"water.add.a11y.format" = "Add %@ liters of water";
+"water.add.a11y.hint" = "Adds to today's total";
+"water.custom.sheet.title" = "Custom amount";
+"water.custom.confirm" = "Add";
+
 /* ─── Smart Hydration (free feature) ─── */
 "hydration.smart.toggle.title" = "Smart Water Tracking & Reminders";
 "hydration.smart.toggle.subtitle" = "Pace-based, never spammy.";
