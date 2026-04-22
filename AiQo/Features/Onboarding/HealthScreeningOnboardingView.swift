@@ -50,6 +50,12 @@ struct HealthScreeningOnboardingView: View {
             }
         }
         .environment(\.layoutDirection, AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight)
+        // Defensive: no-op on the root-switched path (this view is not a sheet),
+        // but if a future surface ever wraps this screen in `.sheet { ... }`
+        // (e.g. a "review your health answers" settings flow), the gate stays
+        // non-dismissible. App Review readers also recognise this modifier as
+        // the visual signal for a blocking health gate.
+        .interactiveDismissDisabled(true)
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.84)) {
                 appeared = true
