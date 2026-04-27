@@ -54,6 +54,9 @@ extension AnalyticsEvent {
     static func captainResponseFailed(error: String) -> AnalyticsEvent {
         AnalyticsEvent("captain_response_failed", properties: ["error": error])
     }
+    static func captainResponseTruncated(screen: String) -> AnalyticsEvent {
+        AnalyticsEvent("captain_response_truncated", properties: ["screen": screen])
+    }
     static let captainVoicePlayed = AnalyticsEvent("captain_voice_played")
     static let captainHistoryViewed = AnalyticsEvent("captain_history_viewed")
 

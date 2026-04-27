@@ -70,11 +70,12 @@ final class AudioCoachManager {
         lastZone2CueAt = now
 
         Task { @MainActor in
-            await CaptainVoiceService.shared.generateAndSpeakWorkoutPrompt(
+            let prompt = await CaptainVoiceService.shared.makeWorkoutPromptText(
                 liveHR: bpm,
                 zoneBounds: zoneBounds,
                 distance: distanceKM
             )
+            await CaptainVoiceRouter.shared.speak(text: prompt, tier: .premium)
         }
     }
 
@@ -90,5 +91,7 @@ final class AudioCoachManager {
         return .inRange
     }
 
-    func stop() {}
+    func stop() {
+        CaptainVoiceRouter.shared.stop()
+    }
 }

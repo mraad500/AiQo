@@ -191,4 +191,86 @@ enum FeatureFlags {
     // on-device Apple TTS regardless of this setting.
     @FeatureFlag("CAPTAIN_VOICE_CLOUD_ENABLED", default: true)
     static var captainVoiceCloudEnabled: Bool
+
+    // MARK: - Cloud Proxy (Gemini + MiniMax via Supabase Edge Functions) — 2026-04-23
+    //
+    // When OFF (default), the app calls Gemini and MiniMax directly using API
+    // keys shipped inside the IPA (via `Secrets.xcconfig` → `Info.plist` at
+    // build time). That path works but exposes the keys to any attacker who
+    // extracts the IPA — burning our quota is a realistic risk.
+    //
+    // When ON, all Gemini + MiniMax calls go through the Supabase Edge
+    // Functions `captain-chat` and `captain-voice`. The user authenticates
+    // with their Supabase JWT; the Edge Functions hold the real API keys
+    // server-side and forward the request.
+    //
+    // Requirements before flipping this to ON:
+    //   1. Deploy `supabase/functions/captain-chat` + `captain-voice` to Supabase.
+    //   2. Rotate GEMINI + MINIMAX keys and set them as Supabase Edge secrets
+    //      (`supabase secrets set GEMINI_API_KEY=… MINIMAX_API_KEY=…`).
+    //   3. Remove the now-dead client-side keys from `Secrets.xcconfig`.
+    //
+    // See `/supabase/functions/README.md` (runbook) for the full deploy flow.
+    @FeatureFlag("USE_CLOUD_PROXY", default: false)
+    static var useCloudProxy: Bool
+
+    // MARK: - Per-path proxy overrides — 2026-04-26
+    //
+    // The original `USE_CLOUD_PROXY` flag was a single switch — chat AND voice
+    // both flipped together. In practice we want to keep chat behind the
+    // Supabase Edge Function (so the Gemini key stays server-side) while
+    // voice hits MiniMax directly with the rotated client key.
+    //
+    // These two flags override `useCloudProxy` per-path. When the Info.plist
+    // entry is missing or empty, the path falls back to the master flag.
+    // That keeps existing TestFlight builds (which only know about the master
+    // flag) behaving exactly as before.
+
+    /// True when chat (Gemini + memory extractor) should route through
+    /// the `captain-chat` Edge Function. Falls back to `useCloudProxy`
+    /// when `USE_CHAT_CLOUD_PROXY` is unset.
+    static var useChatCloudProxy: Bool {
+        if let override = Self.optionalBoolFlag(named: "USE_CHAT_CLOUD_PROXY") {
+            return override
+        }
+        return useCloudProxy
+    }
+
+    /// True when MiniMax voice synthesis should route through the
+    /// `captain-voice` Edge Function. Falls back to `useCloudProxy`
+    /// when `USE_VOICE_CLOUD_PROXY` is unset.
+    static var useVoiceCloudProxy: Bool {
+        if let override = Self.optionalBoolFlag(named: "USE_VOICE_CLOUD_PROXY") {
+            return override
+        }
+        return useCloudProxy
+    }
+
+    /// Reads a Bool/string Info.plist entry and returns `nil` when the value
+    /// is missing, empty, or an unexpanded `$(…)` placeholder. The
+    /// distinction matters for per-path overrides — `false` means "explicitly
+    /// off", `nil` means "no opinion, defer to the master flag".
+    private static func optionalBoolFlag(named key: String) -> Bool? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) else {
+            return nil
+        }
+        if let bool = raw as? Bool {
+            return bool
+        }
+        if let str = raw as? String {
+            let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed.hasPrefix("$(") {
+                return nil
+            }
+            switch trimmed.lowercased() {
+            case "true", "yes", "1":
+                return true
+            case "false", "no", "0":
+                return false
+            default:
+                return nil
+            }
+        }
+        return nil
+    }
 }

@@ -2321,6 +2321,22 @@
 "captainPersonalization.workoutTime.afternoon" = "Afternoon";
 "captainPersonalization.workoutTime.evening" = "Evening";
 "captainPersonalization.workoutTime.night" = "Night";
+
+// MARK: - Quick Start (consolidated onboarding)
+"quickStart.title" = "Let Your Captain Know You";
+"quickStart.subtitle" = "Just two minutes before we start — you can change everything later.";
+"quickStart.goalSection" = "What's your goal?";
+"quickStart.sportSection" = "What's your favorite sport?";
+"quickStart.timeSection" = "When do you like to train?";
+"quickStart.birthYear.label" = "Your birth year";
+"quickStart.birthYear.placeholder" = "e.g. 1995";
+"quickStart.healthDisclosure.toggle" = "Any health conditions?";
+"quickStart.healthDisclosure.hint" = "Optional — helps Captain ease back on high-intensity recommendations.";
+"quickStart.sleepSection" = "Your sleep window";
+"quickStart.smartWake.inline" = "AiQo suggests waking at %@";
+"quickStart.continue" = "Start with Captain";
+"quickStart.privacy" = "All answers stay on your device. AiQo does not diagnose or treat medical conditions.";
+
 "memory.key.preferredWorkout" = "Favorite sport";
 "memory.key.preferredTrainingTime" = "Preferred workout time";
 "memory.key.waterIntake" = "Water intake";
@@ -2363,7 +2379,20 @@
 "featureIntro.kitchenSubtitle" = "Smart meal plans, food photo analysis, and daily calorie & protein tracking.";
 "featureIntro.workoutsAccessibility" = "Workouts, Challenges and Peaks illustration";
 "featureIntro.kitchenAccessibility" = "Kitchen feature illustration";
-"featureIntro.pageOf" = "Page %d of 3";
+"featureIntro.pageOf" = "Page %d of 2";
+"featureIntro.myVibeTitle" = "My Vibe";
+"featureIntro.myVibeSubtitle" = "DJ Hamoudi reads your mood and picks the right music — morning coffee, gym session, late-night wind-down.";
+
+// MARK: - Subscription Intro (onboarding)
+"subscriptionIntro.skip" = "Skip";
+
+// MARK: - Profile: Subscription section
+"screen.profile.section.subscription" = "Subscription";
+"screen.profile.subscription.tier.free" = "Free Plan";
+"screen.profile.subscription.tier.trial" = "Free Trial";
+"screen.profile.subscription.activeUntil" = "Active until %@";
+"screen.profile.subscription.viewPlans" = "View available plans";
+"profile.paywall.back" = "Back";
 
 /* ─── Smart Wake (missing keys) ─── */
 "smartwake.cycles" = "Cycles";

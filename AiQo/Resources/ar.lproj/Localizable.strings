@@ -2320,6 +2320,22 @@
 "captainPersonalization.workoutTime.afternoon" = "الظهر";
 "captainPersonalization.workoutTime.evening" = "المساء";
 "captainPersonalization.workoutTime.night" = "الليل";
+
+// MARK: - Quick Start (consolidated onboarding)
+"quickStart.title" = "خلّ الكابتن يعرفك";
+"quickStart.subtitle" = "دقيقتين بس قبل ما نبدأ — كل شي تقدر تعدله لاحقاً.";
+"quickStart.goalSection" = "وش هدفك؟";
+"quickStart.sportSection" = "وش رياضتك المفضلة؟";
+"quickStart.timeSection" = "متى تحب تتمرن؟";
+"quickStart.birthYear.label" = "سنة ميلادك";
+"quickStart.birthYear.placeholder" = "مثلاً 1995";
+"quickStart.healthDisclosure.toggle" = "هل عندك حالة صحية؟";
+"quickStart.healthDisclosure.hint" = "اختياري — يساعد الكابتن يخفّف التوصيات الشدّة.";
+"quickStart.sleepSection" = "وقت نومك";
+"quickStart.smartWake.inline" = "AiQo بيقترح تصحى الساعة %@";
+"quickStart.continue" = "ابدأ مع الكابتن";
+"quickStart.privacy" = "كل الإجابات تبقى على جهازك. AiQo ما يشخّص ولا يعالج الحالات الطبية.";
+
 "memory.key.preferredWorkout" = "الرياضة المفضلة";
 "memory.key.preferredTrainingTime" = "وقت التمرين المفضل";
 "memory.key.waterIntake" = "شرب الماء";
@@ -2362,7 +2378,20 @@
 "featureIntro.kitchenSubtitle" = "خطط وجبات ذكية، تصوير الأكل وتحليله، ومتابعة السعرات والبروتين — كل يوم.";
 "featureIntro.workoutsAccessibility" = "رسم توضيحي لتمارين وتحديات وقمم";
 "featureIntro.kitchenAccessibility" = "رسم توضيحي لميزة المطبخ";
-"featureIntro.pageOf" = "صفحة %d من ٣";
+"featureIntro.pageOf" = "صفحة %d من ٢";
+"featureIntro.myVibeTitle" = "My Vibe";
+"featureIntro.myVibeSubtitle" = "DJ حمّودي يقرأ مزاج يومك ويختار لك الموسيقى المناسبة — قهوة الصبح، تمرين الجيم، وراحة الليل.";
+
+// MARK: - Subscription Intro (onboarding)
+"subscriptionIntro.skip" = "تخطي";
+
+// MARK: - Profile: Subscription section
+"screen.profile.section.subscription" = "الاشتراك";
+"screen.profile.subscription.tier.free" = "الخطة المجانية";
+"screen.profile.subscription.tier.trial" = "تجربة مجانية";
+"screen.profile.subscription.activeUntil" = "نشط حتى %@";
+"screen.profile.subscription.viewPlans" = "اعرض الباقات المتاحة";
+"profile.paywall.back" = "رجوع";
 
 /* ─── Smart Wake (missing keys) ─── */
 "smartwake.cycles" = "عدد الدورات";

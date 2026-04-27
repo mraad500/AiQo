@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os.log
 
 /// Single entry point for spoken output in AiQo. Dispatches utterances to the
 /// right provider based on the caller's declared tier:
@@ -45,6 +46,19 @@ final class CaptainVoiceRouter: ObservableObject {
 
     @Published private(set) var isSpeaking = false
     @Published private(set) var activeProvider: VoiceProviderKind = .appleTTS
+    /// Set to true when a `.premium` request is rejected because cloud-voice
+    /// consent has not been granted yet. Views observe this and present
+    /// `VoiceConsentSheet` reactively, so the user discovers the consent
+    /// requirement at the moment they tap a speaker — regardless of which
+    /// chat surface (CaptainChatView, CaptainScreen, future) hosts the
+    /// speaker. The view should call `acknowledgeConsentRequest()` once the
+    /// sheet is dismissed so a later tap can re-trigger.
+    @Published private(set) var needsConsent: Bool = false
+
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "CaptainVoiceRouter"
+    )
 
     private let appleTTSProvider: VoiceProvider
     /// Cloud provider. When unavailable or misconfigured, `.premium` silently
@@ -103,13 +117,27 @@ final class CaptainVoiceRouter: ObservableObject {
         isSpeaking = true
         defer { isSpeaking = false }
 
+        logger.notice("voice_router_speak tier=\(String(describing: tier), privacy: .public) provider=\(String(describing: provider.kind), privacy: .public) chars=\(trimmed.count)")
+
         do {
             try await provider.speak(text: trimmed)
-        } catch VoiceProviderError.consentMissing,
-                VoiceProviderError.configurationMissing,
+        } catch VoiceProviderError.consentMissing {
+            // Surface the consent requirement to the chat UI so the
+            // VoiceConsentSheet appears on the next render. The current
+            // utterance still gets played by Apple TTS so the user is not
+            // left with silence; a second tap (after granting) will use
+            // MiniMax.
+            logger.notice("voice_router_fallback to=appleTTS reason=consent_missing from=\(String(describing: provider.kind), privacy: .public)")
+            if provider.kind == .miniMax {
+                needsConsent = true
+            }
+            activeProvider = .appleTTS
+            try? await appleTTSProvider.speak(text: trimmed)
+        } catch VoiceProviderError.configurationMissing,
                 VoiceProviderError.tooLong {
             // Silent fallback — these are expected states, not runtime
             // failures. No toast, no accounting.
+            logger.notice("voice_router_fallback to=appleTTS reason=expected_skip from=\(String(describing: provider.kind), privacy: .public)")
             activeProvider = .appleTTS
             try? await appleTTSProvider.speak(text: trimmed)
         } catch {
@@ -131,6 +159,13 @@ final class CaptainVoiceRouter: ObservableObject {
         miniMaxProvider?.stop()
     }
 
+    /// Reset the published consent flag once the host view has shown the
+    /// consent sheet. Lets a later tap re-trigger the sheet if the user
+    /// dismissed without granting.
+    func acknowledgeConsentRequest() {
+        needsConsent = false
+    }
+
     /// Premium-tier cache warming hook. In commit 1 this is a no-op; in
     /// commit 2 `MiniMaxTTSProvider` will use it to pre-fetch audio for
     /// upcoming utterances (e.g. a workout summary's known text).
@@ -146,9 +181,11 @@ final class CaptainVoiceRouter: ObservableObject {
             return appleTTSProvider
         case .premium:
             guard featureFlagEnabled() else {
+                logger.notice("voice_router_resolve picked=appleTTS reason=feature_flag_off (CAPTAIN_VOICE_CLOUD_ENABLED=NO)")
                 return appleTTSProvider
             }
             guard let miniMax = miniMaxProvider else {
+                logger.notice("voice_router_resolve picked=appleTTS reason=minimax_provider_nil")
                 return appleTTSProvider
             }
             // Consent is checked inside `MiniMaxTTSProvider.speak` — it

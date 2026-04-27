@@ -276,7 +276,18 @@ final class MemoryStore {
         screenContext: ScreenContext,
         maxTokens: Int = 400
     ) -> String {
-        let allowedCategories: Set<String> = ["goal", "preference", "mood", "injury", "nutrition", "insight"]
+        // `workout_history` is allowed in cloud-safe context: the rolling
+        // 7-workout summary built by `WorkoutHistoryStore.buildMemorySummary`
+        // contains aggregate values (minutes, calories, HR, km) the user
+        // already sees in-app. Without it, asking "حلل تمريني الاخير" makes
+        // the Captain answer with today's HealthKit snapshot instead of the
+        // actual workout — exactly the failure mode reported on 2026-04-26.
+        // Intent-weight `(.workout, "workout_history") = 2.8` already exists
+        // in `CaptainMessageIntent.retrievalCategoryWeights`, so the relevance
+        // ranker promotes it as soon as the user mentions تمرين / workout.
+        let allowedCategories: Set<String> = [
+            "goal", "preference", "mood", "injury", "nutrition", "insight", "workout_history"
+        ]
         let memories = retrieveRelevantMemories(
             for: message,
             screenContext: screenContext,

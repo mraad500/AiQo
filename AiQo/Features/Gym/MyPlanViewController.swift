@@ -117,7 +117,7 @@ struct MyPlanView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 40)
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
     }
     
@@ -168,6 +168,7 @@ struct MyPlanView: View {
                     )
             )
             .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+            .environment(\.colorScheme, .light)
         }
         .buttonStyle(.plain)
         .padding(.top, 10)
@@ -318,6 +319,7 @@ struct PlanGlassCard<Content: View>: View {
             content
         }
         .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        .environment(\.colorScheme, .light)
     }
 }
 

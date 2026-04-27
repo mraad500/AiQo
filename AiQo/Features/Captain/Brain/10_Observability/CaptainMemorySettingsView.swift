@@ -33,7 +33,10 @@ struct CaptainMemorySettingsView: View {
                     }
                 }
 
-                ForEach(groupedMemories, id: \.0) { category, items in
+                identitySection
+                workoutsSection
+
+                ForEach(groupedMemories.filter { $0.0 != "identity" && $0.0 != "workout_history" }, id: \.0) { category, items in
                     Section(categoryLabel(category)) {
                         ForEach(items, id: \.id) { memory in
                             memoryRow(memory)
@@ -58,6 +61,7 @@ struct CaptainMemorySettingsView: View {
             Button(NSLocalizedString("memory.cancel", comment: ""), role: .cancel) {}
             Button(NSLocalizedString("memory.clearAllButton", comment: ""), role: .destructive) {
                 MemoryStore.shared.clearAll()
+                WorkoutHistoryStore.shared.clear()
                 loadMemories()
             }
         } message: {
@@ -113,6 +117,130 @@ struct CaptainMemorySettingsView: View {
                 MemoryStore.shared.isEnabled = newValue
             }
         }
+    }
+
+    // MARK: - Identity Section (fixed — sourced from UserProfile, not memory extractor)
+
+    private var identitySection: some View {
+        Section {
+            identityRow(label: NSLocalizedString("memory.key.name", comment: ""), value: identityName)
+            identityRow(label: NSLocalizedString("memory.key.age", comment: ""), value: identityAge)
+            identityRow(label: identityGenderLabel, value: identityGenderValue)
+            identityRow(label: NSLocalizedString("memory.key.height", comment: ""), value: identityHeight)
+            identityRow(label: NSLocalizedString("memory.key.weight", comment: ""), value: identityWeight)
+        } header: {
+            Text(NSLocalizedString("memory.cat.identity", comment: ""))
+        }
+    }
+
+    private func identityRow(label: String, value: String) -> some View {
+        HStack {
+            Text(value)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.primary.opacity(0.7))
+            Spacer()
+            Text(label)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.primary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var isArabicUI: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    private var currentProfile: UserProfile {
+        UserProfileStore.shared.current
+    }
+
+    private var identityName: String {
+        let trimmed = currentProfile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed.lowercased() == "captain" { return "—" }
+        return trimmed
+    }
+
+    private var identityAge: String {
+        currentProfile.age > 0 ? "\(currentProfile.age)" : "—"
+    }
+
+    private var identityHeight: String {
+        guard currentProfile.heightCm > 0 else { return "—" }
+        return isArabicUI ? "\(currentProfile.heightCm) سم" : "\(currentProfile.heightCm) cm"
+    }
+
+    private var identityWeight: String {
+        guard currentProfile.weightKg > 0 else { return "—" }
+        return isArabicUI ? "\(currentProfile.weightKg) كغم" : "\(currentProfile.weightKg) kg"
+    }
+
+    private var identityGenderLabel: String {
+        isArabicUI ? "الجنس" : "Gender"
+    }
+
+    private var identityGenderValue: String {
+        guard let gender = currentProfile.gender else { return "—" }
+        switch gender {
+        case .male:   return isArabicUI ? "ذكر" : "Male"
+        case .female: return isArabicUI ? "أنثى" : "Female"
+        }
+    }
+
+    // MARK: - Workouts Section (rolling last 7 — sourced from WorkoutHistoryStore)
+
+    @ViewBuilder
+    private var workoutsSection: some View {
+        let entries = workoutEntries
+        if !entries.isEmpty {
+            Section {
+                ForEach(entries) { entry in
+                    workoutRow(entry)
+                }
+            } header: {
+                Text(NSLocalizedString("memory.cat.workoutHistory", comment: ""))
+            }
+        }
+    }
+
+    private var workoutEntries: [WorkoutHistoryEntry] {
+        WorkoutHistoryStore.shared.recentEntries()
+    }
+
+    private func workoutRow(_ entry: WorkoutHistoryEntry) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            HStack {
+                Spacer()
+                Text(entry.title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.primary)
+            }
+
+            Text(workoutSummaryText(for: entry))
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.primary.opacity(0.7))
+                .multilineTextAlignment(.trailing)
+
+            Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.3))
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func workoutSummaryText(for entry: WorkoutHistoryEntry) -> String {
+        let minutes = max(1, entry.durationSeconds / 60)
+        var parts: [String] = [isArabicUI ? "\(minutes) دقيقة" : "\(minutes) min"]
+        if entry.activeCalories > 0 {
+            parts.append(isArabicUI ? "\(Int(entry.activeCalories)) سعرة" : "\(Int(entry.activeCalories)) kcal")
+        }
+        if let hr = entry.heartRate, hr > 0 {
+            parts.append(isArabicUI ? "\(Int(hr)) ن/د" : "\(Int(hr)) bpm")
+        }
+        if entry.distanceMeters >= 100 {
+            let km = entry.distanceMeters / 1000
+            parts.append(String(format: "%.2f \(isArabicUI ? "كم" : "km")", km))
+        }
+        return parts.joined(separator: " • ")
     }
 
     // MARK: - Memory Row

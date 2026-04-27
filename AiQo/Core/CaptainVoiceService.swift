@@ -116,6 +116,20 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         await speak(text: workoutPrompt)
     }
 
+    /// Text-only variant for callers that want to speak the coaching cue
+    /// through `CaptainVoiceRouter` (premium/cloud voice) instead of Apple TTS.
+    func makeWorkoutPromptText(
+        liveHR: Int,
+        zoneBounds: ClosedRange<Int>,
+        distance: Double
+    ) async -> String {
+        await generatedWorkoutPrompt(
+            liveHR: liveHR,
+            zoneBounds: zoneBounds,
+            distance: distance
+        )
+    }
+
     func beginExternalMixedPlayback() {
         externalMixedPlaybackClients += 1
     }

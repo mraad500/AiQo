@@ -1,9 +1,16 @@
 import Foundation
 
 nonisolated enum SubscriptionProductIDs {
-    // Live App Store Connect catalog.
+    // MARK: - Active App Store Connect IDs
+    //
+    // ⚠️  These strings MUST match App Store Connect EXACTLY.
+    //     Apple does not allow editing a Product ID after creation,
+    //     so the typos below (`mraad5000`, capital `I` in `Intelligence`)
+    //     are intentional and immutable. Do NOT "fix" them — that would
+    //     break Product.products(for:) and break IAP entirely.
+    //
     static let coreMonthly = "com.mraad5000.aiqo.max"
-    static let intelligenceProMonthly = "com.mraad500.aiqo.intelligence.pro"
+    static let intelligenceProMonthly = "com.mraad500.aiqo.Intelligence.pro"
 
     // Retired middle-tier SKU kept only to grandfather older entitlements.
     static let proMonthly = "com.mraad500.aiqo.pro.monthly"

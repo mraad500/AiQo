@@ -57,14 +57,26 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
         let sanitizedText = normalizedSpeechText(text)
         guard !sanitizedText.isEmpty else { return }
         guard sanitizedText.count <= 4_000 else {
+            logger.notice("minimax_speak_skipped reason=too_long chars=\(sanitizedText.count)")
             throw VoiceProviderError.tooLong
         }
         guard consent.isGranted else {
+            // The router silently falls back to Apple TTS on this throw — the
+            // log is the only way to discover that the cloud voice was
+            // blocked because the user never opened the consent sheet.
+            logger.notice("minimax_speak_skipped reason=consent_missing — user has not granted cloud voice consent (Settings → صوت الكابتن)")
             throw VoiceProviderError.consentMissing
         }
         guard let configuration = MiniMaxVoiceConfiguration.resolved() else {
+            // Same silent-fallback story — surface which piece of config is
+            // missing so we can tell apart "no API key" from "bad model id".
+            let apiKeyOK = MiniMaxVoiceConfiguration.resolvedAPIKey() != nil
+            let modelOK = MiniMaxVoiceConfiguration.resolvedModelID() != nil
+            let voiceOK = MiniMaxVoiceConfiguration.resolvedVoiceID() != nil
+            logger.error("minimax_speak_skipped reason=config_missing apiKey=\(apiKeyOK) modelID=\(modelOK) voiceID=\(voiceOK) — check CAPTAIN_VOICE_API_KEY / _MODEL_ID / _VOICE_ID in Secrets.xcconfig")
             throw VoiceProviderError.configurationMissing
         }
+        logger.notice("minimax_speak_resolved consent=granted model=\(configuration.modelID, privacy: .public) voice=\(configuration.voiceID, privacy: .public) chars=\(sanitizedText.count)")
 
         stop()
         let playbackSequence = nextPlaybackSequence()
@@ -173,12 +185,6 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
         text: String,
         configuration: MiniMaxVoiceConfiguration.Resolved
     ) async throws -> Data {
-        var request = URLRequest(url: configuration.endpointURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 25
-        request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let body = MiniMaxTTSRequest(
             model: configuration.modelID,
             text: text,
@@ -198,7 +204,8 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
                 channel: 1
             )
         )
-        request.httpBody = try JSONEncoder().encode(body)
+
+        let request = try await makeSynthesisRequest(body: body, configuration: configuration)
 
         let (data, response) = try await session.data(for: request)
 
@@ -229,6 +236,59 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
         }
 
         return audioData
+    }
+
+    /// Builds the outbound URLRequest for MiniMax synthesis. When
+    /// `USE_CLOUD_PROXY` is on, wraps the body and routes through the
+    /// Supabase `captain-voice` Edge Function with the user's JWT — the
+    /// MiniMax API key stays server-side. Otherwise calls MiniMax directly
+    /// with the client-embedded key (legacy path).
+    ///
+    /// Each failure mode in the proxy path emits a distinct log line so the
+    /// difference between "Supabase URL is empty", "user is not signed in",
+    /// and "consent missing" is visible in Console without source-level
+    /// debugging.
+    private func makeSynthesisRequest(
+        body: MiniMaxTTSRequest,
+        configuration: MiniMaxVoiceConfiguration.Resolved
+    ) async throws -> URLRequest {
+        if CaptainProxyConfig.isVoiceEnabled {
+            guard let endpoint = CaptainProxyConfig.endpointURL(for: .voice) else {
+                logger.error("voice_proxy_endpoint_missing — check SUPABASE_URL in Secrets.xcconfig")
+                throw VoiceProviderError.configurationMissing
+            }
+            guard let jwt = await CaptainProxyConfig.currentSessionJWT() else {
+                logger.error("voice_proxy_jwt_missing — user has no Supabase session (sign in with Apple required)")
+                throw VoiceProviderError.configurationMissing
+            }
+            let anonKey = CaptainProxyConfig.anonKey ?? ""
+            if anonKey.isEmpty {
+                logger.notice("voice_proxy_anon_key_missing — request will rely on JWT alone")
+            }
+
+            logger.notice("voice_proxy_request endpoint=\(endpoint.absoluteString, privacy: .public) bytes=\((try? JSONEncoder().encode(body).count) ?? 0)")
+
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 25
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+            if !anonKey.isEmpty {
+                request.setValue(anonKey, forHTTPHeaderField: "apikey")
+            }
+            request.httpBody = try JSONEncoder().encode(body)
+            return request
+        }
+
+        logger.notice("voice_direct_request — USE_VOICE_CLOUD_PROXY is OFF, hitting MiniMax with client-embedded key")
+
+        var request = URLRequest(url: configuration.endpointURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 25
+        request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+        return request
     }
 
     private func play(audioData: Data, playbackSequence: Int) throws {

@@ -9,8 +9,13 @@ struct CaptainChatView: View {
     /// (default) or MiniMax (commit 2, consent-gated). Observed so the
     /// `enhancedVoiceActive` badge and accessibility label reflect live state.
     @ObservedObject private var voiceRouter = CaptainVoiceRouter.shared
+    @ObservedObject private var voiceConsent = CaptainVoiceConsent.shared
     @State private var showAIPrivacySettings = false
     @State private var showHealthSources = false
+    /// First speaker tap presents the cloud-voice consent sheet rather than
+    /// silently falling back to Apple TTS — discoverability fix for the
+    /// "I configured the MiniMax key but voice still uses Apple" case.
+    @State private var showVoiceConsent = false
 
     private let bottomAnchorID = "captain-chat-bottom"
 
@@ -111,6 +116,21 @@ struct CaptainChatView: View {
         }
         .sheet(isPresented: $globalBrain.showPaywall) {
             PaywallView(source: .captainGate)
+        }
+        .sheet(isPresented: $showVoiceConsent) {
+            VoiceConsentSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+        }
+        // Reactive presentation — any speaker tap (this view OR any other
+        // future entry point) that hits `consent_missing` will publish on
+        // the router, and we surface the sheet here. Belt-and-suspenders
+        // with the predictive guard above on `onSpeak`.
+        .onChange(of: voiceRouter.needsConsent) { _, needsIt in
+            guard needsIt else { return }
+            showVoiceConsent = true
+            voiceRouter.acknowledgeConsentRequest()
         }
         .onAppear {
             globalBrain.generateMorningSleepAnalysis()
@@ -261,6 +281,17 @@ private extension CaptainChatView {
                         globalBrain.markEphemeralMessageRead(messageID: message.id)
                     } : nil,
                     onSpeak: message.isUser ? nil : {
+                        // Cloud voice requires a one-time user consent. If
+                        // it has not been granted yet, surface the sheet
+                        // here instead of letting the router silently fall
+                        // back to Apple TTS — the user pressed the speaker
+                        // because they want voice, hiding the gate behind
+                        // Settings makes that intent unreachable.
+                        if FeatureFlags.captainVoiceCloudEnabled,
+                           !voiceConsent.isGranted {
+                            showVoiceConsent = true
+                            return
+                        }
                         Task {
                             await CaptainVoiceRouter.shared.speak(text: message.text, tier: .premium)
                         }

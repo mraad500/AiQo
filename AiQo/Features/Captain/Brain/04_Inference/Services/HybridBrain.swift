@@ -69,6 +69,11 @@ struct HybridBrainServiceReply: Sendable {
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
     let rawText: String
+    /// True when Gemini reported `finishReason: "MAX_TOKENS"` for the cloud
+    /// response that produced this reply. Local / fallback / persona replies
+    /// always pass `false`. Surfaced to the UI so the bubble can mark the
+    /// truncation; analytics tracks it for capacity tuning.
+    let truncatedAtMaxTokens: Bool
 }
 
 struct HybridBrainStreamingSession: Sendable {
@@ -158,7 +163,7 @@ private enum GeminiConfig {
 
 // MARK: - Gemini Response Decoding
 
-private struct GeminiResponse: Decodable {
+struct GeminiResponse: Decodable {
     struct Candidate: Decodable {
         struct Content: Decodable {
             struct Part: Decodable {
@@ -166,10 +171,23 @@ private struct GeminiResponse: Decodable {
             }
             let parts: [Part]?
         }
+        struct SafetyRating: Decodable {
+            let category: String
+            let probability: String
+        }
         let content: Content?
+        let finishReason: String?
+        let safetyRatings: [SafetyRating]?
+    }
+
+    struct UsageMetadata: Decodable {
+        let promptTokenCount: Int?
+        let candidatesTokenCount: Int?
+        let totalTokenCount: Int?
     }
 
     let candidates: [Candidate]?
+    let usageMetadata: UsageMetadata?
 
     var outputText: String {
         candidates?
@@ -178,6 +196,18 @@ private struct GeminiResponse: Decodable {
             .compactMap(\.text)
             .joined()
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Gemini's reason for ending generation on the first candidate
+    /// (e.g. `STOP`, `MAX_TOKENS`, `SAFETY`, `RECITATION`). `nil` when the
+    /// response had no candidates or the field was absent.
+    var finishReason: String? {
+        candidates?.first?.finishReason
+    }
+
+    /// Convenience flag — true only when Gemini hit the output-token cap.
+    var didHitMaxTokens: Bool {
+        finishReason == "MAX_TOKENS"
     }
 }
 
@@ -221,19 +251,20 @@ struct HybridBrainService: Sendable {
     ) async throws -> HybridBrainServiceReply {
         try validate(request)
 
-        let structuredResponse = try await requestCloudResponse(
+        let cloudResult = try await requestCloudResponse(
             request: request,
             model: model
         )
-        let rawText = try encodeStructuredResponse(structuredResponse)
+        let rawText = try encodeStructuredResponse(cloudResult.response)
 
         return HybridBrainServiceReply(
-            message: CaptainPersonaBuilder.sanitizeResponse(structuredResponse.message),
-            quickReplies: structuredResponse.quickReplies,
-            workoutPlan: structuredResponse.workoutPlan,
-            mealPlan: structuredResponse.mealPlan,
-            spotifyRecommendation: structuredResponse.spotifyRecommendation,
-            rawText: rawText
+            message: CaptainPersonaBuilder.sanitizeResponse(cloudResult.response.message),
+            quickReplies: cloudResult.response.quickReplies,
+            workoutPlan: cloudResult.response.workoutPlan,
+            mealPlan: cloudResult.response.mealPlan,
+            spotifyRecommendation: cloudResult.response.spotifyRecommendation,
+            rawText: rawText,
+            truncatedAtMaxTokens: cloudResult.truncatedAtMaxTokens
         )
     }
 
@@ -273,23 +304,22 @@ private extension HybridBrainService {
 
     // MARK: - Network
 
+    /// Result of a single Gemini request — the parsed structured response plus
+    /// the `MAX_TOKENS` flag derived from `finishReason`. Truncation is NOT
+    /// thrown — Gemini still returns useful partial text and the UI is
+    /// responsible for marking it.
+    struct CloudCallResult {
+        let response: CaptainStructuredResponse
+        let truncatedAtMaxTokens: Bool
+    }
+
     func requestCloudResponse(
         request: HybridBrainRequest,
         model: String
-    ) async throws -> CaptainStructuredResponse {
-        let apiKey = try GeminiConfig.resolvedAPIKey()
-        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL(for: model))
-        urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
-        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
-        urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
-        urlRequest.httpBody = try JSONSerialization.data(
-            withJSONObject: makeRequestBody(request: request)
-        )
+    ) async throws -> CloudCallResult {
+        let urlRequest = try await makeGeminiURLRequest(request: request, model: model)
 
-        logger.notice("gemini_request model=\(model, privacy: .public)")
+        logger.notice("gemini_request model=\(model, privacy: .public) via=\(CaptainProxyConfig.isChatEnabled ? "proxy" : "direct", privacy: .public)")
 
         let data: Data
         let response: URLResponse
@@ -323,6 +353,18 @@ private extension HybridBrainService {
 
         let outputText = decoded.outputText
         logger.notice("gemini_output length=\(outputText.count)")
+
+        let finishReason = decoded.finishReason ?? "unknown"
+        let inputTokens = decoded.usageMetadata?.promptTokenCount ?? 0
+        let outputTokens = decoded.usageMetadata?.candidatesTokenCount ?? 0
+        let totalTokens = decoded.usageMetadata?.totalTokenCount ?? 0
+        logger.notice("gemini_finish reason=\(finishReason, privacy: .public) inputTokens=\(inputTokens) outputTokens=\(outputTokens) totalTokens=\(totalTokens)")
+
+        let truncatedAtMaxTokens = decoded.didHitMaxTokens
+        if truncatedAtMaxTokens {
+            logger.error("gemini_max_tokens_hit screen=\(request.screenContext.rawValue, privacy: .public) outputTokens=\(outputTokens)")
+        }
+
         guard !outputText.isEmpty else {
             throw HybridBrainServiceError.emptyResponse
         }
@@ -336,18 +378,106 @@ private extension HybridBrainService {
             logger.error("gemini_parse_fallback_applied output_length=\(outputText.count)")
         }
 
-        return parsedResponse
+        return CloudCallResult(
+            response: parsedResponse,
+            truncatedAtMaxTokens: truncatedAtMaxTokens
+        )
+    }
+
+    // MARK: - URL Request Construction (proxy vs direct)
+
+    /// Routes the Gemini request through the Supabase Edge Function proxy when
+    /// `USE_CLOUD_PROXY` is on, otherwise hits Gemini directly with the
+    /// client-embedded API key (legacy path).
+    private func makeGeminiURLRequest(
+        request: HybridBrainRequest,
+        model: String
+    ) async throws -> URLRequest {
+        let geminiBody = makeRequestBody(request: request)
+
+        if CaptainProxyConfig.isChatEnabled {
+            return try await makeProxiedGeminiRequest(
+                model: model,
+                geminiBody: geminiBody
+            )
+        }
+
+        return try makeDirectGeminiRequest(
+            model: model,
+            geminiBody: geminiBody
+        )
+    }
+
+    private func makeDirectGeminiRequest(
+        model: String,
+        geminiBody: [String: Any]
+    ) throws -> URLRequest {
+        let apiKey = try GeminiConfig.resolvedAPIKey()
+        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL(for: model))
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: geminiBody)
+        return urlRequest
+    }
+
+    /// Wraps the Gemini body as `{ model, payload }` and POSTs to the
+    /// Supabase `captain-chat` Edge Function with the user's session JWT.
+    /// The function validates the JWT, forwards to Gemini with the
+    /// server-held key, and streams the response straight back — the
+    /// existing `GeminiResponse` decoder works unchanged.
+    private func makeProxiedGeminiRequest(
+        model: String,
+        geminiBody: [String: Any]
+    ) async throws -> URLRequest {
+        guard let endpoint = CaptainProxyConfig.endpointURL(for: .chat) else {
+            throw HybridBrainServiceError.invalidEndpoint
+        }
+        guard let jwt = await CaptainProxyConfig.currentSessionJWT() else {
+            // No active Supabase session — caller will see this as a missing-key
+            // error, which already maps to the "sign in again" path in the UI.
+            throw HybridBrainServiceError.missingAPIKey
+        }
+        let anonKey = CaptainProxyConfig.anonKey ?? ""
+
+        var urlRequest = URLRequest(url: endpoint)
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        if !anonKey.isEmpty {
+            urlRequest.setValue(anonKey, forHTTPHeaderField: "apikey")
+        }
+
+        let wrapped: [String: Any] = [
+            "model": model,
+            "payload": geminiBody,
+        ]
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: wrapped)
+        return urlRequest
     }
 
     // MARK: - Request Body
 
     func makeRequestBody(request: HybridBrainRequest) -> [String: Any] {
+        // Arabic tokenizes inefficiently in Gemini's BPE (~1.5–2× English).
+        // 1400 tokens ≈ 700–900 Arabic words, which fits the longest legitimate
+        // structured reply (greeting + recap + advice + question + quickReplies envelope).
+        // finishReason=MAX_TOKENS is now decoded (see GeminiResponse) — if we still
+        // see hits in production logs, raise per-screen rather than globally.
         let maxOutputTokens: Int = {
             switch request.screenContext {
-            case .mainChat, .myVibe, .sleepAnalysis:
-                return 600
+            case .mainChat, .myVibe:
+                return 1400
+            case .sleepAnalysis:
+                return 1200
             case .gym, .kitchen, .peaks:
-                return 900
+                return 1400
             }
         }()
 

@@ -49,15 +49,23 @@ enum MiniMaxVoiceConfiguration {
     }
 
     static func resolvedAPIKey() -> String? {
+        // Build-time key (Secrets.xcconfig → Info.plist) takes precedence
+        // over the Keychain cache. Earlier behavior preferred the cached
+        // copy, which silently kept rotated keys alive after a re-build.
+        // The Keychain remains a fallback for IPAs without xcconfig
+        // (CI / TestFlight builds where a runtime provisioning step writes
+        // the key).
+        if let buildKey = rawValue(for: "CAPTAIN_VOICE_API_KEY"),
+           isUsable(buildKey) {
+            if CaptainVoiceKeychain.miniMaxAPIKey() != buildKey {
+                CaptainVoiceKeychain.setMiniMaxAPIKey(buildKey)
+            }
+            return buildKey
+        }
+
         if let stored = CaptainVoiceKeychain.miniMaxAPIKey(),
            isUsable(stored) {
             return stored
-        }
-
-        if let buildKey = rawValue(for: "CAPTAIN_VOICE_API_KEY"),
-           isUsable(buildKey) {
-            CaptainVoiceKeychain.setMiniMaxAPIKey(buildKey)
-            return buildKey
         }
 
         return nil

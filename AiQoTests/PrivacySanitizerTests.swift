@@ -224,4 +224,68 @@ final class PrivacySanitizerTests: XCTestCase {
         XCTAssertNil(out.contextData.messageSentiment)
         XCTAssertNil(out.contextData.recentInteractions)
     }
+
+    // MARK: - Conversation Sanitization (length + char budget)
+
+    /// Two-stage cap: at most 16 messages OR ~6000 chars (whichever hits first),
+    /// then per-message PII redaction. Order preserved chronologically.
+    func testSanitizeConversation_keepsLast16OrCharBudget() {
+        // 30 messages each ~500 chars. 30 × 500 = 15,000 chars total.
+        // The char budget (6000) hits first → expect ~12 messages kept.
+        var conversation: [CaptainConversationMessage] = []
+        for i in 0..<30 {
+            let role: CaptainConversationRole = (i % 2 == 0) ? .user : .assistant
+            // Pad to ~500 chars — lorem-ish content with the index so we can
+            // assert the *newest* turns survive trimming.
+            let body = String(repeating: "Lorem ipsum dolor sit amet, ", count: 18)
+            let content = "msg-\(i) \(body)"
+            conversation.append(CaptainConversationMessage(role: role, content: content))
+        }
+
+        // Inject a known PII fragment into the newest user turn so we can
+        // assert per-message redaction still runs.
+        conversation[29] = CaptainConversationMessage(
+            role: .user,
+            content: "msg-29 contact me at user@example.com please " + String(repeating: "x", count: 400)
+        )
+
+        let req = HybridBrainRequest(
+            conversation: conversation,
+            screenContext: .mainChat,
+            language: .english,
+            contextData: CaptainContextData(steps: 0, calories: 0, vibe: "x", level: 1),
+            userProfileSummary: "",
+            intentSummary: "",
+            workingMemorySummary: "",
+            attachedImageData: nil
+        )
+
+        let out = sanitizer.sanitizeForCloud(req, knownUserName: nil)
+        let kept = out.conversation
+
+        // Bounded by message count cap.
+        XCTAssertLessThanOrEqual(kept.count, 16, "should never exceed maxConversationMessages=16")
+        // Bounded by char budget (allow up to one over-budget message from the always-keep-last-2 rule).
+        let totalChars = kept.reduce(0) { $0 + $1.content.utf8.count }
+        XCTAssertLessThanOrEqual(totalChars, 6000 + 1500, "should respect ~6000 char budget within a small overshoot")
+        // Always retains at least the last 2 messages.
+        XCTAssertGreaterThanOrEqual(kept.count, 2)
+
+        // Chronological order preserved: every kept message must be a strict
+        // suffix of the input, in the original order.
+        let lastN = Array(conversation.suffix(kept.count))
+        for index in kept.indices {
+            // Roles must match position-for-position with the input suffix.
+            XCTAssertEqual(kept[index].role, lastN[index].role,
+                           "kept[\(index)].role lost chronological alignment")
+        }
+        // Newest turn (msg-29) must be present — proves we keep from the end.
+        XCTAssertTrue(kept.last?.content.contains("msg-29") ?? false,
+                      "newest turn must survive trimming")
+
+        // PII redaction still runs on the kept messages.
+        let combined = kept.map(\.content).joined(separator: "\n")
+        XCTAssertFalse(combined.contains("user@example.com"),
+                       "email PII should be redacted by per-message pipeline")
+    }
 }

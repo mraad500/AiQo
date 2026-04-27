@@ -137,6 +137,7 @@ struct BattleChallengesView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
             .presentationBackground(.ultraThinMaterial)
+            .environment(\.colorScheme, .light)
         }
         .sheet(item: $completedQuestForCelebration) { quest in
             QuestCompletionCelebration(quest: quest) {
@@ -453,5 +454,6 @@ struct RecordCardVertical: View {
                 .fill(cardBackground.opacity(0.86))
         )
         .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.colorScheme, .light)
     }
 }

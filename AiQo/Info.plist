@@ -107,6 +107,12 @@
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
+	<key>USE_CLOUD_PROXY</key>
+	<string>$(USE_CLOUD_PROXY)</string>
+	<key>USE_CHAT_CLOUD_PROXY</key>
+	<string>$(USE_CHAT_CLOUD_PROXY)</string>
+	<key>USE_VOICE_CLOUD_PROXY</key>
+	<string>$(USE_VOICE_CLOUD_PROXY)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

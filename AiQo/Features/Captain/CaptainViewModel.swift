@@ -515,7 +515,10 @@ final class CaptainViewModel: ObservableObject {
             quickReplies = screenContext == .sleepAnalysis ? [] : (validated.quickReplies ?? [])
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
-            let assistantReply = validated.message
+            let assistantReply = Self.markIfTruncated(
+                assistantReply: validated.message,
+                truncatedAtMaxTokens: reply.truncatedAtMaxTokens
+            )
 
             let replyMessage = ChatMessage(
                 text: assistantReply,
@@ -528,11 +531,14 @@ final class CaptainViewModel: ObservableObject {
             }
 
             persistChatMessage(replyMessage)
-            ConversationThreadManager.shared.logCaptainResponse(content: validated.message)
+            ConversationThreadManager.shared.logCaptainResponse(content: assistantReply)
             trimInMemoryMessagesIfNeeded()
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
             AnalyticsService.shared.track(.captainResponseReceived(latencyMs: latencyMs))
+            if reply.truncatedAtMaxTokens {
+                AnalyticsService.shared.track(.captainResponseTruncated(screen: screenContext.rawValue))
+            }
 
             // استخراج الذكريات بالخلفية
             messageCount += 1
@@ -616,8 +622,10 @@ final class CaptainViewModel: ObservableObject {
         messages.removeFirst(excess)
     }
 
-    /// آخر 20 رسالة فقط — كافية للسياق بدون تضخم الـ payload
-    private static let maxConversationWindow = 20
+    /// آخر 24 رسالة فقط — يجب أن تتجاوز سقف PrivacySanitizer بشكل مريح
+    /// (16 رسالة) عشان ما يجوع الـ sanitizer لما تطول الجلسة الحالية.
+    /// Window size > sanitizer cap of 16 by design — see PrivacySanitizer.maxConversationMessages.
+    private static let maxConversationWindow = 24
 
     private func buildConversationHistory() -> [CaptainConversationMessage] {
         messages.suffix(Self.maxConversationWindow).compactMap { message in
@@ -856,6 +864,25 @@ final class CaptainViewModel: ObservableObject {
             result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: "")
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Appends a single ellipsis to a reply that Gemini cut off at
+    /// `MAX_TOKENS`, but only when the existing tail is not already a
+    /// terminal-punctuation sequence. Keeps a quiet visual hint without
+    /// double-punctuating well-formed (but coincidentally truncated) replies.
+    /// The retry/continue UX is intentionally deferred — see fix prompt.
+    nonisolated static func markIfTruncated(
+        assistantReply: String,
+        truncatedAtMaxTokens: Bool
+    ) -> String {
+        guard truncatedAtMaxTokens else { return assistantReply }
+        let trimmed = assistantReply.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return assistantReply }
+        let terminalSuffixes: [String] = [".", "؟", "!", "…", ".\""]
+        if terminalSuffixes.contains(where: { trimmed.hasSuffix($0) }) {
+            return trimmed
+        }
+        return "\(trimmed)…"
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {

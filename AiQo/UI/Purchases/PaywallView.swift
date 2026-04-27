@@ -229,26 +229,6 @@ struct PaywallView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    heroPill(
-                        icon: "sparkles",
-                        title: copy(ar: "7 أيام مجانية", en: "7 free days")
-                    )
-
-                    heroPill(
-                        icon: "lock.open.fill",
-                        title: copy(ar: "فتح كامل بعد التفعيل", en: "Unlocks the full dashboard")
-                    )
-
-                    heroPill(
-                        icon: "arrow.uturn.backward.circle",
-                        title: copy(ar: "إلغاء في أي وقت", en: "Cancel anytime")
-                    )
-                }
-                .padding(.vertical, 2)
-            }
-
             VStack(alignment: .leading, spacing: 10) {
                 Text(copy(
                     ar: "اكتشف قدراتك الحقيقية مع AiQo",
@@ -278,27 +258,6 @@ struct PaywallView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func heroPill(icon: String, title: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-
-            Text(title)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-        }
-        .foregroundStyle(.white.opacity(0.9))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            Capsule(style: .continuous)
-                .fill(Color.white.opacity(0.08))
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
     }
 
     private func benefitChip(title: String) -> some View {
@@ -631,16 +590,25 @@ struct PaywallView: View {
         }
     }
 
+    /// Apple Guideline 3.1.2 auto-renewal disclosure. Shown above the purchase
+    /// button so users see the exact billed amount, the Apple-ID-at-confirmation
+    /// phrasing, and the 24-hour cancellation window before committing.
+    private var subscriptionDisclosureText: String {
+        let price = selectedPlan?.priceText ?? copy(ar: "السعر المحدد", en: "the selected price")
+
+        return copy(
+            ar: "تجربة مجانية 7 أيام، ثم \(price)/شهر تُحمَّل على حساب Apple ID عند تأكيد الشراء. يتجدد الاشتراك تلقائياً بنفس السعر ما لم تُلغِ قبل 24 ساعة على الأقل من نهاية الفترة الحالية. يمكنك إدارة الاشتراكات أو الإلغاء بأي وقت من الإعدادات > Apple ID > الاشتراكات.",
+            en: "7-day free trial, then \(price)/month charged to your Apple ID at purchase confirmation. Subscription auto-renews at the same price unless canceled at least 24 hours before the end of the current period. Manage subscriptions or cancel anytime in Settings > Apple ID > Subscriptions."
+        )
+    }
+
     private var purchaseActionBar: some View {
         VStack(spacing: 10) {
-            Text(copy(
-                ar: "تجربة مجانية 7 أيام، ثم يتجدد الاشتراك شهرياً تلقائياً حتى تلغيه. يمكنك الإلغاء بأي وقت من الإعدادات > Apple ID > الاشتراكات.",
-                en: "7-day free trial, then auto-renews monthly until canceled. Cancel anytime in Settings > Apple ID > Subscriptions."
-            ))
-            .font(.system(size: 11, weight: .medium, design: .rounded))
-            .foregroundStyle(Color.white.opacity(0.62))
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+            Text(subscriptionDisclosureText)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.62))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             Button {
                 purchaseSelectedProduct()
@@ -875,7 +843,7 @@ struct PaywallView: View {
                     PaywallFeature(icon: "bolt.fill", text: copy(ar: "مسار AI أسرع باستخدام نموذج سريع للاستجابة اليومية", en: "Faster AI routing with a speed-first model for everyday replies")),
                     PaywallFeature(icon: "figure.strengthtraining.traditional", text: copy(ar: "Gym وKitchen كاملين لبناء العادة والتغذية اليومية", en: "Full Gym and Kitchen support for training and daily nutrition")),
                     PaywallFeature(icon: "heart.text.square.fill", text: copy(ar: "تتبع كامل لنمط الحياة: النشاط، النوم، التحديات، ولوحة تقدم واضحة", en: "Full lifestyle tracking across activity, sleep, challenges, and a clear progress dashboard")),
-                    PaywallFeature(icon: "person.crop.circle.badge.sparkles", text: copy(ar: "Captain الأساسي للمتابعة السريعة والتوجيه اليومي", en: "Basic Captain for quick check-ins and daily guidance"))
+                    PaywallFeature(icon: "person.crop.circle.badge.checkmark", text: copy(ar: "Captain الأساسي للمتابعة السريعة والتوجيه اليومي", en: "Basic Captain for quick check-ins and daily guidance"))
                 ],
                 badge: nil,
                 icon: "bolt.heart.fill",

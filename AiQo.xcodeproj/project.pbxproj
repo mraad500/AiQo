@@ -332,7 +332,6 @@
 				80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
 				80D9BD8D2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
 				80D9BD972F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests */,
-				806715D22F37337700D6EAB4 /* AiQoWidget */,
 				A1F000010000000000000050 /* AiQoWatchWidget */,
 				80B1F64D2EEFDB41009A810C /* Frameworks */,
 				8025C4B22EC25EB7004DECAA /* Products */,
@@ -365,6 +364,7 @@
 				80235CEE2F1A2D4800A4983B /* HealthKit.framework */,
 				80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */,
 				80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */,
+				806715D22F37337700D6EAB4 /* AiQoWidget */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1052,17 +1052,11 @@
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "يحتاج AiQo الكاميرا لعدّ تمارين الضغط، تسجيل المكوّنات في الثلاجة الذكية، والتحقق من صور الشهادات على جهازك فقط.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "تُستخدم لحفظ صور تقدمك.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "يستخدم AiQo مكتبة الصور لاختيار صورة شهادة إنجازك أو صور الطعام — الصور تُعالَج على جهازك فقط ولا تُرفَع لأي سيرفر.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1121,17 +1115,11 @@
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "يحتاج AiQo الكاميرا لعدّ تمارين الضغط، تسجيل المكوّنات في الثلاجة الذكية، والتحقق من صور الشهادات على جهازك فقط.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "تُستخدم لحفظ صور تقدمك.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "يستخدم AiQo مكتبة الصور لاختيار صورة شهادة إنجازك أو صور الطعام — الصور تُعالَج على جهازك فقط ولا تُرفَع لأي سيرفر.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -85,8 +85,8 @@ final class LiveWorkoutSession: ObservableObject {
 
     private static let captainWarmupAmbientTrackName = "SoundOfEnergy"
     private static let captainWarmupAmbientLoopDurationSeconds = 360
-    private static let captainWarmupAmbientBaseVolume: Float = 0.62
-    private static let captainWarmupAmbientDuckedVolume: Float = 0.18
+    private static let captainWarmupAmbientBaseVolume: Float = 0.30
+    private static let captainWarmupAmbientDuckedVolume: Float = 0.10
     
     // MARK: - Computed Properties
     
@@ -471,6 +471,14 @@ final class LiveWorkoutSession: ObservableObject {
             )
             liveActivityIsActive = false
         }
+
+        WorkoutHistoryStore.shared.recordCompletion(
+            title: title,
+            durationSeconds: elapsedSeconds,
+            activeCalories: activeEnergy,
+            heartRate: heartRate,
+            distanceMeters: distanceMeters
+        )
 
         resetWorkoutState()
         withAnimation(.snappy) {
