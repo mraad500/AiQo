@@ -170,7 +170,7 @@ struct PaywallView: View {
                     #endif
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 24)
+                .padding(.top, 64)
                 .padding(.bottom, 250)
             }
         }
