@@ -1,7 +1,5 @@
-import AVFoundation
 import Combine
 import Foundation
-import UIKit
 
 enum GratitudeSessionLanguage: Sendable, Equatable {
     case arabic
@@ -36,34 +34,26 @@ enum GratitudeSessionLanguage: Sendable, Equatable {
 final class GratitudeAudioManager: NSObject, ObservableObject {
     static let musicVolume: Float = 0.3
 
-    private let audioSession = AVAudioSession.sharedInstance()
-    private let voiceRouter = CaptainVoiceRouter.shared
+    private static let backgroundTrackName = "SerotoninFlow"
+    private static let backgroundTrackExtension = "m4a"
 
-    private var backgroundPlayer: AVAudioPlayer?
+    private let voiceRouter = CaptainVoiceRouter.shared
+    private let ambientAudio = AiQoAudioManager.shared
+
     private var speechTask: Task<Void, Never>?
 
     func startSessionAudio() {
-        configureAudioSession()
-
-        if backgroundPlayer == nil {
-            backgroundPlayer = makeBackgroundPlayer()
-        }
-
-        guard let backgroundPlayer else { return }
-
-        if !backgroundPlayer.isPlaying {
-            backgroundPlayer.currentTime = 0
-            backgroundPlayer.volume = 0
-            backgroundPlayer.play()
-            backgroundPlayer.setVolume(Self.musicVolume, fadeDuration: 0.8)
-        }
+        ambientAudio.setVolume(Self.musicVolume)
+        ambientAudio.playAmbient(
+            trackName: Self.backgroundTrackName,
+            fileExtension: Self.backgroundTrackExtension
+        )
     }
 
     func speak(_ text: String, language: GratitudeSessionLanguage) {
         let sanitizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedText.isEmpty else { return }
 
-        configureAudioSession()
         speechTask?.cancel()
         voiceRouter.stop()
 
@@ -79,52 +69,6 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechTask?.cancel()
         speechTask = nil
         voiceRouter.stop()
-
-        if let backgroundPlayer, backgroundPlayer.isPlaying {
-            backgroundPlayer.setVolume(0, fadeDuration: 0.35)
-            backgroundPlayer.stop()
-            backgroundPlayer.currentTime = 0
-            backgroundPlayer.volume = Self.musicVolume
-        }
-
-        do {
-            try audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
-        } catch {
-            diag.error("GratitudeAudioManager failed to deactivate audio session", error: error)
-        }
+        ambientAudio.stopAmbient()
     }
-
-    private func configureAudioSession() {
-        do {
-            try audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])
-            try audioSession.setActive(true)
-        } catch {
-            diag.error("GratitudeAudioManager failed to configure audio session", error: error)
-        }
-    }
-
-    private func makeBackgroundPlayer() -> AVAudioPlayer? {
-        do {
-            if let bundleURL = Bundle.main.url(forResource: "SerotoninFlow", withExtension: "m4a") {
-                let player = try AVAudioPlayer(contentsOf: bundleURL)
-                player.numberOfLoops = -1
-                player.volume = Self.musicVolume
-                player.prepareToPlay()
-                return player
-            }
-
-            if let dataAsset = NSDataAsset(name: "SerotoninFlow", bundle: .main) {
-                let player = try AVAudioPlayer(data: dataAsset.data)
-                player.numberOfLoops = -1
-                player.volume = Self.musicVolume
-                player.prepareToPlay()
-                return player
-            }
-        } catch {
-            diag.error("GratitudeAudioManager failed to create background player", error: error)
-        }
-
-        return nil
-    }
-
 }
