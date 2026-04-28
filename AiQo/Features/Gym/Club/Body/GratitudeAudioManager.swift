@@ -32,7 +32,7 @@ enum GratitudeSessionLanguage: Sendable, Equatable {
 
 @MainActor
 final class GratitudeAudioManager: NSObject, ObservableObject {
-    static let musicVolume: Float = 0.3
+    static let musicVolume: Float = 0.18
 
     private static let backgroundTrackName = "SerotoninFlow"
     private static let backgroundTrackExtension = "m4a"
