@@ -1,7 +1,7 @@
 import AVFoundation
+import Combine
 import Foundation
 import UIKit
-import Combine
 
 enum GratitudeSessionLanguage: Sendable, Equatable {
     case arabic
@@ -35,18 +35,12 @@ enum GratitudeSessionLanguage: Sendable, Equatable {
 @MainActor
 final class GratitudeAudioManager: NSObject, ObservableObject {
     static let musicVolume: Float = 0.3
-    static let speechVolume: Float = 0.65
 
     private let audioSession = AVAudioSession.sharedInstance()
-    private let speechSynthesizer = AVSpeechSynthesizer()
+    private let voiceRouter = CaptainVoiceRouter.shared
 
     private var backgroundPlayer: AVAudioPlayer?
     private var speechTask: Task<Void, Never>?
-
-    override init() {
-        super.init()
-        speechSynthesizer.delegate = self
-    }
 
     func startSessionAudio() {
         configureAudioSession()
@@ -71,15 +65,12 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
 
         configureAudioSession()
         speechTask?.cancel()
-
-        if speechSynthesizer.isSpeaking {
-            speechSynthesizer.stopSpeaking(at: .immediate)
-        }
+        voiceRouter.stop()
 
         speechTask = Task { @MainActor [weak self] in
             guard let self else { return }
             guard !Task.isCancelled else { return }
-            playLocalSpeech(sanitizedText, language: language)
+            await voiceRouter.speak(text: sanitizedText, tier: .premium)
             speechTask = nil
         }
     }
@@ -87,7 +78,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
     func stopAll() {
         speechTask?.cancel()
         speechTask = nil
-        speechSynthesizer.stopSpeaking(at: .immediate)
+        voiceRouter.stop()
 
         if let backgroundPlayer, backgroundPlayer.isPlaying {
             backgroundPlayer.setVolume(0, fadeDuration: 0.35)
@@ -136,17 +127,4 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         return nil
     }
 
-    private func playLocalSpeech(_ text: String, language: GratitudeSessionLanguage) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: language.speechVoiceCode)
-        utterance.volume = Self.speechVolume
-        utterance.rate = language == .arabic ? 0.45 : 0.47
-        utterance.pitchMultiplier = 0.94
-        utterance.postUtteranceDelay = 0.2
-
-        speechSynthesizer.speak(utterance)
-    }
-
 }
-
-extension GratitudeAudioManager: AVSpeechSynthesizerDelegate {}
