@@ -32,7 +32,8 @@ enum GratitudeSessionLanguage: Sendable, Equatable {
 
 @MainActor
 final class GratitudeAudioManager: NSObject, ObservableObject {
-    static let musicVolume: Float = 0.18
+    static let musicVolume: Float = 0.25
+    static let voiceVolume: Float = 0.85
 
     private static let backgroundTrackName = "SerotoninFlow"
     private static let backgroundTrackExtension = "m4a"
@@ -43,6 +44,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
     private var speechTask: Task<Void, Never>?
 
     func startSessionAudio() {
+        voiceRouter.setMiniMaxPlaybackVolume(Self.voiceVolume)
         ambientAudio.setVolume(Self.musicVolume)
         ambientAudio.playAmbient(
             trackName: Self.backgroundTrackName,
@@ -69,6 +71,7 @@ final class GratitudeAudioManager: NSObject, ObservableObject {
         speechTask?.cancel()
         speechTask = nil
         voiceRouter.stop()
+        voiceRouter.setMiniMaxPlaybackVolume(1.0)
         ambientAudio.stopAmbient()
     }
 }

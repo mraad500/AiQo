@@ -159,6 +159,16 @@ final class CaptainVoiceRouter: ObservableObject {
         miniMaxProvider?.stop()
     }
 
+    /// Adjust the playback volume of the cloud (MiniMax) provider for
+    /// subsequent `.premium` utterances. Hosts that need the captain voice
+    /// balanced against their own ambient audio (e.g. the gratitude session)
+    /// set this before `speak` and reset to 1.0 when finished. No-op for
+    /// Apple TTS — fallback playback always uses the system volume.
+    func setMiniMaxPlaybackVolume(_ volume: Float) {
+        guard let provider = miniMaxProvider as? MiniMaxTTSProvider else { return }
+        provider.playbackVolume = min(max(volume, 0), 1)
+    }
+
     /// Reset the published consent flag once the host view has shown the
     /// consent sheet. Lets a later tap re-trigger the sheet if the user
     /// dismissed without granting.

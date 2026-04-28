@@ -22,6 +22,12 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
     private var hasActiveSpeechSession = false
     private var activePlaybackSequence = 0
 
+    /// Playback volume override applied to the AVAudioPlayer. Hosts that need
+    /// to balance the captain voice against their own ambient audio
+    /// (e.g. the gratitude session) set this before `speak`. Default 1.0 keeps
+    /// existing call sites unchanged.
+    var playbackVolume: Float = 1.0
+
     private static let defaultSession: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 25
@@ -295,6 +301,7 @@ final class MiniMaxTTSProvider: NSObject, VoiceProvider {
         do {
             let player = try AVAudioPlayer(data: audioData)
             player.delegate = self
+            player.volume = min(max(playbackVolume, 0), 1)
             player.prepareToPlay()
 
             guard playbackSequence == activePlaybackSequence else {
