@@ -466,18 +466,22 @@ private extension HybridBrainService {
 
     func makeRequestBody(request: HybridBrainRequest) -> [String: Any] {
         // Arabic tokenizes inefficiently in Gemini's BPE (~1.5–2× English).
-        // 1400 tokens ≈ 700–900 Arabic words, which fits the longest legitimate
-        // structured reply (greeting + recap + advice + question + quickReplies envelope).
-        // finishReason=MAX_TOKENS is now decoded (see GeminiResponse) — if we still
-        // see hits in production logs, raise per-screen rather than globally.
+        // The structured reply envelope (greeting + per-metric line + advice +
+        // follow-up + quickReplies) plus the JSON wrapper itself eats budget
+        // fast — multi-metric questions ("how are my steps + calories + sleep
+        // + water today?") were hitting MAX_TOKENS at 1400 and clipping mid-
+        // sentence. 2048 gives ~1000–1300 Arabic words of headroom while the
+        // tightened conciseness rules in PromptComposer prevent rambling.
+        // finishReason=MAX_TOKENS is decoded in GeminiResponse — watch the
+        // gemini_max_tokens_hit log; if it still fires we tune per-screen.
         let maxOutputTokens: Int = {
             switch request.screenContext {
             case .mainChat, .myVibe:
-                return 1400
+                return 2048
             case .sleepAnalysis:
                 return 1200
             case .gym, .kitchen, .peaks:
-                return 1400
+                return 2048
             }
         }()
 

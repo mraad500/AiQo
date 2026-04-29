@@ -117,7 +117,12 @@ final class CaptainViewModel: ObservableObject {
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
-    private let globalProcessingTimeout: TimeInterval = 15
+    /// Cloud Gemini calls with the full 7-layer prompt + Arabic tokenization
+    /// commonly land in the 12–22s range; 15s was firing on healthy P95 calls
+    /// and showing a "try again" error to users while the request was still
+    /// in-flight. URLSession deadline is 35s so 30s leaves buffer for the
+    /// underlying transport to surface a real failure if the network is gone.
+    private let globalProcessingTimeout: TimeInterval = 30
     /// Sleep analysis runs entirely on-device (HealthKit + Foundation Models) and needs more time.
     private let sleepProcessingTimeout: TimeInterval = 25
 

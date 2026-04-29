@@ -237,7 +237,19 @@ struct CaptainScreen: View {
                     .padding(.horizontal, 16)
             }
             .padding(.bottom, 4)
-            .background(Color.clear)
+            .background {
+                // Opaque layer behind the header + safety banner so the chat
+                // can't bleed through when the user scrolls messages up.
+                // Extends past the safe-area top so the status-bar gutter is
+                // covered too. Adapts to light/dark via systemBackground.
+                theme.background
+                    .ignoresSafeArea(edges: .top)
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(theme.border)
+                            .frame(height: 0.5)
+                    }
+            }
         }
         .fontDesign(.rounded)
         .onTapGesture { hideKeyboard() }

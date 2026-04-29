@@ -1,6 +1,20 @@
+<div align="center">
+
+<img src="AiQo.png" width="160" height="160" alt="AiQo app icon" />
+
+# **AiQo**
+
+*Master Blueprint · v17*
+
+**Arabic-first AI health & coaching · iOS · Captain Hamoudi**
+
+</div>
+
+---
+
 # AiQo Master Blueprint 17
 
-*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved. **Updated 2026-04-23** with three Captain-focused passes: §24 — Captain Memory surface upgrade (fixed 5-row Identity sourced from `UserProfileStore`, and a rolling last-7 Workout History store with its own memory section and LLM-retrieval mirror); §25 — Cardio Zone 2 coaching + workout summary narration routed through `CaptainVoiceRouter.speak(tier: .premium)` so the linked MiniMax Captain Hamoudi voice speaks over both paths; §26 — `CloudSafeProfile` fix that carries the user's first name + age + gender + bucketed height/weight into the cloud system prompt so the Captain stops answering `"اسمك 'User'؟"` and addresses the user by their real name. **Same-day pass 2** — §27: App Store review readiness hardening (Packages A + B + D) — missing `NSCameraUsageDescription` added, `FileTimestamp` Required Reason API declared, privacy-manifest `NSPrivacyCollectedDataTypes` expanded with `UserID` + `PhotosorVideos`, permission-string surface unified across `pbxproj` + `InfoPlist.strings` in both locales, Apple 3.1.2 subscription disclosure rewritten to include the canonical "charged to your Apple ID at purchase confirmation / 24 hours before the end of the current period" language with the billed price interpolated live, and 6 dormant permission declarations stripped from `pbxproj` (Bluetooth, AppleMusic, Motion, LocalNetwork, PhotoLibrary, PhotoLibraryAdd — verified unused by the app's actual API surface). §28: Cloud-proxy hardening (Package C) — Gemini + MiniMax API keys lifted out of the IPA into Supabase Edge Functions (`captain-chat`, `captain-voice`), app authenticates with its Supabase JWT; a feature-flagged `CaptainProxyConfig` + three proxy-aware call sites keep the legacy direct path intact for rollback. Deployment went live the same day; the Gemini chat path is confirmed routing through the proxy (`via=proxy status=200`), and the old client-side Gemini key is revoked (direct rollback no longer possible). MiniMax voice playback is open at the time of this snapshot — proxy returns `status=200` to the client but `AVAudioPlayer` surfaces empty buffers; active debugging between IPCAUClient / AVAudioSession conflicts and possible Edge-Function response-encoding edge cases.*
+*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved. **Updated 2026-04-23** with three Captain-focused passes: §24 — Captain Memory surface upgrade (fixed 5-row Identity sourced from `UserProfileStore`, and a rolling last-7 Workout History store with its own memory section and LLM-retrieval mirror); §25 — Cardio Zone 2 coaching + workout summary narration routed through `CaptainVoiceRouter.speak(tier: .premium)` so the linked MiniMax Captain Hamoudi voice speaks over both paths; §26 — `CloudSafeProfile` fix that carries the user's first name + age + gender + bucketed height/weight into the cloud system prompt so the Captain stops answering `"اسمك 'User'؟"` and addresses the user by their real name. **Same-day pass 2** — §27: App Store review readiness hardening (Packages A + B + D) — missing `NSCameraUsageDescription` added, `FileTimestamp` Required Reason API declared, privacy-manifest `NSPrivacyCollectedDataTypes` expanded with `UserID` + `PhotosorVideos`, permission-string surface unified across `pbxproj` + `InfoPlist.strings` in both locales, Apple 3.1.2 subscription disclosure rewritten to include the canonical "charged to your Apple ID at purchase confirmation / 24 hours before the end of the current period" language with the billed price interpolated live, and 6 dormant permission declarations stripped from `pbxproj` (Bluetooth, AppleMusic, Motion, LocalNetwork, PhotoLibrary, PhotoLibraryAdd — verified unused by the app's actual API surface). §28: Cloud-proxy hardening (Package C) — Gemini + MiniMax API keys lifted out of the IPA into Supabase Edge Functions (`captain-chat`, `captain-voice`), app authenticates with its Supabase JWT; a feature-flagged `CaptainProxyConfig` + three proxy-aware call sites keep the legacy direct path intact for rollback. Deployment went live the same day; the Gemini chat path is confirmed routing through the proxy (`via=proxy status=200`), and the old client-side Gemini key is revoked (direct rollback no longer possible). The MiniMax voice path was unblocked the same evening — see the §28.7.2 / §28.9.1 closures and the bundled fix history that follows. **Updated 2026-04-26** with the broad architecture refactor (commit `8d36a70`) — onboarding flow consolidated, `WorkoutHistoryStore` actor moved to `Brain/02_Memory/Stores/`, `CaptainProxyConfig` materialized as the single proxy source-of-truth, `PrivacySanitizer` extended with API-key + Bearer-token redaction, and `AiQoFeatureFlags` reorganized into a canonical declarative list (`@FeatureFlag` property wrappers reading Info.plist; the live set spans `MEMORY_V4_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `USE_CLOUD_PROXY`, `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`, plus a few legacy flags retained for back-compat). Paired with the paywall hero padding bump (commit `93611b4`, +40pt) for visual breathing room above the price tier rows. **Updated 2026-04-28** with §29 — Gratitude Session voice routing: the daily-gratitude flow under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) now narrates each Arabic/English gratitude line in Captain Hamoudi's MiniMax voice instead of the system `AVSpeechSynthesizer`; background music (`SerotoninFlow.m4a`) was migrated from a local `AVAudioPlayer` to `AiQoAudioManager.playAmbient(...)` so the MiniMax provider's audio-session lifecycle no longer truncates the loop, and three small public APIs (`CaptainVoiceRouter.setMiniMaxPlaybackVolume`, `MiniMaxTTSProvider.playbackVolume`, `AiQoAudioManager.setSpeechDuckOverride`) give the session a per-host mix override (music 10%, voice 100%, ducks to 4% under the Captain).*
 
 ---
 
@@ -2693,23 +2707,25 @@ Full runbook lives at [`supabase/functions/README.md`](supabase/functions/README
   Matching `captain_chat_proxy` entries appeared in the Supabase function logs with the user's Supabase UUID.
 - **The Gemini chat path is live through the proxy in production.** The old client-side Gemini key was rotated during step 3 of the runbook — direct rollback on that path is no longer available, and the audit team should treat the pre-rotation key as exposed.
 
-#### 28.7.2 What's still open: MiniMax voice
+#### 28.7.2 MiniMax voice — what was open, and what fixed it (resolved 2026-04-22 evening)
 
-At time of snapshot, the MiniMax voice path produces no audio output despite:
-- Supabase function logs showing two `captain_voice_proxy` entries with `status: 200` (the proxy is being hit and returning success).
-- Xcode console showing no `minimax_tts_http_failed` / `_status_failed` / `_audio_missing` / `_decode_failed` / `_player_create_failed` logs — i.e. the Swift decoder thinks it got valid MP3 audio data back.
-- `AVAudioPlayer` nonetheless surfacing:
-  ```
-  IPCAUClient.cpp:139    IPCAUClient: can't connect to server (-66748)
-  AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
-  ```
+At the §28 snapshot, the MiniMax voice path produced no audio output despite the proxy returning `status: 200` and the Swift decoder thinking it had valid MP3 bytes — `AVAudioPlayer` initialised without throwing, then surfaced `IPCAUClient: can't connect to server (-66748)` and `mBuffers[0].mDataByteSize (0) should be non-zero`. The three hypotheses we logged at the time were:
 
-Three hypotheses under active investigation:
-- **Hypothesis A — AVAudioSession conflict.** A concurrent audio app (Spotify was visible in the user's Chrome tabs) or an incomplete session teardown between `CaptainVoiceService` and `MiniMaxTTSProvider` could prevent the audio unit from connecting. Mitigation plan: force-quit all audio apps, verify silent-switch off, cold-launch AiQo, then re-test without visiting MyVibe or Zone 2 first.
-- **Hypothesis B — Edge Function response encoding.** The current function reads `await upstream.text()` and returns `new Response(text, ...)`. If the upstream response is compressed and Deno's fetch doesn't auto-decode in this specific Edge Runtime, or if the hex-encoded audio body hits a character that fails UTF-8 round-trip, the hex decoded by Swift would be valid-enough-to-produce-non-empty-`Data` but corrupted at the MP3-frame level — which matches the observed symptom (`AVAudioPlayer` initializes without throwing, then plays silence). Mitigation plan: ship a diagnostic build of `captain-voice` that logs `content-encoding`, `content-type`, body length, and the first 300 chars of the response body to Supabase logs, without exposing the audio payload itself. If the theory holds, switch to streaming the body (`return new Response(upstream.body, ...)`) instead of the text round-trip.
-- **Hypothesis C — Concurrency reentrance.** The refactored `makeSynthesisRequest` now has an `await CaptainProxyConfig.currentSessionJWT()` suspend point inside what was previously a synchronous request-construction path. On the `@MainActor`-isolated voice provider, the re-entrance could let another audio session operation interleave. Lower probability — the Swift code still throws `VoiceProviderError.configurationMissing` when JWT is absent, and we saw proxy calls land successfully.
+- **Hypothesis A — AVAudioSession conflict** (concurrent audio app / incomplete teardown between `CaptainVoiceService` and `MiniMaxTTSProvider`).
+- **Hypothesis B — Edge Function response encoding** (Deno `await upstream.text()` round-trip mangling the binary response).
+- **Hypothesis C — Concurrency reentrance** (the `await CaptainProxyConfig.currentSessionJWT()` suspend point inside `makeSynthesisRequest`).
 
-The direct-mode rollback path was tested and found broken — the pre-rotation Gemini key now returns HTTP 400 `API key not valid` from Google. So the debug loop must stay on the proxy path. Next steps are enumerated in §28.9.
+**Resolution.** Hypothesis B was the dominant cause. The fix landed across commits `6b4cc7b` "Enable MiniMax voice playback and update privacy copy" (2026-04-22 evening), `7524f88` "fix(security): restore xcconfig placeholder pattern, rotate MiniMax + Gemini keys" (same evening), and `64e8927` "feat(voice): MiniMax cache + dedicated cloud-voice consent + settings" (a few hours later). Together they:
+
+1. **Reworked `MiniMaxTTSProvider` (+426 lines)** to request MiniMax's `output_format: "hex"` body and decode the hex string with the existing `Data(hexEncodedString:)` extension, sidestepping any Deno UTF-8 round-trip risk on the Edge Function side. The Swift side now owns the binary decode end-to-end; the proxy's job shrinks to "forward the JSON, return whatever bytes the upstream returned."
+2. **Added a cache layer** ([VoiceCacheStore.swift:175](AiQo/Features/Captain/Voice/VoiceCacheStore.swift)) so a successful synthesis is replayed locally on the next request — eliminating the per-utterance 1–2s round-trip and removing the network from the audible hot path. Cache key is `SHA256(voiceID|model|text)`, eviction is LRU by file mtime, capped at whichever trips first of 500 files or 100 MB. Files are written `[.atomic, .completeFileProtectionUntilFirstUserAuthentication]`.
+3. **Tightened the audio-session lifecycle** in `MiniMaxTTSProvider.beginSpeechSession` / `endSpeechSession` — explicit `setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])` on enter, and a guarded `setActive(false, options: [.notifyOthersOnDeactivation])` on exit *only when `AiQoAudioManager.isPlaying == false`*. The latter guard turned out to matter for the gratitude session work in §29 — see §29.1 for the audio-session interaction with `AiQoAudioManager`.
+4. **Restored the `Configuration/AiQo.xcconfig` placeholder pattern** broken by commit `6b4cc7b` (commit `7524f88`'s body documents the regression in detail; live keys for MiniMax + Gemini + Supabase ANON were rotated at the provider dashboards as part of the same fix). The repository's tracked `AiQo.xcconfig` carries empty placeholders + `#include? "Secrets.xcconfig"` at the bottom; production credentials live only in the gitignored `Secrets.xcconfig`.
+5. **Added dedicated cloud-voice consent** ([CaptainVoiceConsent.swift:102](AiQo/Features/Captain/Voice/CaptainVoiceConsent.swift)) — separate from `AICloudConsentGate` per Apple Guideline 5.1.2(II). State is `@Published`, persisted under `aiqo.voice.cloud.consent.v1`, and `revoke()` triggers a cache wipe + Keychain key delete + `.captainVoiceConsentRevoked` notification atomically.
+6. **Wired the user-facing surfaces** — [VoiceSettingsScreen.swift](AiQo/Core/VoiceSettingsScreen.swift) under Settings → Captain Voice (live consent state, grant/revoke, "coming soon" when `CAPTAIN_VOICE_CLOUD_ENABLED=NO`) and [VoiceConsentSheet.swift](AiQo/Features/Compliance/VoiceConsentSheet.swift) presented on the first `.premium` voice tap (RTL-first, `.interactiveDismissDisabled`, four-row disclosure layout).
+7. **Extended `PrivacySanitizer`** (commit `8d36a70`'s 146-line diff includes this) with API-key and Bearer-token redaction so any future log line that accidentally captures an Authorization header gets scrubbed before it reaches `AuditLogger`.
+
+The Gemini direct-path rollback that §28.7.2 noted as broken (pre-rotation key returning HTTP 400) is no longer relevant — the proxy path has been the only path in production for several days at this point with no observed failures, and the legacy keys are gone from the IPA per step 7 of the §28.6 runbook.
 
 ### 28.8 Security posture
 
@@ -2724,7 +2740,7 @@ The direct-mode rollback path was tested and found broken — the pre-rotation G
 
 ### 28.9 Known risks / follow-ups
 
-1. **MiniMax voice path regression (open)** — see §28.7.2. The function log shows 200s but audio never plays; the hypothesis matrix is the immediate next thread. Blocking the 48 h TestFlight window's end-state "delete legacy keys" step until resolved.
+1. ~~**MiniMax voice path regression (open)** — see §28.7.2. The function log shows 200s but audio never plays; the hypothesis matrix is the immediate next thread. Blocking the 48 h TestFlight window's end-state "delete legacy keys" step until resolved.~~ **Resolved 2026-04-22 evening** via commits `6b4cc7b` + `7524f88` + `64e8927` — see the §28.7.2 closure for the seven-step fix. The 48 h TestFlight window finished cleanly; the legacy MiniMax key has since been purged from `Secrets.xcconfig`.
 2. **Session JWT refresh** — `CaptainProxyConfig.currentSessionJWT()` reads from `SupabaseService.shared.client.auth.session.accessToken` on every call. The Supabase SDK auto-refreshes before expiry, but a long-idle app may hit a brief stale-token window between auto-refreshes. If proxy 401s start appearing in the wild, add a one-shot refresh + retry on that error code.
 3. **No per-user rate limits yet** — the functions log the user ID but don't throttle. A future pass should add a `captain_usage` table + a per-function rate check so a compromised single-user JWT can't exhaust the Gemini quota for everyone.
 4. **Streaming responses are not supported** — Gemini's `generateContentStream` would let the chat UI reveal tokens as they arrive. Current proxy buffers the full response. Non-blocking for the current UX (we already show a "thinking" bubble), but worth revisiting if perceived latency is an issue once voice is unstuck.
@@ -2751,3 +2767,83 @@ The direct-mode rollback path was tested and found broken — the pre-rotation G
 - `Configuration/Secrets.xcconfig` — `USE_CLOUD_PROXY = YES` override + `$()` URL fix across three URLs
 
 Zero test changes. Zero UI changes. Zero localization changes. The rollout is 100% infrastructure.
+
+---
+
+## 29. Gratitude Session Voice Routing (2026-04-28)
+
+*Six small commits on top of the §28 / §28.7.2 voice infrastructure: `11b75c2` "Use voice router for gratitude session audio" → `a282d65` "Switch gratitude audio to shared ambient manager" → `a26a4ad` / `f176f45` / `589010e` / `9c3d304` (volume tuning passes). All on branch `brain-refactor/p-fix-dev-override`. The gratitude flow is the third surface — after Cardio Zone 2 (§25) and the Workout Summary (§25) — to migrate from the system `AVSpeechSynthesizer` onto Captain Hamoudi's MiniMax voice. It's also the first surface to need a per-host audio mix override, which surfaced two missing public APIs on `CaptainVoiceRouter` and `AiQoAudioManager` that the rest of the app can now use too.*
+
+### 29.1 The bug that started it
+
+The Gratitude Session under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) plays a one-minute Arabic / English daily-gratitude reflection. At entry it starts a looped background track (`SerotoninFlow.m4a`) and reads a sequence of bilingual sentences over it. Up until this pass, the sentences were spoken via a local `AVSpeechSynthesizer` instance owned by `GratitudeAudioManager` — the system "Siri" voice for the user's `AppLanguage`. Two complaints drove this work:
+
+1. **Wrong voice.** Now that the app has a coherent Captain Hamoudi MiniMax voice across chat, Cardio Zone 2 coaching, and the Workout Summary narration, the gratitude flow felt off-brand reading lines like *"أشكر ربك على هالبدن اللي بعده يشيلك من أول خطوة"* in a generic Apple-TTS voice.
+2. **Background music truncated to ~5 seconds.** Once the first MiniMax utterance finished, the entire `SerotoninFlow.m4a` loop went silent. Root cause was a session-lifecycle race between two unrelated `AVAudioPlayer` instances on the same shared `AVAudioSession`: `MiniMaxTTSProvider.endSpeechSession()` calls `audioSession.setActive(false, options: [.notifyOthersOnDeactivation])` whenever its check `audioManager.isPlaying == false` is true — where `audioManager` is `AiQoAudioManager.shared`. Gratitude's local `AVAudioPlayer` was not visible to `AiQoAudioManager`, so the deactivation killed the music.
+
+### 29.2 Fix one — route the speech through `CaptainVoiceRouter`
+
+[`GratitudeAudioManager.swift`](AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift) was rewritten end-to-end. The local `AVSpeechSynthesizer` is gone; `speak(_:language:)` now hands the trimmed text to `CaptainVoiceRouter.shared.speak(text:, tier: .premium)` inside a managed `Task<Void, Never>` so consecutive calls cancel cleanly via `speechTask?.cancel()` + `voiceRouter.stop()`. Behaviour:
+
+- If `FeatureFlags.captainVoiceCloudEnabled == true` and `CaptainVoiceConsent.isGranted == true`, the gratitude line is spoken in Captain Hamoudi's MiniMax voice (cached on second play per §28.7.2 step 2).
+- If consent is missing or the cloud call fails, `CaptainVoiceRouter` silently falls back to `AppleTTSProvider` — the user still hears the sentence, just in the system voice. Same fallback chain the rest of the Captain surface uses; no special-case handling in `GratitudeAudioManager`.
+- The `language: GratitudeSessionLanguage` parameter on `speak(...)` is preserved for source-compatibility with [GratitudeSessionView.swift:328](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) and `:346` (the session view passes the active session language with each line), but it is now informational only — `MiniMaxTTSProvider.languageBoost(for:)` auto-detects Arabic vs English from the text's Unicode scalar ranges. The `GratitudeSessionLanguage` enum stays useful for picking the right `gratitudeBundles(for:)` array of phrases inside the view.
+
+### 29.3 Fix two — move the background track onto `AiQoAudioManager`
+
+The local `AVAudioPlayer` in `GratitudeAudioManager` was replaced with `AiQoAudioManager.shared.playAmbient(trackName: "SerotoninFlow", fileExtension: "m4a")`. This is the same path used by the Vibe / focus surfaces and by the workout audio coach. The win: `MiniMaxTTSProvider.endSpeechSession()` now sees `audioManager.isPlaying == true` while gratitude is running, so it calls `audioManager.refreshAudioSessionConfiguration()` instead of `setActive(false, ...)`, and the `SerotoninFlow.m4a` loop survives every utterance boundary. As a side benefit, the gratitude music also gets the existing automatic ducking from `MiniMaxTTSProvider.beginSpeechSession()` calling `audioManager.beginSpeechDucking()` on enter and `endSpeechDucking()` on exit — the first time the gratitude flow has had real ducking instead of two players playing at fixed levels over each other.
+
+`stopAll()` calls `voiceRouter.stop()` then `ambientAudio.stopAmbient()`, restores `setMiniMaxPlaybackVolume(1.0)`, and clears the duck override (see §29.4). Net effect: the session leaves every shared singleton in the same state it found them in, so Captain chat / cardio / summary playback after a gratitude session are unaffected.
+
+### 29.4 Three small public APIs added to support per-host mix overrides
+
+The gratitude session needed a specific mix — quiet music, full Captain voice, *aggressive* duck under speech — that the existing audio APIs couldn't express without globally shifting defaults. Three new APIs were added so the gratitude session (and any future host with similar needs) can opt in without touching the rest of the app:
+
+#### 29.4.1 `MiniMaxTTSProvider.playbackVolume`
+
+[MiniMaxTTSProvider.swift:25](AiQo/Features/Captain/Voice/MiniMaxTTSProvider.swift) added a public `var playbackVolume: Float = 1.0`. Read once inside `play(audioData:playbackSequence:)` and applied via `player.volume = min(max(playbackVolume, 0), 1)` after the `AVAudioPlayer` is initialised. Default `1.0` keeps every existing call site (chat, cardio, summary) unchanged.
+
+#### 29.4.2 `CaptainVoiceRouter.setMiniMaxPlaybackVolume(_:)`
+
+[CaptainVoiceRouter.swift:163](AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift) added a `@MainActor func setMiniMaxPlaybackVolume(_ volume: Float)` that downcasts `miniMaxProvider as? MiniMaxTTSProvider` and writes through to `provider.playbackVolume`. Clamped to `[0, 1]`. Apple TTS fallback playback is intentionally not touched — fallback is rare enough that the host's specific mix is less important than the user being able to hear the sentence at all.
+
+#### 29.4.3 `AiQoAudioManager.setSpeechDuckOverride(_:)`
+
+[AiQoAudioManager.swift](AiQo/Core/AiQoAudioManager.swift) added a `private var speechDuckOverride: Float?` plus a `func setSpeechDuckOverride(_ volume: Float?)`. `beginSpeechDucking(targetVolume:fadeDuration:)` now resolves its target as `speechDuckOverride ?? targetVolume` before clamping and recording. The override persists across multiple `beginSpeechDucking` calls (which is what we want — the MiniMax provider calls it once per utterance with the default `0.26`, and the gratitude session pins the override to `0.04` on enter so every utterance ducks to that floor). `setSpeechDuckOverride(nil)` restores the default-target behaviour and is what `stopAll()` calls on session exit.
+
+### 29.5 The chosen mix
+
+After three tuning passes (commits `a26a4ad`, `f176f45`, `589010e`, `9c3d304`), the constants on `GratitudeAudioManager` settled at:
+
+| Constant | Value | What it controls |
+|---|---|---|
+| `musicVolume` | **0.10** | `SerotoninFlow.m4a` loop volume while no Captain narration is playing |
+| `voiceVolume` | **1.0** | MiniMax player volume (full) — written via `setMiniMaxPlaybackVolume(_:)` on session enter |
+| `musicDuckedVolume` | **0.04** | Music volume during a Captain utterance — written via `setSpeechDuckOverride(_:)` on session enter |
+
+The progression through the four tuning commits — 0.30 → 0.18 → 0.25 → 0.20 → 0.10 on `musicVolume`, with `voiceVolume` briefly at 0.85 before settling at 1.0, and the duck floor walking 0.10 → 0.05 → 0.04 — was driven entirely by Mohammed listening on his iPhone and adjusting until Captain Hamoudi sat clearly above the ambient track without the music feeling absent during the silent gaps between sentences.
+
+### 29.6 Files added / removed / modified
+
+**Modified (3):**
+- `AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift` — `AVSpeechSynthesizer` removed; routes through `CaptainVoiceRouter` + `AiQoAudioManager`; the three mix constants documented in §29.5.
+- `AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift` — `setMiniMaxPlaybackVolume(_:)` added (§29.4.2).
+- `AiQo/Features/Captain/Voice/MiniMaxTTSProvider.swift` — `playbackVolume` property + the `player.volume = ...` line in `play(audioData:playbackSequence:)` (§29.4.1).
+- `AiQo/Core/AiQoAudioManager.swift` — `speechDuckOverride` storage + `setSpeechDuckOverride(_:)` + the resolved-target line in `beginSpeechDucking(targetVolume:fadeDuration:)` (§29.4.3).
+
+**Removed (from `GratitudeAudioManager`, not the project):**
+- The local `AVSpeechSynthesizer` instance + delegate conformance + `playLocalSpeech(_:language:)`.
+- The local `backgroundPlayer: AVAudioPlayer?` + `makeBackgroundPlayer()` factory.
+- The local `audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])` setup, since `AiQoAudioManager.playAmbient` already configures the session.
+
+**Added:** zero new files. The whole feature was an API + routing change.
+
+Zero localization changes. Zero test changes (`AiQoTests` already exercises `CaptainVoiceRouter` via `MiniMaxVoiceConfigurationTests` and the router-level fallback tests). Zero pbxproj changes — Xcode 16's synchronized source groups picked up the modifications without project edits.
+
+### 29.7 What this unlocks
+
+Two future hosts can now use the same pattern:
+- A future **morning kickoff** flow that plays a calmer ambient track and narrates a personalised intent in Captain Hamoudi's voice can call `setMiniMaxPlaybackVolume(...)` + `setSpeechDuckOverride(...)` on enter and clear them on exit.
+- The **breathing / focus** surfaces inside Vibe could reuse `setSpeechDuckOverride(...)` to pin the duck floor to a deeper drop than the global default of 0.26 if the surfaces decide to overlay short coaching cues without the user feeling whiplash on volume restore.
+
+Both are out of scope for this pass — the public APIs exist and are documented, but no caller site landed in this commit set.
