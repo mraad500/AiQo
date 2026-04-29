@@ -1,8 +1,11 @@
 // Shared build settings for the main AiQo app target.
 // Secrets.xcconfig can override these defaults locally when needed.
+// All credential values live in Secrets.xcconfig (gitignored) — never
+// commit real API keys, tokens, or signing secrets to this file.
 
 CAPTAIN_API_KEY =
 CAPTAIN_ARABIC_API_URL =
+CAPTAIN_ARABIC_MODEL =
 COACH_BRAIN_LLM_API_KEY =
 COACH_BRAIN_LLM_API_URL =
 CAPTAIN_VOICE_API_KEY =
@@ -12,6 +15,22 @@ CAPTAIN_VOICE_VOICE_ID =
 SPOTIFY_CLIENT_ID =
 SUPABASE_URL =
 SUPABASE_ANON_KEY =
+
+// Cloud-proxy master switch. When NO (default), the app calls Gemini + MiniMax
+// directly using the keys above (legacy path). When YES, all calls route
+// through Supabase Edge Functions (`captain-chat`, `captain-voice`) that hold
+// the real keys server-side.
+//
+// Per-path overrides below let chat and voice diverge — useful when only one
+// Edge Function has been provisioned, or when a key has been rotated on one
+// path but not the other. Empty value (the default here) means "no override,
+// defer to USE_CLOUD_PROXY".
+//
+// Flip to YES ONLY after deploying the Edge Functions and rotating the
+// client-side keys. See `supabase/functions/README.md` for the runbook.
+USE_CLOUD_PROXY = NO
+USE_CHAT_CLOUD_PROXY =
+USE_VOICE_CLOUD_PROXY =
 
 // Work around Xcode explicit-module failures from SDWebImageSwiftUI.
 CLANG_ENABLE_EXPLICIT_MODULES = NO

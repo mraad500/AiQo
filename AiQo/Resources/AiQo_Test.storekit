@@ -40,7 +40,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.max",
+          "productID" : "com.mraad5000.aiqo.max",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "AiQo Max Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",
@@ -71,7 +71,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.mraad500.aiqo.intelligence.pro",
+          "productID" : "com.mraad500.aiqo.Intelligence.pro",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "AiQo Intelligence Pro Monthly",
           "subscriptionGroupID" : "B1A2C3D4-E5F6-7890-ABCD-EF1234567890",

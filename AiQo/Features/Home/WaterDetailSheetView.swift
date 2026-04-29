@@ -12,23 +12,23 @@ struct WaterDetailSheetView: View {
     /// Two-way binding to the current water amount in liters.
     /// Updates automatically propagate to the parent view (HomeView).
     @Binding var currentWaterLiters: Double
-    
+
+    /// Daily hydration goal in liters, used by the hero ring and goal sublabel.
+    /// Caller is the source of truth (typically `HydrationService.shared.settings.goalML / 1000`).
+    var goalLiters: Double = 2.5
+
     /// Callback fired when water is added, passing the amount added (for HealthKit save)
     var onAddWater: ((Double) -> Void)?
-    
+
     // MARK: - Environment
-    
+
     /// Environment dismiss action for the close button
     @Environment(\.dismiss) private var dismiss
-    
-    // MARK: - Constants
-    
-    /// Water blue color matching the original UIKit implementation
-    private let waterBlue = Color(red: 0.24, green: 0.67, blue: 0.93)
-    
-    /// Amount to add per button tap
-    private let addAmount: Double = 0.25
-    @State private var addWaterFeedbackTrigger = 0
+
+    // MARK: - State
+
+    /// Drives the nested custom-amount sheet.
+    @State private var showCustomSheet = false
     
     // MARK: - Body
     
@@ -37,103 +37,258 @@ struct WaterDetailSheetView: View {
             // Background
             Color(.systemBackground)
                 .ignoresSafeArea()
-            
-            // Close Button (top-right corner)
-            closeButton
-            
+
             // Main Content
-            VStack(spacing: 0) {
-                // Top spacing (matches original: 40pt from safe area)
-                Spacer()
-                    .frame(height: 40)
-                
-                // Title
-                titleLabel
-                
-                // Amount Display
-                amountLabel
-                    .padding(.top, 10)
-                
-                // Water Bottle Visualization
-                waterBottle
-                    .padding(.top, 30)
-                
-                Spacer()
-                
-                // Add Water Button
-                addWaterButton
-                    .padding(.bottom, 40)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Top spacing (matches original: 40pt from safe area)
+                    Spacer()
+                        .frame(height: 40)
+
+                    // Title
+                    titleLabel
+
+                    // Hero ring — replaces the photographic bottle illustration.
+                    // Pure SwiftUI, on-brand mint/sand accents.
+                    WaterHeroRingView(
+                        consumedLiters: currentWaterLiters,
+                        goalLiters: goalLiters
+                    )
+                    .padding(.top, 18)
+
+                    // Percentage pill (below ring)
+                    percentagePill
+                        .padding(.top, 12)
+
+                    // Quick-add chip row — replaces the single blue "+0.25 L" pill.
+                    quickAddRow
+                        .padding(.top, 24)
+
+                    // Smart Hydration — free feature, flag-gated for rollout safety
+                    if FeatureFlags.smartWaterTrackingEnabled {
+                        SmartHydrationSection(service: HydrationService.shared)
+                            .padding(.top, 24)
+                            .padding(.bottom, 20)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 40)
             }
-            .frame(maxWidth: .infinity)
+            .scrollIndicators(.hidden)
+
+            // Close Button (top-right corner) — kept on top of ScrollView
+            closeButton
+        }
+        .sheet(isPresented: $showCustomSheet) {
+            CustomWaterAmountSheet { amount in
+                performAdd(amount: amount, isCustom: true)
+            }
         }
     }
     
     // MARK: - Subviews
     
-    /// Close button positioned in top-right corner
+    /// Close button positioned in top-right corner. Material-backed circle
+    /// keeps the glyph above the 3:1 WCAG AA floor against the sheet's
+    /// system-background surface.
     private var closeButton: some View {
         Button(action: { dismiss() }) {
-            Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.6))
+                .frame(width: 36, height: 36)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(
+                    Circle().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
         }
+        .buttonStyle(.plain)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
         .padding(.top, 16)
         .padding(.trailing, 20)
         .accessibilityLabel(NSLocalizedString("water.close", comment: ""))
     }
     
-    /// "Water" title label
+    /// "Water" title label — SF Rounded, bold, centered
     private var titleLabel: some View {
         Text(NSLocalizedString("metric.water.title", comment: "Water title"))
-            .font(.system(size: 24, weight: .bold, design: .rounded))
+            .font(.system(size: 17, weight: .bold, design: .rounded))
             .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity)
     }
-    
-    /// Current water amount display (e.g., "2.5 L")
-    private var amountLabel: some View {
-        Text(String(format: "%.1f L", currentWaterLiters))
-            .font(.system(size: 48, weight: .heavy, design: .rounded))
+
+    /// Compact percentage pill on `.ultraThinMaterial` — sits ~12pt under the ring.
+    private var percentagePill: some View {
+        let progress = goalLiters > 0 ? min(1, currentWaterLiters / goalLiters) : 0
+        let percent = Int((progress * 100).rounded())
+        return Text("\(percent)%")
+            .font(.system(size: 14, weight: .bold, design: .rounded))
             .foregroundStyle(.primary)
-            .contentTransition(.numericText())
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentWaterLiters)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(AiQoColors.mintSoft.opacity(0.35), lineWidth: 0.5)
+            )
+            .contentTransition(.numericText(value: Double(percent)))
+            .animation(.spring(response: 0.55, dampingFraction: 0.85), value: percent)
     }
-    
-    /// Animated water bottle view
-    private var waterBottle: some View {
-        WaterBottleView(currentLiters: currentWaterLiters)
-            .frame(width: 140, height: 300)
+
+    /// Three chips: +0.25, +0.5, custom. Replaces the single blue capsule.
+    private var quickAddRow: some View {
+        HStack(spacing: 10) {
+            quickAddChip(
+                title: NSLocalizedString("water.add.quarter", comment: ""),
+                amount: 0.25,
+                a11yAmount: "0.25"
+            )
+            quickAddChip(
+                title: NSLocalizedString("water.add.half", comment: ""),
+                amount: 0.5,
+                a11yAmount: "0.5"
+            )
+            customChip
+        }
+        .padding(.horizontal, 20)
     }
-    
-    /// "+ 0.25 L" capsule button
-    private var addWaterButton: some View {
-        Button(action: addWater) {
-            Text(NSLocalizedString("water.add", comment: ""))
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 200, height: 55)
-                .background(waterBlue)
-                .clipShape(Capsule())
+
+    private func quickAddChip(title: String, amount: Double, a11yAmount: String) -> some View {
+        Button {
+            performAdd(amount: amount, isCustom: false)
+        } label: {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .fill(AiQoColors.mintSoft.opacity(0.35))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(AiQoColors.mintSoft.opacity(0.6), lineWidth: 0.5)
+                )
         }
         .buttonStyle(BounceButtonStyle())
-        .sensoryFeedback(.selection, trigger: addWaterFeedbackTrigger)
-        .accessibilityLabel(NSLocalizedString("water.a11y.add", comment: ""))
-        .accessibilityHint(NSLocalizedString("water.a11y.hint", comment: ""))
+        .accessibilityLabel(String(
+            format: NSLocalizedString("water.add.a11y.format", comment: ""),
+            a11yAmount
+        ))
+        .accessibilityHint(NSLocalizedString("water.add.a11y.hint", comment: ""))
     }
-    
+
+    private var customChip: some View {
+        Button {
+            showCustomSheet = true
+        } label: {
+            Text(NSLocalizedString("water.add.custom", comment: ""))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .fill(AiQoColors.sandSoft.opacity(0.35))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(AiQoColors.sandSoft.opacity(0.6), lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(BounceButtonStyle())
+        .accessibilityLabel(NSLocalizedString("water.add.custom", comment: ""))
+        .accessibilityHint(NSLocalizedString("water.add.a11y.hint", comment: ""))
+    }
+
     // MARK: - Actions
-    
-    /// Handles adding water when button is tapped
-    private func addWater() {
-        // Update the binding with animation
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            currentWaterLiters += addAmount
+
+    /// Single entry point for all add actions. Preserves the existing
+    /// `onAddWater` callback path (HomeView wraps it in
+    /// `Task { await viewModel.addWater(liters:) }`) so HealthKit, reminders,
+    /// and widget updates all flow through the same pipe.
+    private func performAdd(amount: Double, isCustom: Bool) {
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.85)) {
+            currentWaterLiters += amount
         }
 
-        addWaterFeedbackTrigger += 1
-        
-        // Notify parent to save to HealthKit
-        onAddWater?(addAmount)
+        if isCustom {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } else {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        }
+
+        onAddWater?(amount)
+    }
+}
+
+// MARK: - Custom Amount Sheet
+
+/// Minimal sheet for the "custom dose" chip. Kept private to this file so the
+/// parent sheet's state (`showCustomSheet`) stays in one place.
+private struct CustomWaterAmountSheet: View {
+    let onConfirm: (Double) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var amount: Double = 0.25
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(NSLocalizedString("water.custom.sheet.title", comment: ""))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .padding(.top, 20)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(amount, format: .number.precision(.fractionLength(2)))
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .contentTransition(.numericText(value: amount))
+                Text(unitLabel)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            Slider(value: $amount, in: 0.05...1.0, step: 0.05)
+                .tint(AiQoColors.mintSoft)
+                .padding(.horizontal, 24)
+
+            Button {
+                onConfirm(amount)
+                dismiss()
+            } label: {
+                Text(NSLocalizedString("water.custom.confirm", comment: ""))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(AiQoColors.mintSoft.opacity(0.45))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(AiQoColors.mintSoft.opacity(0.7), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 0)
+        }
+        .presentationDetents([.height(280)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(.ultraThinMaterial)
+    }
+
+    private var unitLabel: String {
+        Locale.current.language.languageCode?.identifier == "ar" ? "ل" : "L"
     }
 }
 
@@ -155,10 +310,12 @@ extension WaterDetailSheetView {
     /// (uses internal state instead, useful for previews or standalone usage)
     init(
         initialWaterLiters: Double,
+        goalLiters: Double = 2.5,
         onAddWater: ((Double) -> Void)? = nil,
         onDismiss: (() -> Void)? = nil
     ) {
         self._currentWaterLiters = .constant(initialWaterLiters)
+        self.goalLiters = goalLiters
         self.onAddWater = onAddWater
     }
 }
@@ -208,11 +365,13 @@ extension View {
     func waterDetailSheet(
         isPresented: Binding<Bool>,
         currentWaterLiters: Binding<Double>,
+        goalLiters: Double = 2.5,
         onAddWater: ((Double) -> Void)? = nil
     ) -> some View {
         self.sheet(isPresented: isPresented) {
             WaterDetailSheetView(
                 currentWaterLiters: currentWaterLiters,
+                goalLiters: goalLiters,
                 onAddWater: onAddWater
             )
             .presentationDetents([.large])

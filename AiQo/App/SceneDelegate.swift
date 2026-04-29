@@ -16,6 +16,8 @@ enum OnboardingKeys {
     static let didCompleteAIConsent = "didCompleteAIConsent"
     static let didAcknowledgeMedicalDisclaimer = "didAcknowledgeMedicalDisclaimer"
     static let didCompleteHealthScreening = "didCompleteHealthScreening"
+    static let didCompleteQuickStart = "didCompleteQuickStart"
+    static let didCompleteSubscriptionIntro = "didCompleteSubscriptionIntro"
 }
 
 @MainActor
@@ -29,9 +31,9 @@ final class AppFlowController: ObservableObject {
         case legacy
         case aiConsent
         case medicalDisclaimer
-        case healthScreening
-        case captainPersonalization
+        case quickStart
         case featureIntro
+        case subscriptionIntro
         case main
     }
 
@@ -39,6 +41,15 @@ final class AppFlowController: ObservableObject {
     @Published private(set) var refreshID = UUID()
 
     private init() {
+        // Migration: existing users who already completed featureIntro before
+        // the subscriptionIntro step existed should not be re-prompted with the
+        // paywall on app upgrade.
+        let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
+        let hasSubscriptionIntroKey = UserDefaults.standard.object(forKey: OnboardingKeys.didCompleteSubscriptionIntro) != nil
+        if didCompleteFeatureIntro && !hasSubscriptionIntroKey {
+            UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteSubscriptionIntro)
+        }
+
         Task { @MainActor in
             await Task.yield()
             QuestPersistenceController.shared.installQuestPersistence()
@@ -119,21 +130,26 @@ final class AppFlowController: ObservableObject {
 
     func finalizeMedicalDisclaimer() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
+        UserDefaults.standard.set(true, forKey: "aiqo.medicalDisclaimer.acknowledgedV1")
         transition(to: Self.resolveCurrentScreen())
     }
 
-    func finalizeHealthScreening() {
+    func didCompleteQuickStart() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteQuickStart)
+        // Keep legacy flags in sync so any code that still reads them sees the
+        // user as fully onboarded.
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteHealthScreening)
-        transition(to: Self.resolveCurrentScreen())
-    }
-
-    func didCompleteCaptainPersonalization() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
         transition(to: .featureIntro)
     }
 
     func didCompleteFeatureIntro() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteFeatureIntro)
+        transition(to: .subscriptionIntro)
+    }
+
+    func didCompleteSubscriptionIntro() {
+        UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteSubscriptionIntro)
         MainTabRouter.shared.navigate(to: .home)
         transition(to: .main)
     }
@@ -194,9 +210,18 @@ final class AppFlowController: ObservableObject {
             UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteAIConsent)
             UserDefaults.standard.removeObject(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
             UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteHealthScreening)
+            UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteQuickStart)
+            UserDefaults.standard.removeObject(forKey: OnboardingKeys.didCompleteSubscriptionIntro)
 
             LearningProofStore.shared.deleteAllLocalData()
             HealthScreeningStore.clear()
+
+            // Voice teardown: wipe synthesized-audio cache and delete the
+            // MiniMax API key from Keychain so the next account doesn't
+            // inherit cloud-voice credentials or cached replies from the
+            // previous one.
+            await VoiceCacheStore.shared.wipeAll()
+            CaptainVoiceKeychain.deleteMiniMaxAPIKey()
 
             MainTabRouter.shared.navigate(to: .home)
             transition(to: .login)
@@ -226,11 +251,14 @@ final class AppFlowController: ObservableObject {
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
-        let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
-            || didCompleteFeatureIntro
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
-        let didCompleteHealthScreening = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
+        // Migration: legacy users who completed both old screens (or feature intro) are
+        // considered done with the new unified quickStart screen.
+        let didCompleteQuickStart = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart)
+            || didCompleteFeatureIntro
+            || (UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
+                && UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization))
 
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
@@ -264,16 +292,17 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
-        if !didCompleteHealthScreening {
-            return .healthScreening
-        }
-
-        if !didCompleteCaptainPersonalization {
-            return .captainPersonalization
+        if !didCompleteQuickStart {
+            return .quickStart
         }
 
         if !didCompleteFeatureIntro {
             return .featureIntro
+        }
+
+        let didCompleteSubscriptionIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteSubscriptionIntro)
+        if !didCompleteSubscriptionIntro {
+            return .subscriptionIntro
         }
 
         return .main
@@ -283,11 +312,12 @@ final class AppFlowController: ObservableObject {
         let didCompleteDatingProfile = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteDatingProfile)
         let didCompleteLegacyCalculation = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteLegacyCalculation)
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
-        let didCompleteCaptainPersonalization = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization)
-            || didCompleteFeatureIntro
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
-        let didCompleteHealthScreening = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
+        let didCompleteQuickStart = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart)
+            || didCompleteFeatureIntro
+            || (UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
+                && UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization))
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -305,16 +335,17 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
-        if !didCompleteHealthScreening {
-            return .healthScreening
-        }
-
-        if !didCompleteCaptainPersonalization {
-            return .captainPersonalization
+        if !didCompleteQuickStart {
+            return .quickStart
         }
 
         if !didCompleteFeatureIntro {
             return .featureIntro
+        }
+
+        let didCompleteSubscriptionIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteSubscriptionIntro)
+        if !didCompleteSubscriptionIntro {
+            return .subscriptionIntro
         }
 
         return .main
@@ -330,6 +361,7 @@ struct AppRootView: View {
     @StateObject private var aiConsentManager = AIDataConsentManager.shared
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("aiqo.medicalDisclaimer.acknowledgedV1") private var medicalDisclaimerV1Acknowledged = false
 
     private var currentDirection: LayoutDirection {
         AppSettingsStore.shared.appLanguage == .arabic ? .rightToLeft : .leftToRight
@@ -357,6 +389,20 @@ struct AppRootView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
+        .fullScreenCover(isPresented: medicalDisclaimerCoverBinding) {
+            MedicalDisclaimerDetailView(mode: .firstRun)
+        }
+    }
+
+    /// v1.1 gate: show the fullscreen disclaimer only once onboarding is fully
+    /// complete AND the user has not yet acknowledged the v1.1 wording. This
+    /// covers legacy users who completed v1.0 onboarding before the new gate
+    /// existed. Non-dismissible by gesture until "فهمت وأوافق" is tapped.
+    private var medicalDisclaimerCoverBinding: Binding<Bool> {
+        Binding(
+            get: { flow.currentScreen == .main && !medicalDisclaimerV1Acknowledged },
+            set: { _ in }
+        )
     }
 
     @ViewBuilder
@@ -382,17 +428,19 @@ struct AppRootView: View {
         case .medicalDisclaimer:
             MedicalDisclaimerOnboardingView(onAcknowledge: { flow.finalizeMedicalDisclaimer() })
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
-        case .healthScreening:
-            HealthScreeningOnboardingView(onContinue: { flow.finalizeHealthScreening() })
-                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
-        case .captainPersonalization:
-            CaptainPersonalizationOnboardingView()
+        case .quickStart:
+            QuickStartOnboardingView(onContinue: { flow.didCompleteQuickStart() })
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .featureIntro:
             FeatureIntroView {
                 flow.didCompleteFeatureIntro()
             }
             .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading)))
+        case .subscriptionIntro:
+            SubscriptionIntroView {
+                flow.didCompleteSubscriptionIntro()
+            }
+            .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
         case .main:
             MainTabScreen()
                 .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))

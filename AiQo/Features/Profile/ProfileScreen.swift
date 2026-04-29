@@ -20,6 +20,9 @@ struct ProfileScreen: View {
     @State var showBioMetricsSheet = false
     @State var showWeeklyReport = false
     @State var showProgressPhotos = false
+    @State var showSubscriptionPaywall = false
+
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
 
     // Privacy
     @State var isProfilePublic: Bool = UserProfileStore.shared.tribePrivacyMode == .public
@@ -99,6 +102,24 @@ struct ProfileScreen: View {
                                     genderBinding.wrappedValue = genderBinding.wrappedValue == .male ? .female : .male
                                 }
                             }
+                        }
+                    }
+
+                    profileSection(
+                        title: NSLocalizedString(
+                            "screen.profile.section.subscription",
+                            value: "Subscription",
+                            comment: ""
+                        )
+                    ) {
+                        AppActionRow(
+                            icon: "crown.fill",
+                            iconFill: ProfilePalette.sand.opacity(0.36),
+                            title: subscriptionRowTitle,
+                            subtitle: subscriptionRowSubtitle,
+                            tone: .sand
+                        ) {
+                            showSubscriptionPaywall = true
                         }
                     }
 
@@ -280,6 +301,54 @@ struct ProfileScreen: View {
                 subject: NSLocalizedString("screen.profile.support.subject", value: "AiQo Support", comment: "")
             )
         }
+        .fullScreenCover(isPresented: $showSubscriptionPaywall) {
+            ProfilePaywallSheet {
+                showSubscriptionPaywall = false
+            }
+        }
+    }
+
+    private var subscriptionRowTitle: String {
+        switch entitlementStore.currentTier {
+        case .none:
+            return NSLocalizedString(
+                "screen.profile.subscription.tier.free",
+                value: "Free Plan",
+                comment: ""
+            )
+        case .max:
+            return "AiQo Max"
+        case .trial:
+            return NSLocalizedString(
+                "screen.profile.subscription.tier.trial",
+                value: "Free Trial",
+                comment: ""
+            )
+        case .pro:
+            return "AiQo Intelligence Pro"
+        }
+    }
+
+    private var subscriptionRowSubtitle: String {
+        if entitlementStore.isActive, let expiresAt = entitlementStore.expiresAt {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: AppSettingsStore.shared.appLanguage.rawValue)
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            return String(
+                format: NSLocalizedString(
+                    "screen.profile.subscription.activeUntil",
+                    value: "Active until %@",
+                    comment: ""
+                ),
+                formatter.string(from: expiresAt)
+            )
+        }
+        return NSLocalizedString(
+            "screen.profile.subscription.viewPlans",
+            value: "View available plans",
+            comment: ""
+        )
     }
 }
 

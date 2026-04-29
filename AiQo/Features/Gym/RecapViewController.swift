@@ -219,6 +219,7 @@ struct HistoryCardView: View {
         .frame(height: 104)
         .scaleEffect(x: 1.0, y: isPressed ? 0.94 : 1.0, anchor: .bottom)
         .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isPressed)
+        .environment(\.colorScheme, .light)
         .onTapGesture {
             isPressed = true
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()

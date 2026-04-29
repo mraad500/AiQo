@@ -16,31 +16,33 @@ struct MessageBubble<Content: View>: View {
         self.content = content()
     }
 
+    // v1.1 brand tokens — Apple Guideline 4.0.0 resubmission palette.
+    // Mint #B7E5D2 for user bubbles, Sand at 35% alpha for assistant bubbles.
     private var bubbleColor: Color {
         if isUser {
-            return Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB Mint
+            return Color(red: 0.718, green: 0.898, blue: 0.824) // #B7E5D2
         }
-        return Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3 Sand
+        return Color(red: 0.922, green: 0.812, blue: 0.592).opacity(0.35) // #EBCF97 @ 35%
     }
 
     private var textColor: Color {
-        Color.black.opacity(0.85)
+        Color(red: 0.059, green: 0.090, blue: 0.129) // Ink #0F1721
     }
 
     private var bubbleCorners: UnevenRoundedRectangle {
         if isUser {
             return UnevenRoundedRectangle(
-                topLeadingRadius: 20,
-                bottomLeadingRadius: 20,
-                bottomTrailingRadius: 4,
-                topTrailingRadius: 20
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 18,
+                bottomTrailingRadius: 6,
+                topTrailingRadius: 18
             )
         } else {
             return UnevenRoundedRectangle(
-                topLeadingRadius: 20,
-                bottomLeadingRadius: 4,
-                bottomTrailingRadius: 20,
-                topTrailingRadius: 20
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 6,
+                bottomTrailingRadius: 18,
+                topTrailingRadius: 18
             )
         }
     }
@@ -49,13 +51,12 @@ struct MessageBubble<Content: View>: View {
         VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
             content
                 .foregroundStyle(textColor)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .background(
                     bubbleCorners
                         .fill(bubbleColor)
                 )
-                .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 4)
                 .onLongPressGesture(minimumDuration: 0.3) {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showTimestamp.toggle()
