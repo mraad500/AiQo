@@ -99,6 +99,7 @@ struct AIConsentOnboardingView: View {
         VStack(spacing: 12) {
             Button {
                 AIDataConsentManager.shared.grantConsent()
+                CaptainVoiceConsent.shared.grant()
                 onContinue()
             } label: {
                 Text(NSLocalizedString("ai.consent.agree", comment: ""))

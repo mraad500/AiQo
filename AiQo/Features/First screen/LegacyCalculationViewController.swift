@@ -9,6 +9,7 @@ struct LegacyCalculationScreenView: View {
     @State private var resultAppeared = false
     @State private var hasGrantedPermissions = false
     @State private var isRequestingPermissions = false
+    @State private var pulsePhase = false
 
     var body: some View {
         ZStack {
@@ -56,7 +57,7 @@ struct LegacyCalculationScreenView: View {
 
                     Text(NSLocalizedString("legacy.intro.tagline", value: "إنت مو شخص يبدأ من صفر... إنت جاي ويا تاريخ.", comment: ""))
                         .font(.system(size: 20, weight: .black, design: .rounded))
-                        .foregroundStyle(Color(hex: "C6EFDB"))
+                        .foregroundStyle(Color(hex: "7FD4A8"))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
@@ -66,20 +67,30 @@ struct LegacyCalculationScreenView: View {
                         )
                 }
 
-                // Permission Card
-                Button {
-                    guard !isRequestingPermissions && !hasGrantedPermissions else { return }
-                    isRequestingPermissions = true
-                    Task { @MainActor in
-                        HealthKitService.permissionFlowEnabled = true
-                        _ = try? await HealthKitService.shared.requestAuthorization()
-                        _ = await NotificationService.shared.ensureAuthorizationIfNeeded()
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            hasGrantedPermissions = true
-                            isRequestingPermissions = false
-                        }
+                // Permission Card with pulsing glow + "موصى به" badge
+                ZStack(alignment: .topTrailing) {
+                    if !hasGrantedPermissions {
+                        RoundedRectangle(cornerRadius: AiQoRadius.card)
+                            .stroke(Color(hex: "7FD4A8"), lineWidth: 2)
+                            .blur(radius: 5)
+                            .opacity(pulsePhase ? 0.85 : 0.25)
+                            .scaleEffect(pulsePhase ? 1.025 : 1.0)
+                            .animation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true), value: pulsePhase)
                     }
-                } label: {
+
+                    Button {
+                        guard !isRequestingPermissions && !hasGrantedPermissions else { return }
+                        isRequestingPermissions = true
+                        Task { @MainActor in
+                            HealthKitService.permissionFlowEnabled = true
+                            _ = try? await HealthKitService.shared.requestAuthorization()
+                            _ = await NotificationService.shared.ensureAuthorizationIfNeeded()
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                hasGrantedPermissions = true
+                                isRequestingPermissions = false
+                            }
+                        }
+                    } label: {
                     HStack(spacing: AiQoSpacing.sm) {
                         ZStack {
                             RoundedRectangle(cornerRadius: AiQoRadius.control)
@@ -146,23 +157,69 @@ struct LegacyCalculationScreenView: View {
                 .disabled(isRequestingPermissions || hasGrantedPermissions)
                 .accessibilityLabel(NSLocalizedString("legacy.permissions.a11y", value: "صلاحيات الصحة والإشعارات", comment: ""))
 
-                Button { viewModel.primaryButtonTapped() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.left")
-                        Text(NSLocalizedString("legacy.continue", value: "متابعة", comment: ""))
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                    if !hasGrantedPermissions {
+                        Text(NSLocalizedString("legacy.permissions.recommendedBadge", value: "موصى به", comment: ""))
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color(hex: "7FD4A8"))
+                                    .shadow(color: Color(hex: "7FD4A8").opacity(0.5), radius: 4, x: 0, y: 2)
+                            )
+                            .offset(x: -10, y: -8)
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(hex: "C6EFDB"))
-                    )
                 }
-                .buttonStyle(.plain)
-                // Guideline 5.1.1(iv): Continue must always be available.
-                // HealthKit permission is encouraged but not required to proceed.
+
+                if !hasGrantedPermissions {
+                    HStack(spacing: 6) {
+                        Text(NSLocalizedString("legacy.permissions.hint", value: "بدون هاي الصلاحيات ما نكدر نقرأ تاريخك الصحي ونحسب مستواك بدقة.", comment: ""))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color(hex: "7FD4A8"))
+                    }
+                    .padding(.horizontal, 4)
+                }
+
+                // Continue — two visual states (always tappable per Guideline 5.1.1(iv)).
+                // Pre-grant: subtle text-link to nudge users toward the permissions card.
+                // Post-grant: prominent primary button.
+                if hasGrantedPermissions {
+                    Button { viewModel.primaryButtonTapped() } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.left")
+                            Text(NSLocalizedString("legacy.continue", value: "متابعة", comment: ""))
+                                .font(.system(size: 17, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(hex: "7FD4A8"))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                } else {
+                    Button { viewModel.primaryButtonTapped() } label: {
+                        HStack(spacing: 6) {
+                            Text(NSLocalizedString("legacy.continue.skip", value: "تخطي بدون صلاحيات", comment: ""))
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .underline()
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(28)
             .glassCard()
@@ -174,6 +231,7 @@ struct LegacyCalculationScreenView: View {
                 withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                     introAppeared = true
                 }
+                pulsePhase = true
             }
         }
     }
@@ -625,60 +683,7 @@ final class LegacyCalculationViewModel: ObservableObject {
 
         let totalPoints = stepsPoints + caloriesPoints + distancePoints + sleepPoints
 
-        // Level table — progressive thresholds
-        let level: Int
-        switch totalPoints {
-        case 0..<200:           level = 1
-        case 200..<500:         level = 2
-        case 500..<1000:        level = 3
-        case 1000..<1800:       level = 4
-        case 1800..<2800:       level = 5
-        case 2800..<4000:       level = 6
-        case 4000..<5500:       level = 7
-        case 5500..<7500:       level = 8
-        case 7500..<10000:      level = 9
-        case 10000..<13000:     level = 10
-        case 13000..<16500:     level = 11
-        case 16500..<20500:     level = 12
-        case 20500..<25000:     level = 13
-        case 25000..<30000:     level = 14
-        case 30000..<36000:     level = 15
-        case 36000..<42500:     level = 16
-        case 42500..<50000:     level = 17
-        case 50000..<58000:     level = 18
-        case 58000..<66500:     level = 19
-        case 66500..<76000:     level = 20
-        case 76000..<86000:     level = 21
-        case 86000..<97000:     level = 22
-        case 97000..<109000:    level = 23
-        case 109000..<122000:   level = 24
-        case 122000..<136000:   level = 25
-        case 136000..<151000:   level = 26
-        case 151000..<167000:   level = 27
-        case 167000..<184000:   level = 28
-        case 184000..<202000:   level = 29
-        case 202000..<222000:   level = 30
-        case 222000..<244000:   level = 31
-        case 244000..<268000:   level = 32
-        case 268000..<294000:   level = 33
-        case 294000..<322000:   level = 34
-        case 322000..<352000:   level = 35
-        case 352000..<385000:   level = 36
-        case 385000..<420000:   level = 37
-        case 420000..<458000:   level = 38
-        case 458000..<500000:   level = 39
-        case 500000..<545000:   level = 40
-        case 545000..<594000:   level = 41
-        case 594000..<647000:   level = 42
-        case 647000..<705000:   level = 43
-        case 705000..<768000:   level = 44
-        case 768000..<837000:   level = 45
-        case 837000..<912000:   level = 46
-        case 912000..<994000:   level = 47
-        case 994000..<1084000:  level = 48
-        case 1084000..<1183000: level = 49
-        default:                level = 50
-        }
+        let level = AiQoLeveling.level(forTotalXP: totalPoints)
 
         // Level titles — localized
         let title: String

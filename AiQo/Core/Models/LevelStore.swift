@@ -60,10 +60,6 @@ final class LevelStore: ObservableObject {
         level
     }
     
-    // ثوابت الحسابات
-    private let baseXP = 1000
-    private let multiplier = 1.2
-    
     private enum StorageKeys {
         static let currentLevel = "aiqo.user.level"
         static let currentXP = "aiqo.user.currentXP"
@@ -83,38 +79,41 @@ final class LevelStore: ObservableObject {
     
     // MARK: - Core Logic
     
-    /// XP المطلوب للوصول للمستوى التالي
+    /// XP المطلوب للوصول للمستوى التالي (range size of current level).
     var xpForNextLevel: Int {
-        let levelDouble = Double(level)
-        return Int(Double(baseXP) * pow(multiplier, levelDouble - 1))
+        AiQoLeveling.xpForNextLevel(at: level)
     }
-    
+
     var progress: Double {
-        guard xpForNextLevel > 0 else { return 0 }
-        return Double(currentXP) / Double(xpForNextLevel)
+        let needed = AiQoLeveling.xpForNextLevel(at: level)
+        guard needed > 0 else { return 1.0 }
+        return min(Double(currentXP) / Double(needed), 1.0)
     }
-    
-    /// إضافة نقاط خبرة
+
+    /// إضافة نقاط خبرة. Level + currentXP are derived from `totalXP` via the
+    /// shared threshold table so we always agree with the onboarding result.
     func addXP(_ amount: Int) {
-        currentXP += amount
+        guard amount > 0 else { return }
+        let oldLevel = level
         totalXP += amount
-        checkForLevelUp()
+        recomputeLevelAndCurrentXP()
+
+        if level > oldLevel {
+            notifyUI(didLevelUp: true)
+        }
+
         save()
 
-        // Sync to Supabase profiles — non-blocking
         let syncXP = totalXP
         let syncLevel = level
         Task { @MainActor in
             await SupabaseArenaService.shared.syncUserStats(totalPoints: syncXP, level: syncLevel)
         }
     }
-    
-    private func checkForLevelUp() {
-        while currentXP >= xpForNextLevel {
-            currentXP -= xpForNextLevel
-            level += 1
-            notifyUI(didLevelUp: true)
-        }
+
+    private func recomputeLevelAndCurrentXP() {
+        level = max(AiQoLeveling.level(forTotalXP: totalXP), 1)
+        currentXP = AiQoLeveling.currentXP(forTotalXP: totalXP, atLevel: level)
     }
     
     // MARK: - Shield Logic 🛡️
@@ -164,10 +163,16 @@ final class LevelStore: ObservableObject {
     }
     
     private func load() {
-        level = UserDefaults.standard.integer(forKey: StorageKeys.currentLevel)
-        if level == 0 { level = 1 }
-        currentXP = UserDefaults.standard.integer(forKey: StorageKeys.currentXP)
         totalXP = UserDefaults.standard.integer(forKey: StorageKeys.totalXP)
+
+        // Re-derive level + currentXP from totalXP so we self-heal any drift
+        // from older builds that used the exponential formula. Without this,
+        // existing users who onboarded under the old code keep their wrong
+        // stored level forever.
+        recomputeLevelAndCurrentXP()
+
+        UserDefaults.standard.set(level, forKey: StorageKeys.currentLevel)
+        UserDefaults.standard.set(currentXP, forKey: StorageKeys.currentXP)
     }
     
     private func migrateLegacyStorageIfNeeded() {
@@ -219,8 +224,7 @@ final class LevelStore: ObservableObject {
     }
     
     private func xpRequired(for level: Int) -> Int {
-        let safeLevel = max(level, 1)
-        return Int(Double(baseXP) * pow(multiplier, Double(safeLevel) - 1))
+        AiQoLeveling.xpForNextLevel(at: level)
     }
     
     private func notifyUI(didLevelUp: Bool) {
