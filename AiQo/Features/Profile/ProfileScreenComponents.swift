@@ -360,17 +360,6 @@ struct ProfileHeroCard: View {
                     .lineLimit(2)
             }
             .buttonStyle(.plain)
-
-            Text(displayUsername)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(ProfilePalette.textSecondary)
-
-            Text(subtitle)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(ProfilePalette.textSecondary)
-                .multilineTextAlignment(multilineAlignment)
-                .frame(maxWidth: .infinity, alignment: textAlignment)
-                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: textAlignment)
     }

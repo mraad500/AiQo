@@ -253,12 +253,6 @@ final class AppFlowController: ObservableObject {
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
-        // Migration: legacy users who completed both old screens (or feature intro) are
-        // considered done with the new unified quickStart screen.
-        let didCompleteQuickStart = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart)
-            || didCompleteFeatureIntro
-            || (UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
-                && UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization))
 
         // Check Supabase session — attempt to recover expired sessions before falling back to login
         let isLoggedIn: Bool = {
@@ -292,10 +286,6 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
-        if !didCompleteQuickStart {
-            return .quickStart
-        }
-
         if !didCompleteFeatureIntro {
             return .featureIntro
         }
@@ -314,10 +304,6 @@ final class AppFlowController: ObservableObject {
         let didCompleteFeatureIntro = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteFeatureIntro)
         let didCompleteAIConsent = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteAIConsent)
         let didAcknowledgeMedicalDisclaimer = UserDefaults.standard.bool(forKey: OnboardingKeys.didAcknowledgeMedicalDisclaimer)
-        let didCompleteQuickStart = UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart)
-            || didCompleteFeatureIntro
-            || (UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteHealthScreening)
-                && UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteCaptainPersonalization))
 
         if !didCompleteDatingProfile {
             return .profileSetup
@@ -333,10 +319,6 @@ final class AppFlowController: ObservableObject {
 
         if !didAcknowledgeMedicalDisclaimer {
             return .medicalDisclaimer
-        }
-
-        if !didCompleteQuickStart {
-            return .quickStart
         }
 
         if !didCompleteFeatureIntro {

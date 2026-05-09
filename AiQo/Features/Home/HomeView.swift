@@ -158,9 +158,9 @@ struct HomeView: View {
     
     private var metricsGrid: some View {
         let allRows = Array(viewModel.gridRows.enumerated())
-        return VStack(spacing: 28) {
+        return VStack(spacing: 36) {
             ForEach(allRows, id: \.offset) { rowIndex, row in
-                HStack(spacing: 14) {
+                HStack(spacing: 18) {
                     ForEach(Array(row.enumerated()), id: \.element.id) { colIndex, cardData in
                         let flatIndex = allRows.prefix(rowIndex).reduce(0) { $0 + $1.element.count } + colIndex
                         if viewModel.expandedMetric == cardData.kind {

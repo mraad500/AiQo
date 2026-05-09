@@ -9,16 +9,13 @@ struct AppSettingsScreen: View {
     /// Observed so the "Captain Voice" row's subtitle updates live when the
     /// user grants or revokes cloud-voice consent from `VoiceSettingsScreen`.
     @StateObject private var voiceConsent = CaptainVoiceConsent.shared
-    @State private var showDeveloperPanel = false
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var showAcknowledgements = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfService = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
-    #if DEBUG
-    @State private var isPreparingTestWhisper = false
-    @State private var testWhisperStatus: String?
-    #endif
 
     var body: some View {
         Form {
@@ -315,8 +312,40 @@ struct AppSettingsScreen: View {
             }
 
             Section("legal.section".localized) {
-                LegalLinksView()
+                Button {
+                    showPrivacyPolicy = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Text("legal.privacy.title".localized)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "lock.shield")
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showTermsOfService = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Text("legal.terms.title".localized)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "doc.text")
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+
                 Button {
                     showAcknowledgements = true
                 } label: {
@@ -332,66 +361,6 @@ struct AppSettingsScreen: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            #if DEBUG
-            Section("debug.preview.navigation".localized) {
-                Button {
-                    showDeveloperPanel = true
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("debug.preview.navigation".localized)
-                                .foregroundStyle(.primary)
-
-                            Text("debug.preview.settingsHint".localized)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "hammer.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    triggerTestCoachNudge()
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Trigger Test Spiritual Whisper")
-                                .foregroundStyle(.primary)
-
-                            Text("Queues an Iraqi Arabic coach nudge and fires it 5 seconds after backgrounding.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        if isPreparingTestWhisper {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "bell.and.waves.left.and.right.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(.plain)
-                .disabled(isPreparingTestWhisper)
-
-                if let testWhisperStatus {
-                    Text(testWhisperStatus)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            #endif
         }
         .navigationTitle(
             NSLocalizedString(
@@ -475,11 +444,14 @@ struct AppSettingsScreen: View {
                 )
             )
         }
-        .sheet(isPresented: $showDeveloperPanel) {
-            DeveloperPanelView()
-        }
         .sheet(isPresented: $showAcknowledgements) {
             LegalView(type: .acknowledgements)
+        }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            LegalView(type: .privacyPolicy)
+        }
+        .sheet(isPresented: $showTermsOfService) {
+            LegalView(type: .termsOfService)
         }
     }
 
@@ -507,25 +479,6 @@ struct AppSettingsScreen: View {
         }
     }
 
-    #if DEBUG
-    private func triggerTestCoachNudge() {
-        guard !isPreparingTestWhisper else { return }
-
-        isPreparingTestWhisper = true
-        testWhisperStatus = "Preparing test coach nudge..."
-
-        Task {
-            let didQueue = await SmartNotificationScheduler.shared.queueDeveloperTestCoachNudge()
-
-            await MainActor.run {
-                isPreparingTestWhisper = false
-                testWhisperStatus = didQueue
-                    ? "Ready. Send the app to the background to receive it in 5 seconds."
-                    : "Notification permission is unavailable. Enable notifications for AiQo first."
-            }
-        }
-    }
-    #endif
 }
 
 private extension AppSettingsScreen {
