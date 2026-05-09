@@ -20,11 +20,16 @@ struct ProfileScreen: View {
     @State var showBioMetricsSheet = false
     @State var showWeeklyReport = false
     @State var showProgressPhotos = false
+    @State var showSubscriptionPaywall = false
+
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
 
     // Privacy
     @State var isProfilePublic: Bool = UserProfileStore.shared.tribePrivacyMode == .public
     @State var isSyncingPrivacy = false
     @State var privacySyncFailed = false
+
+    @State private var showQuickStartOnboarding: Bool = false
 
     var body: some View {
         ZStack {
@@ -104,12 +109,48 @@ struct ProfileScreen: View {
 
                     profileSection(
                         title: NSLocalizedString(
+                            "screen.profile.section.subscription",
+                            value: "Subscription",
+                            comment: ""
+                        )
+                    ) {
+                        AppActionRow(
+                            icon: "crown.fill",
+                            iconFill: ProfilePalette.sand.opacity(0.36),
+                            title: subscriptionRowTitle,
+                            subtitle: subscriptionRowSubtitle,
+                            tone: .sand
+                        ) {
+                            showSubscriptionPaywall = true
+                        }
+                    }
+
+                    profileSection(
+                        title: NSLocalizedString(
                             "screen.profile.section.app",
                             value: "AiQo",
                             comment: ""
                         )
                     ) {
                         VStack(spacing: 10) {
+                            AppActionRow(
+                                icon: "gearshape.fill",
+                                iconFill: ProfilePalette.mint.opacity(0.34),
+                                title: NSLocalizedString(
+                                    "screen.profile.app.settings.title",
+                                    value: "App Settings",
+                                    comment: ""
+                                ),
+                                subtitle: NSLocalizedString(
+                                    "screen.profile.app.settings.subtitle",
+                                    value: "Notifications, units, language",
+                                    comment: ""
+                                ),
+                                tone: .mint
+                            ) {
+                                showSettingsSheet = true
+                            }
+
                             AppActionRow(
                                 icon: "chart.bar.doc.horizontal.fill",
                                 iconFill: Color.blue.opacity(0.2),
@@ -146,23 +187,6 @@ struct ProfileScreen: View {
                             }
 
                             AppActionRow(
-                                icon: "gearshape.fill",
-                                iconFill: ProfilePalette.mint.opacity(0.34),
-                                title: NSLocalizedString(
-                                    "screen.profile.app.settings.title",
-                                    value: "App Settings",
-                                    comment: ""
-                                ),
-                                subtitle: NSLocalizedString(
-                                    "screen.profile.app.settings.subtitle",
-                                    value: "Notifications, units, language",
-                                    comment: ""
-                                )
-                            ) {
-                                showSettingsSheet = true
-                            }
-
-                            AppActionRow(
                                 icon: "message.fill",
                                 iconFill: ProfilePalette.sand.opacity(0.36),
                                 title: NSLocalizedString(
@@ -190,6 +214,10 @@ struct ProfileScreen: View {
             refreshProfileState()
             refreshLevelSummary()
             HealthKitManager.shared.fetchSteps()
+
+            if !UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart) {
+                showQuickStartOnboarding = true
+            }
         }
         .task {
             await loadBioMetrics()
@@ -280,6 +308,62 @@ struct ProfileScreen: View {
                 subject: NSLocalizedString("screen.profile.support.subject", value: "AiQo Support", comment: "")
             )
         }
+        .fullScreenCover(isPresented: $showSubscriptionPaywall) {
+            ProfilePaywallSheet {
+                showSubscriptionPaywall = false
+            }
+        }
+        .fullScreenCover(isPresented: $showQuickStartOnboarding) {
+            QuickStartOnboardingView {
+                UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteQuickStart)
+                UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteHealthScreening)
+                UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteCaptainPersonalization)
+                showQuickStartOnboarding = false
+            }
+        }
+    }
+
+    private var subscriptionRowTitle: String {
+        switch entitlementStore.currentTier {
+        case .none:
+            return NSLocalizedString(
+                "screen.profile.subscription.tier.free",
+                value: "Free Plan",
+                comment: ""
+            )
+        case .max:
+            return "AiQo Max"
+        case .trial:
+            return NSLocalizedString(
+                "screen.profile.subscription.tier.trial",
+                value: "Free Trial",
+                comment: ""
+            )
+        case .pro:
+            return "AiQo Intelligence Pro"
+        }
+    }
+
+    private var subscriptionRowSubtitle: String {
+        if entitlementStore.isActive, let expiresAt = entitlementStore.expiresAt {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: AppSettingsStore.shared.appLanguage.rawValue)
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            return String(
+                format: NSLocalizedString(
+                    "screen.profile.subscription.activeUntil",
+                    value: "Active until %@",
+                    comment: ""
+                ),
+                formatter.string(from: expiresAt)
+            )
+        }
+        return NSLocalizedString(
+            "screen.profile.subscription.viewPlans",
+            value: "View available plans",
+            comment: ""
+        )
     }
 }
 

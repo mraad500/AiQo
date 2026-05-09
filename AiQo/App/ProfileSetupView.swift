@@ -2,19 +2,16 @@ import SwiftUI
 
 struct ProfileSetupView: View {
     @State private var fullName = UserProfileStore.shared.current.name
-    @State private var username = UserProfileStore.shared.current.username ?? ""
-    @State private var birthDate = Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
+    @State private var ageText = ""
     @State private var gender: ActivityNotificationGender = .male
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var isProfilePublic = true
     @State private var appeared = false
 
-    // Name is optional — Apple Sign In may have already provided it, and
-    // Apple Review Guideline 4 prohibits forcing re-entry of data Apple supplies.
-    // Weight + height remain required for health calculations.
     private var isFormValid: Bool {
-        return !normalizedUsername.isEmpty
+        !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !ageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !weightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !heightText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -43,39 +40,22 @@ struct ProfileSetupView: View {
                             icon: "person.fill"
                         )
 
-                        AuthFlowTextField(
-                            title: localized("dating.username", fallback: "اسم المستخدم"),
-                            text: $username,
-                            icon: "at",
-                            prefix: "@",
-                            keyboardType: .asciiCapable
-                        )
-
-                        HStack {
-                            DatePicker(
-                                "",
-                                selection: $birthDate,
-                                in: ...Date(),
-                                displayedComponents: .date
+                        HStack(spacing: 8) {
+                            CompactNumericField(
+                                title: localized("dating.age", fallback: "العمر"),
+                                text: $ageText
                             )
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            Spacer()
-                            Text(localized("dating.birthDate", fallback: "تاريخ الميلاد"))
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "calendar")
-                                .foregroundStyle(AuthFlowTheme.sand)
+                            CompactNumericField(
+                                title: localized("dating.weight", fallback: "الوزن"),
+                                text: $weightText,
+                                suffix: NSLocalizedString("unit.kg", value: "كغم", comment: "")
+                            )
+                            CompactNumericField(
+                                title: localized("dating.height", fallback: "الطول"),
+                                text: $heightText,
+                                suffix: NSLocalizedString("unit.cm", value: "سم", comment: "")
+                            )
                         }
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.white)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                                )
-                        )
 
                         VStack(alignment: .trailing, spacing: 10) {
                             Text(localized("dating.gender", fallback: "الجنس"))
@@ -99,23 +79,6 @@ struct ProfileSetupView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
                                     .fill(Color.gray.opacity(0.08))
-                            )
-                        }
-
-                        HStack(spacing: 12) {
-                            AuthFlowTextField(
-                                title: localized("dating.weight", fallback: "الوزن"),
-                                text: $weightText,
-                                icon: "scalemass.fill",
-                                suffix: NSLocalizedString("unit.kg", value: "كغم", comment: ""),
-                                keyboardType: .asciiCapableNumberPad
-                            )
-                            AuthFlowTextField(
-                                title: localized("dating.height", fallback: "الطول"),
-                                text: $heightText,
-                                icon: "ruler.fill",
-                                suffix: NSLocalizedString("unit.cm", value: "سم", comment: ""),
-                                keyboardType: .asciiCapableNumberPad
                             )
                         }
 
@@ -144,33 +107,19 @@ struct ProfileSetupView: View {
         }
     }
 
-    private var normalizedUsername: String {
-        var raw = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if raw.hasPrefix("@") { raw.removeFirst() }
-
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._"))
-        let filtered = raw.unicodeScalars.filter { allowed.contains($0) }
-        return String(String.UnicodeScalarView(filtered))
-    }
-
     private func continueTapped() {
         let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedWeight = weightText.replacingOccurrences(of: ",", with: ".")
-        guard let weight = Double(normalizedWeight),
+        guard !trimmedName.isEmpty,
+              let age = Int(ageText.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let weight = Double(normalizedWeight),
               let height = Int(heightText) else { return }
 
-        // Name is optional per Guideline 4 — use a fallback if empty
-        let displayName = trimmedName.isEmpty ? normalizedUsername : trimmedName
-
-        let age = Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 0
-
         var profile = UserProfileStore.shared.current
-        profile.name = displayName
+        profile.name = trimmedName
         profile.age = max(age, 0)
         profile.heightCm = height
         profile.weightKg = Int(weight.rounded())
-        profile.username = normalizedUsername
-        profile.birthDate = birthDate
         profile.gender = gender
 
         if profile.goalText.isEmpty {
@@ -191,6 +140,44 @@ struct ProfileSetupView: View {
 
     private func localized(_ key: String, fallback: String) -> String {
         NSLocalizedString(key, tableName: "Localizable", bundle: .main, value: fallback, comment: "")
+    }
+}
+
+// MARK: - Compact Numeric Field
+
+private struct CompactNumericField: View {
+    let title: String
+    @Binding var text: String
+    var suffix: String? = nil
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let suffix = suffix {
+                Text(suffix)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            TextField(title, text: $text)
+                .keyboardType(.asciiCapableNumberPad)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.white.opacity(0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
+        )
     }
 }
 
