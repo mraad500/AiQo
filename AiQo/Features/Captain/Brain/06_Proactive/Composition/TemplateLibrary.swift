@@ -99,6 +99,11 @@ public enum TemplateLibrary {
         case (.disengagement, _):
             return Template(title: "Still with me?", body: "I'm here when you need me.")
 
+        case (.hydrationReminder, "ar"):
+            return Template(title: "شربة ماي", body: "خذ شربة ماي هسه.")
+        case (.hydrationReminder, _):
+            return Template(title: "Water break", body: "Time for a sip.")
+
         default:
             return (language == "ar")
                 ? Template(title: "كابتن حمودي", body: "عندي شي إلك.")

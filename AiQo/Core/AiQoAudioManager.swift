@@ -26,6 +26,7 @@ final class AiQoAudioManager: ObservableObject {
     private var mixWithOthers = true
     private var ambientVolume: Float = 1
     private var speechDuckedVolume: Float = 0.26
+    private var speechDuckOverride: Float?
     private var activeSpeechDuckCount = 0
     private var volumeRampTask: Task<Void, Never>?
 
@@ -124,9 +125,18 @@ final class AiQoAudioManager: ObservableObject {
         targetVolume: Float = 0.26,
         fadeDuration: TimeInterval = 0.2
     ) {
-        speechDuckedVolume = min(max(targetVolume, 0), 1)
+        let resolvedTarget = speechDuckOverride ?? targetVolume
+        speechDuckedVolume = min(max(resolvedTarget, 0), 1)
         activeSpeechDuckCount += 1
         applyEffectiveVolume(duration: fadeDuration)
+    }
+
+    /// Pin the duck-target volume so subsequent `beginSpeechDucking` calls use
+    /// it instead of the caller-provided default. Hosts that need a specific
+    /// music/voice mix (e.g. the gratitude session ducks to 10% under the
+    /// captain) set this on enter and clear it (`nil`) on exit.
+    func setSpeechDuckOverride(_ volume: Float?) {
+        speechDuckOverride = volume.map { min(max($0, 0), 1) }
     }
 
     /// Restores the user-selected ambient level after spoken coaching finishes.

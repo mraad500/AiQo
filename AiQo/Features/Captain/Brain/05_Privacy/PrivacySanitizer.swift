@@ -4,12 +4,63 @@ import ImageIO
 import os.log
 import UniformTypeIdentifiers
 
+/// Coaching-safe profile payload passed alongside every cloud request.
+///
+/// Only data the user explicitly entered for personal-coaching purposes:
+/// first name (to be addressed naturally), age (for max-HR zones), gender
+/// (for caloric-baseline hints), and bucketed height/weight (for training-load
+/// adjustments). No handles, emails, phones, precise location, or last names.
+///
+/// Numeric body stats are bucketed to 5-unit precision at serialization time
+/// to reduce identifiability while keeping coaching utility (e.g. 95kg → ~95kg,
+/// 177cm → ~175cm).
+struct CloudSafeProfile: Sendable {
+    let firstName: String?
+    let age: Int?
+    let gender: String?
+    let heightCm: Int?
+    let weightKg: Int?
+
+    /// Multi-line summary matching `PromptComposer.extractFirstName` patterns
+    /// (`- Preferred name: …`) so the persona's name-usage layer activates.
+    func asSummaryLines() -> String {
+        var lines: [String] = []
+        if let firstName, !firstName.isEmpty {
+            lines.append("- Preferred name: \(firstName)")
+        }
+        if let age, age > 0 {
+            lines.append("- Age: \(age)")
+        }
+        if let gender, !gender.isEmpty {
+            lines.append("- Gender: \(gender)")
+        }
+        if let heightCm, heightCm > 0 {
+            let bucket = (heightCm / 5) * 5
+            lines.append("- Height: ~\(bucket)cm")
+        }
+        if let weightKg, weightKg > 0 {
+            let bucket = (weightKg / 5) * 5
+            lines.append("- Weight: ~\(bucket)kg")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    var isEmpty: Bool {
+        firstName == nil && age == nil && gender == nil && heightCm == nil && weightKg == nil
+    }
+}
+
 /// Privacy-first sanitizer that enforces Apple's privacy guidelines before any data leaves the device.
 ///
 /// Guarantees:
 /// - PII (emails, phones, UUIDs, IPs) redacted to "[REDACTED]"
-/// - User names normalized to "User" in cloud payloads
-/// - Conversation truncated to LAST 4 messages only (prevents hallucination, saves tokens)
+/// - Coaching profile (first name, age, bucketed body stats) passed through
+///   via `CloudSafeProfile` so the Captain can personalize replies. This is
+///   data the user explicitly entered for coaching; it requires cloud-AI
+///   consent (enforced upstream in `CloudBrainService`).
+/// - Conversation kept to the last 16 messages OR ~6000 chars (whichever is smaller),
+///   then PII-redacted per message. The cap exists for token-budget predictability,
+///   NOT for privacy — privacy comes from the per-message redaction below.
 /// - Health data bucketed: steps by 500, calories by 10, HR by 5, sleep by 0.5h
 /// - Kitchen images stripped of EXIF/GPS metadata
 struct PrivacySanitizer: Sendable {
@@ -19,7 +70,11 @@ struct PrivacySanitizer: Sendable {
     private let genericUserToken = "User"
     private let redactionToken = "[REDACTED]"
     private let redactedProfileToken = "[REDACTED_PROFILE]"
-    private let maxConversationMessages = 4
+    private let maxConversationMessages = 16
+    /// Per-conversation char budget walked newest-first. Roughly 3-4k Arabic
+    /// tokens — paired with `maxOutputTokens=1400` it leaves ample headroom
+    /// for system prompt + response inside Gemini's context window.
+    private let maxConversationCharBudget = 6000
     private let maximumKitchenImageDimension = 1280
     private let kitchenImageCompressionQuality: CGFloat = 0.78
     private let stepsBucketSize = 500
@@ -88,6 +143,23 @@ struct PrivacySanitizer: Sendable {
         RedactionRule(
             pattern: #"\b[a-z0-9]{24,128}\b"#,
             template: "[REDACTED]"
+        ),
+        // `sk-`-prefixed API keys (OpenAI / Anthropic / MiniMax convention).
+        // Added 2026-04-22 as a backstop for the cloud-voice integration —
+        // the MiniMax key lives in Keychain + Info.plist, but any accidental
+        // surfacing in a log line or prompt context must be redacted before
+        // it leaves the device. Template is fixed rather than keeping the
+        // prefix so partial leaks don't fingerprint the key.
+        RedactionRule(
+            pattern: #"\bsk-[A-Za-z0-9_\-\.]{8,200}\b"#,
+            template: "[REDACTED_API_KEY]"
+        ),
+        // `Bearer …` auth headers — same backstop class. Matches the
+        // scheme token plus a bounded opaque value so header leaks in
+        // debug logs or error bodies do not reach the cloud.
+        RedactionRule(
+            pattern: #"\bBearer\s+[A-Za-z0-9_\-\.]{8,400}\b"#,
+            template: "Bearer [REDACTED]"
         )
     ]
 
@@ -96,6 +168,7 @@ struct PrivacySanitizer: Sendable {
     func sanitizeForCloud(
         _ request: HybridBrainRequest,
         knownUserName: String?,
+        cloudSafeProfile: CloudSafeProfile? = nil,
         cloudSafeMemories: String = ""
     ) -> HybridBrainRequest {
         let sanitizedConversation = sanitizeConversation(
@@ -109,13 +182,14 @@ struct PrivacySanitizer: Sendable {
 
         let safeIntent = sanitizePromptForCloud(request.intentSummary, knownUserName: knownUserName)
         let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
+        let profileSummary = cloudSafeProfile?.asSummaryLines() ?? ""
 
         return HybridBrainRequest(
             conversation: sanitizedConversation,
             screenContext: request.screenContext,
             language: request.language,
             contextData: sanitizedContext,
-            userProfileSummary: "",
+            userProfileSummary: profileSummary,
             intentSummary: safeIntent,
             workingMemorySummary: safeWorkingMemory,
             attachedImageData: sanitizedImageData,
@@ -145,16 +219,14 @@ struct PrivacySanitizer: Sendable {
         var sanitized = normalizedWhitespace(in: text)
         guard !sanitized.isEmpty else { return "" }
 
-        // Step 1: Replace self-identifying phrases ("my name is X")
-        sanitized = replaceSelfIdentifyingPhrases(in: sanitized)
-
-        // Step 2: Replace explicit profile fields ("name:", "email:", etc.)
+        // Step 1: Replace explicit non-name profile fields ("email:", "phone:", "DOB:" …).
+        // Name/username patterns are intentionally NOT redacted — the user's first name
+        // is passed to the cloud via `CloudSafeProfile` so the Captain can address the
+        // user naturally. Redacting it here would create contradictions between the
+        // system prompt ("Preferred name: محمد") and conversation turns ("اسمي User").
         sanitized = replaceExplicitProfileFields(in: sanitized)
 
-        // Step 3: Replace known user name globally → "User"
-        sanitized = replaceKnownUserName(in: sanitized, knownUserName: knownUserName)
-
-        // Step 4: Apply PII regex redaction (emails, phones, UUIDs, IPs)
+        // Step 2: Apply PII regex redaction (emails, phones, UUIDs, IPs)
         // Uses pre-compiled regexes to avoid NSRegularExpression init cost per message.
         for rule in Self.piiRedactionRules {
             guard let regex = rule.compiledRegex else { continue }
@@ -214,6 +286,14 @@ struct PrivacySanitizer: Sendable {
 
     // MARK: - Name Injection (post-generation, into Captain's reply)
 
+    /// Replaces explicit name tokens with the user's first name.
+    ///
+    /// Apple v1.1 rejection fix: previously this function also prepended the
+    /// user's name to the front of every assistant reply when no placeholder
+    /// was found, producing screenshots like "John, Got it. 60kg is..." that
+    /// Apple Review flagged under Guideline 4.0.0. The prepend path is gone.
+    /// Hamoudi now says the user's name only if he naturally writes it (via
+    /// one of the explicit placeholder tokens inside his own generated reply).
     func injectUserName(into response: String, userName: String) -> String {
         let trimmedResponse = response.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -224,26 +304,12 @@ struct PrivacySanitizer: Sendable {
 
         let firstName = trimmedName.components(separatedBy: " ").first ?? trimmedName
 
-        // Replace explicit placeholders
-        let placeholders = ["[USER_NAME]", "{{userName}}", "{{user_name}}", "%USER_NAME%"]
-        for placeholder in placeholders where trimmedResponse.contains(placeholder) {
-            return trimmedResponse.replacingOccurrences(of: placeholder, with: firstName)
+        let placeholders = ["[USER_NAME]", "{{userName}}", "{{user_name}}", "{USER_NAME}", "%USER_NAME%"]
+        var result = trimmedResponse
+        for placeholder in placeholders where result.contains(placeholder) {
+            result = result.replacingOccurrences(of: placeholder, with: firstName)
         }
-
-        // Don't double-prepend if name already present
-        let lowercasedResponse = trimmedResponse.lowercased()
-        let lowercasedFirstName = firstName.lowercased()
-        let prefixTokens = ["،", ",", ":", " "]
-
-        if prefixTokens.contains(where: { lowercasedResponse.hasPrefix(lowercasedFirstName + $0) }) {
-            return trimmedResponse
-        }
-        if trimmedResponse.hasPrefix("يا \(firstName)") {
-            return trimmedResponse
-        }
-
-        let separator = containsArabicCharacters(in: trimmedResponse) ? "، " : ", "
-        return "\(firstName)\(separator)\(trimmedResponse)"
+        return result
     }
 
     // MARK: - Kitchen Image Sanitization (strips EXIF/GPS via re-encoding)
@@ -308,16 +374,53 @@ private extension PrivacySanitizer {
         }
     }
 
-    // MARK: - Conversation Sanitization (truncate to last 4 messages)
+    // MARK: - Conversation Sanitization
+    //
+    // Length cap is two-stage:
+    //   1. Take the last `maxConversationMessages` (16) messages.
+    //   2. Walk newest-first summing UTF-8 byte counts; stop when the
+    //      running total exceeds `maxConversationCharBudget` (~6000).
+    //   3. Always retain at least the last 2 messages even if they
+    //      individually exceed the budget — starving the model of the
+    //      current turn produces worse failures than a single oversize
+    //      payload.
+    //   4. Reverse back to chronological order, then run the unchanged
+    //      per-message PII redaction pipeline.
+    // The cap is for token-budget predictability, NOT privacy — privacy
+    // comes from `sanitizePromptForCloud` redaction below.
 
     func sanitizeConversation(
         _ conversation: [CaptainConversationMessage],
         knownUserName: String?
     ) -> [CaptainConversationMessage] {
-        let truncated = Array(conversation.suffix(maxConversationMessages))
+        let totalAvailable = conversation.count
+        let countCapped = Array(conversation.suffix(maxConversationMessages))
+
+        // Walk newest-first, accumulating until the char budget is exceeded.
+        var keptReversed: [CaptainConversationMessage] = []
+        var charsUsed = 0
+        for message in countCapped.reversed() {
+            let messageBytes = message.content.utf8.count
+            // Always keep at least the last 2 turns regardless of budget.
+            let isUnderMinimum = keptReversed.count < 2
+            if !isUnderMinimum && (charsUsed + messageBytes) > maxConversationCharBudget {
+                break
+            }
+            keptReversed.append(message)
+            charsUsed += messageBytes
+        }
+
+        let budgetTrimmed = Array(keptReversed.reversed())
+
+        if budgetTrimmed.count < totalAvailable {
+            Self.conversationLogger.notice(
+                "sanitizer_history_trimmed kept=\(budgetTrimmed.count) ofTotal=\(totalAvailable) charBudgetUsed=\(charsUsed)"
+            )
+        }
+
         var sanitized: [CaptainConversationMessage] = []
 
-        for message in truncated {
+        for message in budgetTrimmed {
             let sanitizedContent = sanitizePromptForCloud(message.content, knownUserName: knownUserName)
 
             if !sanitizedContent.isEmpty {
@@ -406,21 +509,18 @@ private extension PrivacySanitizer {
     func replaceExplicitProfileFields(in text: String) -> String {
         var sanitized = text
 
+        // Name/username rules intentionally omitted: the first name is carried
+        // by `CloudSafeProfile` so redacting it here (e.g. "my name is محمد" →
+        // "my name User") would create prompt contradictions. Contact / DOB /
+        // location / body-metric field labels remain redacted — those are
+        // stricter PII classes not covered by the coaching profile payload.
         let rules: [RedactionRule] = [
             RedactionRule(
-                pattern: #"(?i)\b(name|full name|username|user name)\b\s*[:=]?\s*[^,\n]+"#,
-                template: "$1 \(genericUserToken)"
-            ),
-            RedactionRule(
-                pattern: #"(?i)\b(email|e-mail|phone|mobile|number|address|location|dob|date of birth|birthday|age|height|weight)\b\s*[:=]?\s*[^,\n]+"#,
+                pattern: #"(?i)\b(email|e-mail|phone|mobile|number|address|location|dob|date of birth|birthday)\b\s*[:=]?\s*[^,\n]+"#,
                 template: "$1 \(redactedProfileToken)"
             ),
             RedactionRule(
-                pattern: #"(?i)(الاسم|اسم المستخدم|اليوزر|المستخدم)\s*[:=]?\s*[^،\n]+"#,
-                template: "$1 \(genericUserToken)"
-            ),
-            RedactionRule(
-                pattern: #"(?i)(الايميل|البريد|البريد الالكتروني|الرقم|رقم الهاتف|الجوال|العنوان|الموقع|تاريخ الميلاد|العمر|الطول|الوزن)\s*[:=]?\s*[^،\n]+"#,
+                pattern: #"(?i)(الايميل|البريد|البريد الالكتروني|الرقم|رقم الهاتف|الجوال|العنوان|الموقع|تاريخ الميلاد)\s*[:=]?\s*[^،\n]+"#,
                 template: "$1 \(redactedProfileToken)"
             )
         ]
@@ -628,6 +728,13 @@ private extension PrivacySanitizer {
 // MARK: - Sanitized Logging
 
 extension PrivacySanitizer {
+    /// History-trim audit log. Distinct category from `vibeLogger` so
+    /// Console filtering stays clean.
+    fileprivate static let conversationLogger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
+        category: "PrivacySanitizer"
+    )
+
     private static let vibeLogger = Logger(subsystem: "com.mraad500.aiqo", category: "MyVibe")
 
     /// Fixed token used to stand in for a track title in logs.

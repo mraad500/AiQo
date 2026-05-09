@@ -117,7 +117,12 @@ final class CaptainViewModel: ObservableObject {
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
-    private let globalProcessingTimeout: TimeInterval = 15
+    /// Cloud Gemini calls with the full 7-layer prompt + Arabic tokenization
+    /// commonly land in the 12–22s range; 15s was firing on healthy P95 calls
+    /// and showing a "try again" error to users while the request was still
+    /// in-flight. URLSession deadline is 35s so 30s leaves buffer for the
+    /// underlying transport to surface a real failure if the network is gone.
+    private let globalProcessingTimeout: TimeInterval = 30
     /// Sleep analysis runs entirely on-device (HealthKit + Foundation Models) and needs more time.
     private let sleepProcessingTimeout: TimeInterval = 25
 
@@ -515,7 +520,10 @@ final class CaptainViewModel: ObservableObject {
             quickReplies = screenContext == .sleepAnalysis ? [] : (validated.quickReplies ?? [])
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
-            let assistantReply = validated.message
+            let assistantReply = Self.markIfTruncated(
+                assistantReply: validated.message,
+                truncatedAtMaxTokens: reply.truncatedAtMaxTokens
+            )
 
             let replyMessage = ChatMessage(
                 text: assistantReply,
@@ -528,11 +536,14 @@ final class CaptainViewModel: ObservableObject {
             }
 
             persistChatMessage(replyMessage)
-            ConversationThreadManager.shared.logCaptainResponse(content: validated.message)
+            ConversationThreadManager.shared.logCaptainResponse(content: assistantReply)
             trimInMemoryMessagesIfNeeded()
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
             AnalyticsService.shared.track(.captainResponseReceived(latencyMs: latencyMs))
+            if reply.truncatedAtMaxTokens {
+                AnalyticsService.shared.track(.captainResponseTruncated(screen: screenContext.rawValue))
+            }
 
             // استخراج الذكريات بالخلفية
             messageCount += 1
@@ -616,8 +627,10 @@ final class CaptainViewModel: ObservableObject {
         messages.removeFirst(excess)
     }
 
-    /// آخر 20 رسالة فقط — كافية للسياق بدون تضخم الـ payload
-    private static let maxConversationWindow = 20
+    /// آخر 24 رسالة فقط — يجب أن تتجاوز سقف PrivacySanitizer بشكل مريح
+    /// (16 رسالة) عشان ما يجوع الـ sanitizer لما تطول الجلسة الحالية.
+    /// Window size > sanitizer cap of 16 by design — see PrivacySanitizer.maxConversationMessages.
+    private static let maxConversationWindow = 24
 
     private func buildConversationHistory() -> [CaptainConversationMessage] {
         messages.suffix(Self.maxConversationWindow).compactMap { message in
@@ -833,7 +846,48 @@ final class CaptainViewModel: ObservableObject {
             english: "Sorry, something went wrong with the connection. Could you say that again?"
         )
 
-        return replyJSONParser.cleanDisplayText(from: rawReply, fallback: fallback)
+        let parsed = replyJSONParser.cleanDisplayText(from: rawReply, fallback: fallback)
+        return Self.stripInlineMedicalDisclaimerTail(parsed)
+    }
+
+    /// v1.1 Apple rejection fix: the persistent `CaptainSafetyBanner` above
+    /// the chat now carries the wellness/medical framing, so any trailing
+    /// disclaimer sentence leaking into a bubble is redundant. Strip it here
+    /// as a backstop in case an older cached prompt or remote config still
+    /// instructs the LLM to emit it.
+    nonisolated static func stripInlineMedicalDisclaimerTail(_ text: String) -> String {
+        let patterns: [String] = [
+            #"(?i)\n?⚕️?\s*This is educational info[^\n]*"#,
+            #"(?i)\n?⚕️?\s*هذي معلومات تثقيفية[^\n]*"#,
+            #"(?i)\n?⚕️?\s*استشر طبيب[^\n]*"#,
+            #"(?i)\n?⚕️?\s*consult (your )?doctor[^\n]*"#
+        ]
+        var result = text
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { continue }
+            let range = NSRange(result.startIndex..<result.endIndex, in: result)
+            result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: "")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Appends a single ellipsis to a reply that Gemini cut off at
+    /// `MAX_TOKENS`, but only when the existing tail is not already a
+    /// terminal-punctuation sequence. Keeps a quiet visual hint without
+    /// double-punctuating well-formed (but coincidentally truncated) replies.
+    /// The retry/continue UX is intentionally deferred — see fix prompt.
+    nonisolated static func markIfTruncated(
+        assistantReply: String,
+        truncatedAtMaxTokens: Bool
+    ) -> String {
+        guard truncatedAtMaxTokens else { return assistantReply }
+        let trimmed = assistantReply.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return assistantReply }
+        let terminalSuffixes: [String] = [".", "؟", "!", "…", ".\""]
+        if terminalSuffixes.contains(where: { trimmed.hasSuffix($0) }) {
+            return trimmed
+        }
+        return "\(trimmed)…"
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {

@@ -50,8 +50,9 @@ struct CloudBrainService: Sendable {
         let startedAt = Date()
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
 
-        // Single MainActor hop — tier, memories, and consent state in one round-trip.
-        let (activeTier, cloudSafeMemories, consentGranted) = await MainActor.run {
+        // Single MainActor hop — tier, memories, consent, and coaching profile
+        // in one round-trip.
+        let (activeTier, cloudSafeMemories, consentGranted, cloudSafeProfile) = await MainActor.run {
             let tier = AccessManager.shared.activeTier
             let budget = tier.effectiveAccessTier == .pro ? 700 : 400
             let memories = MemoryStore.shared.buildCloudSafeRelevantContext(
@@ -60,7 +61,8 @@ struct CloudBrainService: Sendable {
                 maxTokens: budget
             )
             let consent = AIDataConsentManager.shared.hasUserConsented
-            return (tier, memories, consent)
+            let profile = Self.makeCloudSafeProfile(userName: userName)
+            return (tier, memories, consent, profile)
         }
 
         guard consentGranted else {
@@ -85,6 +87,7 @@ struct CloudBrainService: Sendable {
         let sanitizedRequest = sanitizer.sanitizeForCloud(
             request,
             knownUserName: userName,
+            cloudSafeProfile: cloudSafeProfile,
             cloudSafeMemories: cloudSafeMemories
         )
 
@@ -141,5 +144,36 @@ struct CloudBrainService: Sendable {
         total += request.workingMemorySummary.utf8.count
         total += request.userProfileSummary.utf8.count
         return total
+    }
+
+    /// Builds the coaching-safe profile snapshot passed to the cloud. Runs on
+    /// MainActor because `UserProfileStore.shared.current` reads from
+    /// `UserDefaults` and the observable store is main-isolated.
+    @MainActor
+    private static func makeCloudSafeProfile(userName: String?) -> CloudSafeProfile {
+        let profile = UserProfileStore.shared.current
+
+        let resolvedFirstName: String? = {
+            if let name = userName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !name.isEmpty {
+                return name.components(separatedBy: .whitespaces).first
+            }
+            let profileName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if profileName.isEmpty || profileName.lowercased() == "captain" { return nil }
+            return profileName.components(separatedBy: .whitespaces).first
+        }()
+
+        let gender: String? = {
+            guard let value = profile.gender else { return nil }
+            return value.rawValue
+        }()
+
+        return CloudSafeProfile(
+            firstName: resolvedFirstName,
+            age: profile.age > 0 ? profile.age : nil,
+            gender: gender,
+            heightCm: profile.heightCm > 0 ? profile.heightCm : nil,
+            weightKg: profile.weightKg > 0 ? profile.weightKg : nil
+        )
     }
 }

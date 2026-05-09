@@ -288,7 +288,11 @@ private extension BrainOrchestrator {
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
             spotifyRecommendation: reply.spotifyRecommendation,
-            rawText: reply.rawText
+            rawText: reply.rawText,
+            // `LocalBrainServiceReply` doesn't surface a MAX_TOKENS signal —
+            // on-device generation has its own truncation semantics that the
+            // chat UI does not currently distinguish.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -390,7 +394,9 @@ private extension BrainOrchestrator {
             workoutPlan: nil,
             mealPlan: nil,
             spotifyRecommendation: nil,
-            rawText: rawText
+            rawText: rawText,
+            // Computed sleep fallback is fully on-device — never truncated.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -412,7 +418,9 @@ private extension BrainOrchestrator {
             workoutPlan: nil,
             mealPlan: nil,
             spotifyRecommendation: nil,
-            rawText: rawText
+            rawText: rawText,
+            // Static offline message — never truncated.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -435,7 +443,9 @@ private extension BrainOrchestrator {
             workoutPlan: nil,
             mealPlan: nil,
             spotifyRecommendation: nil,
-            rawText: rawText
+            rawText: rawText,
+            // Generic localized fallback string — never truncated.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -456,7 +466,9 @@ private extension BrainOrchestrator {
             workoutPlan: nil,
             mealPlan: nil,
             spotifyRecommendation: nil,
-            rawText: rawText
+            rawText: rawText,
+            // Tier-gate notice — never truncated.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -478,7 +490,9 @@ private extension BrainOrchestrator {
             workoutPlan: nil,
             mealPlan: nil,
             spotifyRecommendation: nil,
-            rawText: rawText
+            rawText: rawText,
+            // Safety referral message — never truncated.
+            truncatedAtMaxTokens: false
         )
     }
 
@@ -549,7 +563,9 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
-            rawText: rawText ?? reply.rawText
+            rawText: rawText ?? reply.rawText,
+            // Pass through — name injection does not change generation.
+            truncatedAtMaxTokens: reply.truncatedAtMaxTokens
         )
     }
 
@@ -597,7 +613,9 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
-            rawText: rawText
+            rawText: rawText,
+            // Pass through — wellbeing prefix does not change generation.
+            truncatedAtMaxTokens: reply.truncatedAtMaxTokens
         )
     }
 

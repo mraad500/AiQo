@@ -117,7 +117,7 @@ struct PlanView: View {
                 } label: {
                     Text(period)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(hex: "AAAAAA"))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "8898A8")))
                         .frame(width: 44, height: 62)
                         .background {
                             if isSelected {
@@ -132,7 +132,7 @@ struct PlanView: View {
             }
         }
         .padding(4)
-        .background(Color(hex: "F5F5F5"))
+        .background(Color(light: Color(hex: "F5F5F5"), dark: Color(hex: "1F2A35")))
         .clipShape(RoundedRectangle(cornerRadius: 25))
         .padding(.top, 120)
         .animation(.easeInOut(duration: 0.3), value: railSelection)

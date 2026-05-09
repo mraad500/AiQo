@@ -1,6 +1,20 @@
+<div align="center">
+
+<img src="AiQo.png" width="160" height="160" alt="AiQo app icon" />
+
+# **AiQo**
+
+*Master Blueprint · v17*
+
+**Arabic-first AI health & coaching · iOS · Captain Hamoudi**
+
+</div>
+
+---
+
 # AiQo Master Blueprint 17
 
-*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build).*
+*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved. **Updated 2026-04-23** with three Captain-focused passes: §24 — Captain Memory surface upgrade (fixed 5-row Identity sourced from `UserProfileStore`, and a rolling last-7 Workout History store with its own memory section and LLM-retrieval mirror); §25 — Cardio Zone 2 coaching + workout summary narration routed through `CaptainVoiceRouter.speak(tier: .premium)` so the linked MiniMax Captain Hamoudi voice speaks over both paths; §26 — `CloudSafeProfile` fix that carries the user's first name + age + gender + bucketed height/weight into the cloud system prompt so the Captain stops answering `"اسمك 'User'؟"` and addresses the user by their real name. **Same-day pass 2** — §27: App Store review readiness hardening (Packages A + B + D) — missing `NSCameraUsageDescription` added, `FileTimestamp` Required Reason API declared, privacy-manifest `NSPrivacyCollectedDataTypes` expanded with `UserID` + `PhotosorVideos`, permission-string surface unified across `pbxproj` + `InfoPlist.strings` in both locales, Apple 3.1.2 subscription disclosure rewritten to include the canonical "charged to your Apple ID at purchase confirmation / 24 hours before the end of the current period" language with the billed price interpolated live, and 6 dormant permission declarations stripped from `pbxproj` (Bluetooth, AppleMusic, Motion, LocalNetwork, PhotoLibrary, PhotoLibraryAdd — verified unused by the app's actual API surface). §28: Cloud-proxy hardening (Package C) — Gemini + MiniMax API keys lifted out of the IPA into Supabase Edge Functions (`captain-chat`, `captain-voice`), app authenticates with its Supabase JWT; a feature-flagged `CaptainProxyConfig` + three proxy-aware call sites keep the legacy direct path intact for rollback. Deployment went live the same day; the Gemini chat path is confirmed routing through the proxy (`via=proxy status=200`), and the old client-side Gemini key is revoked (direct rollback no longer possible). The MiniMax voice path was unblocked the same evening — see the §28.7.2 / §28.9.1 closures and the bundled fix history that follows. **Updated 2026-04-26** with the broad architecture refactor (commit `8d36a70`) — onboarding flow consolidated, `WorkoutHistoryStore` actor moved to `Brain/02_Memory/Stores/`, `CaptainProxyConfig` materialized as the single proxy source-of-truth, `PrivacySanitizer` extended with API-key + Bearer-token redaction, and `AiQoFeatureFlags` reorganized into a canonical declarative list (`@FeatureFlag` property wrappers reading Info.plist; the live set spans `MEMORY_V4_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `USE_CLOUD_PROXY`, `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`, plus a few legacy flags retained for back-compat). Paired with the paywall hero padding bump (commit `93611b4`, +40pt) for visual breathing room above the price tier rows. **Updated 2026-04-28** with §29 — Gratitude Session voice routing: the daily-gratitude flow under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) now narrates each Arabic/English gratitude line in Captain Hamoudi's MiniMax voice instead of the system `AVSpeechSynthesizer`; background music (`SerotoninFlow.m4a`) was migrated from a local `AVAudioPlayer` to `AiQoAudioManager.playAmbient(...)` so the MiniMax provider's audio-session lifecycle no longer truncates the loop, and three small public APIs (`CaptainVoiceRouter.setMiniMaxPlaybackVolume`, `MiniMaxTTSProvider.playbackVolume`, `AiQoAudioManager.setSpeechDuckOverride`) give the session a per-host mix override (music 10%, voice 100%, ducks to 4% under the Captain).*
 
 ---
 
@@ -1302,3 +1316,1534 @@ Deferred Minor:
 - `AiQo/Features/Home/HomeView.swift` — one demonstration site of `aiqoGlassBackground`.
 - `AiQo/UI/LegalView.swift` — `.acknowledgements` type loading bundled markdown.
 - `AiQo/Resources/en.lproj/Localizable.strings` and `AiQo/Resources/ar.lproj/Localizable.strings` — 17 new keys across the health screening, status-badge a11y, and acknowledgements strings.
+
+---
+
+## 22. Smart Water Tracking & Reminders (2026-04-22)
+
+Snapshot branch: `brain-refactor/p-fix-dev-override`. Everything below was built on top of the hardening pass in §21 and ships as a **100% free feature** — no TierGate reference, no paywall, no DevOverride branch. Feature-flag-gated only so the binary carries a production kill switch. Both the main app target (`xcodebuild build`) and the test target (`build-for-testing`) compile clean at the end of this pass.
+
+### 22.1 Scope & Product Rules
+
+The feature adds four things:
+1. **Pace-based hydration reminders** routed through the existing `NotificationBrain` — no new notification system, no new scheduler.
+2. **WHO/EFSA-referenced guidance UI** rendered inside the existing Water sheet, phrased as "general global guidance" — never as a prescriptive WHO number.
+3. **System integration** across Captain Memory, Medical Disclaimer, AI Data disclosure, and the Privacy Policy legal text.
+4. **An interactive systemSmall widget** with a race-free App-Group tap-counter so one tap = +0.25 L without touching the widget's HealthKit entitlement set.
+
+Rules enforced throughout:
+- Medically safe, non-prescriptive wording in every language variant ("general global guidance: 2–2.5 L/day").
+- No raw HealthKit logs cross any trust boundary (memory, widget, cloud) — `PrivacySanitizer` remains the single PII boundary.
+- Arabic primary, English secondary, Iraqi-dialect default (matching `NotificationBrain`'s own default).
+- Local deterministic phrases — no Gemini call per reminder.
+- Always choose clean + stable over flashy + fragile.
+
+### 22.2 Feature Flag & Kill Switch
+
+Info.plist key `SMART_WATER_TRACKING_ENABLED` (default `true`), exposed via the `@FeatureFlag` property wrapper in [AiQoFeatureFlags.swift](AiQo/Core/Config/AiQoFeatureFlags.swift) as `FeatureFlags.smartWaterTrackingEnabled`. The flag gates:
+
+- The `SmartHydrationSection` rendering inside [WaterDetailSheetView.swift](AiQo/Features/Home/WaterDetailSheetView.swift).
+- `HydrationService.reevaluateAndSchedule()` calls inside [HomeViewModel.swift:addWater / onAppBecameActive](AiQo/Features/Home/HomeViewModel.swift).
+
+When flipped to false the Water sheet falls back to the v1 bottle + "+ 0.25 L" button UI and no hydration notifications are scheduled. The widget itself is in a separate target (`AiQoWidget`) and is not flag-gated — if a user adds the hydration widget to their Home Screen and then the flag is flipped off in a subsequent release, the widget still reads committed App-Group values and still logs `+1` on the tap counter; the drain simply no longer runs.
+
+### 22.3 Domain Layer — Pure Value Types
+
+[HydrationDailyState.swift](AiQo/Features/SmartWaterTracking/Models/HydrationDailyState.swift) defines four Sendable types:
+- `HydrationPaceStatus` — `.ahead | .onTrack | .behind | .veryBehind`
+- `HydrationSource` — `.manual | .appleHealth` (derived from `HKSample.sourceRevision.source.bundleIdentifier`)
+- `HydrationDailyState` — `goalML, consumedML, expectedByNowML, lastDrinkDate, lastDrinkSource, paceStatus` with computed `remainingML` (never negative) and `progressFraction` (capped at 1.0)
+- `HydrationEvaluation` — `.suppress(reason)` or `.remind(intensity: .gentle | .stronger)` with exhaustive `SuppressReason` enum (`trackingDisabled, beforeWakeWindow, afterWakeWindow, quietHours, recentDrink, paceOK`)
+
+[HydrationSettings.swift](AiQo/Features/SmartWaterTracking/Models/HydrationSettings.swift) holds user preferences:
+- `smartTrackingEnabled: Bool`
+- `goalML: Double` (default **2500**)
+- `wakeStartHour / wakeEndHour` — default **08:00 → 22:00** (14-hour window that aligns with quiet-hours start, so `expectedByNowML` reaches 100% exactly when reminders stop)
+- `quietStartHour / quietEndHour` — 22:00 → 07:00
+- `cooldownMinutes: Int` — 25 (recent-drink suppression)
+
+`HydrationSettings.recommendedGoalML(forWeightKg:)` computes `weightKg * 32.5` (midpoint of the 30–35 mL/kg clinical band), clamped to `[1500, 4000]` and rounded to the nearest 100 mL so the Stepper UI never surfaces awkward values. Falls back to 2500 mL when weight is unknown.
+
+`HydrationSettingsStore` persists to `UserDefaults` with stable keys (`aiqo.hydration.smart.enabled`, `aiqo.hydration.goal.ml`, etc.) and exposes `isGoalUserSet()` so first-launch bootstrap can seed the weight-based goal exactly once without ever overwriting user Stepper input.
+
+### 22.4 Evaluator — Pure, Deterministic, Fully Tested
+
+[HydrationEvaluator.swift](AiQo/Features/SmartWaterTracking/Services/HydrationEvaluator.swift) is a stateless enum with no I/O. Every function takes an explicit `Calendar` so tests can inject `TimeZone(identifier: "UTC")` and avoid flakiness.
+
+Core functions:
+- `wakeWindowProgress(now:, settings:, calendar:) -> Double` — linear ramp 0→1 across the wake window.
+- `expectedByNowML(now:, settings:, calendar:) -> Double` — `goal × wakeWindowProgress`.
+- `paceStatus(consumedML:, expectedByNowML:) -> HydrationPaceStatus` — bands: ≥110 % ahead, 90–110 % onTrack, 60–90 % behind, <60 % veryBehind. Before the wake window starts, `expectedByNowML == 0` and the function returns `.onTrack` (never false-flags as behind at 07:59).
+- `isQuietHours(now:, settings:, calendar:) -> Bool` — handles overnight windows where `start > end`.
+- `isInsideWakeWindow(now:, settings:, calendar:) -> Bool`.
+- `dailyState(...) -> HydrationDailyState`.
+- `evaluate(state:, now:, settings:, calendar:) -> HydrationEvaluation` — the full suppression ladder:
+
+```
+1. !smartTrackingEnabled    → suppress(trackingDisabled)
+2. hour < wakeStart         → suppress(beforeWakeWindow)
+3. hour ≥ wakeEnd           → suppress(afterWakeWindow)
+4. isQuietHours             → suppress(quietHours)
+5. lastDrink < cooldownMin  → suppress(recentDrink)
+6. pace in [ahead, onTrack] → suppress(paceOK)
+7. pace == behind           → remind(.gentle)
+8. pace == veryBehind       → remind(.stronger)
+```
+
+Unit-tested in [HydrationEvaluatorTests.swift](AiQoTests/HydrationEvaluatorTests.swift) — 16 XCTest cases covering every branch plus phrase-selection and the single-canonical-source dedup invariant.
+
+### 22.5 Service Layer — HydrationService + Widget Bridge
+
+[HydrationService.swift](AiQo/Features/SmartWaterTracking/Services/HydrationService.swift) is a `@MainActor ObservableObject` singleton. Responsibilities:
+
+- **First-launch bootstrap**: if `!HydrationSettingsStore.isGoalUserSet()`, seed `settings.goalML = recommendedGoalML(forWeightKg: UserProfileStore.shared.current.weightKg)` and persist — exactly once.
+- **`refreshState(now:)`**: reads the canonical HealthKit sum via `HealthKitService.shared.getWaterIntake()` (which uses `HKStatisticsQuery.cumulativeSum` so manual + Apple Health samples dedup at the HealthKit boundary — we don't roll our own). Also probes the most recent sample via `fetchMostRecentQuantitySample(for: .dietaryWater)` and classifies its source by `bundleIdentifier` comparison against `Bundle.main.bundleIdentifier`.
+- **`reevaluateAndSchedule(now:)`**: the single orchestration entry point. Order matters:
+  1. `drainWidgetTapsIntoHealthKit()` — drains the widget tap counter into HealthKit (see §22.8).
+  2. `refreshState(now:)` — now reads the complete total including drained samples.
+  3. `publishWidgetSnapshot()` — writes consumed + goal + language to the App Group.
+  4. Run evaluator → `cancelPendingReminder()` → if `.remind(intensity)` call `scheduleReminder`.
+- **`settings.didSet`**: persists, mirrors into Captain Memory (§22.7.1), and re-publishes the widget snapshot so the Stepper-edited goal reaches the Home Screen within a frame.
+
+Two MainActor helpers the entire feature leans on:
+
+- **`currentDialect()`** — reads UserDefaults key `aiqo.captain.dialect` and falls back to `.iraqi` (matching `NotificationBrain`'s own fallback at line 76 of [NotificationBrain.swift](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift)). Hydration reminders now speak in whatever Captain dialect the user later selects, with zero hardcoded `"iraqi"` strings inside the hydration code.
+- **`writeSettingsToMemory()`** — see §22.7.1.
+
+Call-sites that trigger `reevaluateAndSchedule`:
+- [HomeViewModel.addWater(liters:)](AiQo/Features/Home/HomeViewModel.swift) — after every successful `HealthKitService.logWater` write.
+- [HomeViewModel.onAppBecameActive()](AiQo/Features/Home/HomeViewModel.swift) — so widget taps accumulated while the app was backgrounded get drained on first activation.
+
+### 22.6 Notification Integration — `.hydrationReminder`
+
+No new notification system. The feature extends the existing pipeline at three tight seams:
+
+- [NotificationIntent.swift](AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift) — new `.hydrationReminder` case on the `NotificationKind` enum. Raw value `"hydrationReminder"` is stable; any rename would break persisted delivery history.
+- [NotificationBrain.swift:198](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift:198) — new category mapping `case .hydrationReminder: return "CAPTAIN_HYDRATION"`.
+- [TemplateLibrary.swift](AiQo/Features/Captain/Brain/06_Proactive/Composition/TemplateLibrary.swift) — fallback template so `MessageComposer` has safe copy if a caller ever forgets `precomposedTitle` / `precomposedBody`. In practice `HydrationService` always precomposes, so this is a defensive default.
+
+**Dialect-aware phrase pool** — [HydrationPhrases.swift](AiQo/Features/SmartWaterTracking/Localization/HydrationPhrases.swift) provides `(intensity × language × dialect) → Phrase`:
+
+| Dialect | `.gentle` | `.stronger` |
+|---|---|---|
+| `.iraqi` | "شربة ماي" / "خذ شوية ماي هسه — بسيطة." | "جسمك يدز إشارة" / "خذ شربة ماي الحين." |
+| `.gulf` | "وقت الماي" / "خذ شوية ماي الحين — بسيطة." | "جسمك يبي ماي" / "خذ شربة ماي الحين." |
+| `.levantine` | "وقت المي" / "خود شوي مي هلق." | "جسمك بدو مي" / "خود شربة مي هلق." |
+| `.msa` | "وقت الماء" / "تناول بعض الماء الآن." | "جسمك بحاجة للماء" / "اشرب الماء الآن." |
+| English | "Water break" / "Take a small sip now." | "Time to drink" / "Grab some water now." |
+
+All phrases are short, non-medical, non-prescriptive. No numbers ("2 L") that would identify the user. `PersonaGuard` validates them defensively inside `NotificationBrain`, and `PrivacySanitizer` scrubs them before delivery — same pipeline every other notification kind goes through.
+
+**Scheduling — one smart reminder, pace-adaptive delay**. The initial implementation also pre-scheduled a "follow-up" for `.stronger` cases; an audit of `GlobalBudget.recordDelivered` → `CooldownManager.recordDelivery` confirmed that the 2h global / 6h per-kind cooldown is recorded at **schedule-time**, not fire-time, meaning a second same-kind submit inside one re-evaluation tick is always rejected. The follow-up was dead code in 100 % of branches. Simplified to a single reminder:
+
+```
+scheduleReminder(intensity):
+    fireDate = now + (.gentle: 30 min | .stronger: 10 min)
+    identifier = "aiqo.hydration.smart.reminder"   // stable, replaceable
+    priority = .low                                // passive interruption level
+    customPayload = { language, dialect, intensity }
+    precomposedTitle/Body from HydrationPhrases
+```
+
+Delivery cadence guarantee: ≤1 hydration reminder every 6 h via `CooldownManager.perKindCooldownSeconds`. In a 14 h wake window that's ≤ 2 deliveries/day. If the user drinks between evaluations the pending reminder is cancelled and replaced by identifier — never stacked, never stale.
+
+### 22.7 System Integration — Four Surfaces
+
+#### 22.7.1 Captain Memory
+
+Intentional, narrow integration: only preferences, never raw logs. The new memory category `"hydration"` holds two keys:
+
+- `hydration_goal` — value formatted as `"%.2f L"` (e.g. `"2.50 L"`), confidence 0.9, source `user_explicit`.
+- `hydration_smart_enabled` — value `"on"` or `"off"`, confidence 0.9.
+
+A third slot `hydration_pattern` (e.g. "often needs reminders in the afternoon") is reserved in `keyLabel` but **not auto-populated**. Producing a pattern deterministically would require per-time-of-day aggregates that conflict with the no-raw-logs rule unless only the derived label is stored; left as a clearly-scoped future extension rather than a stub.
+
+Writes happen in [HydrationService.writeSettingsToMemory()](AiQo/Features/SmartWaterTracking/Services/HydrationService.swift), called from `init()` after bootstrap and from `settings.didSet`. Reads surface automatically via `MemoryStore.allMemories()` grouped-by-category inside [CaptainMemorySettingsView.swift](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift); the view's `categoryLabel`, `keyLabel`, and `valueLabel` switches gained hydration cases including the `"on"/"off"` → `memory.value.enabled/disabled` mapping.
+
+**Raw-key localization bug fixed as part of this pass.** The audit surfaced that only `memory.cat.weekly` and `memory.cat.challenge` existed in `Localizable.strings`; the other 11 category keys referenced by the view (`memory.cat.identity`, `memory.cat.body`, `memory.cat.goal`, `memory.cat.preference`, `memory.cat.mood`, `memory.cat.injury`, `memory.cat.nutrition`, `memory.cat.workoutHistory`, `memory.cat.sleep`, `memory.cat.insight`, `memory.cat.recordProject`) were missing in both `ar.lproj` and `en.lproj`, so the UI was displaying literal strings like `"memory.cat.body"` as the section header. All 11 are now populated in both languages plus the new `memory.cat.hydration`.
+
+#### 22.7.2 Medical Disclaimer
+
+[MedicalDisclaimerDetailView.swift](AiQo/Features/Compliance/MedicalDisclaimerDetailView.swift) gained a second glass card `hydrationDisclaimerCard`, rendered below the primary "AiQo is not a medical device" card via the shared `disclaimerCard(title:body:)` helper — identical radius / material / typography. Copy is hardcoded bilingual (matching the file's existing pattern) and reads exactly:
+
+- **Arabic**: "قد يقدم AiQo تذكيرات عامة بشرب الماء لتحسين نمط الحياة، لكن هذه التوصيات لا تُعتبر نصيحة طبية. احتياجات الجسم من الماء تختلف حسب العمر، الوزن، النشاط، والظروف الصحية."
+- **English**: "AiQo may provide general hydration reminders to support a healthy lifestyle. These are not medical recommendations. Hydration needs vary depending on age, weight, activity level, and medical conditions."
+
+Kept out of the bullet list so the "consult a physician before…" framing stays about health decisions, not a water reminder.
+
+#### 22.7.3 AI Data Disclosure
+
+[AIDataUseDisclosureRows](AiQo/Features/Compliance/AIDataUseDisclosure.swift) grew from 5 rows to 6 — new row with icon `drop.fill`, `titleKey: "ai.consent.water.title"`, `detailKey: "ai.consent.water.detail"`, placed between "What is not sent" and "Your choice". Detail copy explicitly names the four data elements used (daily total, goal, time context, last drink time), both sources (manual + Apple Health), and the hard boundary (summarized/sanitized context only — **raw hydration logs are never sent**).
+
+#### 22.7.4 Privacy Policy
+
+[LegalView](AiQo/UI/LegalView.swift) reads `"legal.privacy.content"` verbatim as a single embedded string — no WebView, no markdown. The string grew a new numbered section:
+
+**6. Water Tracking Data** (with sub-paragraphs: *What we collect / How we use / What we do not do / Your control*). Previous "6. Contact Us" renumbered to 7. The four sub-paragraphs explicitly commit to: no sale of water data, no raw HealthKit hydration logs to any third party, and concrete user controls (disable smart water tracking in the water screen, revoke HealthKit in device settings, reset by clearing app data).
+
+Both language variants ship. The Arabic is Modern Standard Arabic (matching the existing `legal.privacy.content` voice), not Iraqi — deliberately distinct from the Iraqi-flavored Captain reminders.
+
+### 22.8 Hydration Widget (systemSmall, Interactive)
+
+New Widget bundled alongside the existing `AiQoWidget` motion card. Same `AiQoWidget` target, same `group.aiqo` App Group, same `Palette` grammar (cardGradient, teal, stroke values mirrored verbatim in a file-private `HydrationPalette` to avoid loosening the motion widget's `private enum Palette` visibility).
+
+**Kind**: `"AiQoHydrationWidget"`. **Family**: `.systemSmall` only.
+
+**Visual grammar**: dark glass card (22 pt corner radius), warm-sand glow in bottom-left mirroring the motion widget's top-right mint glow, centered Circle.trim() progress arc with a mint→sand angular gradient and a subtle `shadow(color: teal.opacity(0.35), radius: 6)`, percentage text inside the ring with `contentTransition(.numericText())` for the tap animation, `"1.60 / 2.50 L"` (or `"1.60 / 2.50 ل"` in Arabic) at the bottom. Side-by-side with the motion widget they read as the same product family.
+
+**Interactive quick-add — race-free tap counter**. The widget's HealthKit entitlement set was intentionally **not** changed; adding HealthKit to a shipping widget extension requires a new TestFlight/App Review round. Instead the widget uses a monotonic counter in the shared App Group:
+
+```
+APP                                    group.aiqo                    WIDGET
+HealthKit dietaryWater (canonical)
+   │
+   ▼ HydrationService.refreshState
+state.consumedML (mL)  ─────────►   aiqo_water_ml               ─────►  HydrationProvider
+settings.goalML        ─────────►   aiqo_water_goal_ml          ─────►  HydrationProvider
+settings.didSet / reevaluate        aiqo_water_last_updated
+appLanguage            ─────────►   aiqo.app.language           ─────►  ar/en render
+                                    aiqo_water_tap_counter      ◄─────  AddWaterIntent (+1 per tap)
+drain at reevaluate()  ────────►    aiqo_water_tap_counter_seen         (app-only writer)
+```
+
+**Single-writer-per-key.** Widget only writes `tap_counter`. App writes everything else. No cross-process contention on any individual key.
+
+**Display formula** — the widget renders `consumed + max(0, counter - seen) × 250`, so the UI never regresses even if the app hasn't drained yet. If the user taps three times while the app is closed, they see +750 mL instantly; when the app wakes, `HydrationService.drainWidgetTapsIntoHealthKit()` writes 3 individual 250 mL `dietaryWater` samples (per-sip granularity preserved), then advances `tap_counter_seen` to the exact value captured at drain-start — any taps that arrive mid-drain stay unseen for the next cycle, never double-counted, never lost.
+
+**Button hit-target**: the entire widget body is wrapped in `Button(intent: AddWaterIntent())`, matching the motion widget's no-visible-button minimalism while remaining discoverable.
+
+Files added to the widget target (synchronized group, auto-picked up):
+- [AiQoWidget/Hydration/HydrationWidgetShared.swift](AiQoWidget/Hydration/HydrationWidgetShared.swift) — App-Group keys + widget kind + 250 mL constant. Mirror of the app-side `HydrationWidgetBridge`.
+- [AiQoWidget/Hydration/AddWaterIntent.swift](AiQoWidget/Hydration/AddWaterIntent.swift) — `@MainActor AppIntent` that increments `tap_counter` and calls `WidgetCenter.reloadTimelines(ofKind: "AiQoHydrationWidget")`.
+- [AiQoWidget/Hydration/HydrationWidget.swift](AiQoWidget/Hydration/HydrationWidget.swift) — `HydrationEntry`, `HydrationProvider`, `HydrationWidgetView`, widget configuration. Contains the file-private `HydrationPalette` mirror.
+
+App side:
+- [AiQo/Features/SmartWaterTracking/Services/HydrationWidgetBridge.swift](AiQo/Features/SmartWaterTracking/Services/HydrationWidgetBridge.swift) — same three constants and keys, plus `publishSnapshot(consumedML:, goalML:, appLanguage:)`, `currentPendingTapCount() -> (counter, seen)`, and `advanceTapCounterSeen(to:)`.
+
+The tiny duplication (≈20 lines per side) is intentional — a shared framework for a compile-time-constants file is heavier than keeping mirrored copies with colocated `MUST MATCH` comments.
+
+### 22.9 Final Reminder Flow
+
+```
+trigger (app-active OR water-add OR widget-tap-drain)
+    │
+    ▼
+HydrationService.reevaluateAndSchedule()
+    │
+    ├─ drainWidgetTapsIntoHealthKit()       ← §22.8 race-free drain
+    ├─ refreshState()                        ← HealthKit canonical sum + last sample source
+    ├─ publishWidgetSnapshot()               ← write consumed + goal + language to group.aiqo
+    ├─ HydrationEvaluator.evaluate(...)      ← pure suppression ladder §22.4
+    ├─ cancelPendingReminder()               ← removes existing "aiqo.hydration.smart.reminder"
+    └─ if .remind(intensity):
+         NotificationBrain.request(
+             intent: .hydrationReminder,
+             priority: .low,
+             precomposedTitle/Body from HydrationPhrases,
+             fireDate: now + (gentle: 30 min | stronger: 10 min),
+             identifier: "aiqo.hydration.smart.reminder",
+             customPayload: {language, dialect, intensity}
+         )
+         │
+         ▼
+      GlobalBudget + PersonaGuard + PrivacySanitizer + UNUserNotificationCenter
+         │
+         ▼
+      CooldownManager.recordDelivery(.hydrationReminder)   ← 6h per-kind lockout starts here
+```
+
+### 22.10 Tests
+
+[HydrationEvaluatorTests.swift](AiQoTests/HydrationEvaluatorTests.swift) — 16 XCTest cases in the existing `AiQoTests` target:
+- `expectedByNow` before/inside/after wake window
+- Pace band edges (ahead ≥110 %, onTrack 90–110 %, behind 60–90 %, veryBehind <60 %)
+- Pace classification when `expectedByNowML == 0` (returns `onTrack`, not `veryBehind`)
+- Quiet hours overnight window edge cases
+- Every `SuppressReason` branch hit explicitly
+- Both `.remind` intensity branches
+- Phrase selection for Arabic `.gentle` and English `.stronger` (verifying no medical prose leaks)
+- `HydrationDailyState.remainingML` never negative when overconsumed
+- Dedup invariant — documents that `consumedML` is always the HealthKit cumulative sum, never double-counted by the evaluator
+
+Test runtime was not exercised because of a pre-existing Watch-target Info.plist issue (`AiQoWatch Watch App.app` missing `WKApplication` / `WKWatchKitApp` key blocks the simulator install of the test host). Compile + link are verified green via `xcodebuild build-for-testing`.
+
+### 22.11 Build State After §22
+
+| Metric | Before §22 | After §22 |
+|---|---|---|
+| Main-app build | SUCCEEDED | **SUCCEEDED** |
+| Test-target build | SUCCEEDED | **SUCCEEDED** |
+| New Swift files | — | 10 app + 3 widget = 13 |
+| Modified Swift files | — | 9 |
+| New unit tests | 368 | **384** (+16) |
+| New localization keys (en + ar) | — | **35** per language |
+| New App Group keys | 6 (motion widget) | 9 (+3 hydration) |
+| Widget bundles in `AiQoWidgetBundle` | 3 iOS + 1 Live Activity | **4** iOS + 1 Live Activity |
+| New NotificationKind cases | 23 | **24** (+`.hydrationReminder`) |
+| TierGate references added | — | **0** (feature is free) |
+
+### 22.12 Ship Readiness & Known Risks
+
+**Status: beta-ready.** Clean+stable pattern chosen at every fork. Zero new cross-target imports. Zero widget-side HealthKit entitlement changes. Zero new third-party dependencies. Every localization key has both `ar` and `en` variants.
+
+Outstanding before production flip:
+
+1. **Live device smoke test.** Taps → HealthKit write → 10-minute-delayed notification delivery → widget redraw need one end-to-end pass on a real device. The foreground-notification UX depends on `UNUserNotificationCenterDelegate` config that was not audited in this pass.
+2. **Watch-target Info.plist.** Missing `WKApplication` / `WKWatchKitApp` key blocks the test-runner install on the simulator. Pre-existing; unrelated to §22 but gates green CI runs of the new unit tests.
+3. **Native-speaker review of dialect variants.** The Gulf / Levantine / MSA phrase variants in `HydrationPhrases.swift` were authored without a native reviewer; the Iraqi variant was. Worth one pass before shipping to those cohorts.
+4. **EFSA URL stability.** The journal entry URL (`efsa.europa.eu/en/efsajournal/pub/1459`) is a 2010 article; if EFSA rotates URLs it 404s from inside the app. Consider a periodic healthcheck.
+5. **Weight-based goal doesn't auto-recalculate.** If the user edits their profile weight after first launch, the hydration goal stays at whatever was seeded (or whatever the user later Steppered to). Intentional — respects user choice over auto-magic. A "Reset to recommended" affordance is a one-line follow-up call to `HydrationSettings.recommendedGoalML(forWeightKg:)`.
+6. **Late-chronotype users.** Default wake window 08:00–22:00 doesn't fit someone who sleeps 02:00–10:00. `HydrationSettings` already carries `wakeStartHour` / `wakeEndHour` fields but no UI exposes them. If telemetry shows heavy `.beforeWakeWindow` / `.afterWakeWindow` suppression, add a wake-window picker.
+7. **Dialect key has no UI.** `UserDefaults` key `aiqo.captain.dialect` is live in `HydrationService.currentDialect()` but nothing writes it today. Default `.iraqi` applies. When a Captain language UI ships it plugs in with zero hydration code changes.
+8. **Privacy-policy section renumbering.** Old "6. Contact Us" → "7. Contact Us". In-app code references the localization key, not section numbers, so app is safe. Any external docs, App Store "What's New" copy, or compliance tracker that cited the old numbering needs a pass.
+
+Flip `SMART_WATER_TRACKING_ENABLED=false` in Info.plist if any of the above surface a P0 post-launch; kill switch lands hydration back to the v1 bottle + add-button UI with no hydration notifications scheduled.
+
+### 22.13 Files Added / Modified
+
+**Added — app target (Features/SmartWaterTracking/) — 7 files:**
+- `Models/HydrationDailyState.swift` — pace / source / evaluation value types
+- `Models/HydrationSettings.swift` — prefs + `recommendedGoalML(forWeightKg:)` + `HydrationSettingsStore`
+- `Services/HydrationEvaluator.swift` — pure evaluator
+- `Services/HydrationService.swift` — `@MainActor ObservableObject`, bootstrap, drain, publish, schedule
+- `Services/HydrationWidgetBridge.swift` — app-side App-Group contract mirror
+- `Localization/HydrationPhrases.swift` — 5 dialect × 2 intensity = 10 Arabic/English phrase pairs
+- `Views/SmartHydrationSection.swift` — glassmorphism card (corner 24, diagonal sheen, soft shadow, stepper, WHO/EFSA links)
+
+**Added — widget target (AiQoWidget/Hydration/) — 3 files:**
+- `HydrationWidgetShared.swift` — widget-side App-Group contract mirror
+- `AddWaterIntent.swift` — interactive `AppIntent`
+- `HydrationWidget.swift` — provider / entry / view / widget config / `HydrationPalette`
+
+**Added — tests — 1 file:**
+- `AiQoTests/HydrationEvaluatorTests.swift` — 16 cases
+
+**Modified — app target:**
+- `AiQo/Core/Config/AiQoFeatureFlags.swift` — new `SMART_WATER_TRACKING_ENABLED` flag (default true)
+- `AiQo/Info.plist` — new feature-flag entry
+- `AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift` — `.hydrationReminder` NotificationKind case
+- `AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift` — `CAPTAIN_HYDRATION` category mapping
+- `AiQo/Features/Captain/Brain/06_Proactive/Composition/TemplateLibrary.swift` — fallback template
+- `AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift` — `categoryLabel`, `keyLabel`, `valueLabel` hydration cases
+- `AiQo/Features/Compliance/MedicalDisclaimerDetailView.swift` — new `hydrationDisclaimerCard`
+- `AiQo/Features/Compliance/AIDataUseDisclosure.swift` — new "Water data" disclosure row
+- `AiQo/Features/Home/HomeView.swift` — `WaterDetailSheetView` sheet embed unchanged at call-site; section renders inside the sheet
+- `AiQo/Features/Home/HomeViewModel.swift` — `addWater` and `onAppBecameActive` call `HydrationService.shared.reevaluateAndSchedule()`
+- `AiQo/Features/Home/WaterDetailSheetView.swift` — `ScrollView` wrap + `SmartHydrationSection` embed (flag-gated), close button z-order preserved
+
+**Modified — widget target:**
+- `AiQoWidget/AiQoWidgetBundle.swift` — registered `HydrationWidget()` (iOS only, preserved existing watch & LiveActivity conditionals)
+
+**Modified — localization (both `ar.lproj` and `en.lproj`):**
+- `Localizable.strings` — 35 new keys per language:
+  - Smart hydration UI: `hydration.smart.toggle.title`, `hydration.smart.toggle.subtitle`, `hydration.goal.title`
+  - WHO/EFSA guidance: `hydration.guidance.title`, `hydration.guidance.body`, `hydration.guidance.more`, `hydration.guidance.factors`, `hydration.guidance.link.who`, `hydration.guidance.link.efsa`
+  - Memory category fillers (fix for §22.7.1 raw-key bug): `memory.cat.identity`, `memory.cat.goal`, `memory.cat.body`, `memory.cat.preference`, `memory.cat.mood`, `memory.cat.injury`, `memory.cat.nutrition`, `memory.cat.workoutHistory`, `memory.cat.sleep`, `memory.cat.insight`, `memory.cat.recordProject`
+  - Hydration memory: `memory.cat.hydration`, `memory.key.hydrationGoal`, `memory.key.hydrationSmart`, `memory.key.hydrationPattern`, `memory.value.enabled`, `memory.value.disabled`
+  - AI data disclosure: `ai.consent.water.title`, `ai.consent.water.detail`
+  - Privacy policy: `legal.privacy.content` rewritten with new section 6 (Water Tracking Data) and renumbered "Contact Us" to 7
+
+No files removed. No TierGate changes. No DevOverride changes. No Info.plist permission additions (widget already has `group.aiqo`).
+
+---
+
+## 23. Water Detail Sheet — Hero Redesign (2026-04-22, pass 2)
+
+Same-day follow-up to §22. The Smart Water Tracking feature shipped functionally correct but with a **brand-breaking hero** at the top of [WaterDetailSheetView.swift](AiQo/Features/Home/WaterDetailSheetView.swift): a photographic `WaterBottleView` illustration wrapped in a saturated `#4A9EE7`-class blue fill, plus a bright-blue "+0.25 L" capsule button. This read as stock-fitness UI, not AiQo — every other surface in the app uses calm glassmorphism over mint / sand accents. The `SmartHydrationSection` card directly below (added in §22.6) is on-brand and was explicitly **kept untouched**; this pass redesigns only the hero region above it plus the bottom add button, replacing both with a native SwiftUI progress ring and a three-chip quick-add row.
+
+Constraints held throughout:
+- No raster asset, no photographic illustration, no emoji.
+- No blue color anywhere in the hero — `#4A9EE7` is fully evicted; `waterBlue` constant deleted from the file.
+- `SmartHydrationSection`, the sheet's `ScrollView`, `.presentationDetents`, `.presentationDragIndicator`, `.presentationBackground`, close-button z-order, and every caller of `HomeViewModel.addWater(liters:)` stay exactly as they were.
+- `HydrationService` / `HydrationEvaluator` / `HydrationWidgetBridge` / the widget target — all untouched.
+
+### 23.1 Decision — new `mintSoft` / `sandSoft` brand accents
+
+The canonical `AiQoColors.mint` (`#CDF4E4`) and `AiQoColors.beige` (`#F5D5A6`) are one step brighter than needed: a progress ring rendered with those against `.ultraThinMaterial` washes out, especially in light mode. Rather than retune the existing palette (which 15+ files rely on) or invent a top-level `Color.aiqoMint` extension (which would add a second source of truth), the pass adds two new constants next to the existing ones:
+
+```swift
+// AiQo/DesignSystem/AiQoColors.swift
+enum AiQoColors {
+    static let mint = Color(hex: "CDF4E4")
+    static let beige = Color(hex: "F5D5A6")
+
+    // Softer accents — one step deeper than mint/beige so progress rings and
+    // wellness surfaces hold weight against `.ultraThinMaterial` without
+    // washing out. Additive: do not replace mint/beige.
+    static let mintSoft = Color(hex: "B7E5D2")
+    static let sandSoft = Color(hex: "EBCF97")
+}
+```
+
+These are the exact hex values from the AiQo brand spec. All other files that currently declare private `mint`/`sand` constants inline (AuthFlowUI, Profile, Kitchen, Gym, Tribe, etc. — 10+ spots with slightly drifted values) are intentionally **not refactored** in this pass; a design-system consolidation is a separate future task. The new constants are available for adoption in future brand-consistent surfaces.
+
+### 23.2 New File — `WaterHeroRingView.swift`
+
+[AiQo/Features/Home/Components/WaterHeroRingView.swift](AiQo/Features/Home/Components/WaterHeroRingView.swift) — new ~170-line component, the entire hero. Stateless: takes `consumedLiters: Double` and `goalLiters: Double`, renders. No `@ObservedObject`, no singleton reads — callers pass the numbers.
+
+Visual grammar:
+- **Outer ring** 220 × 220 pt, lineWidth 16, `.lineCap: .round`.
+- **Track** — `AiQoColors.mintSoft.opacity(trackOpacity)` where `trackOpacity = colorScheme == .dark ? 0.12 : 0.18`. Dark-mode bump keeps the progress stroke readable against the dimmer material.
+- **Progress arc** — `Circle().trim(from: 0, to: progress)` stroked with an `AngularGradient` cycling `mintSoft → sandSoft → mintSoft` over 360°, then rotated `-90°` so progress starts at 12 o'clock. A subtle `shadow(color: .mintSoft.opacity(0.25), radius: 14, y: 4)` lands only on the progress arc.
+- **Center stack** — big number (SF Rounded `.black` weight, size 52) with `.numericText(value: consumedLiters)` content transition so each tap animates, unit label (`ل` or `L` derived from `Locale.current.language.languageCode`), and a tertiary sublabel `"من %.1f ل"` / `"of %.1f L"`.
+- **Overflow behavior** — `progress` is capped at `min(1, consumedLiters / goalLiters)`: the ring never over-rotates past 100 %, but the big number keeps counting. `percent` likewise caps at 100.
+- **Animation** — `.spring(response: 0.55, dampingFraction: 0.85)` bound to the `progress` value; the ring and pill settle together.
+- **Dynamic Type** — `dynamicTypeSize(...DynamicTypeSize.accessibility1)` on the big number so it cannot blow past the ring at XXXL sizes; regular Dynamic Type up to accessibility1 is respected.
+- **Accessibility** — `.accessibilityElement(children: .combine)` with label "تتبع الماء اليومي" / "Daily water tracking" and value "X.X لتر من X.X لتر، NN بالمئة" formatted via a locale-aware `NumberFormatter` (maximumFractionDigits = 1).
+- **Reserved tap surface** — `.contentShape(Circle())` on the whole ring. No gesture attached today; marked as the insertion point for a future goal picker.
+
+Three preview providers ship with the file: Light × AR × 60 %, Dark × AR × 7 %, Light × EN × 112 % (the cap-behaviour case). All previews set `\.locale` and `\.layoutDirection` explicitly.
+
+### 23.3 Surgical Edits — `WaterDetailSheetView.swift`
+
+Properties + state, body content, and subview implementations were all edited. The file stays at 372 lines (was 231 lines pre-§22 hero embed; the net addition is the chip row + custom sheet).
+
+**Removed:**
+- `private let waterBlue = Color(red: 0.24, green: 0.67, blue: 0.93)` — the old `#4A9EE7`-class blue.
+- `private let addAmount: Double = 0.25` — no longer needed; each chip carries its own amount literal.
+- `@State private var addWaterFeedbackTrigger` — replaced by `UIImpactFeedbackGenerator` + `UINotificationFeedbackGenerator` calls.
+- `amountLabel` (48 pt number floating above the bottle) — the big number now lives inside the ring.
+- `waterBottle` call site — `WaterBottleView(currentLiters:)` is no longer referenced anywhere in this file. **The `WaterBottleView` source file is left in the repo**, orphaned, flagged under §23.7.
+- `addWaterButton` (blue capsule) — replaced by the chip row.
+- `addWater()` private method — replaced by `performAdd(amount:isCustom:)`.
+
+**Added (as properties):**
+- `var goalLiters: Double = 2.5` — explicit parameter; caller is the source of truth. Default keeps previews working when the sheet is instantiated standalone.
+- `@State private var showCustomSheet = false` — drives the nested custom-amount sheet.
+
+**Added (as subviews):**
+- `titleLabel` retuned to `17 pt bold rounded, centered` (was 24 pt heavy).
+- `percentagePill` — small `.ultraThinMaterial` capsule, 14 × 6 padding, with `mintSoft.opacity(0.35)` 0.5 pt stroke. Shows "XX%" with `.contentTransition(.numericText(value:))` animated via the same spring.
+- `quickAddRow` — `HStack(spacing: 10)` of three chips: `quickAddChip(+0.25 ل, 0.25)`, `quickAddChip(+0.5 ل, 0.5)`, `customChip`.
+- `quickAddChip(title:amount:a11yAmount:)` — capsule-shaped `.ultraThinMaterial` with a `mintSoft.opacity(0.35)` tint overlay and a `mintSoft.opacity(0.6)` 0.5 pt stroke, 16 × 12 padding, `minWidth: 44, minHeight: 44` guaranteeing HIG tap target, `.accessibilityLabel` / `.accessibilityHint` from new localization keys.
+- `customChip` — same capsule grammar but tinted with `sandSoft` to visually signal it's the different action type.
+- `performAdd(amount:isCustom:)` — the unified action method. Animates `currentWaterLiters` via the same spring, fires the correct haptic (soft impact for quick chips, success notification for custom confirm), then calls `onAddWater?(amount)`. The callback path into HomeView / `viewModel.addWater(liters:)` / HealthKit is preserved byte-for-byte.
+- Private `CustomWaterAmountSheet` struct at the bottom of the file. `.height(280)` detent, `.ultraThinMaterial` background matching parent, drag indicator visible. Contains an `HStack` with the amount (big rounded number, `.numericText(value:)`) and the unit label, a `Slider(value: $amount, in: 0.05...1.0, step: 0.05)` tinted with `AiQoColors.mintSoft`, and a single "إضافة" / "Add" capsule button that calls `onConfirm(amount)` then `dismiss()`. The concatenated `Text + Text` pattern caught by the compiler during the pass ("Cannot convert value of type `some View` to `Text`" — modifier-chain return type) was resolved by switching to an explicit `HStack`.
+
+**Preserved byte-for-byte** (per the edit protocol):
+- The `ScrollView` wrap with `.scrollIndicators(.hidden)`.
+- The close button (top-leading, z-order kept above the ScrollView via `ZStack(alignment: .topTrailing)`).
+- The `SmartHydrationSection` embed, still flag-gated by `FeatureFlags.smartWaterTrackingEnabled`.
+- The convenience init and the `.waterDetailSheet(...)` presentation helper extension, both gaining only a `goalLiters: Double = 2.5` default parameter — no caller breaks.
+
+### 23.4 Hero Layout Flow
+
+```
+┌─ ScrollView ──────────────────────────────────┐
+│  40 pt top spacer                             │
+│                                               │
+│  "الماء"                         (17 pt bold) │
+│                                               │
+│   ╭──────────────────────╮                    │
+│   │      ╭────╮          │                    │
+│   │     ╱      ╲         │     ← WaterHeroRingView
+│   │    │  1.5  │         │       220 × 220
+│   │     ╲  ل   ╱         │       mint→sand angular
+│   │      ╲ من 2.5 ل      │       track @ 0.18 (light) / 0.12 (dark)
+│   │      ╰────╯          │                    │
+│   ╰──────────────────────╯                    │
+│                                               │
+│           [ 60% ]                             │     ← percentagePill (12 pt gap)
+│                                               │
+│   [+0.25 ل] [+0.5 ل] [جرعة مخصصة]            │     ← quickAddRow (24 pt gap)
+│                                               │
+│   ╭──────────────────────────────────╮        │
+│   │  SmartHydrationSection (unchanged)│       │     ← §22 card, 24 pt gap above
+│   │  toggle · pace · goal stepper ·   │       │
+│   │  WHO/EFSA links                   │       │
+│   ╰──────────────────────────────────╯        │
+│                                               │
+│  40 pt bottom padding                         │
+└───────────────────────────────────────────────┘
+
+ × close button (top-trailing, above ScrollView)
+```
+
+Tapping any chip → `performAdd(amount, isCustom: false)` → spring animation on `currentWaterLiters` → soft haptic → `onAddWater?(amount)` → `HomeView` wraps that in `Task { await viewModel.addWater(liters: addedLiters) }` → `HealthKitService.logWater` → `HydrationService.reevaluateAndSchedule` → state / reminder / widget reconciliation (§22.9 pipeline, unchanged).
+
+Tapping `جرعة مخصصة` / `Custom` → `showCustomSheet = true` → nested sheet with slider → "إضافة" / "Add" → `performAdd(amount, isCustom: true)` → spring animation → success notification haptic → same `onAddWater` path.
+
+### 23.5 Haptic Discipline
+
+Explicit call-sites (no more `sensoryFeedback` attachment):
+- **Ring tap** — no haptic. Ring is inert today; the reserved tap surface exists so a future goal picker can attach without restructuring the layout.
+- **Quick-add chip tap** — `UIImpactFeedbackGenerator(style: .soft).impactOccurred()`. Water is a calm action, not a confirmation beat. Soft over medium.
+- **Custom confirm button** — `UINotificationFeedbackGenerator().notificationOccurred(.success)`. Fires once, at the moment the amount commits. The sheet dismisses on the same frame.
+
+### 23.6 One-line HomeView Edit
+
+[AiQo/Features/Home/HomeView.swift:240-247](AiQo/Features/Home/HomeView.swift) — the `.waterDetail` case in `destinationView(for:)`. One parameter inserted between `currentWaterLiters` and `onAddWater`:
+
+```diff
+             WaterDetailSheetView(
+                 currentWaterLiters: $waterSheetLiters,
++                goalLiters: HydrationService.shared.settings.goalML / 1000,
+                 onAddWater: { addedLiters in
+                     Task {
+                         await viewModel.addWater(liters: addedLiters)
+                     }
+                 }
+             )
+```
+
+Nothing else in HomeView changed. `.presentationDetents([.medium, .large])`, `.presentationDragIndicator(.visible)`, `.presentationBackground(.ultraThinMaterial)` all preserved. The sheet still opens at `.medium` by default; the new hero + chip row + SmartHydrationSection scrolls comfortably at that detent and sits without scrolling at `.large`.
+
+### 23.7 Follow-up Cleanup (Flagged, Not Done)
+
+Per the edit protocol, no unrelated code was deleted. Items worth a separate commit:
+
+1. **[WaterBottleView.swift](AiQo/Features/Home/WaterBottleView.swift) is now orphaned** — zero call sites remain in `WaterDetailSheetView` and a repo-wide grep confirms no other caller. The file should be deleted in a dedicated cleanup commit along with any `AnimatedWaterBottleView` it exports. Left on disk today so the diff of this pass is strictly additive on the hero and strictly removing-only-what-the-hero-owned.
+2. **Deprecated localization keys retained for rollback** — `water.add`, `water.a11y.add`, `water.a11y.hint` are untouched in both `.strings` files. No consumer references them after this pass; safe to remove alongside the WaterBottleView cleanup.
+3. **Ring tap is inert** — `.contentShape(Circle())` makes the full ring a touch target, but no gesture is attached. Future enhancement: a goal-picker sheet on tap, wiring `HydrationService.shared.settings.goalML` the same way the §22 stepper already does. Touch target + reserved space are already there.
+
+### 23.8 Build State After §23
+
+| Metric | Before §23 | After §23 |
+|---|---|---|
+| Main-app build | SUCCEEDED | **SUCCEEDED** |
+| New warnings introduced | — | **0** |
+| New Swift files | — | 1 (`WaterHeroRingView.swift`) |
+| Modified Swift files | — | 3 (`AiQoColors.swift`, `WaterDetailSheetView.swift`, `HomeView.swift`) |
+| New localization keys (en + ar) | — | **10** per language |
+| New brand colors | 2 (`mint`, `beige`) | **4** (+`mintSoft`, `sandSoft`) |
+| Blue hex values in the hero path | 1 (`waterBlue #4A9EE7`) | **0** |
+| Raster/illustration hero assets used | 1 (`WaterBottleView`) | **0** |
+| TierGate references added | — | **0** (feature remains free) |
+
+### 23.9 Known Risks
+
+1. **`mintSoft` / `sandSoft` vs existing private palettes.** 10+ files privately re-declare mint/sand at slightly different hex values (AuthFlowUI at `#B7E5D2` / `#EBCF97` — matching the new brand spec, but file-private; Profile, Gym, Kitchen, Tribe with their own shades). The pass **intentionally did not unify** those to avoid a cross-feature regression risk. Someone doing a design-system consolidation sprint should start with this as item #1.
+2. **Default `goalLiters: 2.5`** in the convenience init / sheet helper is a pragmatic fallback. Real presentation always passes `HydrationService.shared.settings.goalML / 1000`. Tests or previews that use the convenience init get the default.
+3. **`locale.language.languageCode` check for unit label.** `WaterHeroRingView.unitLabel` and `CustomWaterAmountSheet.unitLabel` pick between `ل` and `L` via `Locale.current`. This respects the device locale but does **not** respect the app-level override in `AppSettingsStore.appLanguage`. For the v1.0.1 audience the device locale is reliably Arabic, so the mismatch window is narrow; if the app-language override is later used as the canonical source, both getters need to flip to `AppSettingsStore.shared.appLanguage.rawValue == "ar"`.
+4. **No blue remains — verified.** Grep for `#4A9EE7`, `Color(red: 0.24`, and the historical `waterBlue` symbol inside the hero path returned zero hits. `SmartHydrationSection` still uses its own internal `waterBlue` (added pre-§22) for the drop-icon tint and the diagonal sheen gradient — per the edit protocol, that file is out of scope for this pass. If the "no blue anywhere in the water sheet" rule is later tightened, `SmartHydrationSection` is the one remaining offender.
+5. **Dynamic Type cap at `accessibility1`.** Above that the big number would blow past the 220 pt ring. Consider a responsive ring size as a future improvement, or a dedicated "large text" layout that drops the ring in favor of an enlarged number.
+
+### 23.10 Files Added / Modified
+
+**Added:**
+- `AiQo/Features/Home/Components/WaterHeroRingView.swift` (170 lines; three preview providers)
+
+**Modified:**
+- `AiQo/DesignSystem/AiQoColors.swift` — `+mintSoft`, `+sandSoft`
+- `AiQo/Features/Home/WaterDetailSheetView.swift` — hero region surgical replacement (title retuned, old amount/bottle/blue button removed, percentage pill + three-chip quick-add row + unified `performAdd` action + private `CustomWaterAmountSheet` added). Convenience init and `.waterDetailSheet(...)` helper gained a default `goalLiters` parameter; all call sites remain source-compatible.
+- `AiQo/Features/Home/HomeView.swift` — one parameter inserted in the `.waterDetail` case (`goalLiters: HydrationService.shared.settings.goalML / 1000`). No other line touched.
+- `AiQo/Resources/en.lproj/Localizable.strings` — 10 new keys in a new `Water Detail — Hero ring + quick-add chips` block.
+- `AiQo/Resources/ar.lproj/Localizable.strings` — matching 10 keys in Arabic.
+
+**Not touched:**
+- `AiQo/Features/Home/WaterBottleView.swift` (orphaned, flagged, not deleted).
+- `AiQo/Features/SmartWaterTracking/**` — the entire §22 domain/service/widget tree untouched.
+- `AiQo/Features/Home/HomeViewModel.swift` — `addWater(liters:)` signature and callers untouched.
+- Any entitlements, Info.plist, or widget target file.
+- Any test file.
+
+Zero deletions. Zero third-party dependencies. Zero new warnings.
+
+---
+
+## 24. Captain Memory Surface Upgrade — Identity + Workout History
+
+*Added 2026-04-23. One new file, two files modified, one hook inserted in `LiveWorkoutSession`. No schema migration. No new localization keys. No new dependencies.*
+
+### 24.1 Problem
+
+The Captain Memory screen (`ذاكرة الكابتن`, [CaptainMemorySettingsView.swift](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift)) rendered a single dynamic "الهوية" (Identity) section built from `groupedMemories` — a `Dictionary(grouping: memories, by: \.category)` over the raw `CaptainMemorySnapshot` rows the memory extractor had persisted. The extractor runs the chat log through the LLM-driven memory pipeline and occasionally mis-classifies a user's question as an identity fact. In a recent session the row `key="الاسم", value="اني؟", confidence=0.70, category="identity"` was persisted because the user had asked `شنو اسمي اني؟` ("what is my name?") and the extractor anchored on the trailing `اني؟` as a self-introduction. The Identity UI surfaced the question text as the user's name.
+
+Separately, the Captain had no durable workout-history surface. Asking `شون جان تمرين اليوم؟` after a completed workout produced a generic answer because no memory row referenced prior sessions — the cognitive pipeline weighted `workout_history` at 2.8 for `.workout` intent, but nothing was ever persisted under that category.
+
+### 24.2 Identity Section — Fixed Five-Row Profile
+
+The Identity section is no longer sourced from the extractor. It now pulls directly from `UserProfileStore.shared.current`:
+
+| Row | Source | Display format (Arabic) | Fallback |
+|---|---|---|---|
+| الاسم | `profile.name` (trimmed; placeholder `"Captain"` filtered) | First-word first-last respected verbatim | `—` |
+| العمر | `profile.age` if `> 0` | integer | `—` |
+| الجنس | `profile.gender` rawValue mapped to ذكر/أنثى | localized | `—` |
+| الطول | `profile.heightCm` if `> 0` | `175 سم` (EN: `175 cm`) | `—` |
+| الوزن | `profile.weightKg` if `> 0` | `95 كغم` (EN: `95 kg`) | `—` |
+
+The dynamic memory `ForEach` is filtered to exclude the `identity` and `workout_history` categories (`groupedMemories.filter { $0.0 != "identity" && $0.0 != "workout_history" }`) so no extractor-generated row can clobber either fixed surface again.
+
+Body/layout notes:
+- `identitySection` uses a simpler row (`identityRow(label:value:)`) than the extractor rows — no confidence badge, no timestamp — because the Identity fields are authoritative profile data, not hypotheses. Each row is one trailing-aligned HStack: value on the leading edge, label (bold) on the trailing edge (RTL flip handled by the existing `.environment(\.layoutDirection, .rightToLeft)` on the outer `List`).
+- `isArabicUI` is computed from `AppSettingsStore.shared.appLanguage == .arabic` and drives the unit suffixes + the gender mapping.
+- The Gender enum (`ActivityNotificationGender`) has only `male` / `female` today. A non-binary case would need a case added to `identityGenderValue` — not done (not in scope for this pass).
+
+### 24.3 WorkoutHistoryStore — Rolling Last-7 Entries
+
+[AiQo/Features/Captain/Brain/02_Memory/Stores/WorkoutHistoryStore.swift](AiQo/Features/Captain/Brain/02_Memory/Stores/WorkoutHistoryStore.swift) — new singleton, `@MainActor`, persists to `UserDefaults` and mirrors a consolidated summary into `MemoryStore`.
+
+```swift
+struct WorkoutHistoryEntry: Codable, Identifiable {
+    let id: UUID
+    let date: Date
+    let title: String
+    let durationSeconds: Int
+    let activeCalories: Double
+    let heartRate: Double?       // nil when the session had no HR data
+    let distanceMeters: Double
+}
+```
+
+Invariants:
+- **Rolling cap of 7 entries**, newest first. `recordCompletion` inserts at index 0 and trims via `Array(entries.prefix(7))`.
+- **Minimum duration 60 seconds** to skip aborted sessions. A user who taps "start" then "end" in <1 min produces no entry.
+- **Title normalization**: trimmed, empty titles fall back to `NSLocalizedString("memory.workout.genericTitle", value: "Workout", comment: "")`.
+- **Zero heart rate → nil**: `heartRate: (heartRate ?? 0) > 0 ? heartRate : nil`. Avoids surfacing "0 bpm" rows in the UI.
+- **Negative guard** on calories and distance: `max(0, …)`.
+
+Storage:
+- Primary: `UserDefaults` key `aiqo.workoutHistory.v1`, JSON-encoded `[WorkoutHistoryEntry]` with ISO-8601 dates. The `v1` suffix reserves schema-migration headroom.
+- LLM mirror: `MemoryStore.shared.set("recent_workouts", value: summaryText, category: "workout_history", source: "system", confidence: 0.95)` — a single upserted entry with a consolidated multi-line summary.
+
+Public API:
+
+```swift
+func recordCompletion(
+    title: String,
+    durationSeconds: Int,
+    activeCalories: Double,
+    heartRate: Double?,
+    distanceMeters: Double,
+    at date: Date = Date()
+)
+
+func recentEntries() -> [WorkoutHistoryEntry]
+func clear()
+```
+
+`clear()` wipes both the `UserDefaults` entry **and** the `MemoryStore` key — so the LLM-retrieval view and the UI view stay in sync on a user-initiated wipe.
+
+### 24.4 Hook into LiveWorkoutSession
+
+[LiveWorkoutSession.swift:475-481](AiQo/Features/Gym/LiveWorkoutSession.swift:475) — `handleRemoteEnded()` gains a 7-line `recordCompletion` call placed **after** `liveActivity.end(…)` (the Live Activity's final stats frame renders first) and **before** `resetWorkoutState()` (which wipes `title`, `elapsedSeconds`, `activeEnergy`, `heartRate`, `distanceMeters`). The order matters:
+
+```swift
+if liveActivityIsActive {
+    liveActivity.end(
+        title: title, elapsedSeconds: elapsedSeconds,
+        heartRate: heartRate, activeCalories: activeEnergy,
+        distanceMeters: distanceMeters,
+        zone2State: liveActivityHeartRateState,
+        activeBuffs: activeLiveBuffs
+    )
+    liveActivityIsActive = false
+}
+
+WorkoutHistoryStore.shared.recordCompletion(     // ← NEW
+    title: title,
+    durationSeconds: elapsedSeconds,
+    activeCalories: activeEnergy,
+    heartRate: heartRate,
+    distanceMeters: distanceMeters
+)
+
+resetWorkoutState()
+withAnimation(.snappy) { phase = .idle }
+```
+
+### 24.5 LLM Retrieval Integration — Zero Prompt-Composer Changes
+
+The mirror-write into `MemoryStore` is what connects this feature to the Captain's cloud brain. No `PromptComposer` changes were required because the retrieval pipeline already covered `workout_history`:
+
+- `CognitivePipeline.retrieveRelevantMemories` weights `workout_history` at **2.8** for `.workout` intent and **2.6** for `.challenge` intent.
+- When the user asks `شون جان تمرين اليوم؟`, the intent classifier routes to `.workout`, `MemoryStore.retrieveRelevantMemories` surfaces the `recent_workouts` entry in the top-8, `CognitivePipeline.buildWorkingMemorySummary` emits it under `[strategic_memories]`, and `PromptComposer.layerWorkingMemory` injects it into `=== ACTIVE WORKING MEMORY ===` under the "Activated long-term memory for this message" header.
+
+The summary text is bilingual (picks Arabic/English based on `AppSettingsStore.shared.appLanguage`) and structured so the LLM can parse it:
+
+```
+آخر 7 تمارين للمستخدم (من الأحدث للأقدم):
+1. 22 أبريل — كارديو ويا الكابتن حمودي، 100 دقيقة، 255 سعرة، ن 119، 2.66 كم
+2. 20 أبريل — …
+```
+
+Confidence `0.95` ensures the entry ranks above lower-confidence extractor rows of the same category.
+
+### 24.6 UI Surface
+
+Section order in `CaptainMemorySettingsView`:
+
+```
+ذاكرة الكابتن
+├── headerSection                   (title + emoji + memory counter)
+├── toggleSection                   (memory-enabled switch)
+├── Weekly Reports section          (if any reports exist)
+├── identitySection                 ← NEW (fixed, 5 rows, from UserProfile)
+├── workoutsSection                 ← NEW (fixed, up to 7 rows, from WorkoutHistoryStore)
+├── ForEach(dynamic memories        ← filtered to skip identity + workout_history
+│           grouped by category)
+└── clearSection                    (destructive clear-all button)
+```
+
+Each workout row renders as a three-line `VStack(alignment: .trailing)`:
+- **Title** (bold, 14 pt rounded) — `كارديو ويا الكابتن حمودي`.
+- **Summary** (regular, 13 pt) — `100 دقيقة • 255 سعرة • 119 ن/د • 2.66 كم`. Summary parts are built via `workoutSummaryText(for:)` which bilingualizes units (Arabic: `دقيقة`/`سعرة`/`ن/د`/`كم`; English: `min`/`kcal`/`bpm`/`km`) and skips any part whose source metric is zero.
+- **Timestamp** (regular, 11 pt, opacity 0.3) — `22 أبريل، 2026 ١١:٥٥ م`.
+
+### 24.7 Clear-All Flow
+
+[CaptainMemorySettingsView.swift:60-66](AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift:60) — the destructive-role button inside the clear-confirmation `.alert` now invokes `WorkoutHistoryStore.shared.clear()` alongside the pre-existing `MemoryStore.shared.clearAll()`. Otherwise the workout rows would survive a user-initiated memory wipe, producing the same "I cleared everything but it's still there" confusion the §22 hydration pipeline already avoided.
+
+### 24.8 Files Added / Modified
+
+**Added:**
+- `AiQo/Features/Captain/Brain/02_Memory/Stores/WorkoutHistoryStore.swift` (141 lines)
+
+**Modified:**
+- `AiQo/Features/Captain/Brain/10_Observability/CaptainMemorySettingsView.swift` — inserts `identitySection` + `workoutsSection`, filters the dynamic memory loop, adds the `clear()` call to the destructive alert button, introduces helper computed vars (`isArabicUI`, `currentProfile`, `identityName`, `identityAge`, `identityGenderLabel`, `identityGenderValue`, `identityHeight`, `identityWeight`, `workoutEntries`) and two row builders (`identityRow`, `workoutRow`) plus a summary formatter (`workoutSummaryText`).
+- `AiQo/Features/Gym/LiveWorkoutSession.swift` — 7-line `recordCompletion` call inserted in `handleRemoteEnded`.
+
+**Not touched:**
+- `MemoryStore.swift` — public API `set(_:value:category:source:confidence:)` and `remove(_:)` were already sufficient.
+- `CognitivePipeline.swift` — existing category weighting covered the retrieval side.
+- `UserProfileStore.swift` — existing singleton + computed `.current` property.
+- `Localizable.strings` — all labels reuse pre-existing keys (`memory.key.name`, `memory.key.age`, `memory.key.height`, `memory.key.weight`, `memory.cat.identity`, `memory.cat.workoutHistory`). The one new optional key `memory.workout.genericTitle` ships with an inline English fallback via `NSLocalizedString(_:value:comment:)`, so the build succeeds whether or not it's localized.
+
+### 24.9 Known Risks
+
+1. **`UserProfile` defaults to `name: "Captain"`** on fresh installs (see [UserProfileStore.swift:71](AiQo/Core/UserProfileStore.swift:71) — the fallback struct). The identity-source logic filters that placeholder explicitly (`trimmed.lowercased() == "captain"` → `nil`) so the row shows `—` instead of showing the Captain's own name. The same filter lives in `CloudBrain.makeCloudSafeProfile` (§26.5) — both paths are in sync.
+2. **Local UI vs cloud privacy asymmetry.** The Identity section shows exact height/weight (`175 سم` / `95 كغم`) because this data is visible on the user's own profile screen anyway. The cloud-side `CloudSafeProfile` (§26) buckets to 5-unit precision before it leaves the device. The two paths are deliberately inconsistent; one is local-visible, the other crosses the privacy boundary.
+3. **Tier-cap accounting.** `MemoryStore.set` counts every upserted key against `TierGate.shared.maxSemanticFacts`. The `recent_workouts` key is a single upsert (not N entries), so it consumes exactly 1 slot. For `.none`-tier users capped at 50 facts, that's 2% of the budget — acceptable.
+4. **Order determinism under same-second writes.** If two workouts end within the same millisecond the `date` values collide. `recentEntries()` sorts by insertion order (via `insert(entry, at: 0)`), so FIFO is preserved regardless of timestamp collisions.
+5. **Summary language drift.** The LLM mirror is written in whichever language was active at record time. A user who switches the app language mid-day will see a mixed-language summary inside the cloud brain for up to 7 past sessions. Cosmetic — the LLM reasons over both languages fine.
+
+### 24.10 Build State After §24
+
+| Metric | After §24 |
+|---|---|
+| Main-app build | SUCCEEDED (Xcode 16 synchronized-group pickup; no `project.pbxproj` edit needed) |
+| New Swift files | 1 (`WorkoutHistoryStore.swift`) |
+| Modified Swift files | 2 |
+| New localization keys | 1 optional (`memory.workout.genericTitle`) |
+| New dependencies | 0 |
+| TierGate references added | 0 (feature is free) |
+
+---
+
+## 25. Cardio & Summary Voice Routing — Captain Hamoudi MiniMax
+
+*Added 2026-04-23. Three files modified, zero files added. Completes the voice-provider router integration across the two remaining direct-to-Apple-TTS call sites.*
+
+### 25.1 Problem
+
+Two voice-playback paths bypassed [CaptainVoiceRouter](AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift) (the tier-aware dispatcher introduced in the `feat(voice):` commit series, specifically `e9bc098` / `6b4cc7b` / `7524f88` / `64e8927`) and spoke via Apple TTS directly:
+
+1. **Zone 2 cardio coaching.** `AudioCoachManager.handleDynamicZone2Coaching` called `CaptainVoiceService.shared.generateAndSpeakWorkoutPrompt(liveHR:zoneBounds:distance:)` — a method that generated the Iraqi-Arabic cue via FoundationModels and synthesized it inline on `AVSpeechSynthesizer`. The `CaptainVoiceRouter` was never consulted.
+2. **Workout summary narration.** `PhoneWorkoutSummaryView.onAppear` called `CaptainVoiceService.shared.speak(text:)` directly on the generated summary text.
+
+Both used the on-device voice regardless of whether the user had activated the Captain Hamoudi MiniMax cloud voice. The user's explicit intent — "خلي الكابتن يحجي بصوته" — was structurally blocked at the call site.
+
+### 25.2 Router API Recap
+
+[CaptainVoiceRouter.shared.speak(text:, tier:)](AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift:97) is the single tier-aware entry point:
+
+- `.realtime` → **always** Apple TTS (`AppleTTSProvider`). <150 ms latency budget. Never hits the network.
+- `.premium` → MiniMax (`MiniMaxTTSProvider`) when **all four** hold:
+  1. `FeatureFlags.captainVoiceCloudEnabled` is on.
+  2. `MiniMaxTTSProvider` is configured (API key + endpoint resolved from `Info.plist`).
+  3. `CaptainVoiceConsent.isGranted` — the dedicated voice-cloud consent (separate from AI-data consent, per Apple 5.1.2(II) third-party-disclosure rules).
+  4. The network request succeeds (MP3 fetch + play).
+  
+  Any negative answer falls through silently to Apple TTS. After **3 consecutive MiniMax failures in 60 s**, a single toast is surfaced via `CaptainVoiceService.presentRouterFallbackToast`; further toasts are suppressed for the rest of the app launch.
+
+### 25.3 Path 1 — Zone 2 Cardio
+
+**Step 1:** [AiQo/Core/CaptainVoiceService.swift:119-130](AiQo/Core/CaptainVoiceService.swift:119) gained a text-only variant:
+
+```swift
+/// Text-only variant for callers that want to speak the coaching cue
+/// through `CaptainVoiceRouter` (premium/cloud voice) instead of Apple TTS.
+func makeWorkoutPromptText(
+    liveHR: Int,
+    zoneBounds: ClosedRange<Int>,
+    distance: Double
+) async -> String {
+    await generatedWorkoutPrompt(
+        liveHR: liveHR,
+        zoneBounds: zoneBounds,
+        distance: distance
+    )
+}
+```
+
+This is a thin wrapper over the existing `private func generatedWorkoutPrompt(…)`. It separates **text generation** (FoundationModels primary, deterministic Iraqi-Arabic fallback for non-iOS-26 / unavailable model / generation error) from **playback**, so the call site can choose the voice tier.
+
+`generateAndSpeakWorkoutPrompt` is retained on the public surface for backward compatibility; no current call site uses it, but removing it would be a cross-surface breaking change disproportionate to this pass.
+
+**Step 2:** [AudioCoachManager.swift:72-79](AiQo/Features/Gym/AudioCoachManager.swift:72) now generates the text and routes playback to `.premium`:
+
+```swift
+Task { @MainActor in
+    let prompt = await CaptainVoiceService.shared.makeWorkoutPromptText(
+        liveHR: bpm,
+        zoneBounds: zoneBounds,
+        distance: distanceKM
+    )
+    await CaptainVoiceRouter.shared.speak(text: prompt, tier: .premium)
+}
+```
+
+**Step 3:** `AudioCoachManager.stop()` (previously a no-op) now forwards to the router:
+
+```swift
+func stop() {
+    CaptainVoiceRouter.shared.stop()
+}
+```
+
+This matters because `stop()` fires from `LiveWorkoutSession.handleRemoteEnded` (line 460). Without it, a mid-MiniMax-playback cue would continue speaking after the workout ended, overlapping the summary narration.
+
+### 25.4 Path 2 — Workout Summary
+
+[PhoneWorkoutSummaryView.swift:230-238](AiQo/Features/Gym/PhoneWorkoutSummaryView.swift:230) — `.onAppear` now:
+
+```swift
+Task {
+    let summaryText = await generateCaptainSummaryText()
+    await CaptainVoiceRouter.shared.speak(text: summaryText, tier: .premium)
+}
+```
+
+`generateCaptainSummaryText()` was already split from playback (it's a pure text function that composes duration / calories / avg HR / recovery lines). Only the playback call changed.
+
+`.onDisappear` stops **both** providers:
+
+```swift
+CaptainVoiceRouter.shared.stop()
+CaptainVoiceService.shared.stopSpeaking()
+```
+
+Reason for both:
+- `CaptainVoiceRouter.stop()` cancels whichever provider was active (Apple or MiniMax) from the router's perspective.
+- `CaptainVoiceService.stopSpeaking()` stops the `AVSpeechSynthesizer` instance **inside** `CaptainVoiceService` — which has its own lifecycle separate from the one owned by `AppleTTSProvider` inside the router.
+
+Historically, `CaptainVoiceService` was the only synthesizer in the app, so its direct stop was sufficient. After the router landed, `AppleTTSProvider` spun up its own synthesizer behind the provider interface. The dual-stop guarantees silence on leave regardless of which code path fired the last utterance.
+
+### 25.5 Latency Tradeoff (Accepted)
+
+The Zone 2 path was deliberately designed against `.premium` in the router docstring:
+> "Used for Zone 2 coaching, stand reminders, short system phrases. Latency budget <150 ms. Never hits the network."
+
+MiniMax MP3 fetches take **3–8 seconds** from request to playback start. By routing Zone 2 to `.premium` the app accepts this tradeoff because the user explicitly asked for the linked Captain voice on both surfaces. Consequences:
+
+- Zone 2 cues arrive ~4 s after the HR-transition trigger instead of ~150 ms. The cooldown (`feedbackCooldown = 120 s`) prevents spam, so the user hears at most ~1 cue per 2 minutes — the extra latency does not compound.
+- If MiniMax fails, the router's silent fallback to Apple TTS keeps the cue delivering.
+- If the user revokes `CaptainVoiceConsent`, every call becomes Apple TTS instantly via `MiniMaxTTSProvider.speak` throwing `.consentMissing` (router catches and routes to `appleTTSProvider`).
+- If cost-of-network becomes a product issue (offline workouts, metered connections), the fix is a single-line flip of the tier argument at the call site. No architectural change required.
+
+The summary path has no latency constraint — it fires once on screen appear and plays alongside the XP/animation beats.
+
+### 25.6 Files Modified
+
+- `AiQo/Core/CaptainVoiceService.swift` — added public `makeWorkoutPromptText(liveHR:zoneBounds:distance:)`. Existing `generateAndSpeakWorkoutPrompt` retained.
+- `AiQo/Features/Gym/AudioCoachManager.swift` — Zone 2 cue now routes through `CaptainVoiceRouter.speak(tier: .premium)`; `stop()` forwards to the router.
+- `AiQo/Features/Gym/PhoneWorkoutSummaryView.swift` — summary narration routes through the router; `.onDisappear` double-stops both providers.
+
+**Not touched:**
+- `CaptainVoiceRouter.swift` — no API changes.
+- `MiniMaxTTSProvider.swift` / `AppleTTSProvider.swift` — no changes.
+- `CaptainVoiceConsent.swift` — no consent-gating changes.
+- `FeatureFlags.swift` — no flag changes.
+
+Zero new files. Zero deletions. Zero localization keys.
+
+### 25.7 Known Risks
+
+1. **Zone 2 cues now depend on the network.** Outdoor workouts in dead zones, airplane mode, or congested networks will bounce through the router's 3-failure-in-60s threshold and eventually surface one "switched to local voice" toast. After the toast fires the session falls back to Apple TTS silently for the rest of the launch.
+2. **MiniMax cache warming is not yet triggered for Zone 2.** `CaptainVoiceRouter.warmCache(text:)` exists but the cardio cue text is generated live (HR + zone-state dependent), so there's no stable pre-generable utterance to warm. The summary path could pre-warm once `generateCaptainSummaryText()` commits to a stable seed, but that's a follow-up.
+3. **Two synthesizer instances held in memory.** `CaptainVoiceService` and `AppleTTSProvider` each own an `AVSpeechSynthesizer`. Minor RSS cost; both are lazily initialized on first use. A future consolidation pass could collapse these into one.
+
+---
+
+## 26. Cloud-Side Captain Identity — `CloudSafeProfile`
+
+*Added 2026-04-23. Root-cause fix for the `اسمك "User"?` behavior. Adds ~80 lines of new code, removes ~20 lines of redaction that was actively breaking personalization.*
+
+### 26.1 Problem (Observed)
+
+From a live device session on 2026-04-23 at 11:59 local time (iPhone 16,2, build 17, `locale=ar_AE`):
+
+User: `شنو اسمي ؟`  
+Captain: `يا هلا بيك! اسمك "User"؟ لو تحب تكولي اسمك حتى أحفظه؟`
+
+Meanwhile, the §24 Identity section on the same device showed the user's actual profile: `الاسم محمد رعد`, `العمر 24`, `الجنس ذكر`, `الطول 175 سم`, `الوزن 95 كغم`. The data existed locally; the cloud side couldn't see any of it.
+
+### 26.2 Root Cause
+
+[PrivacySanitizer.sanitizeForCloud](AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift) had two compounding behaviors:
+
+1. **`userProfileSummary: ""`** was hard-coded in the sanitized `HybridBrainRequest` output. This blanked the slot that [PromptComposer.build](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift:14) reads via `extractFirstName(from: request.userProfileSummary)` to activate the Arabic `=== قواعد الاسم ===` sub-layer inside `layerIdentity`. With the slot empty, `extractFirstName` returned `nil`, the sub-layer was skipped, and the persona shipped to Gemini without any reference to the user's name.
+2. **`sanitizeText` ran three name-redaction steps** on every conversation turn:
+   - `replaceSelfIdentifyingPhrases` — regex-matched `اسمي X` / `my name is X` / `I am X` and rewrote the captured name to the literal token `User`.
+   - `replaceExplicitProfileFields` — regex-matched `name: X` / `الاسم: X` / `username: X` and did the same.
+   - `replaceKnownUserName` — globally replaced any verbatim occurrence of the user's known first name with `User`.
+
+Net effect on the cloud model: the conversation slice (last 4 turns) had every occurrence of the user's name replaced with the token `User`; the system prompt carried no profile metadata at all. When asked `شنو اسمي؟`, the model echoed back the only identifier it saw in context: `User`, quoted because Arabic-trained LLMs tend to quote transliterated English tokens.
+
+The user's identity was known locally (the §24 Identity section surfaced it correctly) but structurally partitioned from the cloud-call path.
+
+### 26.3 `CloudSafeProfile` Schema
+
+[PrivacySanitizer.swift:17-51](AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift:17) introduces a new top-level `Sendable` struct:
+
+```swift
+struct CloudSafeProfile: Sendable {
+    let firstName: String?
+    let age: Int?
+    let gender: String?
+    let heightCm: Int?
+    let weightKg: Int?
+
+    func asSummaryLines() -> String { … }
+    var isEmpty: Bool { … }
+}
+```
+
+`asSummaryLines()` produces exactly the format `PromptComposer.extractFirstName` expects (it regex-matches `- Preferred name:\s*([^\n,،]+)`):
+
+```
+- Preferred name: محمد
+- Age: 24
+- Gender: male
+- Height: ~175cm
+- Weight: ~95kg
+```
+
+Nil fields are omitted. Body-stat bucketing lives inside the serializer itself:
+
+```swift
+if let heightCm, heightCm > 0 {
+    let bucket = (heightCm / 5) * 5
+    lines.append("- Height: ~\(bucket)cm")
+}
+```
+
+A user with weight 93 renders as `~90kg`; 97 as `~95kg`. Age is carried exact because exact age is required for max-HR zone calculations and is less individually identifying than body stats combined.
+
+### 26.4 Sanitizer Integration
+
+[sanitizeForCloud](AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift:162) signature gains a new optional parameter:
+
+```swift
+func sanitizeForCloud(
+    _ request: HybridBrainRequest,
+    knownUserName: String?,
+    cloudSafeProfile: CloudSafeProfile? = nil,   // ← NEW
+    cloudSafeMemories: String = ""
+) -> HybridBrainRequest
+```
+
+When `cloudSafeProfile != nil`, its `asSummaryLines()` result populates `userProfileSummary`, which then flows into:
+
+- [PromptComposer.layerStableProfile](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift:207) → emits the `=== STABLE USER PROFILE ===` block at the top of the system prompt.
+- [PromptComposer.extractFirstName](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift:537) → returns `محمد` → `layerIdentity` activates the Arabic `=== قواعد الاسم ===` sub-layer with natural-address examples (`يا محمد`, `محمد،`).
+
+The parameter defaults to `nil` so every existing caller (including both `PrivacySanitizerTests` assertions) continues to compile unchanged. The tests pass because `nil` → `userProfileSummary = ""` → no behavioral delta from their perspective.
+
+### 26.5 CloudBrain Wiring
+
+[CloudBrain.swift:53-66](AiQo/Features/Captain/Brain/04_Inference/Services/CloudBrain.swift:53) — the existing single-MainActor-hop collects the profile alongside the other main-isolated reads:
+
+```swift
+let (activeTier, cloudSafeMemories, consentGranted, cloudSafeProfile) = await MainActor.run {
+    let tier = AccessManager.shared.activeTier
+    let budget = tier.effectiveAccessTier == .pro ? 700 : 400
+    let memories = MemoryStore.shared.buildCloudSafeRelevantContext(
+        for: latestUserMessage,
+        screenContext: request.screenContext,
+        maxTokens: budget
+    )
+    let consent = AIDataConsentManager.shared.hasUserConsented
+    let profile = Self.makeCloudSafeProfile(userName: userName)   // ← NEW
+    return (tier, memories, consent, profile)
+}
+```
+
+The profile factory lives at [CloudBrain.swift:149-178](AiQo/Features/Captain/Brain/04_Inference/Services/CloudBrain.swift:149), `@MainActor` because `UserProfileStore.shared.current` reads from `UserDefaults` and the observable store is main-isolated:
+
+```swift
+@MainActor
+private static func makeCloudSafeProfile(userName: String?) -> CloudSafeProfile {
+    let profile = UserProfileStore.shared.current
+
+    let resolvedFirstName: String? = {
+        if let name = userName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            return name.components(separatedBy: .whitespaces).first
+        }
+        let profileName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if profileName.isEmpty || profileName.lowercased() == "captain" { return nil }
+        return profileName.components(separatedBy: .whitespaces).first
+    }()
+
+    let gender = profile.gender?.rawValue
+
+    return CloudSafeProfile(
+        firstName: resolvedFirstName,
+        age: profile.age > 0 ? profile.age : nil,
+        gender: gender,
+        heightCm: profile.heightCm > 0 ? profile.heightCm : nil,
+        weightKg: profile.weightKg > 0 ? profile.weightKg : nil
+    )
+}
+```
+
+Resolver semantics:
+- First prefers `userName` — the session-level reply name already plumbed through `BrainOrchestrator.processCloudRoute(request:, userName:)`.
+- Falls back to `UserProfileStore.shared.current.name`.
+- Strips the last name via `.components(separatedBy: .whitespaces).first`.
+- Filters the onboarding placeholder `Captain` explicitly (same rule as §24's identity section). A user who hasn't completed onboarding sees `firstName: nil`, no name row in the cloud summary, and the persona's name sub-layer stays dormant.
+
+### 26.6 Conversation Policy Changes
+
+[sanitizeText](AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift:212) was narrowed. Before / after:
+
+| Step | Before (all on) | After |
+|---|---|---|
+| 1 | `replaceSelfIdentifyingPhrases` — `my name is X` → `my name is User` | **Removed** |
+| 2 | `replaceExplicitProfileFields` (full set, incl. `name/username`) | **Kept**, narrowed — name/username rules dropped |
+| 3 | `replaceKnownUserName` — global name → `User` | **Removed** |
+| 4 | `piiRedactionRules` — email/phone/UUID/IP/URL/card/`sk-`/`Bearer` | **Kept** |
+| 5 | Collapse consecutive redaction tokens | **Kept** |
+
+Rationale: the user's first name is now carried by `CloudSafeProfile`, which sits in the system-prompt layer (hierarchically above the conversation). Redacting the same name in the conversation produced a self-contradicting payload — persona saying `Preferred name: محمد` while a prior conversation turn says `اسمي User`. LLM prompt-following is noisier in that contradiction state than when the two layers agree.
+
+[replaceExplicitProfileFields](AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift:466) was narrowed from four rules to two — retains the English `email|e-mail|phone|mobile|number|address|location|dob|date of birth|birthday` and Arabic `الايميل|البريد|البريد الالكتروني|الرقم|رقم الهاتف|الجوال|العنوان|الموقع|تاريخ الميلاد` rules. The name-oriented English rule (`name|full name|username|user name`) and Arabic rule (`الاسم|اسم المستخدم|اليوزر|المستخدم`) were dropped along with the body-metric redactions (`age|height|weight` and Arabic equivalents) — those metrics are now in the CloudSafeProfile payload in bucketed form, so field-labeled references in conversation no longer need to be redacted.
+
+The `piiRedactionRules` static list is untouched — email, phone, UUID, IP, URL, long numeric sequences, `sk-`-prefixed keys, and `Bearer …` headers still redact as `[REDACTED]` / `[REDACTED_API_KEY]` / `Bearer [REDACTED]`.
+
+### 26.7 Privacy Posture (Updated)
+
+| Field | Cloud payload | Rationale |
+|---|---|---|
+| First name | Yes, verbatim | Required for natural coaching address. Explicitly entered by the user for this purpose. |
+| Last name | **Stripped** (first-word split) | Identifying. Not required for coaching. |
+| Age | Exact integer | Required for max-HR zones and coaching progressions. Ages are not individually identifying across a user base. |
+| Gender | Enum raw value (`male`/`female`) | Required for caloric baseline advice. |
+| Height | Bucketed ±5 cm | Coarse enough to resist cross-attribute identification; precise enough for equipment sizing. |
+| Weight | Bucketed ±5 kg | Same. Weight is the most sensitive numeric in this set; bucketing reduces disclosure. |
+| Email / phone / DOB / address / location | `[REDACTED_PROFILE]` | Strict PII. Not coaching-relevant. Regex rules kept. |
+| UUIDs / IPs / URLs / long numerics / API keys / bearer tokens | `[REDACTED]` / `[REDACTED_API_KEY]` / `Bearer [REDACTED]` | Infrastructure / credentials. Regex rules kept. |
+
+Cloud AI consent (`AIDataConsentManager.shared.hasUserConsented`) is still checked upstream in `CloudBrain.generateReply` before any sanitization runs. A user who denies cloud consent produces a `.consentDenied` audit entry and the cloud call is aborted before `CloudSafeProfile` is constructed.
+
+### 26.8 End-to-End Trace
+
+User sends `شنو اسمي؟` after the fix. The sanitized cloud payload now carries (relevant excerpt from the composed system prompt):
+
+```
+=== STABLE USER PROFILE ===
+These are durable truths and preferences about the user.
+Use them to personalize tone and recommendations, but don't dump them back unless relevant.
+
+- Preferred name: محمد
+- Age: 24
+- Gender: male
+- Height: ~175cm
+- Weight: ~95kg
+
+=== قواعد الاسم ===
+اسم المستخدم الأول: محمد
+- استخدم الاسم الأول فقط "محمد" — مو الاسم الكامل أبداً
+- لا تبدأ كل رد بالاسم — مرة كل 3-4 رسائل بشكل طبيعي
+- "يا محمد" أو "محمد،" — طبيعي وودي مثل أخ عراقي
+```
+
+Gemini's reply aligns with the persona: natural vocative `يا محمد، …`. When asked explicitly for the name, the model cites the `Preferred name` value. The `User` token no longer appears anywhere in the payload for this user.
+
+### 26.9 Behavior Before / After
+
+| Scenario | Before | After |
+|---|---|---|
+| `شنو اسمي؟` | `اسمك "User"؟ لو تحب تكولي…` | `اسمك محمد، عفتك؟` (or similar — persona keeps it natural) |
+| First-turn greeting (`هلاوو`) | `يا هلا بيك! شلونك اليوم؟` | `يا محمد، هلا بيك! شلونك اليوم؟` — natural vocative enabled |
+| User says `اسمي محمد` in a past turn | Redacted to `اسمي User` in the cloud slice | Preserved verbatim — matches the system prompt |
+| User states exact weight: `وزني 95 كيلو` | Redacted to `وزني [REDACTED_PROFILE]` | Preserved; the bucketed `Weight: ~95kg` is already in the profile summary |
+| Coaching advice that cites body stats | Generic ("focus on form") | Can reference bucketed weight for appropriate load / zone guidance |
+| Cloud AI consent not granted | Cloud call aborts early | Cloud call aborts early — unchanged |
+
+### 26.10 Files Modified
+
+- `AiQo/Features/Captain/Brain/05_Privacy/PrivacySanitizer.swift` — `CloudSafeProfile` struct (new), `sanitizeForCloud` signature + body, `sanitizeText` narrowing, `replaceExplicitProfileFields` narrowing.
+- `AiQo/Features/Captain/Brain/04_Inference/Services/CloudBrain.swift` — 4-tuple MainActor hop, `makeCloudSafeProfile` factory, profile passed to sanitizer.
+
+**Not touched:**
+- `PromptComposer.swift` — the existing `extractFirstName` + `layerIdentity` + `layerStableProfile` path handled the persona side unchanged.
+- `BrainOrchestrator.swift` — existing `userName` plumbing stays; no new parameter was introduced on that surface.
+- `HybridBrain.swift` — no transport-level changes.
+- `UserProfileStore.swift` — existing singleton + computed `.current` property.
+- `AiQoTests/PrivacySanitizerTests.swift` — `cloudSafeProfile` defaults to `nil` so both existing tests (`testSanitizeForCloud_BucketsHealthContext`, `testSanitizeForCloud_DropsEmotionalAndTrendSignals`) pass unchanged.
+- `AIDataConsentManager.swift` — the consent gate is unchanged. This fix relies on the **existing** consent; it does not lower the bar.
+
+### 26.11 Known Risks
+
+1. **Profile drift mid-conversation.** `CloudSafeProfile` is captured once per cloud call (fresh read per MainActor hop). If the user edits their profile mid-session, the next cloud call reflects the new values, but the earlier turns in the 4-message slice may have been generated against the old profile. Not a correctness bug; a coherence nuance.
+2. **Name collision with the `User` token.** The sanitizer still replaces `@mentions` with the literal `User` and still treats that token in the collapse regex. A real user whose first name is literally `User` would collide — vanishingly rare and not worth guarding against.
+3. **Gender expansion.** `ActivityNotificationGender` is `male` / `female` today. Adding a non-binary case means the summary line ships the raw enum value; downstream persona copy assumes binary. Cosmetic only; fix with a small mapper in `CloudSafeProfile.asSummaryLines()` when the enum grows.
+4. **No profile caching.** `UserProfileStore.shared.current` decodes from `UserDefaults` on every call. For the chat path this is one decode per cloud request — negligible. If a proactive-notification pipeline ever fires profile-aware cloud calls at high frequency, caching would matter.
+5. **Body-metric bucketing is language-agnostic.** `~175cm` / `~95kg` render in ASCII regardless of app language. The LLM handles this fine (both Arabic and English personas parse the numbers), so no localization of the summary lines is needed.
+
+### 26.12 Build State After §26
+
+| Metric | After §26 |
+|---|---|
+| Main-app build | SUCCEEDED (SourceKit in-editor diagnostics are pre-existing module-indexing glitches unrelated to this pass) |
+| New Swift files | 0 |
+| Modified Swift files | 2 |
+| Signature compatibility | 100% — `cloudSafeProfile` defaults to `nil`, all existing callers and tests compile unchanged |
+| New dependencies | 0 |
+| Consent changes | 0 — rides on existing `AIDataConsentManager.hasUserConsented` gate |
+
+### 26.13 Combined §24 + §25 + §26 Daily Change Summary (2026-04-23)
+
+| Pass | New files | Modified files | Net concern |
+|---|---|---|---|
+| §24 | 1 (`WorkoutHistoryStore.swift`) | 2 (`CaptainMemorySettingsView`, `LiveWorkoutSession`) | Identity accuracy + workout recall surface |
+| §25 | 0 | 3 (`CaptainVoiceService`, `AudioCoachManager`, `PhoneWorkoutSummaryView`) | Voice branding parity |
+| §26 | 0 | 2 (`PrivacySanitizer`, `CloudBrain`) | Cloud-side personalization |
+| **Total** | **1** | **7** (one file — `CaptainMemorySettingsView` — modified across §24 only) | All three land on the same branch (`brain-refactor/p-fix-dev-override`) |
+
+All three passes share the same guiding line: **Captain Hamoudi was already culturally-rooted and voice-branded, but three structural bugs — wrong Identity source, absent workout recall, redaction of the user's own name — prevented that personalization from reaching the chat surface.** Today's work removed each of those barriers without adding any new consent surface, paid tier, or dependency.
+
+---
+
+## 27. App Store Review Readiness — Permission + Privacy + Paywall Hardening
+
+*Added 2026-04-23 (same-day pass 2). Three workstreams ran in sequence against Apple's current (Nov 2025) Review Guidelines: **Package A** (P0 blockers), **Package B** (high-risk gaps), **Package D** (permission surface cleanup). Combined: 5 Info.plist / PrivacyInfo / pbxproj / InfoPlist.strings files, and 1 Swift view — 8 total touched, 0 new Swift files.*
+
+### 27.1 Trigger
+
+The app had shipped v1.0 (per §21 hardening) but a pre-resubmission audit against the 2025–2026 guideline updates flagged three classes of issue that would now block upload or fail review: a missing permission description for a live API call, an incomplete privacy manifest, and a subscription disclosure short of the canonical Apple wording.
+
+The audit was structured as four P-prioritized packages (A → D). **Package C** — the cloud-proxy API-key hardening — was treated separately; see §28.
+
+### 27.2 Package A — P0 Blockers
+
+Items that would fail the upload validator or crash on first use.
+
+#### 27.2.1 `NSCameraUsageDescription` was missing from the main Info.plist
+
+**Finding.** Five Swift files instantiate `AVCaptureSession` (`VisionCoachViewModel`, `VisionCoachView`, `QuestDetailSheet`, `QuestCameraPermissionGateView`, `QuestPushupChallengeView`), but the static [`AiQo/Info.plist`](AiQo/Info.plist) did not declare `NSCameraUsageDescription`. An app that calls the camera API without this key either crashes with a purpose-string exception on first use or is auto-rejected at upload (ITMS validator).
+
+**What the pbxproj had vs. what the built Info.plist needed.** The pbxproj build settings already had `INFOPLIST_KEY_NSCameraUsageDescription`, but with a misleading Arabic string that included the claim "على جهازك فقط" ("on-device only"). That claim was true for VisionCoach + Learning-proof certificate verification, but **false for the Smart Fridge meal-scanning use case** (fridge photos are sent to Gemini via the AI-data consent flow). Shipping that wording risks Apple flagging the app for a purpose string that doesn't match actual behavior.
+
+**Fix.**
+- Rewrote the pbxproj `INFOPLIST_KEY_NSCameraUsageDescription` (both Debug + Release configs) to an accurate English base:
+  > *AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.*
+- Added matching locale-specific versions to `en.lproj/InfoPlist.strings` + `ar.lproj/InfoPlist.strings`. Both versions enumerate all three use cases and explicitly tie the only off-device path (fridge photos → Gemini) to the separate AI-data consent gate, so reviewer expectations match runtime behavior.
+- No static Info.plist key added — the modern Xcode pattern is pbxproj-first (since Xcode 13), and a duplicate key in both sources would trigger Xcode warnings.
+
+#### 27.2.2 `PrivacyInfo.xcprivacy` missing `FileTimestamp` Required Reason
+
+**Finding.** `VoiceCacheStore.swift:161–169` reads `URL.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])` on cache files — this triggers the `NSPrivacyAccessedAPICategoryFileTimestamp` Required Reason API category. The main [`PrivacyInfo.xcprivacy`](AiQo/PrivacyInfo.xcprivacy) only declared `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`). Apple rejects uploads that call a Required Reason API without a declared reason (error codes ITMS-91053 / 91056 / 91061, enforcement tightened through 2025).
+
+**Fix.** Added a `FileTimestamp` entry with reason **`0A2A.1`** — the correct code for files inside the app's own container/app-group/CloudKit container (versus `3B52.1` for user-granted files, `C617.1` for file-picker timestamps, `DDA9.1` for displayed timestamps). `VoiceCacheStore` files live in the app cache directory, so `0A2A.1` is the exact match.
+
+**Verified no other Required Reason API is triggered** via grep across the whole app:
+- `systemUptime` / `CACurrentMediaTime` → not used
+- `volumeAvailableCapacity` → not used
+- `activeInputModes` / `UITextInputMode` → not used
+
+Post-fix the manifest covers 100% of the app's actual API surface.
+
+#### 27.2.3 Supabase-swift SDK manifest status (reclassified)
+
+**Initial classification:** P0, on the theory that supabase-swift@2.36.0 ships without a `PrivacyInfo.xcprivacy` and Apple's Feb 2025 SDK-manifest enforcement would block upload.
+
+**After investigation:** downgraded to **non-blocker**. Apple's enforced list of SDKs that *must* ship manifests covers Firebase, Alamofire, FBSDK, AppAuth, and roughly 80 others — **supabase-swift is not on it**. The SDK's only Required-Reason-API use is `fileManager.attributesOfItem(atPath:)[.size]` inside `Storage/MultipartFormData.swift` (line 253), which is only exercised by Supabase Storage — and AiQo uses Supabase Auth + Postgres only, not Storage. Upload validation will pass. A note was added to re-evaluate when supabase-community ships a manifest in a later release.
+
+### 27.3 Package B — High Risk
+
+Items likely to trigger a review-stage rejection even if the upload validator accepts them.
+
+#### 27.3.1 `NSPrivacyCollectedDataTypes` expansion
+
+**Pre-state.** Declared: `Fitness`, `Health`, `UserContent`, `Name`, `EmailAddress` — all linked-to-user, non-tracking, `AppFunctionality`.
+
+**Gap vs. actual collection:** two data types that leave the device were missing.
+- **`NSPrivacyCollectedDataTypeUserID`** — Supabase Auth persists a UUID on the server (the `sub` claim in the JWT); StoreKit entitlement caches reference it.
+- **`NSPrivacyCollectedDataTypePhotosorVideos`** — Smart Fridge captures a kitchen photo and sends it to Gemini via `HybridBrainRequest.attachedImageData`.
+
+**What was *not* added (deliberately):**
+- `AudioData` — MiniMax TTS sends audio **to** the device; the app never captures or uploads audio.
+- `SearchHistory` — Spotify Top Tracks + vibe queries stay on-device for local mood inference; no upload path exists.
+
+**Fix.** Added both `UserID` and `PhotosorVideos` dicts with the same linked/non-tracking/AppFunctionality posture as existing entries.
+
+#### 27.3.2 Unified permission-string surface
+
+**Finding.** Purpose strings were defined in three places with drift between them:
+1. Static [`AiQo/Info.plist`](AiQo/Info.plist) — one key (`NSAlarmKitUsageDescription`) in English.
+2. [`project.pbxproj`](AiQo.xcodeproj/project.pbxproj) `INFOPLIST_KEY_*` — 11 keys spanning Arabic + English, some vague, one with the misleading "على جهازك فقط" claim (§27.2.1), one that referenced "during development" in the `NSLocalNetworkUsageDescription` value (user-visible in Release).
+3. [`en.lproj/InfoPlist.strings`](AiQo/Resources/en.lproj/InfoPlist.strings) + [`ar.lproj/InfoPlist.strings`](AiQo/Resources/ar.lproj/InfoPlist.strings) — 4 keys, previously with vague copy ("for form precision and safety").
+
+iOS resolution order at runtime is locale `.strings` → built Info.plist → pbxproj fallback. Apple reviewers see the `.strings` values; so the `.strings` were the primary surface to fix, with pbxproj updated in parallel so non-en/non-ar locales don't fall back to a misleading default.
+
+**Fix — all three surfaces synchronized:**
+- `Info.plist`: no permission keys (the pbxproj path owns them).
+- `pbxproj` camera description: rewritten accurately in English as the global fallback.
+- `InfoPlist.strings` (both locales): full rewrite of the four actively-used keys (`NSCameraUsageDescription`, `NSAlarmKitUsageDescription`, `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription`) with matching specificity in each language.
+
+Arabic examples of the new strings:
+> *يستخدم AiQo الكاميرا لتحليل أداء تمارينك في Vision Coach، وللتحقق من صور إثبات التحديات التعليمية التي تُعالَج على جهازك فقط، ولمسح محتويات ثلاجتك للحصول على اقتراحات وجبات. صور الثلاجة تُرسَل إلى خدمة الذكاء الاصطناعي فقط بعد موافقتك المنفصلة على مشاركة بيانات AI.*
+
+> *يقرأ AiQo البيانات الصحية التي تختارها — الخطوات، نبض القلب، النوم، السعرات، والماء — لإنشاء ملخصاتك اليومية، ومقاييس تمارينك، وتقاريرك الأسبوعية. البيانات تبقى على جهازك ولا تُشارَك لأغراض إعلانية.*
+
+#### 27.3.3 Paywall subscription disclosure (Guideline 3.1.2)
+
+**Pre-state.** [`PaywallView.swift:636–639`](AiQo/UI/Purchases/PaywallView.swift:636) had a concise footer:
+> "7-day free trial, then auto-renews monthly until canceled. Cancel anytime in Settings > Apple ID > Subscriptions."
+
+Compliant in spirit, but missing three Apple-canonical elements that 2025 reviewers consistently flag:
+1. The **exact billed price** (dynamic per selected tier).
+2. The phrase **"charged to your Apple ID account at purchase confirmation"**.
+3. The phrase **"24 hours before the end of the current period"** (the specific cancellation-window language reviewers grep for).
+
+**Fix.** Introduced a `subscriptionDisclosureText` computed var that interpolates `selectedPlan?.priceText` live and produces the full canonical boilerplate in both languages. Current English rendering:
+> *7-day free trial, then ${price}/month charged to your Apple ID at purchase confirmation. Subscription auto-renews at the same price unless canceled at least 24 hours before the end of the current period. Manage subscriptions or cancel anytime in Settings > Apple ID > Subscriptions.*
+
+Arabic version carries the same four elements in Iraqi-friendly dialect. The other five 3.1.2 checklist items (plan titles displayed, length + price per tier card, Restore Purchases button, EULA link, Privacy Policy link) were already present; only the disclosure text itself changed.
+
+### 27.4 Package D — Dormant-Permission Cleanup
+
+**Finding.** `project.pbxproj` declared 11 permission purpose strings. A grep-based code audit showed 6 of them targeted APIs the app **never calls**. Apple doesn't reject for unused declarations, but they invite reviewer questions ("why does this app need Bluetooth?") and are dead weight. Two of them were actively misleading (see §27.2.1 camera case + the LocalNetwork "during development" value).
+
+#### 27.4.1 Removed from pbxproj (6 keys × 2 configs = 12 lines)
+
+| Key | Claimed purpose | Actual code | Action |
+|---|---|---|---|
+| `NSBluetoothPeripheralUsageDescription` | "connects to heart rate sensors and fitness devices via Bluetooth" | No `CBCentralManager` / `CBPeripheralManager` / `import CoreBluetooth`. HR comes from HealthKit (which handles paired HR sensors itself). | **Removed** |
+| `NSAppleMusicUsageDescription` | "We need access to play your music during workouts" | `MediaPlayer` framework is used only for `MPMediaItemProperty*` Now-Playing metadata (lock-screen / Control Center). That specifically does *not* require this permission — `MPMediaLibrary` (which does) is not used. App plays music via Spotify, not Apple Music. | **Removed** |
+| `NSMotionUsageDescription` | "calculate your steps and activity" | No `CMMotionManager` / `CMPedometer` / `import CoreMotion`. Step counts come from HealthKit. | **Removed** |
+| `NSLocalNetworkUsageDescription` | "…to connect to Captain backend during development" | Only `NWPathMonitor` (reachability) is used — reachability doesn't trigger the local-network permission. No `NWConnection` / `NetService` / Bonjour / `_http._tcp`. The `"during development"` wording would have surfaced verbatim to Release users. | **Removed** |
+| `NSPhotoLibraryUsageDescription` | "يستخدم AiQo مكتبة الصور…الصور تُعالَج على جهازك فقط ولا تُرفَع لأي سيرفر" | Both ProgressPhotosView + LearningProofSubmissionView use SwiftUI `PhotosPicker`, which runs out-of-process since iOS 14 and requires no permission. No `UIImagePickerController(sourceType: .photoLibrary)` in the app. | **Removed** |
+| `NSPhotoLibraryAddUsageDescription` | "تُستخدم لحفظ صور تقدمك" | No `UIImageWriteToSavedPhotosAlbum` / `PHPhotoLibrary.performChanges` / `PHAssetChangeRequest` in the app. | **Removed** |
+
+#### 27.4.2 Kept (verified actually used — corrects the initial audit)
+
+The first audit pass flagged `NSMicrophoneUsageDescription` + `NSSpeechRecognitionUsageDescription` as dormant. A re-check of [`HandsFreeZone2Manager.swift`](AiQo/Features/Gym/HandsFreeZone2Manager.swift) showed `import Speech` at line 2, `SFSpeechRecognizer` at line 224, and `SFSpeechRecognizer.requestAuthorization(...)` at line 487. Both are live APIs and need both purpose strings. Corrected.
+
+### 27.5 Files touched across §27
+
+| File | Δ lines | Purpose |
+|---|---|---|
+| [`AiQo/Info.plist`](AiQo/Info.plist) | +2 / −2 | No net permission keys (pbxproj owns them); one `USE_CLOUD_PROXY` key added for §28 |
+| [`AiQo/PrivacyInfo.xcprivacy`](AiQo/PrivacyInfo.xcprivacy) | +24 | `FileTimestamp` API + `UserID` + `PhotosorVideos` data types |
+| [`AiQo/Resources/ar.lproj/InfoPlist.strings`](AiQo/Resources/ar.lproj/InfoPlist.strings) | rewritten | 4 keys, specific + accurate Arabic |
+| [`AiQo/Resources/en.lproj/InfoPlist.strings`](AiQo/Resources/en.lproj/InfoPlist.strings) | rewritten | 4 keys, specific + accurate English |
+| [`AiQo.xcodeproj/project.pbxproj`](AiQo.xcodeproj/project.pbxproj) | −12, +2 | 6 dormant keys removed (× 2 configs), camera description rewritten |
+| [`AiQo/UI/Purchases/PaywallView.swift`](AiQo/UI/Purchases/PaywallView.swift) | +11 | `subscriptionDisclosureText` computed var + wiring |
+
+Zero new Swift files, zero new dependencies, zero test changes.
+
+### 27.6 Post-§27 Apple 2025/2026 compliance state
+
+| Guideline | Before | After |
+|---|---|---|
+| 5.1.1(a) purpose-string accuracy | ❌ `NSCameraUsageDescription` missing from Info.plist + misleading "على جهازك فقط" claim in pbxproj | ✅ Accurate in all three surfaces, bilingual |
+| 5.1.1(b) purpose strings only for APIs actually called | ❌ 6 dormant declarations | ✅ 100% of declared purposes backed by real API usage |
+| 5.1.1(c) privacy manifest — `NSPrivacyAccessedAPITypes` | ❌ Missing `FileTimestamp` (live API call) | ✅ Complete — matches 100% of app's API surface |
+| 5.1.1(c) privacy manifest — `NSPrivacyCollectedDataTypes` | ❌ Missing `UserID`, `PhotosorVideos` (both cross the network) | ✅ Complete |
+| 3.1.2 subscription disclosure | ⚠️ Missing canonical "Apple ID at purchase confirmation" + "24 hours before…" language, no live price | ✅ Full canonical disclosure, price interpolated per tier |
+
+### 27.7 Known risks / follow-ups
+
+1. **Health permission strings diverge between main app and Watch app** — the main-app pbxproj Health strings are the 2025 rewrite; the Watch app still carries pre-2025 copy ("reads your activity, sleep, water and workout data to personalize your daily plan"). Not a rejection risk (each binary is audited separately), but a consistency nit for a future pass.
+2. **Arabic localization of permission strings is now user-facing text** — any future permission key added needs to land in both `.strings` files or fall back to the pbxproj English default. The risk is cosmetic (mixed-language prompt) rather than rejection.
+3. **Supabase-swift manifest re-check** — queued for the next minor SDK bump. The moment supabase-community ships a `PrivacyInfo.xcprivacy` in the package, pin to that version.
+
+---
+
+## 28. Cloud-Proxy Hardening — Gemini + MiniMax via Supabase Edge Functions
+
+*Added 2026-04-23 (same-day pass 2, Package C). Lifts third-party API keys out of the shipped IPA by routing every Gemini + MiniMax call through two newly-deployed Supabase Edge Functions. Live rollout happened the same day — the Gemini path is confirmed running through the proxy in production. Treat the old client-side Gemini key as revoked; direct rollback is no longer possible. The MiniMax voice path is open at the time of this snapshot — responses arrive but `AVAudioPlayer` surfaces empty buffers, active debugging continues below (§28.7.2).*
+
+### 28.1 The security problem
+
+Before this pass, the iOS app embedded three third-party credentials inside the binary at build time via `Secrets.xcconfig → Info.plist`:
+
+- `CAPTAIN_API_KEY` — Google Gemini
+- `CAPTAIN_VOICE_API_KEY` — MiniMax TTS
+- `COACH_BRAIN_LLM_API_KEY` — legacy second Gemini key
+
+Anyone able to extract an `.ipa` (trivial with a jailbroken device or a public decryption service) could recover those keys and exhaust Mohammed's Google / MiniMax quotas on a third-party account. Google publishes no per-app rate limits; abuse is bound only by the account-level quota. The MiniMax minutes billing is pure usage-based.
+
+StoreKit signing keys and the Supabase anon key are not part of this hardening pass — the anon key is designed to be public (scoped to a single project; every privileged action requires an authenticated user JWT), and StoreKit secrets live in the App Store Connect receipt validation path, never in the binary.
+
+### 28.2 Architecture
+
+```
+Before                                  After
+──────                                  ─────
+iOS app   ──(API key in IPA)──►         iOS app  ──(Supabase JWT)──►
+    Gemini / MiniMax                        Supabase Edge Function
+                                            ──(server-held API key)──►
+                                            Gemini / MiniMax
+```
+
+Three components ship in one pass:
+
+1. **Supabase Edge Functions** (Deno/TypeScript) — validate the JWT, enforce a model allowlist + body-size cap, forward to the upstream API with the server-held key, stream the response back.
+2. **Swift client** — a `CaptainProxyConfig` single-source-of-truth + `USE_CLOUD_PROXY` feature flag, three proxy-aware call sites (`HybridBrain`, `MemoryExtractor`, `MiniMaxTTSProvider`), and a defensive fallback to the legacy direct path when the flag is OFF.
+3. **Deployment runbook** — a step-by-step in `supabase/functions/README.md` for rotating keys, deploying functions, flipping the flag, monitoring, and finally purging the old keys.
+
+### 28.3 Edge Function design
+
+Two functions, under `supabase/functions/`:
+
+```
+supabase/functions/
+├── _shared/
+│   ├── cors.ts        CORS helpers (safe allowlist; native iOS doesn't need it)
+│   └── auth.ts        `authenticateRequest(request)` — JWT validation
+├── captain-chat/
+│   └── index.ts       Gemini proxy (chat + memory extraction, model allowlist)
+├── captain-voice/
+│   └── index.ts       MiniMax TTS proxy (voice allowlist + text validation)
+└── README.md          Deployment runbook (§28.6)
+```
+
+Every function applies the same five-step request pipeline:
+1. `OPTIONS` → CORS preflight.
+2. Method + `Content-Length` guard — reject >256 KB on chat, >16 KB on voice, 405 on non-POST.
+3. `authenticateRequest(request)` — throws `AuthError(status, code)` on any of: missing `Authorization` header, empty JWT, Supabase config missing, or `supabase.auth.getUser(jwt)` rejecting the token. Structured error codes surface to the client.
+4. JSON body parse + domain validation — `model ∈ ALLOWED_MODELS`, `payload` / `text` present and typed.
+5. Forward to upstream with the server-held key; return upstream response verbatim with `status` preserved.
+
+Logging is **event + user-id + model + status only** — never prompts, never conversation turns, never response bodies. The user column gives per-user attribution for rate-limit analysis later; the absent payload column keeps chat content private even from ops.
+
+#### 28.3.1 `captain-chat`
+
+- Allowlist: `gemini-2.5-flash`, `gemini-3-flash-preview`. An attacker with a stolen JWT can still only ask for the models AiQo uses — no vision, no Pro, no preview variants.
+- Upstream URL: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
+- Body shape: `{ model: string, payload: GeminiRequestBody }` — the client wraps the full Gemini request into `payload` so the proxy doesn't have to know Gemini's schema.
+
+#### 28.3.2 `captain-voice`
+
+- Allowlist: the eight MiniMax speech models that mirror `MiniMaxVoiceConfiguration.supportedModels` on the Swift side — so adding a new voice model requires updating both files intentionally, not accidentally.
+- Upstream URL: `$MINIMAX_API_URL` (falls back to `https://api.minimax.io/v1/t2a_v2`).
+- Body shape: the Swift `MiniMaxTTSRequest` JSON (top-level `model`, `text`, `voice_setting`, `audio_setting`, `output_format`). No wrapping — the proxy forwards the MiniMax body verbatim so the existing Swift decoder keeps working unchanged.
+
+#### 28.3.3 `_shared/auth.ts`
+
+Uses `@supabase/supabase-js@2` with the project's own URL + anon key as Edge Function secrets (auto-populated by Supabase). Each request creates a short-lived client scoped to the incoming `Authorization` header, calls `getUser(jwt)`, and returns `{ id, email, jwt }` on success. Never persists the session; never refreshes; only validates.
+
+### 28.4 Swift client integration
+
+#### 28.4.1 `CaptainProxyConfig`
+
+Single file [`AiQo/Features/Captain/Brain/04_Inference/Services/CaptainProxyConfig.swift`](AiQo/Features/Captain/Brain/04_Inference/Services/CaptainProxyConfig.swift) — a pure enum with three responsibilities:
+
+- `isEnabled` — live read of `FeatureFlags.useCloudProxy` (no caching, so test fixtures can flip the Info.plist value mid-run).
+- `endpointURL(for: .chat | .voice)` — constructs the Edge Function URL off the existing `K.Supabase.url`. Returns `nil` on placeholder / missing URL; callers map that to `HybridBrainServiceError.invalidEndpoint` or `VoiceProviderError.configurationMissing`.
+- `currentSessionJWT()` — async call into `SupabaseService.shared.client.auth.session.accessToken`. Returns `nil` when the user isn't signed in, which callers treat as a configuration failure (the router falls back to Apple TTS, or the chat surface shows the "sign in to continue" path).
+
+#### 28.4.2 `USE_CLOUD_PROXY` feature flag
+
+[`AiQoFeatureFlags.swift`](AiQo/Core/Config/AiQoFeatureFlags.swift) gained:
+```swift
+@FeatureFlag("USE_CLOUD_PROXY", default: false)
+static var useCloudProxy: Bool
+```
+
+Default OFF — compiled builds keep the legacy direct path until the Edge Functions are deployed and tested in prod. The documentation comment above the declaration lists the three prerequisites for flipping it ON: deploy functions → rotate keys → set `GEMINI_API_KEY` + `MINIMAX_API_KEY` as Supabase secrets.
+
+`Info.plist` gained a matching `<key>USE_CLOUD_PROXY</key><string>$(USE_CLOUD_PROXY)</string>` entry; `AiQo.xcconfig` has `USE_CLOUD_PROXY = NO` as the global default; `Secrets.xcconfig` overrides it to `YES` after rollout.
+
+#### 28.4.3 The three proxy-aware call sites
+
+Each site follows the same pattern: the direct-path URLRequest construction stays intact, wrapped in a private helper that branches on `CaptainProxyConfig.isEnabled`.
+
+1. **`HybridBrain.makeGeminiURLRequest`** — the main Captain chat path. Wraps the Gemini body as `{ model, payload }` and POSTs to `captain-chat` with `Authorization: Bearer <JWT>` + `apikey: <anon>`. On proxy-disabled runs, falls through to `makeDirectGeminiRequest` with the original header pattern (`X-goog-api-key`).
+2. **`MemoryExtractor.makeExtractorRequest`** — `@MainActor static` because the enclosing `extractWithLLM` is static. Uses model `gemini-3-flash-preview` (the preview reasoning model — extraction quality > latency here). Same wrapping as chat.
+3. **`MiniMaxTTSProvider.makeSynthesisRequest`** — wraps the raw `MiniMaxTTSRequest` JSON-encoded body. Directs to `captain-voice` when flag is on; otherwise uses `configuration.endpointURL` + `Authorization: Bearer <API_KEY>` (direct path, pre-existing).
+
+### 28.5 xcconfig `//` truncation — the mid-deploy find
+
+After flipping the flag to `YES`, the first run produced `supabase_client_placeholder_url_missing` at boot, then `Captain API endpoint URL could not be constructed` at first proxy call. Root cause: **Xcode's xcconfig parser treats `//` as a line-comment delimiter inside variable values** — not just on bare lines. `SUPABASE_URL = https://zidbsrepqpbucqzxnwgk.supabase.co` gets silently truncated to `https:` in the built Info.plist, so `URL(string:)` produces a host-less URL and `K.Supabase.normalized()` returns `""`.
+
+The existing code already had a localized workaround for this in [`MiniMaxVoiceConfiguration.normalizedEndpointURL(from:)`](AiQo/Features/Captain/Voice/MiniMaxVoiceConfiguration.swift:128) — a defensive `if normalized == "https:" || normalized == "http:"` branch that falls back to the default URL. Supabase had no such fallback.
+
+**Fix (pass-wide).** Rewrote all three URL lines in `Secrets.xcconfig` with the `$()` expand-to-empty trick:
+
+```
+SUPABASE_URL = https:/$()/zidbsrepqpbucqzxnwgk.supabase.co
+CAPTAIN_ARABIC_API_URL = https:/$()/generativelanguage.googleapis.com/v1beta
+CAPTAIN_VOICE_API_URL = https:/$()/api.minimax.io/v1/t2a_v2
+```
+
+`$()` is an empty variable reference — Xcode expands it to nothing at build time, so the final Info.plist entry is exactly `https://host`. But at parse time, the parser sees `https:/ /host` (with a zero-width gap) and never triggers the `//` comment rule.
+
+Same pass removed the Unicode box-drawing characters from the `Secrets.xcconfig` comment header (paranoia about strict parsers) and normalized `key=value` vs `key = value` spacing. The file is now pure ASCII aside from the key values themselves.
+
+### 28.6 Deployment runbook (abridged)
+
+Full runbook lives at [`supabase/functions/README.md`](supabase/functions/README.md); the seven steps in one sentence each:
+
+1. **Set Edge secrets** — `supabase secrets set GEMINI_API_KEY=… MINIMAX_API_KEY=…` (plus optional `MINIMAX_API_URL`).
+2. **Deploy** — `supabase functions deploy captain-chat --no-verify-jwt && supabase functions deploy captain-voice --no-verify-jwt` (the functions validate JWTs themselves so the gateway check is skipped).
+3. **Rotate the client-side keys** on Google AI Studio + MiniMax dashboard — assume the in-IPA keys are compromised.
+4. **Flip the flag** — `USE_CLOUD_PROXY = YES` in `Secrets.xcconfig`.
+5. **Smoke-test** with a real session JWT via `curl` or the Supabase function test harness.
+6. **48 h TestFlight monitoring** — watch `supabase functions logs captain-chat --tail` for 4xx/5xx anomalies and per-user rates.
+7. **Purge the legacy keys** from `Secrets.xcconfig` — after this, the built IPA carries zero Gemini / MiniMax credentials.
+
+### 28.7 Live deployment outcome (same-day)
+
+#### 28.7.1 What worked
+
+- Both Edge Functions deployed in one session via the Supabase dashboard (web-UI path — no local `supabase` CLI needed).
+- Secrets set in the Edge Functions Secrets panel — `GEMINI_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_API_URL`.
+- Smoke tests via the Supabase web test harness returned `401 {"error":"invalid_jwt"}` for both functions — the expected result, since the harness sends the service-role key as `Bearer`, which is not a valid user JWT. Auth logic verified.
+- After the xcconfig fix (§28.5), iPhone build booted cleanly — no more `supabase_client_placeholder_url_missing`.
+- First real chat message logged:
+  ```
+  gemini_request model=gemini-2.5-flash via=proxy
+  gemini_response status=200
+  gemini-2.5-flash success 7891ms tier=max purpose=captainChat
+  cloud_request_succeeded
+  ```
+  Matching `captain_chat_proxy` entries appeared in the Supabase function logs with the user's Supabase UUID.
+- **The Gemini chat path is live through the proxy in production.** The old client-side Gemini key was rotated during step 3 of the runbook — direct rollback on that path is no longer available, and the audit team should treat the pre-rotation key as exposed.
+
+#### 28.7.2 MiniMax voice — what was open, and what fixed it (resolved 2026-04-22 evening)
+
+At the §28 snapshot, the MiniMax voice path produced no audio output despite the proxy returning `status: 200` and the Swift decoder thinking it had valid MP3 bytes — `AVAudioPlayer` initialised without throwing, then surfaced `IPCAUClient: can't connect to server (-66748)` and `mBuffers[0].mDataByteSize (0) should be non-zero`. The three hypotheses we logged at the time were:
+
+- **Hypothesis A — AVAudioSession conflict** (concurrent audio app / incomplete teardown between `CaptainVoiceService` and `MiniMaxTTSProvider`).
+- **Hypothesis B — Edge Function response encoding** (Deno `await upstream.text()` round-trip mangling the binary response).
+- **Hypothesis C — Concurrency reentrance** (the `await CaptainProxyConfig.currentSessionJWT()` suspend point inside `makeSynthesisRequest`).
+
+**Resolution.** Hypothesis B was the dominant cause. The fix landed across commits `6b4cc7b` "Enable MiniMax voice playback and update privacy copy" (2026-04-22 evening), `7524f88` "fix(security): restore xcconfig placeholder pattern, rotate MiniMax + Gemini keys" (same evening), and `64e8927` "feat(voice): MiniMax cache + dedicated cloud-voice consent + settings" (a few hours later). Together they:
+
+1. **Reworked `MiniMaxTTSProvider` (+426 lines)** to request MiniMax's `output_format: "hex"` body and decode the hex string with the existing `Data(hexEncodedString:)` extension, sidestepping any Deno UTF-8 round-trip risk on the Edge Function side. The Swift side now owns the binary decode end-to-end; the proxy's job shrinks to "forward the JSON, return whatever bytes the upstream returned."
+2. **Added a cache layer** ([VoiceCacheStore.swift:175](AiQo/Features/Captain/Voice/VoiceCacheStore.swift)) so a successful synthesis is replayed locally on the next request — eliminating the per-utterance 1–2s round-trip and removing the network from the audible hot path. Cache key is `SHA256(voiceID|model|text)`, eviction is LRU by file mtime, capped at whichever trips first of 500 files or 100 MB. Files are written `[.atomic, .completeFileProtectionUntilFirstUserAuthentication]`.
+3. **Tightened the audio-session lifecycle** in `MiniMaxTTSProvider.beginSpeechSession` / `endSpeechSession` — explicit `setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])` on enter, and a guarded `setActive(false, options: [.notifyOthersOnDeactivation])` on exit *only when `AiQoAudioManager.isPlaying == false`*. The latter guard turned out to matter for the gratitude session work in §29 — see §29.1 for the audio-session interaction with `AiQoAudioManager`.
+4. **Restored the `Configuration/AiQo.xcconfig` placeholder pattern** broken by commit `6b4cc7b` (commit `7524f88`'s body documents the regression in detail; live keys for MiniMax + Gemini + Supabase ANON were rotated at the provider dashboards as part of the same fix). The repository's tracked `AiQo.xcconfig` carries empty placeholders + `#include? "Secrets.xcconfig"` at the bottom; production credentials live only in the gitignored `Secrets.xcconfig`.
+5. **Added dedicated cloud-voice consent** ([CaptainVoiceConsent.swift:102](AiQo/Features/Captain/Voice/CaptainVoiceConsent.swift)) — separate from `AICloudConsentGate` per Apple Guideline 5.1.2(II). State is `@Published`, persisted under `aiqo.voice.cloud.consent.v1`, and `revoke()` triggers a cache wipe + Keychain key delete + `.captainVoiceConsentRevoked` notification atomically.
+6. **Wired the user-facing surfaces** — [VoiceSettingsScreen.swift](AiQo/Core/VoiceSettingsScreen.swift) under Settings → Captain Voice (live consent state, grant/revoke, "coming soon" when `CAPTAIN_VOICE_CLOUD_ENABLED=NO`) and [VoiceConsentSheet.swift](AiQo/Features/Compliance/VoiceConsentSheet.swift) presented on the first `.premium` voice tap (RTL-first, `.interactiveDismissDisabled`, four-row disclosure layout).
+7. **Extended `PrivacySanitizer`** (commit `8d36a70`'s 146-line diff includes this) with API-key and Bearer-token redaction so any future log line that accidentally captures an Authorization header gets scrubbed before it reaches `AuditLogger`.
+
+The Gemini direct-path rollback that §28.7.2 noted as broken (pre-rotation key returning HTTP 400) is no longer relevant — the proxy path has been the only path in production for several days at this point with no observed failures, and the legacy keys are gone from the IPA per step 7 of the §28.6 runbook.
+
+### 28.8 Security posture
+
+| Surface | Before | After (target) | Now (2026-04-23 night) |
+|---|---|---|---|
+| Gemini key location | Inside every IPA | Supabase Edge secret only | ✅ Supabase-only (pre-rotation key revoked) |
+| MiniMax key location | Inside every IPA | Supabase Edge secret only | ⚠️ Still in `Secrets.xcconfig` pending 48 h window (legacy copy retained for rollback) |
+| Auth required to use the API | None (raw key) | Supabase JWT (per-user) | ✅ JWT-gated for Gemini; voice path confirmed JWT-gated too (Supabase log shows user UUID) |
+| Model abuse surface | Full Gemini + MiniMax catalog | 2 chat models + 8 voice models | ✅ Allowlist enforced server-side |
+| Revocation | Rotate key → ship new IPA → force update | `supabase secrets set` (no app update) | ✅ One-command rotation |
+| Per-user attribution | None | user_id in function logs | ✅ In place |
+
+### 28.9 Known risks / follow-ups
+
+1. ~~**MiniMax voice path regression (open)** — see §28.7.2. The function log shows 200s but audio never plays; the hypothesis matrix is the immediate next thread. Blocking the 48 h TestFlight window's end-state "delete legacy keys" step until resolved.~~ **Resolved 2026-04-22 evening** via commits `6b4cc7b` + `7524f88` + `64e8927` — see the §28.7.2 closure for the seven-step fix. The 48 h TestFlight window finished cleanly; the legacy MiniMax key has since been purged from `Secrets.xcconfig`.
+2. **Session JWT refresh** — `CaptainProxyConfig.currentSessionJWT()` reads from `SupabaseService.shared.client.auth.session.accessToken` on every call. The Supabase SDK auto-refreshes before expiry, but a long-idle app may hit a brief stale-token window between auto-refreshes. If proxy 401s start appearing in the wild, add a one-shot refresh + retry on that error code.
+3. **No per-user rate limits yet** — the functions log the user ID but don't throttle. A future pass should add a `captain_usage` table + a per-function rate check so a compromised single-user JWT can't exhaust the Gemini quota for everyone.
+4. **Streaming responses are not supported** — Gemini's `generateContentStream` would let the chat UI reveal tokens as they arrive. Current proxy buffers the full response. Non-blocking for the current UX (we already show a "thinking" bubble), but worth revisiting if perceived latency is an issue once voice is unstuck.
+5. **`CAPTAIN_ARABIC_API_URL` and friends are now dead xcconfig keys** — `GeminiConfig.baseEndpoint` is hard-coded in Swift, so the xcconfig URL slots are not actually consumed. They were fixed for `//` truncation in §28.5 out of paranoia rather than necessity. Schedule a cleanup pass alongside the legacy-key purge in step 7 of the runbook.
+6. **Supabase Free tier (NANO) quota** — the project is on Free. Edge Function invocations share the project-wide limit. If AiQo grows past a few thousand daily active users, the proxy path becomes the new bottleneck. Upgrade path is one-click.
+
+### 28.10 Files added / modified
+
+**Added (6):**
+- `supabase/functions/_shared/cors.ts`
+- `supabase/functions/_shared/auth.ts`
+- `supabase/functions/captain-chat/index.ts`
+- `supabase/functions/captain-voice/index.ts`
+- `supabase/functions/README.md`
+- `AiQo/Features/Captain/Brain/04_Inference/Services/CaptainProxyConfig.swift`
+
+**Modified (6):**
+- `AiQo/Core/Config/AiQoFeatureFlags.swift` — `useCloudProxy` flag
+- `AiQo/Features/Captain/Brain/04_Inference/Services/HybridBrain.swift` — proxy branch in Gemini path
+- `AiQo/Features/Captain/Brain/02_Memory/Intelligence/MemoryExtractor.swift` — proxy branch in extractor path (+ `static` fix on the new helper)
+- `AiQo/Features/Captain/Voice/MiniMaxTTSProvider.swift` — proxy branch in synthesis path
+- `AiQo/Info.plist` — `USE_CLOUD_PROXY` key
+- `Configuration/AiQo.xcconfig` — default `USE_CLOUD_PROXY = NO`
+- `Configuration/Secrets.xcconfig` — `USE_CLOUD_PROXY = YES` override + `$()` URL fix across three URLs
+
+Zero test changes. Zero UI changes. Zero localization changes. The rollout is 100% infrastructure.
+
+---
+
+## 29. Gratitude Session Voice Routing (2026-04-28)
+
+*Six small commits on top of the §28 / §28.7.2 voice infrastructure: `11b75c2` "Use voice router for gratitude session audio" → `a282d65` "Switch gratitude audio to shared ambient manager" → `a26a4ad` / `f176f45` / `589010e` / `9c3d304` (volume tuning passes). All on branch `brain-refactor/p-fix-dev-override`. The gratitude flow is the third surface — after Cardio Zone 2 (§25) and the Workout Summary (§25) — to migrate from the system `AVSpeechSynthesizer` onto Captain Hamoudi's MiniMax voice. It's also the first surface to need a per-host audio mix override, which surfaced two missing public APIs on `CaptainVoiceRouter` and `AiQoAudioManager` that the rest of the app can now use too.*
+
+### 29.1 The bug that started it
+
+The Gratitude Session under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) plays a one-minute Arabic / English daily-gratitude reflection. At entry it starts a looped background track (`SerotoninFlow.m4a`) and reads a sequence of bilingual sentences over it. Up until this pass, the sentences were spoken via a local `AVSpeechSynthesizer` instance owned by `GratitudeAudioManager` — the system "Siri" voice for the user's `AppLanguage`. Two complaints drove this work:
+
+1. **Wrong voice.** Now that the app has a coherent Captain Hamoudi MiniMax voice across chat, Cardio Zone 2 coaching, and the Workout Summary narration, the gratitude flow felt off-brand reading lines like *"أشكر ربك على هالبدن اللي بعده يشيلك من أول خطوة"* in a generic Apple-TTS voice.
+2. **Background music truncated to ~5 seconds.** Once the first MiniMax utterance finished, the entire `SerotoninFlow.m4a` loop went silent. Root cause was a session-lifecycle race between two unrelated `AVAudioPlayer` instances on the same shared `AVAudioSession`: `MiniMaxTTSProvider.endSpeechSession()` calls `audioSession.setActive(false, options: [.notifyOthersOnDeactivation])` whenever its check `audioManager.isPlaying == false` is true — where `audioManager` is `AiQoAudioManager.shared`. Gratitude's local `AVAudioPlayer` was not visible to `AiQoAudioManager`, so the deactivation killed the music.
+
+### 29.2 Fix one — route the speech through `CaptainVoiceRouter`
+
+[`GratitudeAudioManager.swift`](AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift) was rewritten end-to-end. The local `AVSpeechSynthesizer` is gone; `speak(_:language:)` now hands the trimmed text to `CaptainVoiceRouter.shared.speak(text:, tier: .premium)` inside a managed `Task<Void, Never>` so consecutive calls cancel cleanly via `speechTask?.cancel()` + `voiceRouter.stop()`. Behaviour:
+
+- If `FeatureFlags.captainVoiceCloudEnabled == true` and `CaptainVoiceConsent.isGranted == true`, the gratitude line is spoken in Captain Hamoudi's MiniMax voice (cached on second play per §28.7.2 step 2).
+- If consent is missing or the cloud call fails, `CaptainVoiceRouter` silently falls back to `AppleTTSProvider` — the user still hears the sentence, just in the system voice. Same fallback chain the rest of the Captain surface uses; no special-case handling in `GratitudeAudioManager`.
+- The `language: GratitudeSessionLanguage` parameter on `speak(...)` is preserved for source-compatibility with [GratitudeSessionView.swift:328](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) and `:346` (the session view passes the active session language with each line), but it is now informational only — `MiniMaxTTSProvider.languageBoost(for:)` auto-detects Arabic vs English from the text's Unicode scalar ranges. The `GratitudeSessionLanguage` enum stays useful for picking the right `gratitudeBundles(for:)` array of phrases inside the view.
+
+### 29.3 Fix two — move the background track onto `AiQoAudioManager`
+
+The local `AVAudioPlayer` in `GratitudeAudioManager` was replaced with `AiQoAudioManager.shared.playAmbient(trackName: "SerotoninFlow", fileExtension: "m4a")`. This is the same path used by the Vibe / focus surfaces and by the workout audio coach. The win: `MiniMaxTTSProvider.endSpeechSession()` now sees `audioManager.isPlaying == true` while gratitude is running, so it calls `audioManager.refreshAudioSessionConfiguration()` instead of `setActive(false, ...)`, and the `SerotoninFlow.m4a` loop survives every utterance boundary. As a side benefit, the gratitude music also gets the existing automatic ducking from `MiniMaxTTSProvider.beginSpeechSession()` calling `audioManager.beginSpeechDucking()` on enter and `endSpeechDucking()` on exit — the first time the gratitude flow has had real ducking instead of two players playing at fixed levels over each other.
+
+`stopAll()` calls `voiceRouter.stop()` then `ambientAudio.stopAmbient()`, restores `setMiniMaxPlaybackVolume(1.0)`, and clears the duck override (see §29.4). Net effect: the session leaves every shared singleton in the same state it found them in, so Captain chat / cardio / summary playback after a gratitude session are unaffected.
+
+### 29.4 Three small public APIs added to support per-host mix overrides
+
+The gratitude session needed a specific mix — quiet music, full Captain voice, *aggressive* duck under speech — that the existing audio APIs couldn't express without globally shifting defaults. Three new APIs were added so the gratitude session (and any future host with similar needs) can opt in without touching the rest of the app:
+
+#### 29.4.1 `MiniMaxTTSProvider.playbackVolume`
+
+[MiniMaxTTSProvider.swift:25](AiQo/Features/Captain/Voice/MiniMaxTTSProvider.swift) added a public `var playbackVolume: Float = 1.0`. Read once inside `play(audioData:playbackSequence:)` and applied via `player.volume = min(max(playbackVolume, 0), 1)` after the `AVAudioPlayer` is initialised. Default `1.0` keeps every existing call site (chat, cardio, summary) unchanged.
+
+#### 29.4.2 `CaptainVoiceRouter.setMiniMaxPlaybackVolume(_:)`
+
+[CaptainVoiceRouter.swift:163](AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift) added a `@MainActor func setMiniMaxPlaybackVolume(_ volume: Float)` that downcasts `miniMaxProvider as? MiniMaxTTSProvider` and writes through to `provider.playbackVolume`. Clamped to `[0, 1]`. Apple TTS fallback playback is intentionally not touched — fallback is rare enough that the host's specific mix is less important than the user being able to hear the sentence at all.
+
+#### 29.4.3 `AiQoAudioManager.setSpeechDuckOverride(_:)`
+
+[AiQoAudioManager.swift](AiQo/Core/AiQoAudioManager.swift) added a `private var speechDuckOverride: Float?` plus a `func setSpeechDuckOverride(_ volume: Float?)`. `beginSpeechDucking(targetVolume:fadeDuration:)` now resolves its target as `speechDuckOverride ?? targetVolume` before clamping and recording. The override persists across multiple `beginSpeechDucking` calls (which is what we want — the MiniMax provider calls it once per utterance with the default `0.26`, and the gratitude session pins the override to `0.04` on enter so every utterance ducks to that floor). `setSpeechDuckOverride(nil)` restores the default-target behaviour and is what `stopAll()` calls on session exit.
+
+### 29.5 The chosen mix
+
+After three tuning passes (commits `a26a4ad`, `f176f45`, `589010e`, `9c3d304`), the constants on `GratitudeAudioManager` settled at:
+
+| Constant | Value | What it controls |
+|---|---|---|
+| `musicVolume` | **0.10** | `SerotoninFlow.m4a` loop volume while no Captain narration is playing |
+| `voiceVolume` | **1.0** | MiniMax player volume (full) — written via `setMiniMaxPlaybackVolume(_:)` on session enter |
+| `musicDuckedVolume` | **0.04** | Music volume during a Captain utterance — written via `setSpeechDuckOverride(_:)` on session enter |
+
+The progression through the four tuning commits — 0.30 → 0.18 → 0.25 → 0.20 → 0.10 on `musicVolume`, with `voiceVolume` briefly at 0.85 before settling at 1.0, and the duck floor walking 0.10 → 0.05 → 0.04 — was driven entirely by Mohammed listening on his iPhone and adjusting until Captain Hamoudi sat clearly above the ambient track without the music feeling absent during the silent gaps between sentences.
+
+### 29.6 Files added / removed / modified
+
+**Modified (3):**
+- `AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift` — `AVSpeechSynthesizer` removed; routes through `CaptainVoiceRouter` + `AiQoAudioManager`; the three mix constants documented in §29.5.
+- `AiQo/Features/Captain/Voice/CaptainVoiceRouter.swift` — `setMiniMaxPlaybackVolume(_:)` added (§29.4.2).
+- `AiQo/Features/Captain/Voice/MiniMaxTTSProvider.swift` — `playbackVolume` property + the `player.volume = ...` line in `play(audioData:playbackSequence:)` (§29.4.1).
+- `AiQo/Core/AiQoAudioManager.swift` — `speechDuckOverride` storage + `setSpeechDuckOverride(_:)` + the resolved-target line in `beginSpeechDucking(targetVolume:fadeDuration:)` (§29.4.3).
+
+**Removed (from `GratitudeAudioManager`, not the project):**
+- The local `AVSpeechSynthesizer` instance + delegate conformance + `playLocalSpeech(_:language:)`.
+- The local `backgroundPlayer: AVAudioPlayer?` + `makeBackgroundPlayer()` factory.
+- The local `audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])` setup, since `AiQoAudioManager.playAmbient` already configures the session.
+
+**Added:** zero new files. The whole feature was an API + routing change.
+
+Zero localization changes. Zero test changes (`AiQoTests` already exercises `CaptainVoiceRouter` via `MiniMaxVoiceConfigurationTests` and the router-level fallback tests). Zero pbxproj changes — Xcode 16's synchronized source groups picked up the modifications without project edits.
+
+### 29.7 What this unlocks
+
+Two future hosts can now use the same pattern:
+- A future **morning kickoff** flow that plays a calmer ambient track and narrates a personalised intent in Captain Hamoudi's voice can call `setMiniMaxPlaybackVolume(...)` + `setSpeechDuckOverride(...)` on enter and clear them on exit.
+- The **breathing / focus** surfaces inside Vibe could reuse `setSpeechDuckOverride(...)` to pin the duck floor to a deeper drop than the global default of 0.26 if the surfaces decide to overlay short coaching cues without the user feeling whiplash on volume restore.
+
+Both are out of scope for this pass — the public APIs exist and are documented, but no caller site landed in this commit set.

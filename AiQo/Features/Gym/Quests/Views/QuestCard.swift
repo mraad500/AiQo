@@ -74,6 +74,7 @@ struct QuestCard: View {
             }
         }
         .opacity(isLocked ? 0.78 : 1)
+        .environment(\.colorScheme, .light)
     }
 
     private var progressText: String {

@@ -245,6 +245,7 @@ struct QuestDetailSheet: View {
         } message: {
             Text(healthSetupAlertMessage)
         }
+        .environment(\.colorScheme, .light)
     }
 
     // MARK: - Reward XP Pill

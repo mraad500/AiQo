@@ -41,7 +41,10 @@ struct LocalIntelligenceService: Sendable {
             workoutPlan: response.workoutPlan,
             mealPlan: response.mealPlan,
             spotifyRecommendation: response.spotifyRecommendation,
-            rawText: rawText
+            rawText: rawText,
+            // Apple Intelligence on-device generation does not surface a
+            // MAX_TOKENS signal — local replies are never marked truncated.
+            truncatedAtMaxTokens: false
         )
     }
 }

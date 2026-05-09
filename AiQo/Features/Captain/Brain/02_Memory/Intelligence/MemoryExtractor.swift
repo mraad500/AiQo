@@ -217,12 +217,6 @@ struct MemoryExtractor: Sendable {
         )
 
         do {
-            let config = try resolveLLMConfig()
-            var request = URLRequest(url: config.endpointURL)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 15
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
             let body: [String: Any] = [
                 "systemInstruction": [
                     "parts": [["text": systemPrompt]]
@@ -239,7 +233,8 @@ struct MemoryExtractor: Sendable {
                     "responseMimeType": "application/json"
                 ]
             ]
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+            let request = try await makeExtractorRequest(body: body)
 
             let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -298,6 +293,50 @@ struct MemoryExtractor: Sendable {
     private static func extractSentenceContaining(keyword: String, in text: String) -> String {
         let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".،!؟\n"))
         return sentences.first(where: { $0.contains(keyword) })?.trimmingCharacters(in: .whitespaces) ?? keyword
+    }
+
+    /// Builds the Gemini POST request for memory extraction. Routes through
+    /// the Supabase `captain-chat` Edge Function when `USE_CLOUD_PROXY` is
+    /// on; otherwise hits Gemini directly with the client-embedded key.
+    /// Uses the preview reasoning model (`gemini-3-flash-preview`) because
+    /// extraction quality matters more than latency here.
+    ///
+    /// Must be `static` — the only caller, `extractWithLLM`, is also static.
+    private static func makeExtractorRequest(body: [String: Any]) async throws -> URLRequest {
+        let model = "gemini-3-flash-preview"
+
+        if CaptainProxyConfig.isChatEnabled {
+            guard let endpoint = CaptainProxyConfig.endpointURL(for: .chat) else {
+                throw URLError(.badURL)
+            }
+            guard let jwt = await CaptainProxyConfig.currentSessionJWT() else {
+                throw URLError(.userAuthenticationRequired)
+            }
+            let anonKey = CaptainProxyConfig.anonKey ?? ""
+
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 15
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+            if !anonKey.isEmpty {
+                request.setValue(anonKey, forHTTPHeaderField: "apikey")
+            }
+            let wrapped: [String: Any] = [
+                "model": model,
+                "payload": body,
+            ]
+            request.httpBody = try JSONSerialization.data(withJSONObject: wrapped)
+            return request
+        }
+
+        let config = try Self.resolveLLMConfig()
+        var request = URLRequest(url: config.endpointURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return request
     }
 
     private struct LLMConfig {

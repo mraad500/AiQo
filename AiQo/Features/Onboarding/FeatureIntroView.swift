@@ -22,18 +22,17 @@ struct FeatureIntroView: View {
     @State private var currentPage = 0
     @State private var showPage0   = false
     @State private var showPage1   = false
-    @State private var showPage2   = false
     @State private var didComplete = false
 
-    @AppStorage("appLanguage") private var appLanguage: String = "ar"
+    @AppStorage("aiqo.app.language") private var appLanguage = AppLanguage.arabic.rawValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var isArabic: Bool { appLanguage == "ar" }
+    private static let pageCount = 2
+    private var isArabic: Bool { appLanguage == AppLanguage.arabic.rawValue }
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // ── Background ───────────────────────────────────────────
                 Color.fiPrimaryBackground.ignoresSafeArea()
                 RadialGradient(
                     colors: [Color.fiBrandMint.opacity(0.14), .clear],
@@ -43,15 +42,12 @@ struct FeatureIntroView: View {
                 )
                 .ignoresSafeArea()
 
-                // ── Content ──────────────────────────────────────────────
                 VStack(spacing: 0) {
                     TabView(selection: $currentPage) {
-                        FeatureIntroPage1(show: showPage0, isArabic: isArabic, geo: geo)
+                        FeatureIntroCaptainPage(show: showPage0, geo: geo)
                             .tag(0)
-                        FeatureIntroPage2(show: showPage1, isArabic: isArabic, geo: geo)
+                        FeatureIntroKitchenPage(show: showPage1, geo: geo)
                             .tag(1)
-                        FeatureIntroPage3(show: showPage2, isArabic: isArabic, geo: geo)
-                            .tag(2)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .sensoryFeedback(.selection, trigger: currentPage)
@@ -63,6 +59,7 @@ struct FeatureIntroView: View {
             }
         }
         .environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)
+        .environment(\.locale, Locale(identifier: isArabic ? "ar" : "en"))
         .ignoresSafeArea(edges: .bottom)
         .onAppear { triggerAnimation(for: 0) }
         .onChange(of: currentPage) { _, newPage in triggerAnimation(for: newPage) }
@@ -72,9 +69,8 @@ struct FeatureIntroView: View {
 
     private func bottomNav(geo: GeometryProxy) -> some View {
         VStack(spacing: 14) {
-            // Dots
             HStack(spacing: 8) {
-                ForEach(0..<3) { index in
+                ForEach(0..<Self.pageCount, id: \.self) { index in
                     Circle()
                         .fill(currentPage == index ? Color.fiAccent : Color.fiDotInactive)
                         .frame(
@@ -92,9 +88,8 @@ struct FeatureIntroView: View {
                 String(format: NSLocalizedString("featureIntro.pageOf", comment: ""), currentPage + 1)
             )
 
-            // CTA Button
             Button {
-                if currentPage < 2 {
+                if currentPage < Self.pageCount - 1 {
                     withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8)) {
                         currentPage += 1
                     }
@@ -120,8 +115,7 @@ struct FeatureIntroView: View {
             .buttonStyle(.plain)
             .sensoryFeedback(.impact(weight: .light), trigger: didComplete)
 
-            // Skip
-            if currentPage < 2 {
+            if currentPage < Self.pageCount - 1 {
                 Button { onComplete() } label: {
                     Text(NSLocalizedString("featureIntro.skip", comment: ""))
                         .font(.system(.subheadline, design: .rounded))
@@ -136,7 +130,7 @@ struct FeatureIntroView: View {
     }
 
     private var ctaTitle: String {
-        guard currentPage < 2 else {
+        guard currentPage < Self.pageCount - 1 else {
             return NSLocalizedString("featureIntro.startJourney", comment: "")
         }
         return NSLocalizedString("featureIntro.next", comment: "")
@@ -145,25 +139,21 @@ struct FeatureIntroView: View {
     // MARK: - Animation Trigger
 
     private func triggerAnimation(for page: Int) {
-        // First reset all flags so animations re-run when revisiting a page
         let wasShowing0 = showPage0
         let wasShowing1 = showPage1
-        let wasShowing2 = showPage2
 
-        if wasShowing0 || wasShowing1 || wasShowing2 {
+        if wasShowing0 || wasShowing1 {
             showPage0 = false
             showPage1 = false
-            showPage2 = false
         }
 
-        let delay: Double = (wasShowing0 || wasShowing1 || wasShowing2) ? 0.05 : 0.0
+        let delay: Double = (wasShowing0 || wasShowing1) ? 0.05 : 0.0
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             withAnimation(reduceMotion ? .none : .spring(response: 0.55, dampingFraction: 0.82)) {
                 switch page {
                 case 0: showPage0 = true
                 case 1: showPage1 = true
-                case 2: showPage2 = true
                 default: break
                 }
             }
@@ -171,21 +161,18 @@ struct FeatureIntroView: View {
     }
 }
 
-// MARK: - Page 1: Captain Hamoudi
+// MARK: - Page 1: Captain Hamoudi + Workouts/Challenges/Peaks
 
-private struct FeatureIntroPage1: View {
+private struct FeatureIntroCaptainPage: View {
     let show: Bool
-    let isArabic: Bool
     let geo: GeometryProxy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Hero: Captain Image ───────────────────────────────────
+        VStack(spacing: 16) {
             ZStack(alignment: .bottom) {
-                // Glow behind character
                 RadialGradient(
-                    colors: [Color.fiBrandMint.opacity(0.30), .clear],
+                    colors: [Color(hex: "C6EFDB").opacity(0.30), .clear],
                     center: .center,
                     startRadius: 10,
                     endRadius: 130
@@ -197,7 +184,7 @@ private struct FeatureIntroPage1: View {
                 Image("Hammoudi5")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxHeight: geo.size.height * 0.50)
+                    .frame(maxHeight: geo.size.height * 0.36)
                     .shadow(color: .black.opacity(0.09), radius: 30, x: 0, y: 15)
                     .accessibilityLabel(NSLocalizedString("featureIntro.captainHamoudi", comment: ""))
                     .opacity(show ? 1 : 0)
@@ -208,167 +195,115 @@ private struct FeatureIntroPage1: View {
                         value: show
                     )
             }
-            .frame(height: geo.size.height * 0.52)
+            .frame(height: geo.size.height * 0.38)
 
-            // ── Card ─────────────────────────────────────────────────
-            FeatureIntroCard(
-                title: NSLocalizedString("featureIntro.captainHamoudi", comment: ""),
-                subtitle: NSLocalizedString("featureIntro.captainSubtitle", comment: "")
-            )
-            .padding(.horizontal, 24)
-            .opacity(show ? 1 : 0)
-            .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.32),
-                value: show
-            )
-
-            Spacer()
-        }
-    }
-}
-
-// MARK: - Page 2: Workouts, Challenges & Peaks
-
-private struct FeatureIntroPage2: View {
-    let show: Bool
-    let isArabic: Bool
-    let geo: GeometryProxy
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // ── Hero: Triangle Icon Composition ──────────────────────
-            workoutsComposition
-                .frame(height: geo.size.height * 0.48)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(NSLocalizedString("featureIntro.workoutsAccessibility", comment: ""))
-
-            // ── Card ─────────────────────────────────────────────────
-            FeatureIntroCard(
-                title: NSLocalizedString("featureIntro.workoutsTitle", comment: ""),
-                subtitle: NSLocalizedString("featureIntro.workoutsSubtitle", comment: "")
-            )
-            .padding(.horizontal, 24)
-            .opacity(show ? 1 : 0)
-            .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.48),
-                value: show
-            )
-
-            Spacer()
-        }
-    }
-
-    private var workoutsComposition: some View {
-        VStack(spacing: 18) {
-            Spacer()
-
-            // Top: Trophy
-            FeatureIntroIconCircle(
-                symbol: "trophy.fill",
-                size: 120,
-                iconSize: 46,
-                background: Color.fiBrandSand.opacity(0.60),
-                delay: 0.08,
-                show: show
-            )
-
-            // Bottom row: Flame + Run
-            HStack(spacing: 32) {
-                FeatureIntroIconCircle(
-                    symbol: "flame.fill",
-                    size: 100,
-                    iconSize: 40,
-                    background: Color.fiBrandMint.opacity(0.60),
-                    delay: 0.22,
-                    show: show
+            VStack(spacing: 12) {
+                FeatureIntroCard(
+                    title: NSLocalizedString("featureIntro.captainHamoudi", comment: ""),
+                    subtitle: NSLocalizedString("featureIntro.captainSubtitle", comment: "")
                 )
-                FeatureIntroIconCircle(
-                    symbol: "figure.run",
-                    size: 100,
-                    iconSize: 40,
-                    background: Color.fiBrandMint.opacity(0.60),
-                    delay: 0.38,
-                    show: show
+                .opacity(show ? 1 : 0)
+                .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.32),
+                    value: show
+                )
+
+                FeatureIntroCard(
+                    title: NSLocalizedString("featureIntro.workoutsTitle", comment: ""),
+                    subtitle: NSLocalizedString("featureIntro.workoutsSubtitle", comment: "")
+                )
+                .opacity(show ? 1 : 0)
+                .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.46),
+                    value: show
                 )
             }
+            .padding(.horizontal, 24)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
 
-// MARK: - Page 3: Alchemy Kitchen
+// MARK: - Page 2: Kitchen + My Vibe
 
-private struct FeatureIntroPage3: View {
+private struct FeatureIntroKitchenPage: View {
     let show: Bool
-    let isArabic: Bool
     let geo: GeometryProxy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Hero: Triangle Icon Composition ──────────────────────
+        VStack(spacing: 16) {
             kitchenComposition
-                .frame(height: geo.size.height * 0.48)
+                .frame(height: geo.size.height * 0.34)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(NSLocalizedString("featureIntro.kitchenAccessibility", comment: ""))
 
-            // ── Card ─────────────────────────────────────────────────
-            FeatureIntroCard(
-                title: NSLocalizedString("featureIntro.kitchenTitle", comment: ""),
-                subtitle: NSLocalizedString("featureIntro.kitchenSubtitle", comment: "")
-            )
-            .padding(.horizontal, 24)
-            .opacity(show ? 1 : 0)
-            .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.48),
-                value: show
-            )
+            VStack(spacing: 12) {
+                FeatureIntroCard(
+                    title: NSLocalizedString("featureIntro.kitchenTitle", comment: ""),
+                    subtitle: NSLocalizedString("featureIntro.kitchenSubtitle", comment: "")
+                )
+                .opacity(show ? 1 : 0)
+                .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.40),
+                    value: show
+                )
 
-            Spacer()
+                FeatureIntroCard(
+                    title: NSLocalizedString("featureIntro.myVibeTitle", comment: ""),
+                    subtitle: NSLocalizedString("featureIntro.myVibeSubtitle", comment: "")
+                )
+                .opacity(show ? 1 : 0)
+                .offset(y: show ? 0 : (reduceMotion ? 0 : 22))
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.85).delay(0.54),
+                    value: show
+                )
+            }
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 0)
         }
     }
 
     private var kitchenComposition: some View {
-        VStack(spacing: 18) {
-            Spacer()
+        HStack(spacing: 22) {
+            Spacer(minLength: 0)
 
-            // Top: Camera
             FeatureIntroIconCircle(
-                symbol: "camera.fill",
-                size: 120,
-                iconSize: 46,
-                background: Color.fiBrandSand.opacity(0.60),
-                delay: 0.08,
+                symbol: "fork.knife",
+                size: 92,
+                iconSize: 36,
+                background: Color(hex: "C6EFDB").opacity(0.60),
+                delay: 0.10,
                 show: show
             )
 
-            // Bottom row: Leaf + Fork & Knife
-            HStack(spacing: 32) {
-                FeatureIntroIconCircle(
-                    symbol: "leaf.fill",
-                    size: 100,
-                    iconSize: 40,
-                    background: Color.fiBrandMint.opacity(0.60),
-                    delay: 0.22,
-                    show: show
-                )
-                FeatureIntroIconCircle(
-                    symbol: "fork.knife",
-                    size: 100,
-                    iconSize: 40,
-                    background: Color.fiBrandMint.opacity(0.60),
-                    delay: 0.38,
-                    show: show
-                )
-            }
+            FeatureIntroIconCircle(
+                symbol: "camera.fill",
+                size: 110,
+                iconSize: 42,
+                background: Color(hex: "F7D7A7").opacity(0.60),
+                delay: 0.20,
+                show: show
+            )
 
-            Spacer()
+            FeatureIntroIconCircle(
+                symbol: "music.note",
+                size: 92,
+                iconSize: 36,
+                background: Color(hex: "C6EFDB").opacity(0.60),
+                delay: 0.32,
+                show: show
+            )
+
+            Spacer(minLength: 0)
         }
+        .padding(.top, 12)
     }
 }
 
@@ -393,7 +328,7 @@ private struct FeatureIntroIconCircle: View {
 
             Image(systemName: symbol)
                 .font(.system(size: iconSize, weight: .medium))
-                .foregroundStyle(Color.fiTextPrimary)
+                .foregroundStyle(Color(hex: "0F1721"))
         }
         .opacity(show ? 1 : 0)
         .scaleEffect(show ? 1 : (reduceMotion ? 1 : 0.65))
@@ -411,28 +346,28 @@ private struct FeatureIntroCard: View {
     let subtitle: String
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Text(title)
-                .font(.system(.title2, design: .rounded, weight: .bold))
-                .foregroundStyle(Color.fiTextPrimary)
+                .font(.system(.title3, design: .rounded, weight: .bold))
+                .foregroundStyle(Color(hex: "0F1721"))
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
 
             Text(subtitle)
                 .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(Color.fiTextSecondary)
+                .foregroundStyle(Color(hex: "5F6F80"))
                 .multilineTextAlignment(.center)
-                .lineSpacing(5)
+                .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 26)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [.white.opacity(0.90), .white.opacity(0.78)],
@@ -440,10 +375,10 @@ private struct FeatureIntroCard: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.20), lineWidth: 1)
             }
         )
-        .shadow(color: .black.opacity(0.06), radius: 16, x: 0, y: 7)
+        .shadow(color: .black.opacity(0.06), radius: 14, x: 0, y: 6)
     }
 }

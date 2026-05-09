@@ -7,6 +7,9 @@ struct AiQoWidgetBundle: WidgetBundle {
         AiQoWidget()
         AiQoWatchFaceWidget()
         AiQoRingsFaceWidget()
+#if os(iOS)
+        HydrationWidget()
+#endif
 #if canImport(ActivityKit)
 #if os(iOS)
         AiQoWidgetLiveActivity()

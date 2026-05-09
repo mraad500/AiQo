@@ -35,8 +35,8 @@ enum PremiumPlan: String, CaseIterable, Identifiable {
             )
         case .intelligencePro:
             return localized(
-                ar: "كل ما في Core مع القمم، ذاكرة ممتدة للكابتن، وتوجيه AI تحليلي أعمق.",
-                en: "Everything in Core plus Peaks, expanded Captain memory, and deeper analytical AI guidance."
+                ar: "كل ما في AiQo Max مع القمم، ذاكرة ممتدة للكابتن، وتوجيه AI تحليلي أعمق.",
+                en: "Everything in AiQo Max plus Peaks, expanded Captain memory, and deeper analytical AI guidance."
             )
         }
     }

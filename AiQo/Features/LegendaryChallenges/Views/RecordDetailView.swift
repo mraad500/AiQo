@@ -27,7 +27,7 @@ struct RecordDetailView: View {
             .padding(.top, 16)
             .padding(.bottom, 40)
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
         .navigationTitle(NSLocalizedString("recordDetail.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navigateToProject) {
@@ -116,8 +116,9 @@ struct RecordDetailView: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(color.opacity(0.2))
+                .fill(Color(light: color.opacity(0.2), dark: color.opacity(0.85)))
         )
+        .environment(\.colorScheme, .light)
     }
 
     // MARK: - Story Section
@@ -138,7 +139,7 @@ struct RecordDetailView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(hex: "F7F7F7"))
+                .fill(Color(light: Color(hex: "F7F7F7"), dark: Color(hex: "1A2430")))
         )
     }
 
@@ -166,7 +167,7 @@ struct RecordDetailView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(hex: "F7F7F7"))
+                .fill(Color(light: Color(hex: "F7F7F7"), dark: Color(hex: "1A2430")))
         )
     }
 
@@ -206,6 +207,7 @@ struct RecordDetailView: View {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(GymTheme.mint.opacity(0.5))
             )
+            .environment(\.colorScheme, .light)
         }
         .buttonStyle(.plain)
     }

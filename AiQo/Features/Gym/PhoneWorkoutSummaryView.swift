@@ -229,11 +229,12 @@ struct PhoneWorkoutSummaryView: View {
 
             Task {
                 let summaryText = await generateCaptainSummaryText()
-                await CaptainVoiceService.shared.speak(text: summaryText)
+                await CaptainVoiceRouter.shared.speak(text: summaryText, tier: .premium)
             }
         }
         .onDisappear {
             heartAnalytics.stopStreaming()
+            CaptainVoiceRouter.shared.stop()
             CaptainVoiceService.shared.stopSpeaking()
         }
         .onChange(of: heartAnalytics.samples.count) { _, _ in

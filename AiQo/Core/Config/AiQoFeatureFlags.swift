@@ -55,6 +55,16 @@ enum FeatureFlags {
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
 
+    /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
+    /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat
+    /// uses the Mint/Sand brand-token bubbles, persistent safety banner, fixed
+    /// header, and the revised Gemini system prompt. When OFF, falls back to
+    /// the v1.0 legacy chat — but note that prompt / name-injection / model
+    /// fixes are unconditional because they are bug fixes. This flag only
+    /// gates the visible rebuild.
+    @FeatureFlag("AIQO_CHAT_V1_1_ENABLED", default: true)
+    static var captainChatV1_1Enabled: Bool
+
     @FeatureFlag("HAMOUDI_BLEND_ENABLED", default: false)
     static var hamoudiBlendEnabled: Bool
 
@@ -147,4 +157,120 @@ enum FeatureFlags {
     /// it reappears in its original position. Code is retained fully compilable.
     @FeatureFlag("PLANK_LADDER_CHALLENGE_ENABLED", default: false)
     static var plankLadderChallengeEnabled: Bool
+
+    // MARK: - Smart Water Tracking (free feature) — flag added 2026-04-22
+    //
+    // Kill switch for the Smart Water Tracking & Reminders feature. When ON
+    // (default), `WaterDetailSheetView` renders the `SmartHydrationSection`
+    // (pace summary, WHO/EFSA guidance, toggle) and `HomeViewModel` schedules
+    // pace-based hydration reminders through `NotificationBrain`. When OFF,
+    // the Water sheet falls back to the v1 bottle + add-button UI and no
+    // hydration notifications are scheduled.
+    //
+    // The feature is 100% free — no paywall or subscription gating. This flag
+    // exists only as a production kill switch if the reminder logic misbehaves
+    // in the wild. Users still control the feature via the in-app toggle
+    // (`HydrationSettings.smartTrackingEnabled`, UserDefaults-backed).
+    @FeatureFlag("SMART_WATER_TRACKING_ENABLED", default: true)
+    static var smartWaterTrackingEnabled: Bool
+
+    // MARK: - Captain Voice (hybrid Apple + MiniMax) — flag added 2026-04-22
+    //
+    // Compile-time-constant kill switch for the MiniMax cloud voice tier.
+    // When ON (default), `.premium`-tier calls to `CaptainVoiceRouter` route
+    // through `MiniMaxTTSProvider` provided the user has granted voice
+    // cloud consent (see `CaptainVoiceConsent`) and the MiniMax provider is
+    // configured (API key in Keychain, non-placeholder voiceID/model/baseURL).
+    // When OFF, the router always routes every call — including `.premium` —
+    // to the Apple on-device TTS path; no consent sheet is presented, no
+    // network call is ever made, the Settings voice row shows a
+    // "coming soon" state.
+    //
+    // The `.realtime` tier is not affected by this flag — Zone 2 coaching,
+    // stand nudges, and other latency-sensitive phrases always use
+    // on-device Apple TTS regardless of this setting.
+    @FeatureFlag("CAPTAIN_VOICE_CLOUD_ENABLED", default: true)
+    static var captainVoiceCloudEnabled: Bool
+
+    // MARK: - Cloud Proxy (Gemini + MiniMax via Supabase Edge Functions) — 2026-04-23
+    //
+    // When OFF (default), the app calls Gemini and MiniMax directly using API
+    // keys shipped inside the IPA (via `Secrets.xcconfig` → `Info.plist` at
+    // build time). That path works but exposes the keys to any attacker who
+    // extracts the IPA — burning our quota is a realistic risk.
+    //
+    // When ON, all Gemini + MiniMax calls go through the Supabase Edge
+    // Functions `captain-chat` and `captain-voice`. The user authenticates
+    // with their Supabase JWT; the Edge Functions hold the real API keys
+    // server-side and forward the request.
+    //
+    // Requirements before flipping this to ON:
+    //   1. Deploy `supabase/functions/captain-chat` + `captain-voice` to Supabase.
+    //   2. Rotate GEMINI + MINIMAX keys and set them as Supabase Edge secrets
+    //      (`supabase secrets set GEMINI_API_KEY=… MINIMAX_API_KEY=…`).
+    //   3. Remove the now-dead client-side keys from `Secrets.xcconfig`.
+    //
+    // See `/supabase/functions/README.md` (runbook) for the full deploy flow.
+    @FeatureFlag("USE_CLOUD_PROXY", default: false)
+    static var useCloudProxy: Bool
+
+    // MARK: - Per-path proxy overrides — 2026-04-26
+    //
+    // The original `USE_CLOUD_PROXY` flag was a single switch — chat AND voice
+    // both flipped together. In practice we want to keep chat behind the
+    // Supabase Edge Function (so the Gemini key stays server-side) while
+    // voice hits MiniMax directly with the rotated client key.
+    //
+    // These two flags override `useCloudProxy` per-path. When the Info.plist
+    // entry is missing or empty, the path falls back to the master flag.
+    // That keeps existing TestFlight builds (which only know about the master
+    // flag) behaving exactly as before.
+
+    /// True when chat (Gemini + memory extractor) should route through
+    /// the `captain-chat` Edge Function. Falls back to `useCloudProxy`
+    /// when `USE_CHAT_CLOUD_PROXY` is unset.
+    static var useChatCloudProxy: Bool {
+        if let override = Self.optionalBoolFlag(named: "USE_CHAT_CLOUD_PROXY") {
+            return override
+        }
+        return useCloudProxy
+    }
+
+    /// True when MiniMax voice synthesis should route through the
+    /// `captain-voice` Edge Function. Falls back to `useCloudProxy`
+    /// when `USE_VOICE_CLOUD_PROXY` is unset.
+    static var useVoiceCloudProxy: Bool {
+        if let override = Self.optionalBoolFlag(named: "USE_VOICE_CLOUD_PROXY") {
+            return override
+        }
+        return useCloudProxy
+    }
+
+    /// Reads a Bool/string Info.plist entry and returns `nil` when the value
+    /// is missing, empty, or an unexpanded `$(…)` placeholder. The
+    /// distinction matters for per-path overrides — `false` means "explicitly
+    /// off", `nil` means "no opinion, defer to the master flag".
+    private static func optionalBoolFlag(named key: String) -> Bool? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) else {
+            return nil
+        }
+        if let bool = raw as? Bool {
+            return bool
+        }
+        if let str = raw as? String {
+            let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed.hasPrefix("$(") {
+                return nil
+            }
+            switch trimmed.lowercased() {
+            case "true", "yes", "1":
+                return true
+            case "false", "no", "0":
+                return false
+            default:
+                return nil
+            }
+        }
+        return nil
+    }
 }

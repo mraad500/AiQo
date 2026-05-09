@@ -28,6 +28,12 @@ struct AIDataUseDisclosureRows: View {
             )
 
             disclosureRow(
+                icon: "drop.fill",
+                titleKey: "ai.consent.water.title",
+                detailKey: "ai.consent.water.detail"
+            )
+
+            disclosureRow(
                 icon: "hand.raised.fill",
                 titleKey: "ai.consent.control.title",
                 detailKey: "ai.consent.control.detail"

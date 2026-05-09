@@ -247,6 +247,9 @@ final class HomeViewModel: ObservableObject {
         Task { [weak self] in
             await self?.loadTodayFromHealth()
             self?.healthManager.fetchSteps()
+            if FeatureFlags.smartWaterTrackingEnabled {
+                await HydrationService.shared.reevaluateAndSchedule()
+            }
         }
     }
     
@@ -472,12 +475,15 @@ final class HomeViewModel: ObservableObject {
     /// Add water intake (in liters)
     func addWater(liters: Double) async {
         guard !demoMode else { return }
-        
+
         do {
             // Convert liters to milliliters for HealthKit
             let milliliters = liters * 1000.0
             try await healthService.logWater(ml: milliliters)
             await loadTodayFromHealth()
+            if FeatureFlags.smartWaterTrackingEnabled {
+                await HydrationService.shared.reevaluateAndSchedule()
+            }
         } catch {
             self.error = error
         }

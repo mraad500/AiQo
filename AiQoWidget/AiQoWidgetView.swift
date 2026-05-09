@@ -5,6 +5,13 @@ struct AiQoWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: AiQoEntry
 
+    /// Mirrors `HydrationWidgetView.isArabic` so both widgets render in the
+    /// same language. Uppercase typographic style is suppressed in Arabic
+    /// because forcing `.uppercase` breaks certain Arabic glyph shaping.
+    private var isArabic: Bool {
+        Palette.currentAppLanguage() == "ar"
+    }
+
     var body: some View {
         switch family {
         case .systemSmall:
@@ -43,16 +50,18 @@ struct AiQoWidgetView: View {
                         Circle()
                             .fill(Palette.teal)
                             .frame(width: 8, height: 8)
-                        Text("DAILY MOTION")
+                        Text(isArabic ? "حركة اليوم" : "Daily Motion")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(Palette.textSecondary)
+                            .textCase(isArabic ? nil : .uppercase)
                     }
 
                     Spacer()
 
-                    Text("LIVE")
+                    Text(isArabic ? "مباشر" : "Live")
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundStyle(Palette.textSecondary)
+                        .textCase(isArabic ? nil : .uppercase)
                 }
 
                 HStack(alignment: .top) {
@@ -63,17 +72,19 @@ struct AiQoWidgetView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.65)
 
-                        Text("STEPS TODAY")
+                        Text(isArabic ? "خطوات اليوم" : "Steps Today")
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundStyle(Palette.textMuted)
+                            .textCase(isArabic ? nil : .uppercase)
                     }
 
                     Spacer(minLength: 12)
 
                     VStack(alignment: .trailing, spacing: 6) {
-                        Text("STAND")
+                        Text(isArabic ? "وقوف" : "Stand")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(Palette.textSecondary)
+                            .textCase(isArabic ? nil : .uppercase)
 
                         Text(entry.standHoursText)
                             .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -89,9 +100,21 @@ struct AiQoWidgetView: View {
                     .frame(height: 1)
 
                 HStack(spacing: 8) {
-                    metricTile(icon: "figure.walk", title: "STEPS", value: formattedInt(entry.steps))
-                    metricTile(icon: "flame.fill", title: "KCAL", value: formattedInt(entry.activeCalories))
-                    metricTile(icon: "figure.stand", title: "STAND", value: "\(entry.standPercent)%")
+                    metricTile(
+                        icon: "figure.walk",
+                        title: isArabic ? "خطوات" : "Steps",
+                        value: formattedInt(entry.steps)
+                    )
+                    metricTile(
+                        icon: "flame.fill",
+                        title: isArabic ? "سعرات" : "Kcal",
+                        value: formattedInt(entry.activeCalories)
+                    )
+                    metricTile(
+                        icon: "figure.stand",
+                        title: isArabic ? "وقوف" : "Stand",
+                        value: "\(entry.standPercent)%"
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -136,6 +159,7 @@ struct AiQoWidgetView: View {
                 Text(title)
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(Palette.textSecondary)
+                    .textCase(isArabic ? nil : .uppercase)
             }
 
             Text(value)
@@ -393,4 +417,21 @@ private enum Palette {
     static let textMuted = Color.white.opacity(0.58)
     static let stroke = Color.white.opacity(0.13)
     static let track = Color.white.opacity(0.16)
+
+    /// Reads the app-side language preference from the App Group suite first
+    /// (if the app has mirrored it), falling back to the user's preferred
+    /// locale. Mirrors `HydrationPalette.currentAppLanguage()` so both widgets
+    /// use the same mechanism — see AiQoWidget/Hydration/HydrationWidget.swift.
+    /// Keeps the Motion widget in sync with the app without a widget-target
+    /// `Localizable.strings` bundle.
+    static func currentAppLanguage() -> String {
+        if let shared = UserDefaults(suiteName: "group.aiqo"),
+           let stored = shared.string(forKey: "aiqo.app.language") {
+            return stored
+        }
+        if let stored = UserDefaults.standard.string(forKey: "aiqo.app.language") {
+            return stored
+        }
+        return Locale.current.language.languageCode?.identifier ?? "en"
+    }
 }

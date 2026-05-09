@@ -12,6 +12,13 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     static let shared = CaptainVoiceService()
 
     @Published private(set) var isSpeaking = false
+    /// v1.1 — surfaces TTS health to the chat view so the speaker icon dims
+    /// when playback is unavailable. Flips false on failure, flips back true
+    /// next time audio playback succeeds.
+    @Published private(set) var isTTSAvailable = true
+    /// Transient Arabic status surfaced above the composer when TTS fails.
+    /// Cleared automatically after ~2.5s. Chat view observes this.
+    @Published private(set) var displayedToast: String?
 
     private let audioSession = AVAudioSession.sharedInstance()
     private let audioManager = AiQoAudioManager.shared
@@ -25,6 +32,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
     private var hasActiveSpeechSession = false
     private var externalMixedPlaybackClients = 0
     private var activeSpeechSequence = 0
+    private var toastDismissalTask: Task<Void, Never>?
 
     private override init() {
         super.init()
@@ -41,6 +49,7 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         do {
             try beginSpeechSession()
             isSpeaking = true
+            isTTSAvailable = true
 
             guard speechSequence == activeSpeechSequence else { return }
 
@@ -52,8 +61,30 @@ final class CaptainVoiceService: NSObject, ObservableObject {
                 logger.error("captain_voice_failed error=\(error.localizedDescription, privacy: .public)")
                 completeCurrentPlayback()
                 endSpeechSession()
+                isTTSAvailable = false
+                let arabic = AppSettingsStore.shared.appLanguage == .arabic
+                presentToast(arabic ? "الصوت غير متاح حالياً" : "Audio is unavailable right now")
             }
         }
+    }
+
+    private func presentToast(_ message: String) {
+        displayedToast = message
+        toastDismissalTask?.cancel()
+        toastDismissalTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.displayedToast = nil }
+        }
+    }
+
+    /// Entry point for `CaptainVoiceRouter` to surface a transient toast
+    /// through the same pipe the chat view observes. Used when the cloud
+    /// voice provider falls back to local TTS so the user sees a single
+    /// "switched to local voice" notice — the router throttles this to
+    /// at most one per app launch, so no additional pacing is needed here.
+    func presentRouterFallbackToast(_ message: String) {
+        presentToast(message)
     }
 
     func speakAndWait(text: String) async {
@@ -83,6 +114,20 @@ final class CaptainVoiceService: NSObject, ObservableObject {
         )
 
         await speak(text: workoutPrompt)
+    }
+
+    /// Text-only variant for callers that want to speak the coaching cue
+    /// through `CaptainVoiceRouter` (premium/cloud voice) instead of Apple TTS.
+    func makeWorkoutPromptText(
+        liveHR: Int,
+        zoneBounds: ClosedRange<Int>,
+        distance: Double
+    ) async -> String {
+        await generatedWorkoutPrompt(
+            liveHR: liveHR,
+            zoneBounds: zoneBounds,
+            distance: distance
+        )
     }
 
     func beginExternalMixedPlayback() {

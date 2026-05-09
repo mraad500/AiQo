@@ -332,7 +332,6 @@
 				80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
 				80D9BD8D2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
 				80D9BD972F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests */,
-				806715D22F37337700D6EAB4 /* AiQoWidget */,
 				A1F000010000000000000050 /* AiQoWatchWidget */,
 				80B1F64D2EEFDB41009A810C /* Frameworks */,
 				8025C4B22EC25EB7004DECAA /* Products */,
@@ -365,6 +364,7 @@
 				80235CEE2F1A2D4800A4983B /* HealthKit.framework */,
 				80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */,
 				80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */,
+				806715D22F37337700D6EAB4 /* AiQoWidget */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1039,7 +1039,7 @@
 				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1050,16 +1050,13 @@
 				INFOPLIST_FILE = AiQo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AiQo;
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "تُستخدم لحفظ صور تقدمك.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "تُستخدم لحفظ صور تقدمك الجسدي على جهازك فقط.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1071,7 +1068,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = "$(inherited)";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -1105,7 +1102,7 @@
 				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1116,16 +1113,13 @@
 				INFOPLIST_FILE = AiQo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AiQo;
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need access to play your music during workouts.";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "AiQo connects to heart rate sensors and fitness devices via Bluetooth.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "تستخدم الكاميرا لمسح مكونات الثلاجة وتحليل تمارينك.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AiQo needs local network access to connect to Captain backend during development.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiQo uses the microphone for hands-free Zone 2 coaching while you stay in motion.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "AiQo uses motion data to calculate your steps and activity.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "تُستخدم لحفظ صور تقدمك.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "تُستخدم لحفظ صور تقدمك الجسدي على جهازك فقط.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiQo transcribes your short voice cues so Captain can answer locally during Zone 2 sessions.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1137,7 +1131,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = "$(inherited)";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -1165,11 +1159,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1187,11 +1181,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1208,11 +1202,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1229,11 +1223,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1253,7 +1247,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWidget/Info.plist;
@@ -1265,7 +1259,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1285,7 +1279,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWidget/Info.plist;
@@ -1297,7 +1291,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1317,7 +1311,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AiQoWatch Watch App/AiQoWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1331,7 +1325,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1354,7 +1348,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AiQoWatch Watch App/AiQoWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1368,7 +1362,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1389,10 +1383,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1412,10 +1406,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1434,10 +1428,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1456,10 +1450,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1480,7 +1474,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -1493,7 +1487,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1513,7 +1507,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -1526,7 +1520,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1545,7 +1539,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
@@ -1557,7 +1551,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1577,7 +1571,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
@@ -1589,7 +1583,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
