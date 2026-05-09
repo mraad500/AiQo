@@ -55,6 +55,30 @@ enum FeatureFlags {
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
 
+    // MARK: - App-Knowledge v2 (sliced + SSOT-generated) — flag added 2026-05-09
+    //
+    // Brain Refactor §32: the legacy `layerAppKnowledge(language:)` ships ~5K
+    // tokens of static reference material on EVERY Captain call regardless of
+    // which screen the user is on. v2 routes by `ScreenContext` so non-`mainChat`
+    // calls only ship the relevant slice (Battle for Gym, Peaks for Peaks,
+    // Kitchen for Kitchen, etc.) — projected 60–80% prompt-overhead reduction
+    // outside Main Chat. Output stays byte-identical across calls so the Edge
+    // Function can later layer Gemini explicit caching on top with no iOS work.
+    //
+    // The v1 `layerAppKnowledge(_:)` is preserved fully compilable as the
+    // rollback path. Flip this OFF to revert without an app update (Info.plist
+    // is read fresh on each access — no cache).
+    //
+    // Default chosen in Swift mirrors the Debug-on / Release-off convention:
+    // dev builds exercise v2; Release falls back to v1 until TestFlight verifies.
+    #if DEBUG
+    @FeatureFlag("APP_KNOWLEDGE_V2_ENABLED", default: true)
+    static var appKnowledgeV2Enabled: Bool
+    #else
+    @FeatureFlag("APP_KNOWLEDGE_V2_ENABLED", default: false)
+    static var appKnowledgeV2Enabled: Bool
+    #endif
+
     /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
     /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat
     /// uses the Mint/Sand brand-token bubbles, persistent safety banner, fixed

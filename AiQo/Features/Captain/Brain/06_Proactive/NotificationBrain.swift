@@ -196,6 +196,8 @@ public actor NotificationBrain {
              .streakSave:              return "CAPTAIN_STREAK"
         case .circadianNudge:          return "CAPTAIN_CIRCADIAN"
         case .hydrationReminder:       return "CAPTAIN_HYDRATION"
+        case .workoutAnalysis,
+             .workoutSummary:          return "CAPTAIN_WORKOUT"
         default:                       return "CAPTAIN_DEFAULT"
         }
     }

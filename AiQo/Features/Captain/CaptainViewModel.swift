@@ -397,7 +397,10 @@ final class CaptainViewModel: ObservableObject {
         startNewChat()
     }
 
-    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية
+    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية ديناميكية
+    /// يولّد الرسالة الافتتاحية عبر BrainOrchestrator (وقت اليوم، الخطوات، السعرات،
+    /// الماء، الاسم، والجنس) ويعرض typing indicator حتى يصل الرد. عند أي خلل
+    /// (انترنت، tier-gate، timeout) يرجع للنص الثابت بصمت.
     func startNewChat() {
         currentSessionID = UUID()
         messages.removeAll()
@@ -406,13 +409,45 @@ final class CaptainViewModel: ObservableObject {
         currentMealPlan = nil
         quickReplies = []
 
-        let welcome = ChatMessage(
-            text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", comment: "Captain first message"),
-            isUser: false
-        )
-        messages.append(welcome)
-        // Don't persist the welcome message — the session is only persisted once the user sends their first message.
-        // This prevents stale single-message sessions accumulating in SwiftData on every cold launch.
+        responseTask?.cancel()
+        activeRequestID = nil
+
+        isLoading = true
+        coachState = .typing
+
+        let sessionID = currentSessionID
+        let capturedOrchestrator = orchestrator
+        responseTask = Task { [weak self] in
+            let dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+            self?.applyWelcomeMessage(dynamic, for: sessionID)
+        }
+    }
+
+    /// Inserts the welcome bubble after the dynamic generator settles, or
+    /// drops in the static fallback if generation returned nil. Bails out
+    /// silently if the user has already started another session in the
+    /// meantime (e.g., tapped a chat-history entry).
+    private func applyWelcomeMessage(_ dynamic: String?, for sessionID: UUID) {
+        guard currentSessionID == sessionID else { return }
+
+        let trimmed = dynamic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let text = trimmed.isEmpty
+            ? NSLocalizedString(
+                "captain.welcome",
+                value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
+                comment: "Captain first message"
+            )
+            : trimmed
+
+        let welcome = ChatMessage(text: text, isUser: false)
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+            messages.append(welcome)
+        }
+        isLoading = false
+        coachState = .idle
+        // Don't persist the welcome — the session is only persisted on first
+        // user reply, so we never leave stale single-message sessions in
+        // SwiftData on every cold launch.
     }
 
     /// يحمّل جلسة قديمة — يستبدل الرسائل الحالية برسائل الجلسة المختارة
@@ -871,23 +906,41 @@ final class CaptainViewModel: ObservableObject {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Appends a single ellipsis to a reply that Gemini cut off at
-    /// `MAX_TOKENS`, but only when the existing tail is not already a
-    /// terminal-punctuation sequence. Keeps a quiet visual hint without
-    /// double-punctuating well-formed (but coincidentally truncated) replies.
-    /// The retry/continue UX is intentionally deferred — see fix prompt.
+    /// Appends a single ellipsis to a reply that was cut off — either flagged
+    /// explicitly by Gemini's `MAX_TOKENS`, or implicitly detected by the tail
+    /// looking like an unfinished sentence (no terminal punctuation, ends on a
+    /// connector word like "اللي"/"وهي"/"مثل"). Keeps a quiet visual hint
+    /// without double-punctuating well-formed replies that happen to end on a
+    /// word like a name or a feature label.
     nonisolated static func markIfTruncated(
         assistantReply: String,
         truncatedAtMaxTokens: Bool
     ) -> String {
-        guard truncatedAtMaxTokens else { return assistantReply }
         let trimmed = assistantReply.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return assistantReply }
-        let terminalSuffixes: [String] = [".", "؟", "!", "…", ".\""]
+
+        let terminalSuffixes: [String] = [".", "؟", "!", "…", ".\"", "؟\"", "!\"", "?", "?\""]
         if terminalSuffixes.contains(where: { trimmed.hasSuffix($0) }) {
             return trimmed
         }
-        return "\(trimmed)…"
+
+        if truncatedAtMaxTokens { return "\(trimmed)…" }
+
+        // Implicit truncation: the reply has no terminal punctuation AND ends on
+        // an Arabic connector / continuation word (يدل ع جملة ناقصة). Catches
+        // cases where Gemini returned valid JSON but the message field itself
+        // was clipped — finishReason came back as STOP so the explicit flag
+        // never fired. Keep the list short — false positives append a stray
+        // ellipsis to a clean one-liner.
+        let danglingTails: [String] = [
+            " اللي هي", " اللي", " وهي", " وهو", " مثل", " مثلاً", " يعني",
+            " بس", " لأن", " عشان", " لمّا", " لما", " إذا", " مع",
+            " و", " أو", "،", "،\""
+        ]
+        for tail in danglingTails where trimmed.hasSuffix(tail) {
+            return "\(trimmed)…"
+        }
+        return trimmed
     }
 
     private func prependUserNameIfNeeded(to reply: String) -> String {

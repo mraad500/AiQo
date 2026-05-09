@@ -46,6 +46,11 @@ final class CaptainVoiceRouter: ObservableObject {
 
     @Published private(set) var isSpeaking = false
     @Published private(set) var activeProvider: VoiceProviderKind = .appleTTS
+    /// Stable identifier for the text currently being spoken — derived from a
+    /// hash of the trimmed string. Used by the chat to highlight the SINGLE
+    /// bubble that is sounding, instead of pulsing every Captain bubble in
+    /// view whenever any utterance plays.
+    @Published private(set) var speakingTextHash: Int? = nil
     /// Set to true when a `.premium` request is rejected because cloud-voice
     /// consent has not been granted yet. Views observe this and present
     /// `VoiceConsentSheet` reactively, so the user discovers the consent
@@ -115,7 +120,11 @@ final class CaptainVoiceRouter: ObservableObject {
         let provider = resolveProvider(for: tier)
         activeProvider = provider.kind
         isSpeaking = true
-        defer { isSpeaking = false }
+        speakingTextHash = trimmed.hashValue
+        defer {
+            isSpeaking = false
+            speakingTextHash = nil
+        }
 
         logger.notice("voice_router_speak tier=\(String(describing: tier), privacy: .public) provider=\(String(describing: provider.kind), privacy: .public) chars=\(trimmed.count)")
 

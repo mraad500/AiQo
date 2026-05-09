@@ -480,6 +480,14 @@ final class LiveWorkoutSession: ObservableObject {
             distanceMeters: distanceMeters
         )
 
+        // Compare against the previous session and surface a one-sentence
+        // analysis through the in-app toast and (if the app is backgrounded
+        // by the time it lands) the iOS notification pipeline. Detached so
+        // we never block the UI's transition back to .idle.
+        Task.detached(priority: .utility) {
+            await WorkoutAnalysisAnnouncer.shared.analyzeAndAnnounce()
+        }
+
         resetWorkoutState()
         withAnimation(.snappy) {
             phase = .idle

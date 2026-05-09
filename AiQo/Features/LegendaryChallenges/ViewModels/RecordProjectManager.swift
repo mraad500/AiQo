@@ -173,6 +173,14 @@ final class RecordProjectManager {
 
     // MARK: - توليد خطة افتراضية
 
+    // SSOT exposure for PromptComposer: HRR-driven plan tuning constants. The
+    // exact numbers gate the "شلون أبدي مشروع؟" answer, so the v2 app-knowledge
+    // layer reads these directly instead of duplicating literals.
+    static let hrrStartFractionExcellent: Double = 0.25
+    static let hrrStartFractionGood: Double = 0.15
+    static let hrrStartFractionNeedsWork: Double = 0.10
+    static let hrrNeedsWorkExtraRestWeeks: Int = 4
+
     /// يولّد خطة تدريب افتراضية بناءً على الرقم القياسي
     // CHANGED: Added hrrLevel parameter to customize plan based on fitness assessment
     static func generateDefaultPlan(for record: LegendaryRecord, totalWeeks: Int, hrrLevel: String = "good") -> String {
@@ -181,13 +189,13 @@ final class RecordProjectManager {
         // CHANGED: Adjust starting intensity based on HRR level
         let startFraction: Double
         switch hrrLevel {
-        case "excellent": startFraction = 0.25
-        case "needsWork": startFraction = 0.10
-        default: startFraction = 0.15
+        case "excellent": startFraction = Self.hrrStartFractionExcellent
+        case "needsWork": startFraction = Self.hrrStartFractionNeedsWork
+        default: startFraction = Self.hrrStartFractionGood
         }
 
         // CHANGED: Extra rest days in early weeks for needsWork
-        let needsWorkEarlyRestWeeks = hrrLevel == "needsWork" ? 4 : 0
+        let needsWorkEarlyRestWeeks = hrrLevel == "needsWork" ? Self.hrrNeedsWorkExtraRestWeeks : 0
 
         for weekNum in 1...totalWeeks {
             let phase: String

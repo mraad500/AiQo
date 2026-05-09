@@ -73,6 +73,7 @@ public enum NotificationKind: String, Sendable, Codable, CaseIterable {
 
     // Workout
     case workoutSummary
+    case workoutAnalysis
 
     // Hydration (Smart Water Tracking — free feature)
     case hydrationReminder

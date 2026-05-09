@@ -275,6 +275,7 @@ private extension CaptainChatView {
             }
 
             ForEach(Array(globalBrain.messages.enumerated()), id: \.element.id) { index, message in
+                let isUser = message.isUser
                 ChatMessageRow(
                     message: message,
                     onAppearRead: message.isEphemeral && !message.isRead ? {
@@ -300,10 +301,20 @@ private extension CaptainChatView {
                         globalBrain.startMorningGratitudeSession()
                     } : nil,
                     ttsDimmed: !voiceService.isTTSAvailable,
-                    enhancedVoiceActive: voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking
+                    enhancedVoiceActive: voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking,
+                    isVoicePlaying: voiceRouter.isSpeaking
+                        && voiceRouter.speakingTextHash == message.text.trimmingCharacters(in: .whitespacesAndNewlines).hashValue
                 )
                 .id(message.id)
                 .padding(.bottom, spacing(forIndex: index))
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity
+                            .combined(with: .scale(scale: 0.94, anchor: isUser ? .bottomTrailing : .bottomLeading))
+                            .combined(with: .move(edge: .bottom)),
+                        removal: .opacity
+                    )
+                )
 
                 if !message.isUser, let spotifyRec = message.spotifyRecommendation {
                     VibeMiniBubble(
@@ -329,12 +340,12 @@ private extension CaptainChatView {
             }
 
             if globalBrain.isLoading {
-                CaptainTypingRow()
+                CaptainTypingRow(coachState: globalBrain.coachState)
                     .id("typing-indicator")
                     .padding(.top, 8)
                     .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .bottom)),
-                        removal: .opacity
+                        insertion: .opacity.combined(with: .move(edge: .bottom).combined(with: .scale(scale: 0.92, anchor: .bottomLeading))),
+                        removal: .opacity.combined(with: .scale(scale: 0.96))
                     ))
             }
 
@@ -361,24 +372,14 @@ private extension CaptainChatView {
     var quickReplyRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(globalBrain.quickReplies, id: \.self) { reply in
-                    Button {
-                        HapticEngine.light()
+                ForEach(Array(globalBrain.quickReplies.enumerated()), id: \.element) { index, reply in
+                    QuickReplyChip(
+                        text: reply,
+                        index: index
+                    ) {
+                        HapticEngine.selection()
                         globalBrain.sendMessage(reply)
-                    } label: {
-                        Text(reply)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color(hex: "EBCF97"))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule()
-                                    .fill(Color(hex: "EBCF97").opacity(0.15))
-                                    .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
-                            )
                     }
-                    .buttonStyle(AiQoPressButtonStyle())
-                    .accessibilityLabel(reply)
                 }
             }
             .padding(.horizontal, 4)
@@ -465,6 +466,10 @@ private struct ChatMessageRow: View {
     /// MiniMax cloud provider. Drives the subtle mint badge on the speaker
     /// icon and the "enhanced voice" accessibility label variant.
     var enhancedVoiceActive: Bool = false
+    /// True when the voice router is currently sounding THIS message.
+    /// Drives the speaker → waveform morph and the mint border highlight on
+    /// the bubble so the user can spot the active utterance at a glance.
+    var isVoicePlaying: Bool = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
@@ -478,6 +483,18 @@ private struct ChatMessageRow: View {
                 }
             } else {
                 CaptainChatAvatarView(size: 28)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.aiqoMint.opacity(isVoicePlaying ? 0.85 : 0), lineWidth: 2)
+                            .scaleEffect(isVoicePlaying ? 1.18 : 1.0)
+                            .opacity(isVoicePlaying ? 0.9 : 0)
+                            .animation(
+                                isVoicePlaying
+                                    ? .easeOut(duration: 1.2).repeatForever(autoreverses: false)
+                                    : .easeOut(duration: 0.2),
+                                value: isVoicePlaying
+                            )
+                    )
 
                 MessageBubble(isUser: false, timestamp: message.timestamp) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -507,14 +524,36 @@ private struct ChatMessageRow: View {
 
                                 Button(action: onSpeak) {
                                     ZStack(alignment: .bottomTrailing) {
-                                        Image(systemName: "speaker.wave.2")
-                                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(Color.black.opacity(ttsDimmed ? 0.4 : 0.68))
-                                            .padding(8)
-                                            .background(
-                                                Circle()
-                                                    .fill(Color.white.opacity(ttsDimmed ? 0.18 : 0.34))
-                                            )
+                                        Group {
+                                            if isVoicePlaying {
+                                                // Live waveform replaces the static speaker icon
+                                                // while THIS message is the one being spoken.
+                                                VoiceWaveform(color: Color.black.opacity(0.78))
+                                                    .frame(width: 18, height: 14)
+                                                    .transition(.scale.combined(with: .opacity))
+                                            } else {
+                                                Image(systemName: "speaker.wave.2")
+                                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                                    .foregroundStyle(Color.black.opacity(ttsDimmed ? 0.4 : 0.68))
+                                                    .transition(.scale.combined(with: .opacity))
+                                            }
+                                        }
+                                        .frame(width: 18, height: 14)
+                                        .padding(8)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white.opacity(ttsDimmed ? 0.18 : (isVoicePlaying ? 0.55 : 0.34)))
+                                        )
+                                        .overlay(
+                                            Circle()
+                                                .stroke(
+                                                    isVoicePlaying ? Color.aiqoMint.opacity(0.85) : Color.clear,
+                                                    lineWidth: 1.4
+                                                )
+                                        )
+                                        .scaleEffect(isVoicePlaying ? 1.06 : 1)
+                                        .animation(.spring(response: 0.32, dampingFraction: 0.78), value: isVoicePlaying)
+
                                         if enhancedVoiceActive {
                                             Circle()
                                                 .fill(AiQoColors.mintSoft)
@@ -533,6 +572,9 @@ private struct ChatMessageRow: View {
                         }
                     }
                 }
+                .scaleEffect(isVoicePlaying ? 1.014 : 1)
+                .shadow(color: isVoicePlaying ? Color.aiqoMint.opacity(0.28) : .clear, radius: isVoicePlaying ? 14 : 0, x: 0, y: 4)
+                .animation(.spring(response: 0.4, dampingFraction: 0.78), value: isVoicePlaying)
 
                 Spacer(minLength: 26)
             }
@@ -555,47 +597,114 @@ private struct ChatMessageRow: View {
     }
 }
 
+/// Smart typing indicator that reflects the Captain's current cognitive state.
+/// Falls back to neutral "Captain is thinking" copy when the cognitive timeline
+/// hasn't transitioned yet (e.g. very early in the request) so the bubble never
+/// appears empty on screen.
 private struct CaptainTypingRow: View {
+    let coachState: CoachCognitiveState
+
+    @State private var avatarPulse = false
+
+    private var isArabic: Bool {
+        AppSettingsStore.shared.appLanguage == .arabic
+    }
+
+    private var resolvedStatusText: String {
+        if let live = coachState.statusText { return live }
+        return isArabic ? "الكابتن يفكر…" : "Captain is thinking…"
+    }
+
+    private var resolvedSymbol: String {
+        coachState == .idle ? "ellipsis.bubble.fill" : coachState.symbolName
+    }
+
+    private var ringColor: Color {
+        coachState.accentColors.first ?? Color(hex: "5ECDB7")
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            CaptainChatAvatarView(size: 28)
+            ZStack {
+                Circle()
+                    .stroke(ringColor.opacity(0.55), lineWidth: 2)
+                    .scaleEffect(avatarPulse ? 1.18 : 1.0)
+                    .opacity(avatarPulse ? 0 : 0.85)
+                    .animation(
+                        .easeOut(duration: 1.4).repeatForever(autoreverses: false),
+                        value: avatarPulse
+                    )
+                CaptainChatAvatarView(size: 28)
+            }
+            .frame(width: 28, height: 28)
 
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { index in
-                    TypingDot(delay: Double(index) * 0.18)
+            HStack(spacing: 10) {
+                Image(systemName: resolvedSymbol)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: coachState.accentColors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .contentTransition(.symbolEffect(.replace.byLayer))
+                    .animation(.spring(response: 0.4, dampingFraction: 0.78), value: coachState)
+
+                Text(resolvedStatusText)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(AiQoTheme.Colors.textPrimary.opacity(0.78))
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+                    .id(resolvedStatusText)
+
+                HStack(spacing: 4) {
+                    ForEach(0..<3, id: \.self) { index in
+                        TypingDot(
+                            delay: Double(index) * 0.16,
+                            color: ringColor
+                        )
+                    }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color(hex: "F7EAD7").opacity(0.94))
                     .overlay(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [ringColor.opacity(0.42), Color.white.opacity(0.72)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
                     )
             )
-            .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 6)
+            .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
 
             Spacer(minLength: 26)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { avatarPulse = true }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            AppSettingsStore.shared.appLanguage == .arabic ? "الكابتن يكتب" : "Captain is typing"
-        )
+        .accessibilityLabel(resolvedStatusText)
     }
 }
 
 private struct TypingDot: View {
     let delay: Double
+    var color: Color = Color(hex: "5ECDB7")
 
     @State private var isAnimating = false
 
     var body: some View {
         Circle()
-            .fill(Color(hex: "5ECDB7"))
-            .frame(width: 8, height: 8)
+            .fill(color)
+            .frame(width: 7, height: 7)
             .scaleEffect(isAnimating ? 1 : 0.55)
             .opacity(isAnimating ? 1 : 0.35)
             .offset(y: isAnimating ? -3 : 3)
@@ -814,7 +923,10 @@ private struct ChatComposerBar: View {
     let onSend: (String) -> Void
 
     @State private var text: String = ""
+    @State private var sendPressed = false
     @FocusState private var isFocused: Bool
+
+    private let charSoftLimit = 480
 
     var body: some View {
         VStack(spacing: 0) {
@@ -823,52 +935,59 @@ private struct ChatComposerBar: View {
                 .frame(height: 8)
 
             HStack(alignment: .bottom, spacing: 12) {
-                TextField(composerPlaceholder, text: $text, axis: .vertical)
-                    .focused($isFocused)
-                    .textInputAutocapitalization(.sentences)
-                    .autocorrectionDisabled(false)
-                    .submitLabel(.send)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    .lineLimit(1...4)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 13)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(0.56))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.white.opacity(0.68), lineWidth: 1)
-                    )
-                    .onSubmit(send)
-
-                Button(action: send) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        AiQoTheme.Colors.ctaGradientLeading,
-                                        AiQoTheme.Colors.ctaGradientTrailing
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                ZStack(alignment: .topTrailing) {
+                    TextField(composerPlaceholder, text: $text, axis: .vertical)
+                        .focused($isFocused)
+                        .textInputAutocapitalization(.sentences)
+                        .autocorrectionDisabled(false)
+                        .submitLabel(.send)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                        .lineLimit(1...5)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.white.opacity(isFocused ? 0.74 : 0.56))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: isFocused
+                                            ? [Color.aiqoMint.opacity(0.85), Color(hex: "EBCF97").opacity(0.55)]
+                                            : [Color.white.opacity(0.68), Color.white.opacity(0.68)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: isFocused ? 1.4 : 1
                                 )
-                            )
+                        )
+                        .shadow(
+                            color: isFocused ? Color.aiqoMint.opacity(0.22) : .clear,
+                            radius: isFocused ? 10 : 0,
+                            y: 0
+                        )
+                        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isFocused)
+                        .onSubmit(send)
 
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(hex: "113238"))
-                            .rotationEffect(.degrees(12))
+                    if charCount >= charSoftLimit - 80 {
+                        Text("\(charCount)")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundStyle(charCount > charSoftLimit ? Color.red.opacity(0.75) : AiQoTheme.Colors.textSecondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color.white.opacity(0.7))
+                            )
+                            .padding(.top, 6)
+                            .padding(.trailing, 10)
+                            .transition(.opacity.combined(with: .scale))
                     }
-                    .frame(width: 50, height: 50)
-                    .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 7)
                 }
-                .buttonStyle(.plain)
-                .disabled(isDisabled)
-                .opacity(isDisabled ? 0.55 : 1)
-                .accessibilityLabel(sendAccessibilityLabel)
+                .animation(.easeOut(duration: 0.18), value: charCount >= charSoftLimit - 80)
+
+                sendButton
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -898,9 +1017,67 @@ private struct ChatComposerBar: View {
         )
     }
 
+    /// Morphing send button:
+    /// - Empty / disabled: dim, neutral
+    /// - Has text + idle: gradient mint, paperplane
+    /// - Sending: gradient mint, spinning progress ring
+    private var sendButton: some View {
+        Button {
+            send()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: isDisabled
+                                ? [Color.gray.opacity(0.18), Color.gray.opacity(0.10)]
+                                : [
+                                    AiQoTheme.Colors.ctaGradientLeading,
+                                    AiQoTheme.Colors.ctaGradientTrailing
+                                ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                if isSending {
+                    SendSpinner(color: Color(hex: "113238"))
+                        .transition(.opacity.combined(with: .scale))
+                } else {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: "113238"))
+                        .rotationEffect(.degrees(isFocused && !trimmed.isEmpty ? 0 : 12))
+                        .offset(x: isFocused && !trimmed.isEmpty ? 1 : 0)
+                        .transition(.opacity.combined(with: .scale))
+                }
+            }
+            .frame(width: 50, height: 50)
+            .scaleEffect(sendPressed ? 0.9 : 1)
+            .shadow(color: isDisabled ? .clear : Color.aiqoMint.opacity(0.32), radius: 14, x: 0, y: 7)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSending)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDisabled)
+            .animation(.spring(response: 0.22, dampingFraction: 0.6), value: sendPressed)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(sendAccessibilityLabel)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !sendPressed && !isDisabled { sendPressed = true }
+                }
+                .onEnded { _ in
+                    sendPressed = false
+                }
+        )
+    }
+
     private var trimmed: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    private var charCount: Int { text.count }
 
     private var isDisabled: Bool {
         trimmed.isEmpty || isSending
@@ -915,15 +1092,112 @@ private struct ChatComposerBar: View {
     }
 
     private var sendAccessibilityLabel: String {
-        isArabic ? "إرسال الرسالة" : "Send message"
+        if isSending { return isArabic ? "جاري الإرسال" : "Sending" }
+        return isArabic ? "إرسال الرسالة" : "Send message"
     }
 
     private func send() {
         let message = trimmed
-        guard !message.isEmpty else { return }
+        guard !message.isEmpty, !isSending else { return }
+        HapticEngine.success()
         onSend(message)
-        text = ""
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+            text = ""
+        }
         isFocused = false
+    }
+}
+
+/// Indeterminate spinner used while a chat send is in flight. Avoids the iOS
+/// stock `ProgressView` so the stroke colour blends with the send-button
+/// gradient and the rotation speed matches the app's spring vocabulary.
+private struct SendSpinner: View {
+    let color: Color
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.1, to: 0.92)
+            .stroke(color, style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            .frame(width: 18, height: 18)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
+/// Tappable suggestion chip beneath the latest Captain message. Stagger-fades
+/// in based on its index so a fresh batch of replies cascades in instead of
+/// popping all at once. Press effect uses the shared `AiQoPressButtonStyle`
+/// for haptic-feeling spring scale.
+private struct QuickReplyChip: View {
+    let text: String
+    let index: Int
+    let action: () -> Void
+
+    @State private var hasAppeared = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(Color(hex: "EBCF97"))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color(hex: "EBCF97").opacity(0.15))
+                        .overlay(Capsule().stroke(Color(hex: "EBCF97").opacity(0.3), lineWidth: 1))
+                )
+        }
+        .buttonStyle(AiQoPressButtonStyle())
+        .accessibilityLabel(text)
+        .opacity(hasAppeared ? 1 : 0)
+        .offset(y: hasAppeared ? 0 : 8)
+        .onAppear {
+            withAnimation(
+                .spring(response: 0.42, dampingFraction: 0.82)
+                    .delay(Double(index) * 0.06)
+            ) {
+                hasAppeared = true
+            }
+        }
+    }
+}
+
+/// Animated five-bar audio waveform — mirrors the active utterance while the
+/// router is sounding a Captain message. Each bar oscillates on its own phase
+/// so the rhythm reads as voice-like, not a metronome. Replaces the static
+/// `speaker.wave.2` SF Symbol while playback is active.
+private struct VoiceWaveform: View {
+    let color: Color
+    @State private var phase: CGFloat = 0
+
+    private let bars = 5
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(0..<bars, id: \.self) { index in
+                    Capsule()
+                        .fill(color)
+                        .frame(width: 2.2, height: barHeight(for: index, time: timeline.date.timeIntervalSinceReferenceDate))
+                }
+            }
+            .frame(width: 18, height: 14)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func barHeight(for index: Int, time: TimeInterval) -> CGFloat {
+        let speed: Double = 4.6
+        let phaseOffset = Double(index) * 0.7
+        let raw = sin(time * speed + phaseOffset)
+        let normalized = (raw + 1) / 2
+        return 4 + CGFloat(normalized) * 8
     }
 }
 

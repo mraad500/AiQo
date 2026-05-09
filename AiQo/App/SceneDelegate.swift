@@ -354,6 +354,10 @@ struct AppRootView: View {
             rootScreen
                 .id(flow.refreshID)
         }
+        .overlay(alignment: .top) {
+            CaptainGlassToastView()
+                .ignoresSafeArea(edges: .horizontal)
+        }
         .environment(\.layoutDirection, currentDirection)
         .environment(\.locale, Locale(identifier: AppSettingsStore.shared.appLanguage.rawValue))
         .withOfflineBanner()

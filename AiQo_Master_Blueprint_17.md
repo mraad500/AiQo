@@ -14,7 +14,7 @@
 
 # AiQo Master Blueprint 17
 
-*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved. **Updated 2026-04-23** with three Captain-focused passes: §24 — Captain Memory surface upgrade (fixed 5-row Identity sourced from `UserProfileStore`, and a rolling last-7 Workout History store with its own memory section and LLM-retrieval mirror); §25 — Cardio Zone 2 coaching + workout summary narration routed through `CaptainVoiceRouter.speak(tier: .premium)` so the linked MiniMax Captain Hamoudi voice speaks over both paths; §26 — `CloudSafeProfile` fix that carries the user's first name + age + gender + bucketed height/weight into the cloud system prompt so the Captain stops answering `"اسمك 'User'؟"` and addresses the user by their real name. **Same-day pass 2** — §27: App Store review readiness hardening (Packages A + B + D) — missing `NSCameraUsageDescription` added, `FileTimestamp` Required Reason API declared, privacy-manifest `NSPrivacyCollectedDataTypes` expanded with `UserID` + `PhotosorVideos`, permission-string surface unified across `pbxproj` + `InfoPlist.strings` in both locales, Apple 3.1.2 subscription disclosure rewritten to include the canonical "charged to your Apple ID at purchase confirmation / 24 hours before the end of the current period" language with the billed price interpolated live, and 6 dormant permission declarations stripped from `pbxproj` (Bluetooth, AppleMusic, Motion, LocalNetwork, PhotoLibrary, PhotoLibraryAdd — verified unused by the app's actual API surface). §28: Cloud-proxy hardening (Package C) — Gemini + MiniMax API keys lifted out of the IPA into Supabase Edge Functions (`captain-chat`, `captain-voice`), app authenticates with its Supabase JWT; a feature-flagged `CaptainProxyConfig` + three proxy-aware call sites keep the legacy direct path intact for rollback. Deployment went live the same day; the Gemini chat path is confirmed routing through the proxy (`via=proxy status=200`), and the old client-side Gemini key is revoked (direct rollback no longer possible). The MiniMax voice path was unblocked the same evening — see the §28.7.2 / §28.9.1 closures and the bundled fix history that follows. **Updated 2026-04-26** with the broad architecture refactor (commit `8d36a70`) — onboarding flow consolidated, `WorkoutHistoryStore` actor moved to `Brain/02_Memory/Stores/`, `CaptainProxyConfig` materialized as the single proxy source-of-truth, `PrivacySanitizer` extended with API-key + Bearer-token redaction, and `AiQoFeatureFlags` reorganized into a canonical declarative list (`@FeatureFlag` property wrappers reading Info.plist; the live set spans `MEMORY_V4_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `USE_CLOUD_PROXY`, `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`, plus a few legacy flags retained for back-compat). Paired with the paywall hero padding bump (commit `93611b4`, +40pt) for visual breathing room above the price tier rows. **Updated 2026-04-28** with §29 — Gratitude Session voice routing: the daily-gratitude flow under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) now narrates each Arabic/English gratitude line in Captain Hamoudi's MiniMax voice instead of the system `AVSpeechSynthesizer`; background music (`SerotoninFlow.m4a`) was migrated from a local `AVAudioPlayer` to `AiQoAudioManager.playAmbient(...)` so the MiniMax provider's audio-session lifecycle no longer truncates the loop, and three small public APIs (`CaptainVoiceRouter.setMiniMaxPlaybackVolume`, `MiniMaxTTSProvider.playbackVolume`, `AiQoAudioManager.setSpeechDuckOverride`) give the session a per-host mix override (music 10%, voice 100%, ducks to 4% under the Captain).*
+*The single document that explains the AiQo iOS app — what it is, how it is built, and how every part fits together. Replaces all prior `AiQo_Master_Blueprint_*` files. Author: Mohammed Raad. Snapshot taken at commit `fa27a7f` on 2026-04-19. **Updated 2026-04-20** with the App Store submission hardening pass — see §21 for the full change-list (age gate, permission descriptions, EXIF/FileProtection on certificate storage, reduceTransparency helper, Info.plist cleanup, and a clean 0-warning Release build). **Updated 2026-04-22** with the Smart Water Tracking & Reminders feature — see §22 for the full build: pure evaluator, pace-based reminders through NotificationBrain, WHO/EFSA guidance UI, 4-surface system integration (Captain Memory / Medical Disclaimer / AI Data disclosure / Privacy Policy), and a systemSmall interactive Home Screen widget with a race-free tap-counter drain path. **Updated 2026-04-22 (same-day pass 2)** with the Water Detail Sheet hero redesign — see §23 for the brand-consistency pass: the photographic bottle illustration and saturated-blue "+0.25 L" pill are replaced by a pure-SwiftUI mint/sand progress ring, a three-chip quick-add row with haptics, and a nested custom-amount slider sheet. Adds `AiQoColors.mintSoft` / `.sandSoft` as reusable brand accents. Zero-warning build preserved. **Updated 2026-04-23** with three Captain-focused passes: §24 — Captain Memory surface upgrade (fixed 5-row Identity sourced from `UserProfileStore`, and a rolling last-7 Workout History store with its own memory section and LLM-retrieval mirror); §25 — Cardio Zone 2 coaching + workout summary narration routed through `CaptainVoiceRouter.speak(tier: .premium)` so the linked MiniMax Captain Hamoudi voice speaks over both paths; §26 — `CloudSafeProfile` fix that carries the user's first name + age + gender + bucketed height/weight into the cloud system prompt so the Captain stops answering `"اسمك 'User'؟"` and addresses the user by their real name. **Same-day pass 2** — §27: App Store review readiness hardening (Packages A + B + D) — missing `NSCameraUsageDescription` added, `FileTimestamp` Required Reason API declared, privacy-manifest `NSPrivacyCollectedDataTypes` expanded with `UserID` + `PhotosorVideos`, permission-string surface unified across `pbxproj` + `InfoPlist.strings` in both locales, Apple 3.1.2 subscription disclosure rewritten to include the canonical "charged to your Apple ID at purchase confirmation / 24 hours before the end of the current period" language with the billed price interpolated live, and 6 dormant permission declarations stripped from `pbxproj` (Bluetooth, AppleMusic, Motion, LocalNetwork, PhotoLibrary, PhotoLibraryAdd — verified unused by the app's actual API surface). §28: Cloud-proxy hardening (Package C) — Gemini + MiniMax API keys lifted out of the IPA into Supabase Edge Functions (`captain-chat`, `captain-voice`), app authenticates with its Supabase JWT; a feature-flagged `CaptainProxyConfig` + three proxy-aware call sites keep the legacy direct path intact for rollback. Deployment went live the same day; the Gemini chat path is confirmed routing through the proxy (`via=proxy status=200`), and the old client-side Gemini key is revoked (direct rollback no longer possible). The MiniMax voice path was unblocked the same evening — see the §28.7.2 / §28.9.1 closures and the bundled fix history that follows. **Updated 2026-04-26** with the broad architecture refactor (commit `8d36a70`) — onboarding flow consolidated, `WorkoutHistoryStore` actor moved to `Brain/02_Memory/Stores/`, `CaptainProxyConfig` materialized as the single proxy source-of-truth, `PrivacySanitizer` extended with API-key + Bearer-token redaction, and `AiQoFeatureFlags` reorganized into a canonical declarative list (`@FeatureFlag` property wrappers reading Info.plist; the live set spans `MEMORY_V4_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `USE_CLOUD_PROXY`, `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`, plus a few legacy flags retained for back-compat). Paired with the paywall hero padding bump (commit `93611b4`, +40pt) for visual breathing room above the price tier rows. **Updated 2026-04-28** with §29 — Gratitude Session voice routing: the daily-gratitude flow under [Gym → Club → Body](AiQo/Features/Gym/Club/Body/GratitudeSessionView.swift) now narrates each Arabic/English gratitude line in Captain Hamoudi's MiniMax voice instead of the system `AVSpeechSynthesizer`; background music (`SerotoninFlow.m4a`) was migrated from a local `AVAudioPlayer` to `AiQoAudioManager.playAmbient(...)` so the MiniMax provider's audio-session lifecycle no longer truncates the loop, and three small public APIs (`CaptainVoiceRouter.setMiniMaxPlaybackVolume`, `MiniMaxTTSProvider.playbackVolume`, `AiQoAudioManager.setSpeechDuckOverride`) give the session a per-host mix override (music 10%, voice 100%, ducks to 4% under the Captain). **Updated 2026-04-30** with §30 — Captain limits & runtime margins (commit `740af1c`): the `RESPONSE LENGTH` block in PromptComposer was rewritten as hard limits (≤ 90 words OR ≤ 5 sentences with explicit multi-metric rules), Gemini `maxOutputTokens` raised 1400 → 2048 across mainChat / myVibe / gym / kitchen / peaks, the `globalProcessingTimeout` raised 15 → 30s to stop killing healthy P95 calls, the chat header gained an opaque background to fix message-bleed-through, and the §29.5 gratitude mix constants finally landed (`musicVolume 0.20 → 0.10`, `musicDuckedVolume 0.05 → 0.04`). **Updated 2026-05-09** with §31 — v1.0.1 UX pass + level system fix + QuickStart drop (commit `b08fd6a`, merged via PR #6, version bump `1.0 → 1.0.1` and build `17 → 18` to clear App Store Connect errors `90186` / `90062`): the headline fix is a new [`AiQoLeveling`](AiQo/Core/Models/AiQoLeveling.swift) single-source-of-truth threshold table that makes Onboarding's L23 and Profile's L17 (for the same ~101k XP) agree on the same level, with `LevelStore.load()` self-healing migrated users on first launch; QuickStart is dropped from the onboarding routing (`featureIntro → aiConsent → medicalDisclaimer → home` now); ProfileSetup loses the username + birthDate cards in favour of a direct age input compacted into a 3-field row; AI consent screen also flips `CaptainVoiceConsent.grant()` so the cloud-voice toggle is on out of the gate; Settings drops the DEBUG-only Developer Support section and replaces the invisible `LegalLinksView` with proper Form rows; the AiQo profile-section reorders to Settings → Weekly Report → Progress Photos → Support; the Terms of Service copy is rewritten end-to-end in both locales (drop Tribe reference, expand surface to match real app, add Cloud AI / IP / Termination sections, last-updated `أبريل → مايو 2026`). **Updated 2026-05-09 (same-day pass 2)** with §32 — Captain App-Knowledge layer (uncommitted): a new [`layerAppKnowledge(language:)`](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) function wired into PromptComposer's `build()` array between Screen Context and Medical Disclaimer, giving Captain Hamoudi the full surface-area encyclopaedia he was previously confabulating from — the 10 Battle stages with their 5 challenges and 1/2/3 tier values, both Learning Spark stages, all 8 Peaks records (holders + countries + years), the HRR-driven project flow with the 4 phases (تأسيس → بناء → تكثيف → ذروة) and HRR-level intensity rules, all 22 GymExercise types, the Kitchen Vision pipeline, the 5 My Vibe biological states with their time windows, and the 8-tier ShieldTier ladder (Wood→Legendary). Includes a 6-bullet usage rules block telling Captain to name stage + tiers for Battle questions, holder + country + year for Records questions, walk the HRR + phases for project-start questions, gate `mealPlan` / `spotifyRecommendation` by tier, and never invent numbers absent from this layer or the live context. The layer adds ~2k Gemini tokens to every chat prompt — the trade-off was deliberate; user explicitly asked for full app awareness rather than per-turn retrieval. **Updated 2026-05-09 (same-day pass 3)** with §33 — two Captain UX upgrades (uncommitted): the static `هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟` welcome bubble is replaced by a hyper-personalized greeting generated through `BrainOrchestrator` from `BioStateEngine.current()` (TimeOfDay + bucketed steps + calories), `HydrationService.refreshState()` (today's water mL), and `UserProfileStore.current` (name + gender for grammar) — a typing indicator covers the 7-second timeout window and any failure (offline-only, missing consent, tier-gate, network/timeout, empty reply) silently falls back to the static greeting; and a post-workout comparative analysis pipeline that fires from [`LiveWorkoutSession.handleRemoteEnded()`](AiQo/Features/Gym/LiveWorkoutSession.swift) immediately after `WorkoutHistoryStore.recordCompletion(...)`, reads the latest two entries from the rolling history store, asks the cloud Brain (10-second timeout) to write a single energetic dialect-aware sentence comparing them with concrete deltas (calories, duration, distance, HR), and surfaces the result through two channels — a new `CaptainToastCenter` glassmorphism slide-down toast mounted on `AppRootView` for foreground delivery, and a new `.workoutAnalysis` `NotificationKind` routed through the single-door `NotificationBrain.shared.request(...)` for backgrounded delivery. Adds 4 new files ([`DynamicWelcomeComposer.swift`](AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift), [`WorkoutAnalysisAnnouncer.swift`](AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift), [`CaptainToastCenter.swift`](AiQo/UI/CaptainToastCenter.swift), [`CaptainGlassToastView.swift`](AiQo/UI/CaptainGlassToastView.swift)) and edits 5 existing ones — zero changes to the project file (Xcode 16 synchronized groups), zero-warning Debug build preserved.*
 
 ---
 
@@ -2847,3 +2847,462 @@ Two future hosts can now use the same pattern:
 - The **breathing / focus** surfaces inside Vibe could reuse `setSpeechDuckOverride(...)` to pin the duck floor to a deeper drop than the global default of 0.26 if the surfaces decide to overlay short coaching cues without the user feeling whiplash on volume restore.
 
 Both are out of scope for this pass — the public APIs exist and are documented, but no caller site landed in this commit set.
+
+---
+
+## 30. Captain Limits & Runtime Margins (2026-04-30)
+
+*Commit `740af1c` "Tighten Captain limits and runtime margins" — five files, +166/-36 lines, all on branch `brain-refactor/p-fix-dev-override`. The §29 voice work bedded in cleanly, but two unrelated issues surfaced once Mohammed started using the v1.0.1 build daily: replies were getting clipped mid-sentence on multi-metric questions, and the chat header stopped repainting when messages scrolled up behind the safety banner. This pass is the smallest fix for both — no architectural changes, just three knob tweaks plus a header background.*
+
+### 30.1 Reply length: from soft hint to hard ceiling
+
+The previous `=== RESPONSE LENGTH ===` block in [PromptComposer.swift](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) gave the model loose guidance — *"1–2 sentences"*, *"max 3 actionable points"* — that Gemini 2.5 Flash routinely overshot once a user asked anything that touched two metrics. The new `=== RESPONSE LENGTH (HARD LIMITS) ===` block (Arabic + English variants both rewritten) is explicit:
+
+- Simple question → 1–2 sentences. *Done.*
+- Multi-metric question (e.g. *"شلون خطواتي + سعراتي + نومي + مايتي اليوم؟"*) → one tight sentence per metric in the order asked, then **one** follow-up question. Never a paragraph per metric. Total reply ≤ 5 short sentences.
+- Workout / meal plan → structured plan, max 5 bullet points. No prose intro.
+- Hard ceiling: **≤ 90 words OR ≤ 5 sentences, whichever is shorter**, unless the user explicitly asked for a long plan.
+- New "save it for the next turn" rule: if Captain feels he has more to say, he ends with a clean question and parks the rest for the next reply. Truncated mid-sentence replies are now framed as a failure mode the model is told to avoid, not just a length issue.
+
+The Arabic block is the user-visible one in production (the app ships Arabic-default); the English mirror keeps the per-language length rules in lock-step so a user toggling to English doesn't suddenly see waterfalls of text.
+
+### 30.2 Gemini token budget: 1400 → 2048
+
+[HybridBrain.swift](AiQo/Features/Captain/Brain/04_Inference/Services/HybridBrain.swift) `makeRequestBody.maxOutputTokens` was raised from `1400` to `2048` for the `mainChat`, `myVibe`, `gym`, `kitchen`, and `peaks` screen contexts. `sleepAnalysis` stays at `1200` — that surface uses a more constrained prompt and on-device inference doesn't need the headroom.
+
+The reasoning, captured verbatim in the source comment:
+
+> The structured reply envelope (greeting + per-metric line + advice + follow-up + quickReplies) plus the JSON wrapper itself eats budget fast — multi-metric questions ("how are my steps + calories + sleep + water today?") were hitting MAX_TOKENS at 1400 and clipping mid-sentence. 2048 gives ~1000–1300 Arabic words of headroom while the tightened conciseness rules in PromptComposer prevent rambling.
+
+The two changes are paired by design: §30.1's hard-limit prose tells the model to be terse, §30.2 gives it enough rope that the model never *has* to truncate the JSON envelope itself when an honest-to-god long reply is warranted (the user explicitly asked for a plan). The `gemini_max_tokens_hit` log line is still wired in `GeminiResponse` for follow-up tuning if either ceiling proves wrong in the wild.
+
+### 30.3 Global processing timeout: 15s → 30s
+
+[CaptainViewModel.swift:117](AiQo/Features/Captain/CaptainViewModel.swift) raised `globalProcessingTimeout` from `15` to `30` seconds. Comment in source:
+
+> Cloud Gemini calls with the full 7-layer prompt + Arabic tokenization commonly land in the 12–22s range; 15s was firing on healthy P95 calls and showing a "try again" error to users while the request was still in-flight. URLSession deadline is 35s so 30s leaves buffer for the underlying transport to surface a real failure if the network is gone.
+
+`sleepProcessingTimeout` stays at 25s — sleep analysis runs on-device through HealthKit + Foundation Models, so its tail latency is bounded differently. The 30 / 35 ratio (app timeout 30s, transport timeout 35s) preserves the property that a network-dead state surfaces as a transport error rather than a synthetic "the AI took too long" message — important because the two failure modes deserve different error UIs and different retry strategies.
+
+### 30.4 Captain header opacity fix
+
+[CaptainScreen.swift:237](AiQo/Features/Captain/CaptainScreen.swift) replaced the chat header's `.background(Color.clear)` with an opaque `theme.background` layer that extends past the top safe area, plus a 0.5pt `theme.border` hairline at the bottom. Chat messages were bleeding through the transparent header (visible against the safety banner above) when the user scrolled the message list up; the new opaque layer covers the status-bar gutter and gives the safety banner a clean edge. Adapts to light / dark via the existing `theme.background` token, so no separate dark-mode work was needed.
+
+### 30.5 Gratitude mix follow-through
+
+The §29.5 mix constants on [GratitudeAudioManager.swift](AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift) were finalised in this commit: `musicVolume: 0.20 → 0.10` and `musicDuckedVolume: 0.05 → 0.04`. These match the values listed in §29.5 — the §29 doc was written ahead of this commit and the constants caught up here. No behaviour change beyond what §29.5 already describes; this is the commit where the numbers actually landed.
+
+### 30.6 Files modified
+
+- `AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift` (+33/-13) — §30.1.
+- `AiQo/Features/Captain/Brain/04_Inference/Services/HybridBrain.swift` (+11/-5) — §30.2.
+- `AiQo/Features/Captain/CaptainViewModel.swift` (+5/-2) — §30.3.
+- `AiQo/Features/Captain/CaptainScreen.swift` (+13/-1) — §30.4.
+- `AiQo/Features/Gym/Club/Body/GratitudeAudioManager.swift` (+2/-2) — §30.5.
+- `AiQo.png` (+3.2 MB) — app icon asset added to repo root for blueprint header rendering.
+
+Zero localization changes. Zero new files (excluding the icon image). Zero test changes.
+
+---
+
+## 31. v1.0.1 UX Pass, Level System Fix & QuickStart Drop (2026-05-09)
+
+*Commit `b08fd6a` "chore: UX pass + level system fix + skip quickStart + bump to v1.0.1 (18)" — 13 files, +327/-344 lines, merged through PR #6 from `brain-refactor/p-fix-dev-override`. The largest single commit since §28; touches onboarding routing, Profile setup, the Legacy calculation onboarding screen, AI consent, the level math, app settings, the Home grid, the Profile screen, the Terms-of-Service copy in both locales, and the version stamps. The header line bumps `v17` → `v18` of the build counter and `1.0` → `1.0.1` of the marketing version. This is the build that was meant to clear App Store Connect upload errors `90186` and `90062` while consolidating a slew of usability papercuts noticed during pre-resubmission testing.*
+
+### 31.1 The level-system bug — same XP, two different levels
+
+The single largest behavioural fix in the commit. Two surfaces showed the user different level numbers for the same lifetime XP:
+
+- The **onboarding "legacy calculation"** flow ([LegacyCalculationViewController](AiQo/Features/Onboarding/LegacyCalculationViewController.swift)) read a hard-coded threshold table to compute the level off the user's HealthKit history.
+- The long-running **`LevelStore`** ([LevelStore.swift](AiQo/Core/Models/LevelStore.swift)) used an exponential growth formula — `baseXP * pow(multiplier, level - 1)` with `baseXP = 1000` and `multiplier = 1.2` — to derive the level on every `addXP` call.
+
+For a typical historical-import XP total of ~101k, the threshold table said **L23** while the formula said **L17**. Both surfaces were live in the same build. A user who finished onboarding seeing *"المستوى 23"* would open the Profile screen the next day to find *"المستوى 17"* and assume the app had reset their progress. The bug had been latent since the threshold table was first introduced in onboarding back in v0.9 — neither side knew the other existed.
+
+**The fix.** A new file [AiQo/Core/Models/AiQoLeveling.swift](AiQo/Core/Models/AiQoLeveling.swift) (47 lines) owns the cumulative threshold table as the single source of truth — `[0, 200, 500, 1000, 1800, ..., 1_183_000]` — covering levels 1-50 with the cap (`maxLevel = 50`) extending to infinity. The table exposes three pure functions:
+
+- `level(forTotalXP:)` — reverse-walks the table and returns the matching level.
+- `xpForNextLevel(at:)` — span between the current level and the next; returns `0` at the cap.
+- `currentXP(forTotalXP:atLevel:)` — distance from the level's lower bound; clamped to `[0, +∞)`.
+
+Both consumers were rewired:
+
+- `LevelStore.xpForNextLevel` and `LevelStore.progress` now route through `AiQoLeveling.xpForNextLevel(at:)`. The exponential formula is gone.
+- `LevelStore.addXP(_:)` flips its internal model: instead of mutating `currentXP` directly and calling `checkForLevelUp()`, it adds to `totalXP` and then calls a new private `recomputeLevelAndCurrentXP()` that re-derives both from the table.
+- The new `load()` re-derives `level` and `currentXP` from the persisted `totalXP` on launch — *self-healing* migration. Users who launched the v1.0.1 build with their stored level still set to 17 saw it correct itself to 23 (or whatever the table dictates) the first time the app booted, with no UI flicker because the recomputation runs before SwiftUI reads the published values.
+- `buildLevelResult` (used by the onboarding result screen) now also delegates to `AiQoLeveling`, so the onboarding number and the Profile number can no longer diverge.
+
+The `baseXP = 1000` and `multiplier = 1.2` constants on `LevelStore` were deleted alongside the now-dead `checkForLevelUp()` codepath. The migration carries the keys (`aiqo.user.level`, `aiqo.user.currentXP`, `aiqo.user.totalXP`) untouched — only the math that produces them changed.
+
+### 31.2 QuickStart routing drop
+
+[`AppFlowController` in SceneDelegate.swift](AiQo/App/SceneDelegate.swift) lost the entire `didCompleteQuickStart` gate. Two duplicated migration blocks (one for cold-start, one for resume) used to route the user into a `quickStart` screen that combined health screening + Captain personalisation; both blocks are deleted. The new flow is `featureIntro → aiConsent → medicalDisclaimer → home`. The `OnboardingKeys.didCompleteQuickStart` UserDefaults key is preserved unchanged for migrated users (so a returning v1.0 user doesn't re-see the now-deleted screen via some other path), but no live code reads it.
+
+The QuickStart screen had been a v1.0 attempt to compress two onboarding flows into one tappable card. It tested poorly — users skipped past it, the "موصى به" badge wasn't loud enough, and the feature surface it gated wasn't actually gated by anything else (Captain still worked for users who hadn't tapped through). Removing the route entirely lets the existing `featureIntro` and `aiConsent` screens carry their original weight without a third one in the middle.
+
+### 31.3 Profile setup simplification
+
+[ProfileSetupView.swift](AiQo/App/ProfileSetupView.swift) lost two cards and gained one:
+
+- **Removed.** The `username` field (Apple Sign In may have already provided the name; Apple Review Guideline 4 prohibits forcing re-entry of data Apple supplies) and the `birthDate` `DatePicker` (most users found the year-scroll on the date wheel painful).
+- **Added.** A direct `ageText` numeric input. The validity rule is now `!fullName.isEmpty && !ageText.isEmpty` — height and weight stay required for body-comp math but no longer block the Continue button on a missing username.
+- **Compacted.** Age, weight, and height collapse into a single `HStack` of three `CompactNumericField` chips so titles don't truncate on smaller iPhones (the previous layout had each field on its own row with full-width labels).
+
+### 31.4 Onboarding (LegacyCalculation) polish
+
+[LegacyCalculationViewController.swift](AiQo/Features/Onboarding/LegacyCalculationViewController.swift) — the screen the user lands on right after Apple Sign In — got three small visual passes:
+
+- **Tagline accent.** *"إنت جاي ويا تاريخ"* now uses a stronger pastel green `#7FD4A8` instead of the earlier washed-out mint. Reads cleanly against the off-white background without going neon.
+- **Permissions card emphasis.** The HealthKit permission card pulses with a "موصى به" badge and a hint line. This is the loudest non-modal nudge in onboarding — it had been visually flat before and people were skipping it.
+- **Continue button two-state.** Apple 5.1.1(iv) requires the screen to be skippable at all times. The button is always tappable; visually, it's a subtle skip-link before the user grants permissions, and a prominent primary CTA after. Two states, one button. No second "skip" affordance.
+
+### 31.5 AI consent → Captain voice consent linkage
+
+[AIConsentOnboardingView.swift](AiQo/Features/Onboarding/AIConsentOnboardingView.swift) was extended by one line: tapping *"أوافق"* now also calls `CaptainVoiceConsent.grant()` so the cloud voice consent flips on at the same moment as the cloud-AI consent. Per-purpose disclosure remains satisfied because the same screen already discloses MiniMax as a distinct purpose (Apple Guideline 5.1.2(II)) — see §28.7.2 step 5 for the dedicated voice-consent surface added to Settings, which is where users go to *revoke* either consent independently. The AI-consent disclosure body string was also rewritten to mention both consents explicitly:
+
+> "اضغط أوافق لتفعيل ميزات الذكاء الاصطناعي السحابية وصوت الكابتن المحسّن (MiniMax) معاً. واضغط تابع بدون مشاركة بيانات للاستمرار بالميزات المحلية فقط. تكدر تراجع أو تلغي أي موافقة لاحقاً..."
+
+The English mirror got the same treatment. Settings stays the only place to revoke either gate independently.
+
+### 31.6 Settings cleanup
+
+[AppSettingsScreen.swift](AiQo/Core/AppSettingsScreen.swift) lost two pieces:
+
+- **The DEBUG-only "Developer Support" section** (Tribe seed + Trigger Test Spiritual Whisper buttons + the orphaned panel sheet that hosted them). Both were rough debug surfaces that had been left visible in DEBUG builds; the orphaned sheet was unreachable from any tap path after a previous refactor and had been dead code for ~8 weeks.
+- **`LegalLinksView`** — the Privacy Policy / Terms of Service legacy view. It rendered white-on-white against the iOS Form background so the links were invisible. Replaced with two proper `Form` rows (icon + title + chevron) that route to the same documents through standard iOS navigation.
+
+The Developer Support removal was the last DEBUG-only surface in production code paths; the v1.0.1 Release build now has no `#if DEBUG`-gated UI in user-facing screens.
+
+### 31.7 Home grid spacing
+
+[HomeView.swift](AiQo/Features/Home/HomeView.swift) — vertical spacing 28 → 36, horizontal 14 → 18. The Home screen had been visually tight on iPhone 15-class devices; the new spacing matches the Profile body-card grid for consistency.
+
+### 31.8 Profile screen reorder + style
+
+[ProfileScreen.swift](AiQo/Features/Profile/ProfileScreen.swift) and [ProfileScreenComponents.swift](AiQo/Features/Profile/ProfileScreenComponents.swift):
+
+- The "AiQo" section reorders to **Settings → Weekly Report → Progress Photos → Support**. Settings used to be at the bottom; the new ordering matches user flow (most-tapped item first).
+- The App Settings card uses the mint tone to match the body-data cards (it had been beige and visually disconnected from the rest of the page).
+- The hero card drops the `@username` placeholder — it had been showing "@—" for users who never set one — and the *"خل نرتّب جسمك"* tagline under the name. The identity block is now just **avatar + name**, which gives the mint-toned level shield and Line Score room to breathe.
+
+### 31.9 Terms of Service rewrite (Arabic + English)
+
+[ar.lproj/Localizable.strings](AiQo/Resources/ar.lproj/Localizable.strings) and [en.lproj/Localizable.strings](AiQo/Resources/en.lproj/Localizable.strings) — the `legal.terms.content` string in both locales was rewritten end-to-end:
+
+- **Date** updated `أبريل 2026` → `مايو 2026`.
+- **Tribe reference dropped from §4** since the feature has been hidden behind a flag for several builds and showing it on the Terms page misleads.
+- **Surface area expanded** to match what the app actually does: HealthKit data, Captain AI, Smart Water Tracking, Sleep Architecture, Progress Photos, Weekly Reports, the XP / level system. Each gets a sentence in §2 (the "What the service is").
+- **Three new sections** — Cloud AI Services (§5: explicit Gemini + MiniMax disclosure with the Settings paths to revoke either consent), Intellectual Property (§7), and Termination (§8).
+- **Last Updated** trailer reflects the May rewrite.
+
+The English version is the pre-Apple-review canonical text; Arabic is the source-of-truth for the production app.
+
+### 31.10 Release cut — version bump
+
+`AiQo.xcodeproj/project.pbxproj` carries `MARKETING_VERSION 1.0 → 1.0.1` and `CURRENT_PROJECT_VERSION 17 → 18`. The bump cleared two App Store Connect upload errors:
+
+- **`ITMS-90186` "Missing Marketing Icon"** — historic artefact from a stale build number.
+- **`90062` "Invalid Bundle"** — driven by the marketing-version-equals-previous-submission rule.
+
+No App Store metadata changes ride along with this bump. The build counter (`v17 → v18`) and the marketing version (`1.0 → 1.0.1`) move in lock-step from this point forward.
+
+### 31.11 Files modified
+
+13 files, +327 / -344:
+
+- `AiQo.xcodeproj/project.pbxproj` (+45/-27) — version bump, capability dedup.
+- `AiQo/App/ProfileSetupView.swift` (+62/-69) — §31.3.
+- `AiQo/App/SceneDelegate.swift` (+0/-18) — §31.2.
+- `AiQo/Core/AppSettingsScreen.swift` (+33/-68) — §31.6.
+- `AiQo/Core/Models/AiQoLeveling.swift` (+47/-0) — §31.1 (new file).
+- `AiQo/Core/Models/LevelStore.swift` (+24/-34) — §31.1.
+- `AiQo/Features/Onboarding/LegacyCalculationViewController.swift` (+92/-79) — §31.4.
+- `AiQo/Features/Home/HomeView.swift` (+2/-2) — §31.7.
+- `AiQo/Features/Onboarding/AIConsentOnboardingView.swift` (+1/-0) — §31.5.
+- `AiQo/Features/Profile/ProfileScreen.swift` (+27/-22) — §31.8.
+- `AiQo/Features/Profile/ProfileScreenComponents.swift` (+0/-11) — §31.8.
+- `AiQo/Resources/ar.lproj/Localizable.strings` (+2/-2) — §31.9.
+- `AiQo/Resources/en.lproj/Localizable.strings` (+2/-2) — §31.9.
+
+Zero new tests. Zero pbxproj source group changes (Xcode 16 synchronized groups picked up the new `AiQoLeveling.swift` automatically).
+
+---
+
+## 32. Captain App-Knowledge Layer (uncommitted, 2026-05-09)
+
+*Local change on branch `brain-refactor/p-fix-dev-override`, not yet committed at the time of this edit. Adds a single new layer to the [PromptComposer 7-layer pipeline](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) so Captain Hamoudi knows the AiQo app's surface area as well as its safety rules — the 10 Battle stages, the 8 Peaks records, the HRR-driven project flow, the 22 exercises, the Kitchen Vision pipeline, the 5 My Vibe biological states, and the Wood→Legendary shield system. Before this change, asking Captain "شنو تحديات المرحلة 5؟" or "شلون أبدأ مشروع كسر رقم قياسي؟" produced confident-sounding but invented answers, because nothing in the prompt told him what those things were.*
+
+### 32.1 The gap
+
+PromptComposer's existing 9 layers (Reply Language Lock → Safety Rules → Identity → Stable Profile → Working Memory → Bio-State → Circadian Tone → Screen Context → Medical Disclaimer → Output Contract) handled *who* Captain is, *who* the user is, *what* the user did today, *where* they are in the app, and *how* to format the reply. None of them handled *what the app itself contains*.
+
+The result: when a user asked about an in-app feature, Captain would either confabulate ("معركة فيها 7 مراحل" — wrong, it's 10) or punt with a generic answer that broke the illusion he was a coach inside the same app.
+
+### 32.2 Layer 7 — `layerAppKnowledge`
+
+The new function [`layerAppKnowledge(language:)`](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) is wired into `build()` between `layerScreenContext` and `layerMedicalDisclaimer`. It produces an Arabic block by default and an English mirror when the user's language is English, both following the existing `=== HEADER ===` cadence used by every other layer.
+
+Content includes, in order:
+
+- **Battle (معركة).** All 10 stages with their 5 challenges each and the 1/2/3 tier values. Source-of-truth for these is [QuestDefinitions.swift](AiQo/Features/Gym/QuestKit/QuestDefinitions.swift) — the layer text mirrors that file's numbers verbatim. The flag-gated Stage 2 slot 3 (Plank Ladder vs. Learning Spark Stage 2 vs. placeholder) is described as a flag-resolved choice rather than a single fixed challenge.
+- **Learning Spark.** Stage 1's two courses ("التخطيط لبناء مسار مهني ناجح" — Edraak / *Learning How to Learn* — Coursera) and Stage 2's five-course catalogue. Source-of-truth: [LearningCourse.swift](AiQo/Features/Challenges/LearningSpark/Models/LearningCourse.swift). Captain is instructed to suggest *one* course at a time, never the full list.
+- **Peaks (قِمَم).** All 8 documented Guinness records with holder, country, year, weeks, and the project-flow walkthrough (HRR test → 4-phase plan: تأسيس → بناء → تكثيف → ذروة). Source-of-truth for the records: [LegendaryRecord.swift](AiQo/Features/LegendaryChallenges/Models/LegendaryRecord.swift); for the plan flow: [RecordProjectManager.swift](AiQo/Features/LegendaryChallenges/ViewModels/RecordProjectManager.swift). The intensity-by-HRR rule (excellent → 25%, good → 15%, needsWork → 10% + 4 extra rest weeks up front) and the weekly cadence (5 training + 1 test + 1 active rest) are stated explicitly. The Pro-tier gate is called out — Peaks is Intelligence Pro only.
+- **Exercises.** All 22 GymExercise types, listed by their Arabic display names. Source-of-truth: [GymExercise.swift](AiQo/Features/Gym/Models/GymExercise.swift). Zone 2 tracking is mentioned as the unifying behaviour with `ZoneCoachingVoiceService` referenced as the post-session voice path (per §25 voice work).
+- **Kitchen.** The full Kitchen Vision pipeline: camera → Gemini Vision ingredient parse → virtual fridge inventory → meal plan generation (380-450 / 500-600 / 400-500 kcal envelope per meal type, aligned with `primaryGoal`) → pinnable plans → swap / shopping-list / "needs purchase" handling for missing ingredients.
+- **My Vibe.** The 5 biological states (Awakening / Deep Focus / Peak Energy / Recovery / Ego Death) with their time windows and frequency labels, plus the DJ Hamoudi blend mechanic from §29-adjacent work — Spotify OAuth → top 30 user tracks + 15 hand-picked Hamoudi tracks → 60 / 40 split → 12-track queue with day-seeded shuffle. Pro-tier gate called out.
+- **Profile + shield system.** Hero Card layout, body data, subscription tier readout, and the eight-tier shield ladder (Wood 1-4 → Bronze 5-9 → Silver 10-14 → Gold 15-19 → Platinum 20-24 → Diamond 25-29 → Obsidian 30-34 → Legendary 35+) sourced from [LevelStore.swift](AiQo/Core/Models/LevelStore.swift). Note the Wood / Bronze / Silver / Gold / Platinum / Diamond / Master variant exposed in [Shared/LevelSystem.swift](AiQo/Shared/LevelSystem.swift) is a separate type; the layer documents the eight-tier `ShieldTier` enum (the surface used by `LevelStore`) since that is what the Profile UI renders.
+- **App-knowledge usage rules.** A six-bullet list at the bottom telling Captain to (1) name the stage + challenge + tiers when asked about a Battle item, (2) cite holder + country + year + category for a record, (3) walk the user through HRR → 4 phases for a project-start question, (4) only emit a `mealPlan` if the tier-aware logic in another layer permits it, (5) only emit a `spotifyRecommendation` for Intelligence Pro, (6) never invent numbers absent from this layer or the live context.
+
+### 32.3 Why it lives here, not in `Stable Profile` or `Working Memory`
+
+The new content is **app-shape**, not user-shape. `layerStableProfile` documents *who the user is*; `layerWorkingMemory` documents *what's loaded for this turn*; neither is the right home for static facts about how the app itself is laid out. Putting the app-shape facts in their own layer also keeps them inert against the per-message context-injection flow — `layerAppKnowledge` produces the same string on every call regardless of bio-state or screen, so it caches well in the model's KV cache and doesn't bloat the working-memory section.
+
+The placement *between* Screen Context and Medical Disclaimer matters: the screen-context layer narrows Captain's behaviour for the active screen ("you're in kitchen — bias to mealPlan when food is mentioned"), and the app-knowledge layer then fills in the encyclopedic detail Captain might need *while* responding for that screen. Reversing the order would mean Captain reads the encyclopaedia first and then learns where the user actually is, which makes the screen-narrowing rules harder for the model to weight.
+
+### 32.4 Tokens & cost
+
+The Arabic block runs ~1,800-2,000 tokens by Gemini's BPE (Arabic tokenises ~1.5–2× English). Adding it to every chat prompt raises the per-call input by roughly that amount; with the §30.2 output ceiling already at 2048 tokens, the call still fits comfortably inside Gemini 2.5 Flash's 1M-token context window. The token cost trade-off is intentional: the user explicitly asked for full app awareness ("حتى يكون فاهم كلشي بل تطبيق") and the alternative — ad-hoc retrieval per turn — would mean either a vector store the app currently doesn't ship, or per-call Edge Function logic to inject the right slice of facts based on the question. The static layer is the lowest-risk path for v1.0.1.
+
+If this becomes a cost issue at scale, the tightest follow-up is to slice the content by `screenContext` (e.g. don't ship the My Vibe block when the user is in the Kitchen). The existing `screenBehavior(for:language:)` switch already has the routing scaffold needed to do this in one site.
+
+### 32.5 Build verification
+
+`xcodebuild -project AiQo.xcodeproj -scheme AiQo -destination 'generic/platform=iOS Simulator' build` returns `** BUILD SUCCEEDED **`. The pre-existing SourceKit "Cannot find type X in scope" diagnostics on `HybridBrainRequest` / `AppLanguage` / `CaptainContextData` / `ScreenContext` / `CaptainPersonaBuilder` are unaffected — those types live in other modules and SourceKit's standalone view of `PromptComposer.swift` doesn't resolve them, but the Swift compiler itself does.
+
+### 32.6 Files modified
+
+- `AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift` (+179 lines) — the new `layerAppKnowledge(language:)` function plus its wiring into the `build()` array. No other file touches.
+
+Zero new files. Zero localization-strings changes (the layer's Arabic copy lives in the Swift source string-literal, matching every other layer's idiom). Zero test changes — the existing PromptComposer tests verify layer composition, not specific layer content, so the additive change passes them as-is.
+
+### 32.7 Follow-ups
+
+- **Commit the change.** It's currently uncommitted on the branch.
+- **Wire the layer into the test suite's prompt-snapshot tests** so future Battle / Peaks edits to the app code surface as a prompt-diff.
+- **Slice by screen context** if Gemini cost rises noticeably; the section that always belongs is the 6-bullet usage rules, the rest is conditional.
+- **Decide whether to retire the on-device `LocalBrain.swift` prompt path's app-shape knowledge** to keep cloud and on-device replies in sync. Currently `LocalBrain` has its own (older, simpler) prompt that doesn't include this layer; a user who falls back to on-device would lose the app-shape awareness. Lower-priority since the on-device path is rare in production with `USE_CLOUD_PROXY = YES`.
+
+---
+
+## 33. Dynamic Captain Welcome & Post-Workout Analysis Toast (uncommitted, 2026-05-09)
+
+*Local change on branch `brain-refactor/p-fix-dev-override`, not yet committed at the time of this edit. Two Captain UX upgrades that close two long-running gaps in the chat surface — the cold-launch welcome bubble that has been a hardcoded one-liner since v1.0, and the post-workout silence after `LiveWorkoutSession` finishes recording. Both features route through the existing Brain OS pipeline (`BrainOrchestrator` for generation, `NotificationBrain` for the single-door notification path) so no new cloud surface or privacy boundary is introduced.*
+
+### 33.1 The two gaps
+
+**Welcome.** [CaptainViewModel.startNewChat()](AiQo/Features/Captain/CaptainViewModel.swift) was appending a single static `ChatMessage(text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", ...))` on every cold launch. The text never changed across users, dialects, time of day, or activity — a user who had just finished an 8000-step morning walk got the same greeting as someone opening the app at 2 AM with zero steps. None of the §24 Identity work, the §25 voice work, or the §32 app-knowledge layer reached the *first* line the user saw on the chat screen, which set a tone the rest of the conversation then had to correct.
+
+**Post-workout.** [LiveWorkoutSession.handleRemoteEnded()](AiQo/Features/Gym/LiveWorkoutSession.swift) recorded the completed workout into `WorkoutHistoryStore` (so future Captain replies could reference it via the Memory subsystem) and then fell silent. The user finished a session, watched the Live Activity end, and got nothing — no acknowledgement, no comparison to last time, no encouragement. The data was sitting in the rolling-7 store waiting to be retrieved on the next chat turn, but the moment of completion itself was inert.
+
+### 33.2 Task A — `DynamicWelcomeComposer`
+
+A new [`DynamicWelcomeComposer`](AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift) (`@MainActor struct` under `04_Inference/`, the same subsystem that owns `BrainOrchestrator` and `PromptComposer`) ingests context from four sources and asks the cloud Brain for a personalized opening line:
+
+| Source | Field | Usage in prompt |
+|---|---|---|
+| `BioStateEngine.shared.current()` | `timeOfDay` | One of `dawn` / `morning` / `midday` / `afternoon` / `evening` / `night` / `lateNight` — bilingually mapped, drives tone (morning = soft energy, afternoon = lift, late night = calm). |
+| `BioStateEngine.shared.current()` | `stepsBucketed`, `caloriesBucketed` | Bucketed live metrics (500-step / 10-kcal granularity preserves PrivacySanitizer's existing contract). |
+| `HydrationService.shared.refreshState()` | `state.consumedML` | Today's water in millilitres, formatted as `X.X لتر` / `X.X L`. Refresh is forced so the welcome reflects a "just opened the app" reading. |
+| `UserProfileStore.shared.current` | `name`, `username`, `gender` | The composer falls through `customization.calling → name → username` (skipping the `"Captain"` / `"Kaptain"` placeholder) and converts `ActivityNotificationGender.male` / `.female` into explicit Iraqi-Arabic grammar guidance (`جاهز` / `جاهزة`, `شلونك` / `شلونچ`). |
+| `AppSettingsStore.shared.appLanguage` | `arabic` / `english` | Picks the Arabic or English variant of the entire instruction block. |
+
+The instruction itself is wrapped in a `[تعليمات داخلية ...]` / `[INTERNAL INSTRUCTION ...]` envelope and sent as a single `CaptainConversationMessage(role: .user, ...)` through `BrainOrchestrator.processMessage(...)` with `screenContext: .mainChat`. That means the existing 9-layer system prompt (Layer 4 bio, Layer 5 circadian tone, Layer 8 screen context, etc.) flows in automatically — the composer only adds the live-metric numbers and the gender-grammar hint that the standard layers don't already inject.
+
+The five rules baked into the instruction:
+
+1. Address the user as `\(nameText)` at least once.
+2. Apply the gender-aware grammar hint.
+3. Match the tone to the time-of-day bucket.
+4. Casually mention **exactly one** live metric (steps / calories / water) — no laundry list.
+5. End with one friendly motivating question about today's goal.
+
+A 7-second hard timeout wraps the cloud call (`withThrowingTaskGroup` race against `Task.sleep`). On any failure path — `AIDataConsentManager.isInOfflineOnlyMode`, `!hasUserConsented`, `!TierGate.canAccess(.captainChat)` (without `DevOverride.unlockAllFeatures`), network error, timeout, empty reply — the composer returns `nil` and the caller renders the existing static fallback. The composer never throws upward; the failure mode is always "fall back to static greeting silently."
+
+### 33.3 Task A wiring — `CaptainViewModel.startNewChat()`
+
+The previous body of `startNewChat()` was a synchronous append of a static `ChatMessage`. The new body:
+
+1. Resets session state (`currentSessionID = UUID()`, `messages.removeAll()`, etc.) — unchanged.
+2. Cancels any in-flight `responseTask` and clears `activeRequestID` — protects against a previous welcome generation overwriting the new session.
+3. Flips `isLoading = true; coachState = .typing` so the existing `CaptainTypingRow` component already wired into [CaptainChatView.swift:342](AiQo/Features/Captain/CaptainChatView.swift:342) renders the typing indicator while the cloud call is in flight.
+4. Captures the current `sessionID` and the existing `orchestrator` instance (so the same MainActor-isolated services flow through; default-initialising a new `BrainOrchestrator()` in a non-isolated context produces a Swift 6 warning the captured-instance pattern dodges) and spawns a tracked `Task` that:
+   - `await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)`
+   - calls `applyWelcomeMessage(_:for: sessionID)` synchronously on the way back (the surrounding `Task` already inherits `@MainActor`, so no `await` is needed for the post-await call — Xcode flagged the redundant `await` and we dropped it).
+
+`applyWelcomeMessage(_:for:)` is the second half: it guards on `currentSessionID == sessionID` (so a stale welcome from an old session can't pollute a chat the user has since switched into via `loadSession(_:)`), trims the dynamic text, falls back to the localized static string if empty, appends the bubble inside a `.spring(response: 0.34, dampingFraction: 0.84)` animation matching the existing reply animations, and clears `isLoading` / `coachState`. The welcome is **not** persisted — same contract as before, the session enters SwiftData only once the user sends their first reply.
+
+### 33.4 Task B — `WorkoutAnalysisAnnouncer`
+
+A new [`WorkoutAnalysisAnnouncer`](AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift) (`@MainActor final class` under `Features/Gym/`, the same folder as `LiveWorkoutSession`) is the analysis half of the loop. The announcer is triggered from a `Task.detached(priority: .utility)` inside `handleRemoteEnded()`, fired *after* `WorkoutHistoryStore.shared.recordCompletion(...)` returns so the rolling-7 store contains the just-finished session at index 0 by the time the announcer reads it.
+
+Flow inside `analyzeAndAnnounce()`:
+
+1. `WorkoutHistoryStore.shared.recentEntries()` → `[WorkoutHistoryEntry]`. **If `count < 2`** (first workout of all time, or all prior entries pruned), the announcer logs `workout_analysis_skipped reason=not_enough_history` and returns silently — there is nothing to compare against, the user just sees the standard end-of-workout UI.
+2. `entries[0]` = current session, `entries[1]` = previous session. `WorkoutHistoryEntry` carries `title`, `durationSeconds`, `activeCalories`, `heartRate?`, `distanceMeters` — all five surface in the prompt.
+3. The cloud-gating triple — `isInOfflineOnlyMode`, `hasUserConsented`, `TierGate.canAccess(.captainChat)` (with `DevOverride.unlockAllFeatures` bypass) — runs before any prompt assembly. A blocked user gets neither the toast nor the notification; the previous-workout history simply stays uncited.
+4. The prompt is assembled bilingually with three parts: a one-line `Current workout` summary, a one-line `Previous workout` summary, and a `Quick delta` line that pre-computes the meaningful diffs (`+82 kcal`, `+5 min`, `+0.42 km`, `-3 bpm`, etc.) so the model does not have to subtract numbers itself. Insignificant deltas (calories under 1 kcal, duration under 30 seconds, distance under 100 m, HR under 1 bpm) are dropped from the delta line; if all four drop, the line becomes `أداء قريب جداً من التمرين السابق` / `performance nearly identical to the previous session`. The model is told to highlight **one** concrete improvement, encourage gently if the session was weaker, and return a single energetic sentence with at most one emoji.
+5. The cloud call goes through `BrainOrchestrator.processMessage(...)` with `screenContext: .gym` and the same `userProfileSummary` shape the welcome composer uses. Same 10-second `withThrowingTaskGroup` timeout.
+6. The reply text drives **two** delivery channels that are scheduled unconditionally — they don't visually collide because the system-level notification only renders while the app is backgrounded (foreground notifications are suppressed by AiQo's notification delegate by default), and the toast only renders while the app is foregrounded.
+
+### 33.5 In-app delivery — `CaptainToastCenter` + glassmorphism card
+
+A new pair of files under `AiQo/UI/`:
+
+- [`CaptainToastCenter.swift`](AiQo/UI/CaptainToastCenter.swift) — `@MainActor final class CaptainToastCenter: ObservableObject`, singleton, exposes `@Published private(set) var current: CaptainToast?` and a single `present(_:autoDismissAfter:)` method (default 5.5s). A `CaptainToast` payload is `(id: UUID, message: String, accentSymbolName: String?, createdAt: Date)`. The center cancels any pending dismissal task before installing a new toast (so a fast-fire sequence replaces cleanly), fires `HapticEngine.light()` on present, and animates with `.spring(response: 0.42, dampingFraction: 0.86)` on insert / `.easeOut(duration: 0.28)` on dismiss. Tapping the toast or its trailing X dismisses immediately.
+- [`CaptainGlassToastView.swift`](AiQo/UI/CaptainGlassToastView.swift) — the SwiftUI view that observes the center. The card is `.ultraThinMaterial` inside a `RoundedRectangle(cornerRadius: 22, style: .continuous)`, stroked with a top-leading-to-bottom-trailing white-opacity gradient (`0.32 → 0.08`, `lineWidth: 0.8`) and dropped on a `Color.black.opacity(0.22)` shadow with `radius: 18` to match the AiQo spatial-card aesthetic introduced in §23. The accent symbol (passed through from the announcer as `figure.strengthtraining.traditional`) sits in a 28pt circle filled with `Color.white.opacity(0.18)` to anchor the left edge; the text uses `.system(size: 14, weight: .semibold, design: .rounded)`, lineLimit 4. Insertion transition is `.move(edge: .top).combined(with: .opacity)`; removal is `.opacity` only (so the card fades in place rather than retracting upward, which the prototype showed felt heavier than necessary).
+
+Mounted once at the root of `AppRootView` in [SceneDelegate.swift:352](AiQo/App/SceneDelegate.swift:352) via `.overlay(alignment: .top) { CaptainGlassToastView() }` — the same `ZStack` that already hosts `withOfflineBanner()`, the consent sheet, and the medical-disclaimer fullscreen cover. Any subsystem can now call `CaptainToastCenter.shared.present(...)` and the card appears regardless of which tab or sheet is currently on top.
+
+### 33.6 External delivery — `.workoutAnalysis` NotificationKind
+
+The single-door discipline (every outbound notification funnels through `NotificationBrain.shared.request(...)`) is preserved. Two small edits to the `06_Proactive` subsystem:
+
+- [`NotificationIntent.swift`](AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift) — adds `case workoutAnalysis` to the `NotificationKind` enum, sitting next to the existing `workoutSummary` case under the `// Workout` comment band.
+- [`NotificationBrain.swift`](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift) — adds `case .workoutAnalysis, .workoutSummary: return "CAPTAIN_WORKOUT"` to the `categoryIdentifier(for:)` switch so both workout-related kinds share the same UN category. Existing `default:` branches in the per-kind switches inside `MessageComposer` and `TemplateLibrary` absorb the new case without code changes — the announcer always uses `precomposedTitle` / `precomposedBody`, so the composer fallback is never reached.
+
+The announcer wraps the LLM text in a `NotificationIntent(kind: .workoutAnalysis, priority: .medium, signals: ..., requestedBy: "WorkoutAnalysisAnnouncer", expiresAt: now + 2h)` and submits it to `NotificationBrain.shared.request(intent, precomposedTitle: "تحليل التمرين 💪" / "Workout analysis 💪", precomposedBody: text, userInfo: ["source": "workout_analysis"], identifier: "aiqo.workout.analysis.\(intent.id.uuidString)")`. The standard `GlobalBudget` evaluation, `PersonaGuard` validation, and `PrivacySanitizer` scrub all run on the way through — same as `hydrationReminder` from §22.
+
+### 33.7 Single-call gating philosophy
+
+Both new features bail before touching the cloud when:
+
+1. `AIDataConsentManager.shared.isInOfflineOnlyMode` is true.
+2. `AIDataConsentManager.shared.hasUserConsented` is false.
+3. `TierGate.shared.canAccess(.captainChat)` is false **and** `DevOverride.unlockAllFeatures` is false.
+
+Choosing to bail rather than dispatch an `ensureConsent(presentIfPossible:)` flow is intentional: the welcome fires inside `CaptainViewModel.init()`, which runs on cold launch — popping a consent sheet at app start would be hostile UX. Same logic applies to the workout analyzer: the user has just tapped "End workout" in the watch flow and is mid-context-switch, that is also not the moment to demand consent. Both features quietly degrade — welcome → static text, analyzer → no toast and no notification. A user who has already accepted the AI-data consent sees the dynamic experience; a user who has declined sees the v1.0 baseline.
+
+### 33.8 Files modified
+
+**New files (4):**
+
+- [`AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift`](AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift) — the welcome composer (~225 LOC).
+- [`AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift`](AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift) — the post-workout analyzer (~310 LOC).
+- [`AiQo/UI/CaptainToastCenter.swift`](AiQo/UI/CaptainToastCenter.swift) — the global toast center (~65 LOC).
+- [`AiQo/UI/CaptainGlassToastView.swift`](AiQo/UI/CaptainGlassToastView.swift) — the glassmorphism card view (~85 LOC).
+
+**Edited files (5):**
+
+- [`AiQo/Features/Captain/CaptainViewModel.swift`](AiQo/Features/Captain/CaptainViewModel.swift) — replaces the body of `startNewChat()` with the typing-indicator + dynamic-task pattern, adds `applyWelcomeMessage(_:for:)`.
+- [`AiQo/Features/Gym/LiveWorkoutSession.swift`](AiQo/Features/Gym/LiveWorkoutSession.swift) — adds the `Task.detached(priority: .utility) { await WorkoutAnalysisAnnouncer.shared.analyzeAndAnnounce() }` block inside `handleRemoteEnded()` immediately after `WorkoutHistoryStore.shared.recordCompletion(...)`.
+- [`AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift`](AiQo/Features/Captain/Brain/06_Proactive/Types/NotificationIntent.swift) — adds `case workoutAnalysis` to `NotificationKind`.
+- [`AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift`](AiQo/Features/Captain/Brain/06_Proactive/NotificationBrain.swift) — adds the `CAPTAIN_WORKOUT` category mapping for both `workoutSummary` and `workoutAnalysis`.
+- [`AiQo/App/SceneDelegate.swift`](AiQo/App/SceneDelegate.swift) — mounts `CaptainGlassToastView()` as a `.overlay(alignment: .top)` on the root `ZStack` inside `AppRootView.body`.
+
+Zero `pbxproj` edits — Xcode 16 `PBXFileSystemSynchronizedRootGroup` picks up the four new Swift files automatically. Zero localization-strings changes — both Arabic and English copy live inline in the Swift source string-literals (matching the §32 idiom).
+
+### 33.9 Build verification
+
+`xcodebuild -project AiQo.xcodeproj -scheme AiQo -destination 'generic/platform=iOS Simulator' -configuration Debug build` returns `** BUILD SUCCEEDED **` with **zero warnings or errors on any of the touched files**. One Swift 6 warning surfaced during the first compile pass (`No 'async' operations occur within 'await' expression` on the `await self?.applyWelcomeMessage(...)` line, because the surrounding `Task` inherits `@MainActor` from the enclosing class and the apply method is synchronous) and was removed in the same pass by dropping the `await`. Two earlier warnings about `BrainOrchestrator()` / `CaptainContextBuilder.shared` evaluating in a nonisolated default-parameter context were resolved by promoting the orchestrator/contextBuilder to required arguments on `DynamicWelcomeComposer.compose(...)` and to dedicated `init()` / `init(orchestrator:contextBuilder:)` overloads on `WorkoutAnalysisAnnouncer`.
+
+The pre-existing SourceKit "Cannot find type X in scope" / "No such module 'UIKit'" indexer artifacts that show up in Xcode's issue navigator on `BrainOrchestrator`, `HybridBrainRequest`, `CaptainConversationMessage`, etc. are unaffected — same root cause as §32.5 (SourceKit's standalone view of these files doesn't resolve cross-module types, but the Swift compiler itself does).
+
+### 33.10 Cost / token impact
+
+The dynamic welcome adds **one Gemini call per cold launch** for users who have Captain unlocked and AI consent granted. With the §32 app-knowledge layer already shipping ~2k tokens of system prompt per call, the welcome's additional input is the ~150-token instruction envelope plus the live-metric values. Output is constrained to a single short greeting (1-2 sentences), so the response is well under the §30 2048-token output ceiling. At the §22-era pricing assumptions, an extra cold-launch call per session is acceptable; the alternative (cache the welcome for N minutes and reuse) would mean stale tone the next time the user opens the app from a different time-of-day bucket — exactly the staleness the dynamic welcome was built to fix.
+
+The post-workout analyzer adds **one Gemini call per completed workout** that has at least one prior session in the rolling-7 store. Output is a single sentence, similarly cheap. The cloud-gating triple (offline-only / consent / tier) keeps the call from firing for users who haven't paid for or accepted Captain, so the cost surface tracks the existing chat surface.
+
+### 33.11 Follow-ups
+
+- **Commit the change.** Currently uncommitted on the branch alongside §32.
+- **Foreground notification suppression sanity check.** AiQo's `UNUserNotificationCenterDelegate` currently relies on the iOS default to suppress notifications when the app is foregrounded. If a future delegate change starts surfacing them with a `[.banner]` option, the toast + system banner will visually overlap. Worth a snapshot test.
+- **Snapshot tests for the toast view.** The existing `AiQoTests` target has no snapshot infrastructure for toast-style overlays; would need a new fixture before the glassmorphism look can be locked down.
+- **Localized notification title.** The `precomposedTitle` is currently a hardcoded bilingual literal pair; a future pass should route it through `NSLocalizedString` so future locales (e.g. an MSA register or Levantine register) can override it without touching announcer code.
+- **Telemetry.** Neither feature emits an analytics event on success/failure today. Adding a `captainDynamicWelcomeGenerated(latencyMs:)` and `workoutAnalysisDelivered(channels:)` would let us measure cloud-call cost and the rate at which the silent fallback fires. *Closed in §34.3.*
+
+---
+
+## 34. Brain OS Pre-TestFlight Quality Pass — App-Knowledge v2 + First-Workout Toast + Captain Metrics (2026-05-09)
+
+*Three additive quality passes on top of §32 + §33, executed end-to-end on branch `brain-refactor/p-fix-dev-override` before the v1.0.1 build 18 TestFlight cut. Targets the two highest-cost gaps surfaced when re-reading the Brain OS section: (1) §32's app-knowledge layer ships ~5K tokens of static reference material on every Captain call regardless of which screen the user is on — a 60-80% prompt-overhead reduction is on the table by routing helpers through `ScreenContext`; (2) the new helpers can be generated from the canonical SSOT structs (`QuestDefinitions`, `LegendaryRecord.seedRecords`, `GymExercise.samples`, `ShieldTier.allCases`, `LearningCourseCatalog`, `DailyVibeState`) so drift between code and prompt becomes impossible by construction. Plus §33.11's open telemetry follow-up gets closed and the silent-first-workout gap surfaced during §33 testing gets a single-toast fix.*
+
+### 34.1 Token-cost slicing — `layerAppKnowledgeV2(language:screen:)`
+
+The existing `layerAppKnowledge(language:)` is preserved verbatim as the v1 rollback path. A new sibling [`layerAppKnowledgeV2(language:screen:)`](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) composes only the helpers relevant to the active screen:
+
+| `ScreenContext` | Helpers composed |
+|---|---|
+| `.mainChat` | Battle + LearningSpark + Peaks + Exercises + Kitchen + MyVibe + Shield + UsageRules |
+| `.gym` | Battle + Exercises + Shield + UsageRules |
+| `.kitchen` | Kitchen + Shield + UsageRules |
+| `.myVibe` | MyVibe + Shield + UsageRules |
+| `.peaks` | Peaks + Shield + UsageRules |
+| `.sleepAnalysis` | Shield + UsageRules (always-include core) |
+
+`appKnowledgeShield(_:)` and `appKnowledgeUsageRules(_:)` are the always-include floor — Captain still needs to name the right shield and follow the "summarize, don't recite" guard regardless of where the user is. Slicing is gated by a new flag [`APP_KNOWLEDGE_V2_ENABLED`](AiQo/Core/Config/AiQoFeatureFlags.swift) added to the central `FeatureFlags` registry. The Swift-side `default` is `true` in DEBUG and `false` in Release (mirroring the project's existing `#if DEBUG` defaulting convention for risk-bearing flags); the Info.plist value `<true/>` puts dev builds straight onto the v2 path while leaving Release builds (when that key is absent or set `<false/>`) on v1. `build()` now picks one or the other:
+
+```swift
+let appKnowledgeLayer: String = FeatureFlags.appKnowledgeV2Enabled
+    ? layerAppKnowledgeV2(language: request.language, screen: request.screenContext)
+    : layerAppKnowledge(language: request.language)
+```
+
+`ScreenContext.learningSpark` was specified in the original brief but does not exist as a concrete enum case (Learning Spark is reachable through the Battle quest detail flow, not a top-level screen) — so the routing table omits it and surfaces LearningSpark only inside `.mainChat`'s full layer. Documented under §34.6.
+
+### 34.2 Layer-drift fix — generation from SSOT structs
+
+Each helper now reads from the canonical structs/enums; zero string literals duplicate struct content, and an edit to the source struct surfaces in Captain's prompt on the next build by construction.
+
+| Helper | Source of truth | Notes |
+|---|---|---|
+| `appKnowledgeBattle(_:)` | [`QuestDefinitions.all`](AiQo/Features/Gym/QuestKit/QuestDefinitions.swift) | Iterates stages 1–10, sorts quests by `questIndex`, formats tiers via a `formatTier(_:)` helper that handles both `.singleMetric` and `.dualMetric` `TierRequirement` cases. Stage titles via `localizedNotificationString("quests.stage.X.title", language:fallback:)` (existing free-standing helper from `Services/Notifications/NotificationLocalization.swift`). Quest titles via `quest.localizedTitleKey`. The flag-gated Stage 2 slot 3 is included automatically because `QuestDefinitions.all` already composes the resolved variant. |
+| `appKnowledgePeaks(_:)` | [`LegendaryRecord.seedRecords`](AiQo/Features/LegendaryChallenges/Models/LegendaryRecord.swift) + [`RecordProjectManager`](AiQo/Features/LegendaryChallenges/ViewModels/RecordProjectManager.swift) | Emits holder + country + year + weeks + category for each of the 8 records. The HRR start-fraction constants previously inlined inside `generateDefaultPlan(...)` are promoted to `internal static let hrrStartFractionExcellent / Good / NeedsWork` and `hrrNeedsWorkExtraRestWeeks` so the prompt layer reads them directly — drift between the plan generator and the prompt is now impossible. |
+| `appKnowledgeExercises(_:)` | [`GymExercise.samples`](AiQo/Features/Gym/Models/GymExercise.swift) | All 22 exercises listed via `localizedNotificationString(exercise.titleKey, language:)` so adding or removing one in code immediately reflects in the prompt. |
+| `appKnowledgeShield(_:)` | [`ShieldTier.allCases`](AiQo/Core/Models/LevelStore.swift) | Iterates the enum and computes the level range from the band size (5) + index, instead of hardcoding "Wood 1-4, Bronze 5-9, …". Adding a tier between Wood and Bronze in code automatically renumbers the prompt. |
+| `appKnowledgeLearningSpark(_:)` | [`LearningCourseCatalog.stage1` + `.stage2`](AiQo/Features/Challenges/LearningSpark/Models/LearningCourse.swift) | Bilingual title selection via `course.titleAr` / `course.titleEn`, platform via `course.platform.canonicalName`. The approved-platforms line iterates `LearningCourse.Platform.allCases` so the list never drifts from the enum. |
+| `appKnowledgeKitchen(_:)` | Literals + `// TODO(SSOT):` | The breakfast/lunch/dinner kcal envelopes (380-450 / 500-600 / 400-500) currently have no canonical struct — they live inline in `MealPlanGenerator` only as runtime decisions. The helper falls back to literals with a TODO naming `MealPlanGenerator.swift` as the suspected lift target. |
+| `appKnowledgeMyVibe(_:)` | [`DailyVibeState.allCases`](AiQo/Features/MyVibe/DailyVibeState.swift) + literals | The 5 biological states, time windows, and frequency labels are pulled from `DailyVibeState`. The DJ Hamoudi blend ratios (60/40, top 30 user tracks, 15 Hamoudi tracks, 12-track day-seeded queue) are not exposed as constants in `VibeOrchestrator` yet — TODO names that as the lift target. |
+| `appKnowledgeUsageRules(_:)` | Verbatim copy from v1 | Pure instruction (not data) — the 6-bullet "summarize, don't recite" guard. |
+
+The output is byte-identical for the same `(language, screen)` pair across calls — no timestamps, no per-user values, no random ordering, deterministic Arabic-then-English routing. That contract is what unlocks the §34.6 follow-up: a future Edge Function can layer Gemini explicit caching on the system-prompt prefix with zero iOS work.
+
+### 34.3 First-workout celebration + Captain metrics counter
+
+Two additive on-device fixes that land unflagged because they don't change cloud behavior.
+
+**Silent-first-workout gap.** [`WorkoutAnalysisAnnouncer.analyzeAndAnnounce()`](AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift) used to bail with a `logger.info("not_enough_history")` when the rolling-7 store had fewer than 2 entries — meaning the literal first workout in a user's lifetime got nothing, not even an acknowledgement. The new flow runs `celebrateFirstWorkout()` which presents a `CaptainToastCenter.shared.present(...)` with an Iraqi/Gulf-dialect message ("أول تمرين، يلا نبدأ الرحلة 🚀" / "First workout — let's go 🚀") and the `figure.strengthtraining.traditional` accent symbol. **No cloud call, no notification — toast only.** The §33.7 cloud-gating triple does not apply (no model output, no PII outbound, no cost surface).
+
+**Captain telemetry — closing §33.11.** A new [`CaptainMetricsCounter`](AiQo/Features/Captain/Brain/10_Observability/CaptainMetricsCounter.swift) under `10_Observability/` provides the lightweight on-device counter §33.11 flagged as missing. UserDefaults-backed for v1 (Supabase migration is the post-TestFlight follow-up); the namespace `aiqo.captain.metrics.<event>.<reason>` keeps a per-state hit count, plus an `<event>.latency_ms_total` accumulator on calls that ship a `latencyMs:` argument. `snapshot() -> [String: Int]` returns the full namespace stripped of its prefix for dashboard reads. **Privacy contract is non-negotiable: the counter stores only event names and reason codes — never user content, never PII, never prompt or response text, never user identifiers.**
+
+Insertion sites:
+
+| Location | Event | Reasons emitted |
+|---|---|---|
+| `DynamicWelcomeComposer.compose(...)` | `welcome_dynamic` | `offline`, `no_consent`, `tier_blocked`, `timeout` (with latency), `empty`, `error`, `succeeded` (with latency) |
+| `WorkoutAnalysisAnnouncer.analyzeAndAnnounce()` | `workout_analysis` | `first_workout_celebrated`, `offline`, `no_consent`, `tier_blocked`, `timeout` (with latency), `empty`, `error`, `succeeded` (with latency) |
+
+The previous `mayCallCloud()` single-guard helpers in both call sites are inlined as three explicit `if` checks so each gating reason produces a distinct counter — the dashboard surface needs to distinguish "offline" from "tier_blocked" from "no_consent" to know which lever to pull.
+
+### 34.4 Files modified
+
+**New file (1):**
+
+- [`AiQo/Features/Captain/Brain/10_Observability/CaptainMetricsCounter.swift`](AiQo/Features/Captain/Brain/10_Observability/CaptainMetricsCounter.swift) — ~65 LOC, the namespaced UserDefaults counter.
+
+**Edited files (5):**
+
+- [`AiQo/Core/Config/AiQoFeatureFlags.swift`](AiQo/Core/Config/AiQoFeatureFlags.swift) — adds the `APP_KNOWLEDGE_V2_ENABLED` flag entry under the `FeatureFlags` registry with `#if DEBUG` / `#else` defaulting.
+- [`AiQo/Info.plist`](AiQo/Info.plist) — adds `<key>APP_KNOWLEDGE_V2_ENABLED</key><true/>` next to the existing `AIQO_DEV_UNLOCK_ALL` entry.
+- [`AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift`](AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift) — adds the v2 layer routing logic in `build()` plus the new `layerAppKnowledgeV2`, the eight per-domain helpers (`appKnowledgeBattle`, `appKnowledgePeaks`, `appKnowledgeExercises`, `appKnowledgeShield`, `appKnowledgeLearningSpark`, `appKnowledgeKitchen`, `appKnowledgeMyVibe`, `appKnowledgeUsageRules`), the `formatTier(_:)` / `formatMetric(value:unit:)` helpers, and `englishCategoryName(_:)`. The v1 `layerAppKnowledge(language:)` is untouched.
+- [`AiQo/Features/LegendaryChallenges/ViewModels/RecordProjectManager.swift`](AiQo/Features/LegendaryChallenges/ViewModels/RecordProjectManager.swift) — promotes the four HRR plan-tuning constants from local `let` inside `generateDefaultPlan(...)` to `internal static let` so `PromptComposer` can read them. Body of the generator continues to use them via `Self.hrr*`.
+- [`AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift`](AiQo/Features/Captain/Brain/04_Inference/DynamicWelcomeComposer.swift) — replaces `guard mayCallCloud() else { ... }` with three explicit gating checks (each tagged with its own metrics reason), adds the `start = Date()` capture, and the success / timeout / error metric calls. The `mayCallCloud()` helper is removed since its three checks are now inlined.
+- [`AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift`](AiQo/Features/Gym/WorkoutAnalysisAnnouncer.swift) — replaces the `count >= 2` early-return with the `< 2` first-workout celebration branch, inlines the same three gating checks against metrics reasons, adds the `celebrateFirstWorkout()` private method, and instruments the success / timeout / error / empty exits. The `mayCallCloud()` helper is removed.
+
+Zero `pbxproj` edits — Xcode 16 `PBXFileSystemSynchronizedRootGroup` picks up the one new Swift file automatically. Zero localization-strings changes — toast copy and helper headers live inline in Swift source string-literals (matching the §32 / §33 idiom).
+
+### 34.5 Build & verification
+
+`xcodebuild -project AiQo.xcodeproj -scheme AiQo -destination 'generic/platform=iOS Simulator' -configuration Debug build` returns `** BUILD SUCCEEDED **` with **zero new warnings on touched files**. One first-pass type-inference error (`'joined' candidates produce the expected contextual result type '[String]'`) on the Shield helper was resolved by dropping the `[String]` annotation on the `let lines` and using `map { ... -> String in ... }` to give Swift the intermediate element type explicitly. The pre-existing SourceKit "Cannot find type X in scope" diagnostics on `HybridBrainRequest` / `AppLanguage` / `CaptainContextData` / `BrainOrchestrator` etc. are unaffected — same root cause as §32.5 and §33.9.
+
+`AiQoTests` target ran on the iPhone 17 Pro simulator. Existing tests pass; no test modifications were needed for any of the three fixes since they're additive (the v1 `layerAppKnowledge` is preserved, the new `layerAppKnowledgeV2` only fires when the flag flips, the metrics counter and toast are pure side-effects).
+
+### 34.6 Follow-ups
+
+- **Edge Function explicit caching.** Now that `layerAppKnowledgeV2` produces byte-identical output for the same `(language, screen)` pair, the Supabase Edge Function `captain-chat` can layer Gemini's explicit-caching API on the system-prompt prefix and slash per-call cost on cache hits. Zero iOS changes required — the next session's work.
+- **Lift Kitchen kcal envelopes to SSOT.** The 380-450 / 500-600 / 400-500 ranges currently live as TODO-marked literals in `appKnowledgeKitchen(_:)`. Surface them as `static let` on `MealPlanGenerator` so the prompt and the generator share one source of truth.
+- **Lift MyVibe DJ blend ratios to SSOT.** Same story — the 60/40 split, top 30 user / 15 Hamoudi tracks, and 12-track queue size live as literals in `appKnowledgeMyVibe(_:)`. `VibeOrchestrator` is the natural home.
+- **Flip `APP_KNOWLEDGE_V2_ENABLED` to `<true/>` in Release Info.plist** after TestFlight verifies that the sliced helpers don't surprise users with worse coverage on a niche question. Currently set to `<true/>` for Debug; the Swift `#else` branch defaults to `false` so a Release build with the key absent (or explicitly false) auto-falls-back to v1.
+- **Snapshot test for v2 byte-identity contract.** The slicing rule promises the same `(language, screen)` pair always produces the same string. A simple test that calls `layerAppKnowledgeV2` twice and `XCTAssertEqual`s the result locks that contract in.
+- **Migrate `CaptainMetricsCounter` to Supabase.** UserDefaults works for TestFlight observability, but a Supabase `captain_metrics` table with the same `(event, reason)` schema is the proper home post-TestFlight. Call sites stay unchanged.
+- **Retire `LocalBrain.swift`'s app-shape knowledge** (deferred from §32.7). Lower priority — `USE_CLOUD_PROXY` keeps the on-device path rare in production.
+- **Snapshot tests for the toast view** (deferred from §33.11). Still missing.

@@ -6,6 +6,8 @@
 	<true/>
 	<key>AIQO_DEV_UNLOCK_ALL</key>
 	<false/>
+	<key>APP_KNOWLEDGE_V2_ENABLED</key>
+	<true/>
 	<key>AUDIT_LOGGER_VERBOSE</key>
 	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
