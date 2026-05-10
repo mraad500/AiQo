@@ -19,6 +19,13 @@ struct CaptainChatView: View {
 
     private let bottomAnchorID = "captain-chat-bottom"
 
+    /// Hoisted from `ChatComposerBar` so the chat view can react to focus
+    /// transitions — specifically to re-pin the scroll to the latest
+    /// message when the keyboard rises. Without this, a new Captain reply
+    /// arriving *while the user is typing* lands behind the keyboard
+    /// because the scroll position still reflects the pre-keyboard layout.
+    @FocusState private var inputFocused: Bool
+
     /// v1.1 kill switch — Info.plist `AIQO_CHAT_V1_1_ENABLED`. When off, the
     /// new fixed header + persistent safety banner retract and the chat falls
     /// back to a scroll-embedded header like v1.0 so Apple Review can see the
@@ -46,13 +53,20 @@ struct CaptainChatView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 20)
                 }
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.interactively)
                 .safeAreaPadding(.bottom, 8)
                 .onAppear {
                     scrollToBottom(using: proxy, animated: false)
                 }
                 .onChange(of: globalBrain.messages.count) {
-                    scrollToBottom(using: proxy)
+                    // One layout pass before scrolling so the just-appended
+                    // message has a real frame to anchor against. Without
+                    // the yield, the scroll fires against stale geometry
+                    // and the new bubble lands behind the composer.
+                    Task { @MainActor in
+                        await Task.yield()
+                        scrollToBottom(using: proxy)
+                    }
                 }
                 .onChange(of: globalBrain.isLoading) { _, thinking in
                     if thinking {
@@ -65,6 +79,18 @@ struct CaptainChatView: View {
                 }
                 .onChange(of: globalBrain.currentWorkoutPlan != nil) {
                     scrollToBottom(using: proxy)
+                }
+                // Keyboard appears → re-pin the scroll to the bottom so
+                // the most recent message stays visible above the rising
+                // composer. The 0.32s delay matches the system keyboard
+                // animation; scrolling earlier targets the pre-keyboard
+                // safe-area inset and lands the message behind the keys.
+                .onChange(of: inputFocused) { _, focused in
+                    guard focused else { return }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(320))
+                        scrollToBottom(using: proxy)
+                    }
                 }
             }
         }
@@ -85,7 +111,10 @@ struct CaptainChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(isChatV1_1Enabled ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ChatComposerBar(isSending: globalBrain.isLoading) { text in
+            ChatComposerBar(
+                isSending: globalBrain.isLoading,
+                isFocused: $inputFocused
+            ) { text in
                 globalBrain.sendMessage(text, context: .mainChat)
             }
         }
@@ -920,11 +949,14 @@ private extension Exercise {
 /// subview; the only time anything escapes to the VM is when the user taps send.
 private struct ChatComposerBar: View {
     let isSending: Bool
+    /// Focus binding hoisted to `CaptainChatView` so the parent can react
+    /// to keyboard show/hide and re-pin the scroll. The composer still
+    /// owns the underlying `@FocusState`; the parent just observes it.
+    var isFocused: FocusState<Bool>.Binding
     let onSend: (String) -> Void
 
     @State private var text: String = ""
     @State private var sendPressed = false
-    @FocusState private var isFocused: Bool
 
     private let charSoftLimit = 480
 
@@ -937,7 +969,7 @@ private struct ChatComposerBar: View {
             HStack(alignment: .bottom, spacing: 12) {
                 ZStack(alignment: .topTrailing) {
                     TextField(composerPlaceholder, text: $text, axis: .vertical)
-                        .focused($isFocused)
+                        .focused(isFocused)
                         .textInputAutocapitalization(.sentences)
                         .autocorrectionDisabled(false)
                         .submitLabel(.send)
@@ -948,27 +980,27 @@ private struct ChatComposerBar: View {
                         .padding(.vertical, 13)
                         .background(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Color.white.opacity(isFocused ? 0.74 : 0.56))
+                                .fill(Color.white.opacity(isFocused.wrappedValue ? 0.74 : 0.56))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(
                                     LinearGradient(
-                                        colors: isFocused
+                                        colors: isFocused.wrappedValue
                                             ? [Color.aiqoMint.opacity(0.85), Color(hex: "EBCF97").opacity(0.55)]
                                             : [Color.white.opacity(0.68), Color.white.opacity(0.68)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
-                                    lineWidth: isFocused ? 1.4 : 1
+                                    lineWidth: isFocused.wrappedValue ? 1.4 : 1
                                 )
                         )
                         .shadow(
-                            color: isFocused ? Color.aiqoMint.opacity(0.22) : .clear,
-                            radius: isFocused ? 10 : 0,
+                            color: isFocused.wrappedValue ? Color.aiqoMint.opacity(0.22) : .clear,
+                            radius: isFocused.wrappedValue ? 10 : 0,
                             y: 0
                         )
-                        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isFocused)
+                        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isFocused.wrappedValue)
                         .onSubmit(send)
 
                     if charCount >= charSoftLimit - 80 {
@@ -1047,8 +1079,8 @@ private struct ChatComposerBar: View {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(hex: "113238"))
-                        .rotationEffect(.degrees(isFocused && !trimmed.isEmpty ? 0 : 12))
-                        .offset(x: isFocused && !trimmed.isEmpty ? 1 : 0)
+                        .rotationEffect(.degrees(isFocused.wrappedValue && !trimmed.isEmpty ? 0 : 12))
+                        .offset(x: isFocused.wrappedValue && !trimmed.isEmpty ? 1 : 0)
                         .transition(.opacity.combined(with: .scale))
                 }
             }
@@ -1104,7 +1136,7 @@ private struct ChatComposerBar: View {
         withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
             text = ""
         }
-        isFocused = false
+        isFocused.wrappedValue = false
     }
 }
 
