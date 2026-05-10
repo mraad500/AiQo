@@ -135,14 +135,10 @@ final class CaptainViewModel: ObservableObject {
     /// كل فتحة تطبيق = جلسة جديدة
     private(set) var currentSessionID = UUID()
 
-    private enum Keys {
-        static let name = "captain_user_name"
-        static let age = "captain_user_age"
-        static let height = "captain_user_height"
-        static let weight = "captain_user_weight"
-        static let calling = "captain_calling"
-        static let tone = "captain_tone"
-    }
+    /// §50 Round 6 — re-typed alias of the shared `CaptainCustomizationKeys`
+    /// enum so the lens (`UserProfileLensBuilder`) and the ViewModel reference
+    /// the *same* keys. Renaming any key requires touching one place now.
+    private typealias Keys = CaptainCustomizationKeys
 
     init(
         orchestrator: BrainOrchestrator? = nil,
@@ -487,8 +483,13 @@ final class CaptainViewModel: ObservableObject {
         await Task.yield()
 
         do {
-            // Build HealthKit context (async but lightweight — just reads cached values)
-            var contextData = await contextBuilder.buildContextData()
+            // Build HealthKit context (async but lightweight — just reads cached values).
+            // The conversation is forwarded so the coherence analyzer (§34) can extract
+            // structured tags from the last user turns and seed the anti-contradiction
+            // prompt layer with absolute constraints.
+            var contextData = await contextBuilder.buildContextData(
+                conversation: prebuiltConversation
+            )
 
             // Brain V2: Detect sentiment from user's message
             if CaptainContextBuilder.isBrainV2Enabled,

@@ -399,6 +399,69 @@ final class CaptainHealthSnapshotService: @unchecked Sendable {
         await SleepSessionProvider.shared.lastNightSession().totalAsleepHours
     }
 
+    // MARK: - Brain §49: HR Mood Inputs
+
+    /// Reads the most recent `restingHeartRate` sample HealthKit has computed
+    /// (Apple Watch derives this overnight). Returns `nil` when unavailable
+    /// — the caller (HRMoodReader) falls back to a population-median default.
+    /// Wrapped in the standard 2-second timeout so a slow HealthKit query
+    /// never blocks the prompt build.
+    func fetchRestingHeartRate() async -> Int? {
+        await withHealthKitTimeout(fallback: nil) { [self] in
+            try await fetchLatestRestingHeartRate()
+        }
+    }
+
+    /// Reads the latest live HR sample within the last 5 minutes — used for
+    /// real-time mood inference during a chat turn. Distinct from the
+    /// today-average heart rate that powers the bio-state layer; this one
+    /// reflects "what is the user's heart doing *right now*."
+    func fetchLiveHeartRate(now: Date = Date()) async -> Int? {
+        let lookbackMinutes: Double = 5
+        let interval = DateInterval(
+            start: now.addingTimeInterval(-lookbackMinutes * 60),
+            end: now
+        )
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        return await withHealthKitTimeout(fallback: nil) { [self] in
+            let value = try await fetchLatestHeartRate(unit: unit, interval: interval)
+            return value.map { max(0, Int($0.rounded())) }
+        }
+    }
+
+    private func fetchLatestRestingHeartRate() async throws -> Int? {
+        guard let restingType = HKQuantityType.quantityType(
+            forIdentifier: .restingHeartRate
+        ) else {
+            return nil
+        }
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let sortDescriptors = [
+            NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        ]
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: restingType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: sortDescriptors
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let sample = (samples as? [HKQuantitySample])?.first else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let bpm = sample.quantity.doubleValue(for: unit)
+                continuation.resume(returning: bpm > 0 ? Int(bpm.rounded()) : nil)
+            }
+            healthStore.execute(query)
+        }
+    }
+
     private func todayDateInterval(now: Date = Date()) -> DateInterval {
         let dayStart = calendar.startOfDay(for: now)
         return DateInterval(start: dayStart, end: max(now, dayStart.addingTimeInterval(1)))

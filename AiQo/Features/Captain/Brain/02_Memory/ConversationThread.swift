@@ -136,6 +136,20 @@ final class ConversationThreadManager {
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
+    /// Compiles a prompt-friendly snapshot of recent thread entries.
+    ///
+    /// Brain Refactor §35 — Replaces the v1 50-char-truncation log with a
+    /// two-section output:
+    ///   1. **Structured tags** — `[workoutDetected: walking]`, `[goal ✓]`,
+    ///      etc. — pulled from typed entries with full metadata. Lossless
+    ///      so the prompt can reason about *what* happened, not just that
+    ///      *something* happened.
+    ///   2. **Recent timeline** — chronological list of the last N entries
+    ///      with longer content (110 chars vs 50) so user messages aren't
+    ///      cut mid-thought.
+    ///
+    /// The empty-state string is preserved verbatim so existing prompts
+    /// don't drift.
     func buildPromptSummary(maxEntries: Int = 5) -> String {
         let entries = recentEntries(limit: maxEntries)
         guard !entries.isEmpty else { return "لا توجد تفاعلات سابقة" }
@@ -144,12 +158,49 @@ final class ConversationThreadManager {
         formatter.locale = Locale(identifier: "ar")
         formatter.dateFormat = "h:mma"
 
-        return entries.reversed().map { entry in
+        // 1) Structured-tag block — surface high-value entry types as
+        //    machine-readable facts. Captain reasons better when "user
+        //    completed a walk" is a tag, not a chat-log line.
+        var tagLines: [String] = []
+        for entry in entries.reversed() {
+            guard let type = ThreadEntryType(rawValue: entry.entryType) else { continue }
+            switch type {
+            case .workoutDetected:
+                if let metadata = decodeMetadata(entry.metadata),
+                   let workoutType = metadata["workoutType"] {
+                    let started = metadata["started"] == "true"
+                    let stateLabel = started ? "بدأ" : "خلّص"
+                    tagLines.append("• \(stateLabel) تمرين \(workoutType) (\(formatter.string(from: entry.timestamp)))")
+                }
+            case .goalCompleted:
+                tagLines.append("• ✅ كمّل الحلقة اليومية (\(formatter.string(from: entry.timestamp)))")
+            case .notificationOpened:
+                if let metadata = decodeMetadata(entry.metadata),
+                   let action = metadata["action"] {
+                    tagLines.append("• فتح إشعار وسوّى: \(action) (\(formatter.string(from: entry.timestamp)))")
+                } else {
+                    tagLines.append("• فتح إشعار: \(String(entry.content.prefix(60))) (\(formatter.string(from: entry.timestamp)))")
+                }
+            default:
+                break  // covered in the timeline section below
+            }
+        }
+
+        // 2) Timeline block — preserve chronological order, but with longer
+        //    content so user messages survive intact.
+        let timelineLines = entries.reversed().map { entry -> String in
             let type = localizeType(entry.entryType)
             let time = formatter.string(from: entry.timestamp)
-            let truncated = String(entry.content.prefix(50))
+            let truncated = String(entry.content.prefix(110))
             return "[\(type) \(time)] \(truncated)"
-        }.joined(separator: "\n")
+        }
+
+        var sections: [String] = []
+        if !tagLines.isEmpty {
+            sections.append("--- وقائع منظمة ---\n" + tagLines.joined(separator: "\n"))
+        }
+        sections.append("--- تسلسل التفاعلات ---\n" + timelineLines.joined(separator: "\n"))
+        return sections.joined(separator: "\n\n")
     }
 
     // MARK: - Cleanup
@@ -191,6 +242,18 @@ final class ConversationThreadManager {
         Task { @MainActor in
             try? modelContext.save()
         }
+    }
+
+    /// Decodes the JSON-stringified metadata back into a flat string map.
+    /// Returns `nil` when the entry has no metadata (the common case for
+    /// plain user/captain messages).
+    private func decodeMetadata(_ raw: String?) -> [String: String]? {
+        guard let raw,
+              let data = raw.data(using: .utf8),
+              let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
+            return nil
+        }
+        return parsed
     }
 
     private func localizeType(_ rawType: String) -> String {

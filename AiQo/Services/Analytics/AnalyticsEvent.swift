@@ -60,6 +60,27 @@ extension AnalyticsEvent {
     static let captainVoicePlayed = AnalyticsEvent("captain_voice_played")
     static let captainHistoryViewed = AnalyticsEvent("captain_history_viewed")
 
+    // MARK: Captain Quality Gate (Brain §41)
+    static func captainQualityGateViolation(
+        code: String,
+        isCritical: Bool,
+        score: Double
+    ) -> AnalyticsEvent {
+        AnalyticsEvent(
+            "captain_quality_gate_violation",
+            properties: [
+                "code": code,
+                "is_critical": isCritical,
+                // Round to 2 decimals so cardinality stays bounded.
+                "score": Double(Int(score * 100)) / 100.0
+            ]
+        )
+    }
+    static let captainQualityGateRegenSucceeded =
+        AnalyticsEvent("captain_quality_gate_regen_succeeded")
+    static let captainQualityGateRegenRejected =
+        AnalyticsEvent("captain_quality_gate_regen_rejected")
+
     // MARK: Workouts
     static func workoutStarted(type: String) -> AnalyticsEvent {
         AnalyticsEvent("workout_started", properties: ["type": type])

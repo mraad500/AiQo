@@ -57,7 +57,7 @@ struct BrainOrchestrator: Sendable {
                 requiredTier: TierGate.shared.requiredTier(for: .captainChat)
             )
         }
-        let baseReply: HybridBrainServiceReply
+        var baseReply: HybridBrainServiceReply
 
         switch route(for: routedRequest) {
         case .local:
@@ -66,6 +66,16 @@ struct BrainOrchestrator: Sendable {
         case .cloud:
             baseReply = await processCloudRoute(request: routedRequest, userName: userName)
         }
+
+        // §41 — quality gate. Score the draft, log violations, and on a
+        // critical hit (avoid-list family or dialect drift) optionally
+        // regenerate once with a corrective prefix. Gated on a feature flag
+        // so we can A/B the regeneration tax.
+        baseReply = await applyQualityGate(
+            reply: baseReply,
+            request: routedRequest,
+            userName: userName
+        )
 
         let personalizedReply = personalizeReply(
             baseReply,
@@ -216,6 +226,116 @@ private extension BrainOrchestrator {
                 return makeComputedSleepReply(session: session, language: request.language)
             }
         }
+    }
+
+    // MARK: - Quality Gate (Brain §41)
+
+    /// Runs the deterministic quality gate against the freshly-generated
+    /// reply. On critical violations (avoid-list family used, severe dialect
+    /// drift), regenerates ONCE through the cloud route with a corrective
+    /// prefix appended — gated behind `CAPTAIN_QUALITY_REGEN_ENABLED` so we
+    /// can A/B the latency cost against the quality lift.
+    ///
+    /// Always logs violations to analytics regardless of regen — telemetry
+    /// is the long-term value here. The user gets the better of (original,
+    /// regenerated) reply, never a worse one.
+    func applyQualityGate(
+        reply: HybridBrainServiceReply,
+        request: HybridBrainRequest,
+        userName: String?
+    ) async -> HybridBrainServiceReply {
+        let gate = ResponseQualityGate()
+        let score = gate.evaluate(replyMessage: reply.message, request: request)
+
+        // Always emit telemetry for any violation — this is how we learn
+        // whether prompt rules actually translate into model behaviour.
+        for violation in score.violations {
+            AnalyticsService.shared.track(
+                .captainQualityGateViolation(
+                    code: violation.analyticsCode,
+                    isCritical: violation.isCritical,
+                    score: score.score
+                )
+            )
+        }
+
+        guard score.hasCriticalViolation, isQualityRegenEnabled else {
+            return reply
+        }
+
+        // Cloud-only regen — local Apple Intelligence path is too slow on
+        // older devices to justify a second pass.
+        guard route(for: request) == .cloud else {
+            return reply
+        }
+
+        let correctedRequest = augmentRequestWithCorrection(
+            request: request,
+            score: score
+        )
+
+        do {
+            let regenerated = try await cloudService.generateReply(
+                request: correctedRequest,
+                userName: userName
+            )
+            // Re-score — only ship the regen if it scored *better* than the
+            // original. Prevents shipping a worse reply when the model
+            // ignores the corrective prefix.
+            let regenScore = gate.evaluate(
+                replyMessage: regenerated.message,
+                request: correctedRequest
+            )
+            if regenScore.score > score.score && !regenScore.hasCriticalViolation {
+                AnalyticsService.shared.track(.captainQualityGateRegenSucceeded)
+                return regenerated
+            }
+            AnalyticsService.shared.track(.captainQualityGateRegenRejected)
+            return reply
+        } catch {
+            logger.error("quality_gate_regen_failed error=\(error.localizedDescription, privacy: .public)")
+            return reply
+        }
+    }
+
+    /// Adds the corrective prefix to the working-memory layer so the second
+    /// pass starts with explicit acknowledgment of what failed. We don't
+    /// touch the conversation array — the user's words stay untouched.
+    private func augmentRequestWithCorrection(
+        request: HybridBrainRequest,
+        score: QualityScore
+    ) -> HybridBrainRequest {
+        // §50 Round 3 — feed the brief's thesis into the corrective prefix
+        // so the second pass knows *why* the angle was chosen, not just
+        // which violation codes tripped. The thesis already carries the
+        // upstream cause (HR / stage / patterns) from §50 Round 2 Fix C.
+        let prefix = score.correctivePromptPrefix(
+            language: request.language,
+            thesis: request.contextData.reasoningBrief?.thesis
+        )
+        let augmentedMemory: String
+        if request.workingMemorySummary.isEmpty {
+            augmentedMemory = prefix
+        } else {
+            augmentedMemory = "\(prefix)\n\n\(request.workingMemorySummary)"
+        }
+        return HybridBrainRequest(
+            conversation: request.conversation,
+            screenContext: request.screenContext,
+            language: request.language,
+            contextData: request.contextData,
+            userProfileSummary: request.userProfileSummary,
+            intentSummary: request.intentSummary,
+            workingMemorySummary: augmentedMemory,
+            attachedImageData: request.attachedImageData,
+            purpose: request.purpose
+        )
+    }
+
+    /// Plist-driven flag — false by default until we've seen telemetry shape.
+    /// Set `CAPTAIN_QUALITY_REGEN_ENABLED` to YES in Info.plist to opt in.
+    private var isQualityRegenEnabled: Bool {
+        Bundle.main.infoDictionary?["CAPTAIN_QUALITY_REGEN_ENABLED"] as? Bool ?? false
     }
 
     // MARK: - Cloud Route Processing

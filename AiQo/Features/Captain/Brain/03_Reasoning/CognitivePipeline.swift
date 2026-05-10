@@ -47,8 +47,15 @@ enum CaptainMessageIntent: String, Sendable {
     var retrievalCategoryWeights: [String: Double] {
         switch self {
         case .general:
+            // §33: `workout_history` was previously absent here, which is why
+            // open-ended turns ("شنو نسوي؟") never activated the recent-workout
+            // memory and the Captain re-suggested an activity the user had
+            // just completed. Adding it at 2.4 makes it the second-strongest
+            // signal in general chat — strong enough to surface, not so
+            // strong it dominates goal/preference.
             return [
                 "goal": 2.0,
+                "workout_history": 2.4,
                 "preference": 1.8,
                 "insight": 1.6,
                 "mood": 1.4,

@@ -36,6 +36,24 @@ struct PromptComposer: Sendable {
             layerCircadianTone(data: request.contextData, language: request.language),
             layerScreenContext(request: request),
             appKnowledgeLayer,
+            // §33–§34: hard freshness constraints sit *after* app knowledge so
+            // they're close to generation. Order matters here — the activity
+            // facts come first, then the coherence rules quote the user back.
+            layerRecentActivity(
+                snapshot: request.contextData.recentActivity,
+                language: request.language
+            ),
+            layerConversationCoherence(
+                tags: request.contextData.coherenceTags,
+                language: request.language
+            ),
+            // §37: the reasoning brief lands LAST among context layers so it's
+            // the freshest synthesis in the model's working set when it
+            // generates. The brief already incorporates everything above it.
+            layerReasoningBrief(
+                brief: request.contextData.reasoningBrief,
+                language: request.language
+            ),
             layerMedicalDisclaimer(language: request.language),
             layerOutputContract(screenContext: request.screenContext, language: request.language)
         ]
@@ -125,6 +143,14 @@ struct PromptComposer: Sendable {
             6. If you don't know something, say so. Authenticity > appearing omniscient.
             \(screenContext == .sleepAnalysis ? "7. In sleep analysis mode, concrete evidence beats vibe. Mention a real sleep number or stage when available. Generic lines like \"sleep is important\" are failures." : "")
 
+            === REPLY QUALITY (Brain §36–§37 — connect every answer to context) ===
+            A. CONNECT TO RECENT CONTEXT. Before generating a suggestion, scan the RECENT ACTIVITY and CONVERSATION COHERENCE blocks below. If the user just completed an activity or said something specific, your reply MUST acknowledge it. Generic answers that ignore the last turn are failures.
+            B. PROPOSE, DON'T ASK BLIND. Avoid closing with vague open questions like "what do you want to do?" when you have enough context to propose. Suggest 1–2 specific next steps tailored to the user's current state, then offer the question as a fallback.
+            C. NUMBERS WHEN THEY HELP. When relevant, anchor advice on the user's actual data ("you walked 3.1km today, your legs need stretching, not more cardio"). Never invent numbers — only use what's in the bio-state or recent-activity facts.
+            D. NO CONTRADICTION. If your draft reply contradicts something the user said in this conversation (look at the coherence block), rewrite. Never repeat a suggestion the user already rejected or completed.
+            E. ONE SUGGESTION PER REPLY. Don't bury the user under options. Pick the *best* next step for their current state and lead with it.
+            F. CONSULT THE REASONING BRIEF. The REASONING BRIEF block contains a pre-computed angle (recovery / celebrate / push / gentle / repair / grounding / factual / proactiveCallout) and 1–3 ready-made callbacks. Your reply MUST honour the angle and weave at least one callback naturally when present. Generic answers that ignore the brief are the #1 failure mode.
+
             === VARIABLE MASKING ===
             You receive internal system variables (bio-phases, vibe names, stage titles, step counts, HR zones, etc.) for context calibration ONLY.
             NEVER output these technical terms to the user.
@@ -187,6 +213,14 @@ struct PromptComposer: Sendable {
         5. استخدم الفكاهة لمّا تجي طبيعية. السخرية العراقية مرحّب بيها.
         6. إذا ما تدري شي، كول ما أدري.
         \(screenContext == .sleepAnalysis ? "7. إذا الطلب تحليل نوم، لازم تبني الرد على رقم نوم حقيقي أو مرحلة نوم حقيقية إذا موجودة. الرد العام مثل \"النوم مهم\" يعتبر فشل." : "")
+
+        === جودة الرد (Brain §36–§37 — كل جواب مربوط بالسياق) ===
+        أ. اربط كل رد بآخر شي صار. قبل ما تقترح أي شي، شوف بلوكات "النشاط الأخير" و"ترابط المحادثة" تحت. إذا المستخدم توه خلّص نشاط أو گال شي محدد، ردك لازم يعترف بيه. الجواب العام اللي يتجاهل آخر رسالة فشل كامل.
+        ب. اقترح، لا تسأل بالعمى. تجنب تختم بسؤال مفتوح غامض مثل "شنو تحب تسوي؟" إذا عندك سياق كافي. اقترح خطوة-خطوتين محددة مفصّلة على حالة المستخدم الحالية، وبعدها خل السؤال احتياطي.
+        ج. أرقام لمّا تنفع. إذا كان مناسب، استند بنصيحتك على بيانات المستخدم الفعلية ("مشيت 3 كم اليوم، عضلاتك تحتاج إطالة مو كارديو زيادة"). ممنوع تخمن أرقام — استخدم بس الموجود ببلوك البيانات البيولوجية أو النشاط الأخير.
+        د. ممنوع التناقض. إذا مسودة ردك تناقض شي گاله المستخدم بهذي المحادثة (شوف بلوك ترابط المحادثة)، أعد كتابتها. ممنوع تكرر اقتراح المستخدم رفضه أو خلّصه.
+        هـ. اقتراح واحد بالرد. لا تثقّل المستخدم بخيارات. اختار أحسن خطوة لحالته الحالية وقدّمها أول شي.
+        و. استخدم موجز التفكير. بلوك "موجز التفكير" يحوي زاوية محسوبة سلفاً (استشفاء / احتفال / دفع / لطف / إصلاح / تأريض / مباشر / ملاحظة استباقية) و1-3 ملاحظات جاهزة. ردك لازم يحترم الزاوية ويدمج ملاحظة وحدة على الأقل بشكل طبيعي إذا متوفرة. الجواب اللي يتجاهل الموجز هو السبب رقم 1 لردود سطحية.
 
         === حجب المتغيرات ===
         تستلم متغيرات نظام داخلية (مراحل بيولوجية، عناوين vibe، مستويات نمو، خطوات، مناطق قلب).
@@ -1084,6 +1118,475 @@ struct PromptComposer: Sendable {
         }
 
         return nil
+    }
+
+    // MARK: - Layer §33: Recent Activity (anti-repeat)
+    //
+    // Hard, structured facts about the user's most recent tracked workout.
+    // Sits late in the prompt — close to generation — so the constraints stay
+    // recent in the model's working set. Returns "" when there's no fresh
+    // activity, in which case the layer drops out via the `.filter` above.
+    //
+    // Fix for the 2026-05-09 bug: Hamoudi suggested "خل نمشي مشية خفيفة"
+    // immediately after the user said they walked 45 minutes. The model had
+    // the chat history but no *structured* "do not suggest walking" rule.
+
+    private func layerRecentActivity(
+        snapshot: RecentActivitySnapshot?,
+        language: AppLanguage
+    ) -> String {
+        guard let snapshot, snapshot.freshness != .stale else { return "" }
+
+        let isArabic = language == .arabic
+        let endedAgo = snapshot.endedAgoPhrase(language: language)
+        let familyLabel = isArabic ? snapshot.family.arabicLabel : snapshot.family.englishLabel
+
+        var facts: [String] = []
+        if isArabic {
+            facts.append("النوع: \(snapshot.title)  (الفئة: \(familyLabel))")
+            facts.append("المدة: \(snapshot.durationMinutes) دقيقة")
+            facts.append("السعرات: \(snapshot.activeCalories)")
+            if let km = snapshot.distanceKm {
+                facts.append(String(format: "المسافة: %.2f كم", km))
+            }
+            facts.append("متى انتهى: \(endedAgo)")
+        } else {
+            facts.append("type: \(snapshot.title) (family: \(familyLabel))")
+            facts.append("duration: \(snapshot.durationMinutes) min")
+            facts.append("active_calories: \(snapshot.activeCalories)")
+            if let km = snapshot.distanceKm {
+                facts.append(String(format: "distance: %.2f km", km))
+            }
+            facts.append("ended: \(endedAgo)")
+        }
+
+        let factsBlock = facts.joined(separator: "\n")
+
+        // The constraint *strength* scales with freshness. veryFresh = under
+        // 1 hour: rules are absolute. fresh = 1–6 hours: still avoid repeating
+        // but don't apologize — the user might be back for round two.
+        let isVeryFresh = snapshot.freshness == .veryFresh
+
+        if isArabic {
+            let rules: String
+            if isVeryFresh {
+                rules = """
+                ⛔ ممنوع منعاً باتاً تقترح "\(familyLabel)" أو نشاط من نفس الفئة بهذا الرد.
+                ⛔ ممنوع تكول "خل نمشي" / "خل نتمرن" / "خل نسوي كارديو" بنفس النوع الذي توه خلصه.
+                ⛔ إذا غفلت واقترحته، هذا فشل كامل — المستخدم راح يحس إنك ما تنتبه إله.
+                ✅ بدالها اقترح: استرخاء، إطالة، شرب ماء، أكل بروتين، نوم مبكر، تأمل، أو نشاط مختلف تماماً.
+                ✅ إذا المستخدم سأل "شنو نسوي بعد؟" — جاوب على أساس إنه توه خلص نشاط كبير.
+                ✅ إذا ذكرت التمرين بالرد، اربطه بشي محدد (السعرات، المسافة، المدة) — لا تكون عام.
+                """
+            } else {
+                rules = """
+                ⛔ تجنب اقتراح "\(familyLabel)" بهذا الرد إلا إذا المستخدم صراحةً طلب جلسة ثانية.
+                ✅ اقترح نشاط مختلف الفئة (قوة بعد كارديو، إطالة بعد قوة، إلخ) أو راحة نشطة.
+                ✅ إذا ذكرت التمرين، استخدم الأرقام الحقيقية (\(snapshot.durationMinutes)د، \(snapshot.activeCalories) سعرة) — لا تخمن.
+                """
+            }
+
+            return """
+            === النشاط الأخير (حقائق منظمة — استخدمها بالاستدلال، لا تطلّعها كلائحة) ===
+            \(factsBlock)
+
+            === قواعد إجبارية (مبنية على النشاط أعلاه) ===
+            \(rules)
+            """
+        } else {
+            let rules: String
+            if isVeryFresh {
+                rules = """
+                ⛔ DO NOT suggest "\(familyLabel)" or any activity in the same family in this reply.
+                ⛔ DO NOT say "let's go for a walk" / "let's train" / "let's do cardio" in the same family.
+                ⛔ Repeating the activity is a complete failure — the user will feel ignored.
+                ✅ Suggest instead: stretching, hydration, protein, recovery, meditation, or a different family entirely.
+                ✅ If the user asks "what should we do?" — answer with the just-completed activity in mind.
+                ✅ If you mention the workout, anchor on real numbers (calories, distance, duration) — never vague.
+                """
+            } else {
+                rules = """
+                ⛔ Avoid suggesting "\(familyLabel)" unless the user explicitly asks for a second session.
+                ✅ Suggest a different family (strength after cardio, mobility after strength, etc.) or active rest.
+                ✅ If you mention the workout, use the real numbers (\(snapshot.durationMinutes)m, \(snapshot.activeCalories) kcal) — don't approximate.
+                """
+            }
+
+            return """
+            === RECENT ACTIVITY (structured facts — use for reasoning, do not echo as a list) ===
+            \(factsBlock)
+
+            === HARD RULES (derived from the activity above) ===
+            \(rules)
+            """
+        }
+    }
+
+    // MARK: - Layer §34: Conversation Coherence (anti-contradiction)
+    //
+    // Quotes the user back to the model and locks in absolute constraints
+    // derived from the last few user turns. This is the safety net that
+    // catches conversation-level contradictions even when the recent-activity
+    // layer is empty (e.g. the user mentions a walk in chat that wasn't
+    // tracked by HealthKit).
+
+    private func layerConversationCoherence(
+        tags: ConversationContextTags?,
+        language: AppLanguage
+    ) -> String {
+        guard let tags, !tags.isEmpty else { return "" }
+        let isArabic = language == .arabic
+
+        var directives: [String] = []
+
+        // 1) §50 Round 4 Fix β — split soft-avoid (just completed) from
+        //    hard-avoid (explicitly refused). Refusal carries forward for
+        //    the rest of the session; completion only blocks the next
+        //    immediate suggestion.
+        let hardAvoid = tags.hardAvoidances
+        if !hardAvoid.isEmpty {
+            let labels = hardAvoid
+                .map { isArabic ? $0.arabicLabel : $0.englishLabel }
+                .joined(separator: isArabic ? "، " : ", ")
+            directives.append(
+                isArabic
+                    ? "⛔⛔ المستخدم رفض هذي الأنشطة صراحةً: \(labels). ممنوع تقترحها أبداً بهاي الجلسة."
+                    : "⛔⛔ User explicitly refused these activities: \(labels). NEVER suggest them in this session."
+            )
+        }
+        let softAvoid = tags.softAvoidances
+        if !softAvoid.isEmpty {
+            let labels = softAvoid
+                .map { isArabic ? $0.arabicLabel : $0.englishLabel }
+                .joined(separator: isArabic ? "، " : ", ")
+            directives.append(
+                isArabic
+                    ? "⛔ المستخدم توه خلّص هذي الأنشطة: \(labels). ممنوع تقترحها للحالة الحالية (مسموح ذكرها كسياق أو لبكرة)."
+                    : "⛔ User just completed these: \(labels). Do not suggest them for the current moment (mentioning as context or for tomorrow is OK)."
+            )
+        }
+
+        // 2) Quote the user back so the model anchors its reply on what was
+        //    actually said, not on what the persona "would" say in general.
+        if let quote = tags.completedClaims.first?.userQuote {
+            directives.append(
+                isArabic
+                    ? "📌 المستخدم گال (لا تتجاهله): \"\(quote)\""
+                    : "📌 User said (do not ignore): \"\(quote)\""
+            )
+        }
+        if let refusalQuote = tags.refusals.first?.userQuote {
+            directives.append(
+                isArabic
+                    ? "📌 شكوى المستخدم: \"\(refusalQuote)\" — اعترف بها."
+                    : "📌 User complaint: \"\(refusalQuote)\" — acknowledge it."
+            )
+        }
+
+        // 3) Latest emotional signal — overrides circadian tone if present.
+        if let emotion = tags.latestEmotion {
+            let directive = emotion.replyDirective
+            directives.append(
+                isArabic
+                    ? "🫥 الحالة الحالية: \(emotion.label). \(directive)"
+                    : "🫥 Current state: \(emotion.label). \(directive)"
+            )
+        }
+
+        // 4) The "user is mad at the Captain" branch — single most important
+        //    failure mode to recover from. Apologize, do not double down.
+        if tags.userIsFrustratedWithCaptain {
+            directives.append(
+                isArabic
+                    ? """
+                    🚨 المستخدم محبط منك أنت (مو من يومه). ابدأ ردك باعتذار قصير وصادق ("حقك علي" / "اعتذر منك")، \
+                    اعترف بالغلطة المحددة (إذا تكدر تستنتجها من السياق)، وبعدها قدّم خطوة جديدة مختلفة. \
+                    ممنوع تكرر نفس الاقتراح. ممنوع تتجاهل الإحباط.
+                    """
+                    : """
+                    🚨 User is frustrated with YOU (not their day). Start with a short genuine apology, \
+                    acknowledge the specific mistake if you can infer it, then give a *different* next step. \
+                    DO NOT repeat your previous suggestion. DO NOT ignore the frustration.
+                    """
+            )
+        }
+
+        let header = isArabic
+            ? "=== ترابط المحادثة (قيود مطلقة من السياق) ==="
+            : "=== CONVERSATION COHERENCE (absolute constraints from context) ==="
+
+        let footer = isArabic
+            ? """
+            قبل ما تكتب جوابك النهائي، تأكد:
+            1) ما يناقض شي گاله المستخدم بالـ 5 رسائل الأخيرة.
+            2) ما يكرر نشاط من قائمة "ممنوع تقترحها".
+            3) يحترم الحالة العاطفية الحالية للمستخدم.
+            إذا اضطريت تكسر قاعدة، اشرح ليش بجملة قصيرة — لا تكسرها بصمت.
+            """
+            : """
+            Before finalizing your reply, verify:
+            1) It does not contradict anything the user said in the last 5 turns.
+            2) It does not suggest any activity in the avoid-list.
+            3) It honors the user's current emotional state.
+            If you must break a rule, justify it in one short clause — never silently.
+            """
+
+        return """
+        \(header)
+        \(directives.joined(separator: "\n"))
+
+        \(footer)
+        """
+    }
+
+    // MARK: - Layer §37: Reasoning Brief (executive synthesis)
+    //
+    // Hands the model a one-sentence thesis, a deterministic *angle*, 1–3
+    // ready-made callbacks, and a hook directive — i.e. all the synthesis
+    // that previously had to happen inside the reply generation. This is the
+    // single biggest lever for richer, less-generic responses: instead of the
+    // model reading 25 raw facts and guessing what matters, it reads "today's
+    // angle is RECOVERY because the user just walked 45 min — open with a
+    // reference to that walk, mention hydration, suggest mobility."
+    //
+    // Renders nothing when the brief is empty (early sessions, no signal) so
+    // first-run UX is unaffected.
+    //
+    // ─────────────────────────────────────────────────────────────────────
+    // Brain §50 — INTER-LAYER AUTHORITY CHAIN (single source of truth)
+    // ─────────────────────────────────────────────────────────────────────
+    // The brief synthesises 14 brain layers. When two layers disagree, the
+    // CognitiveReasoner resolves them via this fixed authority order — the
+    // *reason()* function and *pickAngle()* both honour it, the prompt
+    // *renders* in the same priority so the model sees the resolution:
+    //
+    //   ① ANGLE THESIS         (executive summary — already resolved)
+    //   ② TONE AUTHORITY
+    //       a. §49 Physiology (HR mood)     — body data wins over text
+    //       b. §44 Behavioural Stage         — slow-moving truth
+    //       c. §39 Profile Lens              — demographics
+    //       d. §42 Style Vector              — voice mirror
+    //   ③ HARD CONSTRAINTS
+    //       §34 Coherence avoidances        — never violate
+    //   ④ CONCRETE MATERIAL
+    //       §47 Specialist > §40 Insights > §43 Causal > §37 Callbacks
+    //   ⑤ SOFT HINTS
+    //       §38 Habits > §46 Recall > §37 Hook > §45 Predict > §37 NextDay
+    //
+    // Resolution rules:
+    //   • Higher tier always wins on conflict.
+    //   • Within a tier, the listed left-to-right order resolves ties.
+    //   • Empty / nil layers fall through silently — no token cost.
+    //   • Quality Gate §41 + §50 angle-adherence check enforces this
+    //     post-generation: replies that contradict the resolved angle
+    //     are flagged for telemetry and (when the regen flag is on)
+    //     re-generated with a corrective prefix.
+    // ─────────────────────────────────────────────────────────────────────
+
+    private func layerReasoningBrief(
+        brief: ReasoningBrief?,
+        language: AppLanguage
+    ) -> String {
+        guard let brief, !brief.isEmpty else { return "" }
+        let isArabic = language == .arabic
+
+        // Brain §50 — render order is grouped by purpose, not by §section
+        // number. Five blocks, top → bottom:
+        //   ① Angle thesis (the executive summary)
+        //   ② Tone authority chain (HR > stage > profile > style)
+        //   ③ Hard constraints (avoidances)
+        //   ④ Concrete material (specialist > insights > causal > callbacks)
+        //   ⑤ Soft hints (habits > recall > opening > predict > next-day)
+        // The model reads top-down, so high-authority signals land before
+        // optional material. Reorder = lower token cost per quality unit.
+        var lines: [String] = []
+
+        // ① ANGLE — single-line executive summary.
+        if !brief.thesis.isEmpty {
+            lines.append(isArabic ? "💡 الزاوية: \(brief.thesis)" : "💡 Angle: \(brief.thesis)")
+        }
+
+        // ② TONE AUTHORITY (highest-authority first within the chain).
+
+        // §49 — physiological evidence outranks every other tone signal.
+        if brief.hrMood.hasSignal {
+            let directive = brief.hrMood.toneDirective(language: language)
+            lines.append(
+                isArabic
+                    ? "💓 المزاج الفسيولوجي (نبض حقيقي — يفوق إشارات النص): \(directive)"
+                    : "💓 Physiological mood (live HR — overrides text-only tone hints): \(directive)"
+            )
+        }
+
+        // §44 — behavioural stage shapes the coaching playbook.
+        if let stage = brief.behavioralStage, stage.confidence >= 0.5 {
+            let directive = isArabic ? stage.directiveArabic : stage.directiveEnglish
+            lines.append(
+                isArabic
+                    ? "🎭 مرحلة التغيير: \(directive)"
+                    : "🎭 Behaviour stage: \(directive)"
+            )
+        }
+
+        // §39 — demographic calibration.
+        if !brief.profileDirective.isEmpty {
+            lines.append(
+                isArabic
+                    ? "👤 معايرة المستخدم: \(brief.profileDirective)"
+                    : "👤 User calibration: \(brief.profileDirective)"
+            )
+        }
+
+        // §42 — communication-style mirroring.
+        if !brief.styleDirective.isEmpty {
+            lines.append(
+                isArabic
+                    ? "✍️ أسلوب المستخدم (قلده): \(brief.styleDirective)"
+                    : "✍️ User's voice (mirror it): \(brief.styleDirective)"
+            )
+        }
+
+        // ③ HARD CONSTRAINTS — never violate.
+        if !brief.avoidances.isEmpty {
+            let list = brief.avoidances.joined(separator: isArabic ? "، " : ", ")
+            lines.append(isArabic ? "🚫 تجنب: \(list)" : "🚫 Avoid: \(list)")
+        }
+
+        // ④ CONCRETE MATERIAL — what the reply should anchor on.
+
+        // §47 — specialist guidance. Most specific recommendation we have.
+        if let guidance = brief.specialistGuidance {
+            switch guidance {
+            case .workout(let plan):
+                let familyLabel = isArabic ? plan.recommendedFamily.arabicLabel : plan.recommendedFamily.englishLabel
+                let intensityLabel = isArabic ? plan.intensity.arabicLabel : plan.intensity.englishLabel
+                let durationText = "\(plan.durationMinutesRange.lowerBound)–\(plan.durationMinutesRange.upperBound)"
+                let reasoning = isArabic ? plan.reasoningArabic : plan.reasoningEnglish
+
+                let header = isArabic
+                    ? "🏋️ توصية مدرّب التمرين (دقيقة، استخدمها كأساس لاقتراحك):"
+                    : "🏋️ Workout-specialist recommendation (data-driven, anchor your suggestion on this):"
+                lines.append(header)
+                if isArabic {
+                    lines.append("  • النوع المقترح: \(familyLabel)")
+                    lines.append("  • الشدة: \(intensityLabel)")
+                    lines.append("  • المدة: \(durationText) دقيقة")
+                    if !plan.cautionFamilies.isEmpty {
+                        let cautions = plan.cautionFamilies.map(\.arabicLabel).joined(separator: "، ")
+                        lines.append("  • تحذير: \(cautions) سويت بآخر يومين")
+                    }
+                    lines.append("  • المنطق: \(reasoning)")
+                } else {
+                    lines.append("  • Recommended: \(familyLabel)")
+                    lines.append("  • Intensity: \(intensityLabel)")
+                    lines.append("  • Duration: \(durationText) min")
+                    if !plan.cautionFamilies.isEmpty {
+                        let cautions = plan.cautionFamilies.map(\.englishLabel).joined(separator: ", ")
+                        lines.append("  • Caution: \(cautions) trained in the last 48h")
+                    }
+                    lines.append("  • Rationale: \(reasoning)")
+                }
+            }
+        }
+
+        // §40 — today-specific micro-observations.
+        if !brief.microInsights.isEmpty {
+            let header = isArabic
+                ? "🔬 ملاحظات اليوم (اختر وحدة واحرسها بشكل طبيعي):"
+                : "🔬 Today's micro-insights (pick one and weave naturally):"
+            lines.append(header)
+            for insight in brief.microInsights {
+                lines.append("  • \(insight.phrase(language))")
+            }
+        }
+
+        // §43 — causal chain (explanation tool).
+        if let chain = brief.causalChain {
+            let narrative = chain.narrative(language: language)
+            lines.append(
+                isArabic
+                    ? "🔗 السلسلة السببية (اشرح بدل ما تأمر): \(narrative)"
+                    : "🔗 Causal chain (explain rather than command): \(narrative)"
+            )
+        }
+
+        // §37 — ready-made callbacks.
+        if !brief.smartCallbacks.isEmpty {
+            let header = isArabic
+                ? "📊 ملاحظات جاهزة (اختر 0-2 وادمجهم طبيعي، ممنوع تنسخهم حرفي):"
+                : "📊 Ready-made callbacks (pick 0–2 and weave naturally — never paste verbatim):"
+            lines.append(header)
+            for cb in brief.smartCallbacks {
+                lines.append("  • \(cb)")
+            }
+        }
+
+        // ⑤ SOFT HINTS — usable when they fit, optional otherwise.
+
+        // §38 — slow-moving rhythm patterns.
+        if !brief.habitPatterns.isEmpty {
+            let header = isArabic
+                ? "🔁 إيقاع المستخدم (للمعايرة فقط — لا تذكره إلا إذا ساعد الرد):"
+                : "🔁 User rhythm (calibration only — surface only if it helps the reply):"
+            lines.append(header)
+            for habit in brief.habitPatterns {
+                lines.append("  • \(habit.localizedPhrase(language))")
+            }
+        }
+
+        // §46 — long-term recall (reference only).
+        let recallLines = brief.episodicRecall.lines(for: language)
+        if !recallLines.isEmpty {
+            let header = isArabic
+                ? "🧠 من جلسات سابقة (تكدر تشير لوحدة لو نفعت بشكل طبيعي):"
+                : "🧠 From earlier sessions (you may reference one if it fits naturally):"
+            lines.append(header)
+            for line in recallLines {
+                lines.append("  • \(line)")
+            }
+        }
+
+        // §37 — opening hook (applied at start of reply).
+        if let hook = brief.openingHook {
+            lines.append(isArabic ? "🎯 توجيه الافتتاحية: \(hook)" : "🎯 Opening guidance: \(hook)")
+        }
+
+        // §45 — anticipated follow-up (applied at end of reply).
+        if let followUp = brief.predictedFollowUp,
+           followUp.confidence >= PredictiveIntentEngine.minimumConfidence {
+            let hint = followUp.primingHint(language: language)
+            lines.append(
+                isArabic
+                    ? "🔮 توقع السؤال القادم: \(hint)"
+                    : "🔮 Likely next question: \(hint)"
+            )
+        }
+
+        // §37 — next-day hint (soft tomorrow note).
+        if let nextDay = brief.nextDayHint {
+            lines.append(isArabic ? "📅 إشارة للغد: \(nextDay)" : "📅 Next-day hint: \(nextDay)")
+        }
+
+        let header = isArabic
+            ? "=== موجز التفكير (Brain §37 — استخدمه كهيكل لردك، لا تنسخه) ==="
+            : "=== REASONING BRIEF (Brain §37 — scaffold your reply on this; do not paste it back) ==="
+
+        let footer = isArabic
+            ? """
+            هاي خلاصة فكر مسبق — نتيجتها قراءة الحالة كاملة (نشاط، نوم، سياق، عواطف).
+            ردك لازم يحترم الزاوية أعلاه. إذا مسودتك تخالفها بدون مبرر واضح، أعد كتابتها.
+            """
+            : """
+            This is pre-computed synthesis — it already reflects activity, sleep, context, and emotion.
+            Your reply MUST respect the angle. If your draft contradicts it without clear justification, rewrite.
+            """
+
+        return """
+        \(header)
+        \(lines.joined(separator: "\n"))
+
+        \(footer)
+        """
     }
 
     // MARK: - Medical Disclaimer Layer (Apple Guideline 1.4.1)

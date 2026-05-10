@@ -97,6 +97,38 @@ struct CaptainContextData: Sendable {
     var messageSentiment: SentimentResult?
     var recentInteractions: String?
 
+    // Brain Refactor §33 — Recent-activity awareness
+    /// Most recent completed workout within the last 24h, if any. Drives the
+    /// "anti-repeat" prompt layer that prevents the Captain from suggesting
+    /// the same activity the user just finished.
+    var recentActivity: RecentActivitySnapshot?
+
+    // Brain Refactor §34 — Conversation coherence
+    /// Structured tags extracted from the last few user turns — completed
+    /// activities the user explicitly mentioned, complaints, emotional cues.
+    /// Surfaced as absolute constraints in the conversation-coherence layer
+    /// so the model never contradicts something the user just said.
+    var coherenceTags: ConversationContextTags?
+
+    // Brain Refactor §37 — Executive reasoning
+    /// Pre-computed thesis + observed patterns + ready-made callbacks. The
+    /// reasoning-brief prompt layer renders this so Gemini receives a
+    /// deterministic synthesis instead of having to derive one from raw
+    /// metrics every turn.
+    var reasoningBrief: ReasoningBrief?
+
+    // Brain Refactor §46 — Long-term recall
+    /// Compact summary of high-salience prior episodes (≤ 14 days back).
+    /// Surfaced as "echoes from before" so the Captain feels continuous
+    /// across sessions instead of stateless.
+    var episodicRecall: EpisodicRecall?
+
+    // Brain Refactor §49 — Real-time HR mood
+    /// Physiological mood inferred from live HR vs resting HR vs recent
+    /// activity. Powers the tone-matching directive — Captain speaks
+    /// calmly when the body is stressed, energetically when it's excited.
+    var hrMood: HRMoodReading?
+
     init(
         steps: Int,
         calories: Int,
@@ -202,7 +234,15 @@ final class CaptainContextBuilder {
         )
     }
 
-    func buildContextData() async -> CaptainContextData {
+    /// Builds the full context payload the prompt composer consumes.
+    ///
+    /// `conversation` was added in Brain Refactor §34 to power the coherence
+    /// analyzer. Existing call sites that don't (yet) have a conversation can
+    /// pass `[]` — the recent-activity snapshot still works, and the coherence
+    /// layer simply degrades to empty.
+    func buildContextData(
+        conversation: [CaptainConversationMessage] = []
+    ) async -> CaptainContextData {
         let snapshot = await buildSystemContext()
         let hour = calendar.component(.hour, from: Date())
         let bioPhase = BioTimePhase.current(
@@ -222,6 +262,18 @@ final class CaptainContextBuilder {
             toneHint: snapshot.toneHint,
             stageTitle: snapshot.stageTitle,
             bioPhase: bioPhase
+        )
+
+        // Brain Refactor §33 — populate the recent-activity snapshot for the
+        // anti-repeat prompt layer. Always on (no flag) because correctness:
+        // the bug it fixes is "Captain suggests walking after a 45-min walk."
+        contextData.recentActivity = RecentActivityProvider.mostRecent()
+
+        // Brain Refactor §34 — populate conversation-coherence tags from the
+        // last user turns. Empty conversation → empty tags → layer no-ops.
+        contextData.coherenceTags = ConversationCoherenceAnalyzer.shared.analyze(
+            conversation: conversation,
+            recentActivity: contextData.recentActivity
         )
 
         // Brain V2: Gate behind feature flag
@@ -254,7 +306,132 @@ final class CaptainContextBuilder {
             contextData.recentInteractions = ConversationThreadManager.shared.buildPromptSummary(maxEntries: 5)
         }
 
+        // §50 Round 5 Fix η — fan out all three independent async fetches
+        // in parallel instead of awaiting them sequentially. Each is
+        // already timeout-bounded individually:
+        //   • EpisodicRecall: SwiftData actor fetch (~5–15ms typical)
+        //   • Live HR: HealthKit query (~50–500ms, 2s timeout)
+        //   • Resting HR: HealthKit query (~10–100ms, 2s timeout)
+        // Sequential cost = sum (worst case ~4s+). Parallel cost = max
+        // (~2s ceiling). Saves a noticeable chunk of cold-start latency
+        // on every Captain message build.
+        async let recallTask = EpisodicRecallProvider.fetch()
+        async let liveHRTask = intelligenceManager.fetchLiveHeartRate()
+        async let restingHRTask = intelligenceManager.fetchRestingHeartRate()
+
+        // Brain Refactor §46 — long-term recall (joins on completion).
+        contextData.episodicRecall = await recallTask
+
+        // Brain Refactor §49 — real-time HR mood. The reader gracefully
+        // degrades when either HR read returns nil; confidence drops but
+        // a reading is still produced from defaults.
+        // §50 Round 6 — pre-build the profile lens so HRMoodReader can use
+        // an age-aware fallback baseline when restingHR isn't available.
+        // The lens is *also* built inside `buildReasoningBrief` later — both
+        // calls return the same data (synchronous, deterministic), so we
+        // intentionally accept the small duplicate cost in exchange for a
+        // simpler call graph.
+        let liveHR = await liveHRTask
+        let restingHR = await restingHRTask
+        let earlyDefaults = UserDefaults.standard
+        let earlyLens = UserProfileLensBuilder.build(
+            ageString: earlyDefaults.string(forKey: CaptainCustomizationKeys.age),
+            weightString: earlyDefaults.string(forKey: CaptainCustomizationKeys.weight),
+            level: contextData.level,
+            recentWorkoutCount: WorkoutHistoryStore.shared.recentEntries().count,
+            primaryGoal: CaptainPersonalizationStore.shared.currentSnapshot()?.primaryGoal
+        )
+        // Prefer the live (last-5-min) reading; fall back to today's avg
+        // already on contextData when no live sample exists.
+        let currentHR = liveHR ?? contextData.heartRate
+        contextData.hrMood = HRMoodReader.read(
+            currentHR: currentHR,
+            restingHR: restingHR,
+            recentActivity: contextData.recentActivity,
+            hour: hour,
+            profileLens: earlyLens
+        )
+
+        // Brain Refactor §37 — synthesise the reasoning brief AFTER all the
+        // upstream signals are populated. The reasoner reads the same
+        // CaptainContextData fields that downstream prompt layers will see,
+        // so its angle/thesis/callbacks stay coherent with everything else.
+        contextData.reasoningBrief = buildReasoningBrief(
+            from: contextData,
+            hour: hour,
+            language: AppSettingsStore.shared.appLanguage,
+            conversation: conversation
+        )
+
         return contextData
+    }
+
+    // MARK: - Brain Refactor §37: Reasoning Brief
+
+    /// Bundles the existing context fields + the daily-point buffer + the
+    /// recent-workout list into a `ReasonerInput`, then asks the reasoner for
+    /// a brief. Returns `nil` when no signal is acute enough to be worth
+    /// rendering — the prompt layer drops empty briefs.
+    private func buildReasoningBrief(
+        from data: CaptainContextData,
+        hour: Int,
+        language: AppLanguage,
+        conversation: [CaptainConversationMessage]
+    ) -> ReasoningBrief? {
+        let dailyPoints = WeeklyMetricsBufferStore.shared.allBuffered().map { buffer in
+            DailyHealthPoint(
+                date: buffer.dayStart,
+                steps: buffer.steps,
+                sleepHours: buffer.sleepHours ?? 0,
+                caloriesBurned: Int(buffer.activeCalories),
+                workoutCount: buffer.workoutCount,
+                workoutMinutes: buffer.workoutMinutes,
+                waterIntakePercent: 0,
+                ringCompletion: 0,
+                restingHeartRate: buffer.restingHeartRate
+            )
+        }
+
+        let recentWorkouts = WorkoutHistoryStore.shared.recentEntries()
+
+        // §39 — build the demographic lens. Reads age/weight from the same
+        // UserDefaults the customization sheet writes to. §50 Round 6 — uses
+        // the `CaptainCustomizationKeys` constants so a key rename can't
+        // silently break the lens. Primary goal comes from the
+        // personalization store. All fields are optional individually —
+        // partial profiles still produce a useful (if narrower) directive.
+        let defaults = UserDefaults.standard
+        let lens = UserProfileLensBuilder.build(
+            ageString: defaults.string(forKey: CaptainCustomizationKeys.age),
+            weightString: defaults.string(forKey: CaptainCustomizationKeys.weight),
+            level: data.level,
+            recentWorkoutCount: recentWorkouts.count,
+            primaryGoal: CaptainPersonalizationStore.shared.currentSnapshot()?.primaryGoal
+        )
+
+        let input = ReasonerInput(
+            language: language,
+            hour: hour,
+            steps: data.steps,
+            calories: data.calories,
+            sleepHoursLastNight: data.sleepHours,
+            restingHeartRate: data.heartRate,
+            level: data.level,
+            bioPhase: data.bioPhase,
+            trend: data.trendSnapshot,
+            recentActivity: data.recentActivity,
+            coherence: data.coherenceTags,
+            dailyPoints: dailyPoints,
+            recentWorkouts: recentWorkouts,
+            profileLens: lens,
+            currentStreak: StreakManager.shared.currentStreak,
+            conversation: conversation,
+            episodicRecall: data.episodicRecall ?? .empty,
+            hrMood: data.hrMood ?? .unknown
+        )
+
+        let brief = CognitiveReasoner.shared.reason(input: input)
+        return brief.isEmpty ? nil : brief
     }
 
     // MARK: - Brain V2: Trend Snapshot
