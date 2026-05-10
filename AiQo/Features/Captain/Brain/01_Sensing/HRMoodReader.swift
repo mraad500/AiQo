@@ -118,7 +118,13 @@ struct HRMoodReading: Sendable {
         language == .arabic ? toneDirectiveArabic : toneDirectiveEnglish
     }
 
-    static let unknown = HRMoodReading(
+    /// `nonisolated` because the project's `default-isolation=MainActor`
+    /// inference would otherwise pin this static to the main actor, and
+    /// default parameter values (e.g. `hrMood: HRMoodReading = .unknown`
+    /// in `PredictiveIntentEngine.anticipate`) are evaluated in a
+    /// nonisolated context. The struct holds only `Sendable` value types
+    /// so the static is genuinely safe to read from any actor.
+    nonisolated static let unknown = HRMoodReading(
         currentHR: nil,
         restingHR: nil,
         elevationFromResting: nil,
