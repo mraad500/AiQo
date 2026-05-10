@@ -95,6 +95,8 @@ struct KitchenPlanGenerationService {
         - Use fridge ingredients first when possible.
         - Include breakfast, lunch, and dinner daily.
         - Ingredient names must be short.
+        - Include 3-6 short numbered cooking steps per meal (each under 80 chars).
+        - cookingMinutes should be realistic and ≤ \(cookingTimeMinutes) when possible.
 
         Context:
         - User goal: \(goal)
@@ -115,12 +117,18 @@ struct KitchenPlanGenerationService {
               "carbs": 45,
               "fat": 15,
               "fiber": 5,
+              "cookingMinutes": 20,
               "ingredients": [
                 {
                   "name": "ingredient",
                   "amount": 1,
                   "unit": "cup"
                 }
+              ],
+              "steps": [
+                "Heat the pan on medium",
+                "Cook chicken 4 minutes per side",
+                "Plate with rice and vegetables"
               ]
             }
           ]
@@ -177,6 +185,10 @@ struct KitchenPlanGenerationService {
                 ? [KitchenIngredient(name: "Basic ingredients", amount: nil, unit: nil)]
                 : ingredients
 
+            let cleanedSteps = (rawMeal.steps ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
             mappedMeals.append(
                 KitchenPlannedMeal(
                     dayIndex: dayIndex,
@@ -187,7 +199,9 @@ struct KitchenPlanGenerationService {
                     carbs: rawMeal.carbs,
                     fat: rawMeal.fat,
                     fiber: rawMeal.fiber,
-                    ingredients: resolvedIngredients
+                    ingredients: resolvedIngredients,
+                    steps: cleanedSteps,
+                    cookingMinutes: rawMeal.cookingMinutes
                 )
             )
         }
@@ -278,7 +292,9 @@ struct KitchenPlanGenerationService {
                         title: template.title,
                         calories: template.calories,
                         protein: template.protein,
-                        ingredients: ingredients
+                        ingredients: ingredients,
+                        steps: template.steps,
+                        cookingMinutes: template.cookingMinutes
                     )
                 )
             }
@@ -291,7 +307,14 @@ struct KitchenPlanGenerationService {
         type: KitchenMealType,
         dayIndex: Int,
         prefersArabic: Bool
-    ) -> (title: String, calories: Int, protein: Double, ingredients: [KitchenIngredient]) {
+    ) -> (
+        title: String,
+        calories: Int,
+        protein: Double,
+        ingredients: [KitchenIngredient],
+        steps: [String],
+        cookingMinutes: Int
+    ) {
         switch type {
         case .breakfast:
             if prefersArabic {
@@ -303,7 +326,14 @@ struct KitchenPlanGenerationService {
                         KitchenIngredient(name: "بيض", amount: 2, unit: "حبة"),
                         KitchenIngredient(name: "شوفان", amount: 0.5, unit: "كوب"),
                         KitchenIngredient(name: "خضار", amount: 1, unit: "كوب")
-                    ]
+                    ],
+                    steps: [
+                        "سخّن المقلاة على نار وسط",
+                        "اكسر البيض واخفقه",
+                        "اقلي البيض دقيقتين مع الخضار",
+                        "قدّمه مع الخبز"
+                    ],
+                    cookingMinutes: 10
                 )
             }
             return (
@@ -314,7 +344,14 @@ struct KitchenPlanGenerationService {
                     KitchenIngredient(name: "Eggs", amount: 2, unit: "pcs"),
                     KitchenIngredient(name: "Oats", amount: 0.5, unit: "cup"),
                     KitchenIngredient(name: "Vegetables", amount: 1, unit: "cup")
-                ]
+                ],
+                steps: [
+                    "Heat the pan on medium heat",
+                    "Whisk the eggs in a bowl",
+                    "Cook eggs and vegetables for 2 minutes",
+                    "Serve with toast"
+                ],
+                cookingMinutes: 10
             )
 
         case .lunch:
@@ -327,7 +364,15 @@ struct KitchenPlanGenerationService {
                         KitchenIngredient(name: "صدر دجاج", amount: 200, unit: "غم"),
                         KitchenIngredient(name: "رز", amount: 1, unit: "كوب"),
                         KitchenIngredient(name: "بروكلي", amount: 1, unit: "كوب")
-                    ]
+                    ],
+                    steps: [
+                        "تبّل الدجاج بالملح والفلفل",
+                        "اشوي الدجاج 5 دقائق لكل وجه",
+                        "اسلق الرز حسب التعليمات",
+                        "اطبخ البروكلي على البخار 4 دقائق",
+                        "اجمع الكل بصحن واحد"
+                    ],
+                    cookingMinutes: 25
                 )
             }
             return (
@@ -338,7 +383,15 @@ struct KitchenPlanGenerationService {
                     KitchenIngredient(name: "Chicken breast", amount: 200, unit: "g"),
                     KitchenIngredient(name: "Rice", amount: 1, unit: "cup"),
                     KitchenIngredient(name: "Broccoli", amount: 1, unit: "cup")
-                ]
+                ],
+                steps: [
+                    "Season the chicken with salt and pepper",
+                    "Grill chicken 5 minutes per side",
+                    "Cook rice per package instructions",
+                    "Steam broccoli for 4 minutes",
+                    "Plate everything together"
+                ],
+                cookingMinutes: 25
             )
 
         case .dinner:
@@ -351,7 +404,14 @@ struct KitchenPlanGenerationService {
                         KitchenIngredient(name: "تونة", amount: 1, unit: "علبة"),
                         KitchenIngredient(name: "خس", amount: 1, unit: "كوب"),
                         KitchenIngredient(name: "خيار", amount: 1, unit: "حبة")
-                    ]
+                    ],
+                    steps: [
+                        "صفّي التونة من الزيت",
+                        "قطّع الخس والخيار قطع صغيرة",
+                        "اخلط الكل في صحن واحد",
+                        "أضف عصير ليمون وزيت زيتون"
+                    ],
+                    cookingMinutes: 8
                 )
             }
             return (
@@ -362,7 +422,14 @@ struct KitchenPlanGenerationService {
                     KitchenIngredient(name: "Tuna", amount: 1, unit: "can"),
                     KitchenIngredient(name: "Lettuce", amount: 1, unit: "cup"),
                     KitchenIngredient(name: "Cucumber", amount: 1, unit: "pc")
-                ]
+                ],
+                steps: [
+                    "Drain the tuna",
+                    "Chop lettuce and cucumber",
+                    "Combine everything in a bowl",
+                    "Add lemon juice and olive oil"
+                ],
+                cookingMinutes: 8
             )
 
         case .snack:
@@ -371,14 +438,18 @@ struct KitchenPlanGenerationService {
                     title: "سناك سريع",
                     calories: 180,
                     protein: 10,
-                    ingredients: [KitchenIngredient(name: "مكسرات", amount: 30, unit: "غم")]
+                    ingredients: [KitchenIngredient(name: "مكسرات", amount: 30, unit: "غم")],
+                    steps: ["زن 30 غرام مكسرات", "تناولها مباشرة"],
+                    cookingMinutes: 1
                 )
             }
             return (
                 title: "Quick snack",
                 calories: 180,
                 protein: 10,
-                ingredients: [KitchenIngredient(name: "Nuts", amount: 30, unit: "g")]
+                ingredients: [KitchenIngredient(name: "Nuts", amount: 30, unit: "g")],
+                steps: ["Weigh out 30g of nuts", "Enjoy as-is"],
+                cookingMinutes: 1
             )
         }
     }
@@ -421,7 +492,9 @@ private struct GeneratedMealPayload: Decodable {
     let carbs: Double?
     let fat: Double?
     let fiber: Double?
+    let cookingMinutes: Int?
     let ingredients: [GeneratedIngredientPayload]?
+    let steps: [String]?
 }
 
 private struct GeneratedIngredientPayload: Decodable {

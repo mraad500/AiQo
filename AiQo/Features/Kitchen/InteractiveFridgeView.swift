@@ -363,8 +363,21 @@ private struct FridgePinnedItemBadge: View {
                 )
 
             VStack(spacing: 6) {
-                Text(item.emoji)
-                    .font(.system(size: 28))
+                ZStack(alignment: .topTrailing) {
+                    Text(item.emoji)
+                        .font(.system(size: 28))
+
+                    if !item.freshnessIcon.isEmpty {
+                        Text(item.freshnessIcon)
+                            .font(.system(size: 11))
+                            .padding(2)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.92))
+                            )
+                            .offset(x: 10, y: -6)
+                            .accessibilityHidden(true)
+                    }
+                }
 
                 Text(item.title)
                     .font(.system(size: 9, weight: .bold, design: .rounded))
@@ -419,6 +432,21 @@ private struct FridgePinnedItemBadge: View {
             x: 0,
             y: isHighlighted ? 10 : 4
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+    }
+
+    private var accessibilityDescription: String {
+        var parts: [String] = ["\(item.title)", item.quantityText]
+        if !item.freshnessIcon.isEmpty {
+            let template = NSLocalizedString(
+                "fridge.freshness.daysInFridge",
+                value: "في الثلاجة منذ %d أيام",
+                comment: "Days in fridge"
+            )
+            parts.append(String(format: template, item.daysInFridge))
+        }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -569,6 +597,8 @@ private struct FridgeDisplayItem: Identifiable {
     let emoji: String
     let quantityText: String
     let quantityValueText: String
+    let freshnessIcon: String
+    let daysInFridge: Int
 
     init(item: FridgeItem) {
         self.id = item.id
@@ -576,6 +606,8 @@ private struct FridgeDisplayItem: Identifiable {
         self.emoji = item.emoji
         self.quantityText = FridgeTextFormatter.quantity(item.quantity, unit: item.unit)
         self.quantityValueText = FridgeTextFormatter.value(item.quantity)
+        self.freshnessIcon = item.freshness().icon
+        self.daysInFridge = item.daysInFridge()
     }
 }
 

@@ -95,6 +95,7 @@ struct FridgeItem: Identifiable, Codable, Equatable {
     var quantity: Double
     var unit: String?
     var alchemyNoteKey: String?
+    var addedAt: Date
     var updatedAt: Date
 
     init(
@@ -103,6 +104,7 @@ struct FridgeItem: Identifiable, Codable, Equatable {
         quantity: Double,
         unit: String? = nil,
         alchemyNoteKey: String? = nil,
+        addedAt: Date? = nil,
         updatedAt: Date = Date()
     ) {
         self.id = id
@@ -110,7 +112,24 @@ struct FridgeItem: Identifiable, Codable, Equatable {
         self.quantity = quantity
         self.unit = unit
         self.alchemyNoteKey = alchemyNoteKey
+        self.addedAt = addedAt ?? updatedAt
         self.updatedAt = updatedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, quantity, unit, alchemyNoteKey, addedAt, updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.quantity = try c.decode(Double.self, forKey: .quantity)
+        self.unit = try c.decodeIfPresent(String.self, forKey: .unit)
+        self.alchemyNoteKey = try c.decodeIfPresent(String.self, forKey: .alchemyNoteKey)
+        let updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+        self.updatedAt = updatedAt
+        self.addedAt = try c.decodeIfPresent(Date.self, forKey: .addedAt) ?? updatedAt
     }
 
     var localizedAlchemyNote: String? {
@@ -120,6 +139,43 @@ struct FridgeItem: Identifiable, Codable, Equatable {
 
     var emoji: String {
         IngredientEmojiResolver.emoji(for: name, fallback: "🧺")
+    }
+
+    /// Days since the item first entered the fridge.
+    func daysInFridge(now: Date = Date()) -> Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: addedAt)
+        let end = calendar.startOfDay(for: now)
+        return max(calendar.dateComponents([.day], from: start, to: end).day ?? 0, 0)
+    }
+
+    /// Lightweight freshness label. Categories are rough — purely a UX hint, not a safety guarantee.
+    enum FreshnessState {
+        case fresh
+        case staleSoon
+        case stale
+
+        var icon: String {
+            switch self {
+            case .fresh:
+                return ""
+            case .staleSoon:
+                return "⏳"
+            case .stale:
+                return "⚠️"
+            }
+        }
+    }
+
+    func freshness(now: Date = Date(), staleSoonAfterDays: Int = 5, staleAfterDays: Int = 8) -> FreshnessState {
+        let days = daysInFridge(now: now)
+        if days >= staleAfterDays {
+            return .stale
+        }
+        if days >= staleSoonAfterDays {
+            return .staleSoon
+        }
+        return .fresh
     }
 }
 
@@ -152,6 +208,8 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
     var fat: Double?
     var fiber: Double?
     var ingredients: [KitchenIngredient]
+    var steps: [String]
+    var cookingMinutes: Int?
 
     init(
         id: UUID = UUID(),
@@ -163,7 +221,9 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
         carbs: Double? = nil,
         fat: Double? = nil,
         fiber: Double? = nil,
-        ingredients: [KitchenIngredient]
+        ingredients: [KitchenIngredient],
+        steps: [String] = [],
+        cookingMinutes: Int? = nil
     ) {
         self.id = id
         self.dayIndex = dayIndex
@@ -175,6 +235,29 @@ struct KitchenPlannedMeal: Identifiable, Codable, Equatable {
         self.fat = fat
         self.fiber = fiber
         self.ingredients = ingredients
+        self.steps = steps
+        self.cookingMinutes = cookingMinutes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, dayIndex, type, title, calories, protein, carbs, fat, fiber
+        case ingredients, steps, cookingMinutes
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.dayIndex = try c.decode(Int.self, forKey: .dayIndex)
+        self.type = try c.decode(KitchenMealType.self, forKey: .type)
+        self.title = try c.decode(String.self, forKey: .title)
+        self.calories = try c.decodeIfPresent(Int.self, forKey: .calories)
+        self.protein = try c.decodeIfPresent(Double.self, forKey: .protein)
+        self.carbs = try c.decodeIfPresent(Double.self, forKey: .carbs)
+        self.fat = try c.decodeIfPresent(Double.self, forKey: .fat)
+        self.fiber = try c.decodeIfPresent(Double.self, forKey: .fiber)
+        self.ingredients = try c.decode([KitchenIngredient].self, forKey: .ingredients)
+        self.steps = try c.decodeIfPresent([String].self, forKey: .steps) ?? []
+        self.cookingMinutes = try c.decodeIfPresent(Int.self, forKey: .cookingMinutes)
     }
 
     var localImageName: String {
@@ -210,6 +293,148 @@ struct KitchenMealPlan: Identifiable, Codable, Equatable {
         self.startDate = startDate
         self.days = days
         self.meals = meals
+    }
+}
+
+struct KitchenInsight: Identifiable, Equatable {
+    enum Tone: Equatable {
+        case positive
+        case attention
+        case warning
+        case info
+    }
+
+    let id: String
+    let tone: Tone
+    let icon: String
+    let title: String
+    let detail: String
+}
+
+enum MealAdherenceState: String, Codable {
+    case pending
+    case ate
+    case skipped
+    case swapped
+
+    var icon: String {
+        switch self {
+        case .pending:
+            return "circle"
+        case .ate:
+            return "checkmark.circle.fill"
+        case .skipped:
+            return "xmark.circle.fill"
+        case .swapped:
+            return "arrow.triangle.2.circlepath.circle.fill"
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .pending:
+            return "kitchen.adherence.pending".localized
+        case .ate:
+            return "kitchen.adherence.ate".localized
+        case .skipped:
+            return "kitchen.adherence.skipped".localized
+        case .swapped:
+            return "kitchen.adherence.swapped".localized
+        }
+    }
+
+    /// Whether this state contributes to today's nutrition totals.
+    var countsTowardTotals: Bool {
+        switch self {
+        case .ate, .swapped:
+            return true
+        case .pending, .skipped:
+            return false
+        }
+    }
+}
+
+struct MealAdherenceRecord: Codable, Equatable {
+    var state: MealAdherenceState
+    var loggedAt: Date
+
+    init(state: MealAdherenceState, loggedAt: Date = Date()) {
+        self.state = state
+        self.loggedAt = loggedAt
+    }
+}
+
+struct LoggedMeal: Identifiable, Codable, Equatable {
+    let id: UUID
+    var meal: KitchenPlannedMeal
+    var loggedAt: Date
+    var servings: Double
+
+    init(
+        id: UUID = UUID(),
+        meal: KitchenPlannedMeal,
+        loggedAt: Date = Date(),
+        servings: Double = 1.0
+    ) {
+        self.id = id
+        self.meal = meal
+        self.loggedAt = loggedAt
+        self.servings = max(0.25, servings)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, meal, loggedAt, servings
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.meal = try c.decode(KitchenPlannedMeal.self, forKey: .meal)
+        self.loggedAt = try c.decode(Date.self, forKey: .loggedAt)
+        self.servings = try c.decodeIfPresent(Double.self, forKey: .servings) ?? 1.0
+    }
+
+    /// Returns the meal scaled by `servings` for accurate totals.
+    var scaledMeal: KitchenPlannedMeal {
+        guard servings != 1.0 else { return meal }
+        var scaled = meal
+        scaled.calories = meal.calories.map { Int(Double($0) * servings) }
+        scaled.protein = meal.protein.map { $0 * servings }
+        scaled.carbs = meal.carbs.map { $0 * servings }
+        scaled.fat = meal.fat.map { $0 * servings }
+        scaled.fiber = meal.fiber.map { $0 * servings }
+        return scaled
+    }
+}
+
+struct FavoriteMeal: Identifiable, Codable, Equatable {
+    let id: UUID
+    var meal: KitchenPlannedMeal
+    var savedAt: Date
+    var lastUsedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        meal: KitchenPlannedMeal,
+        savedAt: Date = Date(),
+        lastUsedAt: Date = Date()
+    ) {
+        self.id = id
+        self.meal = meal
+        self.savedAt = savedAt
+        self.lastUsedAt = lastUsedAt
+    }
+}
+
+struct WaterEntry: Identifiable, Codable, Equatable {
+    let id: UUID
+    var cups: Int
+    var loggedAt: Date
+
+    init(id: UUID = UUID(), cups: Int = 1, loggedAt: Date = Date()) {
+        self.id = id
+        self.cups = max(1, cups)
+        self.loggedAt = loggedAt
     }
 }
 

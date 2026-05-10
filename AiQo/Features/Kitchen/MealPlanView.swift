@@ -209,11 +209,27 @@ private extension MealPlanView {
                 mealImageThumb(meal)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(meal.title)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    Text(meal.type.localizedTitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(meal.title)
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        favoriteToggle(meal: meal)
+                    }
+
+                    HStack(spacing: 6) {
+                        Text(meal.type.localizedTitle)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+
+                        if let cookingMinutes = meal.cookingMinutes, cookingMinutes > 0 {
+                            cookingTimePill(minutes: cookingMinutes)
+                        }
+
+                        if let calories = meal.calories, let budgetPct = budgetPercentage(forCalories: calories) {
+                            macroBudgetPill(percentage: budgetPct)
+                        }
+                    }
                 }
 
                 Spacer()
@@ -231,10 +247,18 @@ private extension MealPlanView {
                 }
             }
 
+            if isMealForToday(meal) {
+                adherenceRow(meal: meal)
+            }
+
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(meal.ingredients) { ingredient in
                     ingredientRow(ingredient, meal: meal)
                 }
+            }
+
+            if !meal.steps.isEmpty {
+                stepsDisclosure(meal: meal)
             }
 
             if let missingIngredient = unresolvedMissingIngredients.first {
@@ -246,6 +270,167 @@ private extension MealPlanView {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
+    }
+
+    private func favoriteToggle(meal: KitchenPlannedMeal) -> some View {
+        let isFav = kitchenStore.isFavorite(meal)
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            kitchenStore.toggleFavorite(meal)
+        } label: {
+            Image(systemName: isFav ? "star.fill" : "star")
+                .font(.system(size: 13, weight: .black))
+                .foregroundStyle(isFav ? Color.orange : Color.secondary.opacity(0.65))
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(isFav ? Color.orange.opacity(0.14) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            isFav
+                ? "kitchen.mealplan.favorite.remove".localized
+                : "kitchen.mealplan.favorite.add".localized
+        )
+    }
+
+    private func budgetPercentage(forCalories calories: Int) -> Int? {
+        let raw = UserDefaults.standard.object(forKey: "aiqo.nutrition.calorieGoal") as? Int ?? 2200
+        guard raw > 0 else { return nil }
+        let pct = Int((Double(calories) / Double(raw) * 100).rounded())
+        guard pct > 0 else { return nil }
+        return pct
+    }
+
+    private func macroBudgetPill(percentage: Int) -> some View {
+        let tint: Color
+        if percentage >= 50 {
+            tint = Color.orange
+        } else if percentage >= 30 {
+            tint = Color(red: 0.92, green: 0.62, blue: 0.30)
+        } else {
+            tint = Color(red: 0.36, green: 0.74, blue: 0.55)
+        }
+        return Text(
+            String(format: "kitchen.mealplan.budgetPct".localized, percentage)
+        )
+        .font(.system(size: 10, weight: .black, design: .rounded))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule(style: .continuous)
+                .fill(tint.opacity(0.14))
+        )
+    }
+
+    private func cookingTimePill(minutes: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "timer")
+                .font(.system(size: 10, weight: .bold))
+            Text(String(format: "kitchen.mealplan.cookingMinutes".localized, minutes))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(.tertiarySystemFill))
+        )
+    }
+
+    @ViewBuilder
+    private func adherenceRow(meal: KitchenPlannedMeal) -> some View {
+        let state = kitchenStore.adherenceState(for: meal.id)
+
+        HStack(spacing: 8) {
+            Text("kitchen.adherence.prompt".localized)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 4)
+
+            adherenceChip(meal: meal, target: .ate, current: state, icon: "checkmark", labelKey: "kitchen.adherence.ate")
+            adherenceChip(meal: meal, target: .swapped, current: state, icon: "arrow.triangle.2.circlepath", labelKey: "kitchen.adherence.swapped")
+            adherenceChip(meal: meal, target: .skipped, current: state, icon: "xmark", labelKey: "kitchen.adherence.skipped")
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private func adherenceChip(
+        meal: KitchenPlannedMeal,
+        target: MealAdherenceState,
+        current: MealAdherenceState,
+        icon: String,
+        labelKey: String
+    ) -> some View {
+        let isSelected = current == target
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            kitchenStore.setAdherence(isSelected ? .pending : target, for: meal.id)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .black))
+                Text(labelKey.localized)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.78))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? Color.kitchenMint : Color(.tertiarySystemFill))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(labelKey.localized)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func stepsDisclosure(meal: KitchenPlannedMeal) -> some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(meal.steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Color.kitchenMint))
+
+                        Text(step)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(.top, 6)
+        } label: {
+            Label(
+                "kitchen.mealplan.steps".localized,
+                systemImage: "list.bullet.rectangle"
+            )
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(.secondary)
+        }
+        .tint(.secondary)
+    }
+
+    private func isMealForToday(_ meal: KitchenPlannedMeal) -> Bool {
+        guard let plan = kitchenStore.pinnedPlan else { return false }
+        let calendar = Calendar.current
+        let dayOffset = calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: plan.startDate),
+            to: calendar.startOfDay(for: Date())
+        ).day ?? 0
+        let activeDay = min(max(dayOffset + 1, 1), max(plan.days, 1))
+        return meal.dayIndex == activeDay
     }
 
     @ViewBuilder

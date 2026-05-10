@@ -4,8 +4,30 @@ struct KitchenScreen: View {
     @State private var selectedMeal: Meal?
     @State private var regenerateFeedbackTrigger = 0
 
+    @AppStorage("aiqo.nutrition.calorieGoal") private var calorieGoal = 2200
+    @AppStorage("aiqo.nutrition.proteinGoal") private var proteinGoal = 150.0
+    @AppStorage("aiqo.nutrition.waterGoal") private var waterGoal = 8
+
     let viewModel: KitchenViewModel
     @ObservedObject var kitchenStore: KitchenPersistenceStore
+
+    private var insights: [KitchenInsight] {
+        kitchenStore.computeInsights(
+            inputs: KitchenPersistenceStore.InsightInputs(
+                calorieGoal: calorieGoal,
+                proteinGoal: proteinGoal,
+                waterGoal: waterGoal
+            )
+        )
+    }
+
+    private var weeklySnapshot: [KitchenPersistenceStore.DailyNutrition] {
+        kitchenStore.weeklySnapshot(calorieGoal: calorieGoal)
+    }
+
+    private var streakDays: Int {
+        kitchenStore.currentStreak(calorieGoal: calorieGoal)
+    }
 
     var body: some View {
         ZStack {
@@ -17,7 +39,12 @@ struct KitchenScreen: View {
                     .padding(.bottom, 16)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .trailing, spacing: 24) {
+                    VStack(alignment: .trailing, spacing: 22) {
+                        if !insights.isEmpty {
+                            SmartInsightsCard(insights: insights)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+
                         // ملخص التغذية اليومي
                         DailyFoodLogView(kitchenStore: kitchenStore)
 
@@ -25,10 +52,17 @@ struct KitchenScreen: View {
                         mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
                         mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
 
+                        WeeklySummaryCard(
+                            snapshot: weeklySnapshot,
+                            calorieGoal: calorieGoal,
+                            streakDays: streakDays
+                        )
+
                         buttonsSection
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
+                    .animation(.spring(response: 0.45, dampingFraction: 0.86), value: insights.count)
                 }
             }
         }
@@ -36,10 +70,18 @@ struct KitchenScreen: View {
             await viewModel.loadMeals()
         }
         .sheet(item: $selectedMeal) { meal in
+            let pinned = activePinnedPlanMeal(for: meal.meal_type)
+            let onMarkEaten: (() -> Void)? = pinned.map { p in
+                { [kitchenStore] in
+                    kitchenStore.setAdherence(.ate, for: p.id)
+                }
+            }
+
             if #available(iOS 17.0, *) {
                 MealDetailSheet(
                     meal: meal,
-                    pinnedMeal: activePinnedPlanMeal(for: meal.meal_type)
+                    pinnedMeal: pinned,
+                    onMarkEaten: onMarkEaten
                 )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
@@ -48,7 +90,8 @@ struct KitchenScreen: View {
             } else {
                 MealDetailSheet(
                     meal: meal,
-                    pinnedMeal: activePinnedPlanMeal(for: meal.meal_type)
+                    pinnedMeal: pinned,
+                    onMarkEaten: onMarkEaten
                 )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
@@ -60,24 +103,78 @@ struct KitchenScreen: View {
 
 private extension KitchenScreen {
     var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("screen.kitchen.title".localized)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundStyle(.primary)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("screen.kitchen.title".localized)
+                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary)
 
-            HStack(spacing: 6) {
-                Text(formattedDate())
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(formattedDate())
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
 
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    Image(systemName: "calendar")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            todayCaloriesChip
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 74)
+        .frame(minHeight: 74)
         .padding(.horizontal, 24)
+    }
+
+    @ViewBuilder
+    var todayCaloriesChip: some View {
+        let goal = UserDefaults.standard.object(forKey: "aiqo.nutrition.calorieGoal") as? Int ?? 2200
+        let consumed = caloriesConsumedToday()
+        let remaining = max(goal - consumed, 0)
+        let isOver = consumed > goal
+
+        VStack(alignment: .trailing, spacing: 2) {
+            Text("\(remaining)")
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundStyle(isOver ? Color.red.opacity(0.9) : Color.primary)
+
+            Text(isOver
+                ? "screen.kitchen.over".localized
+                : "screen.kitchen.remaining".localized)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isOver ? Color.red.opacity(0.1) : Color.kitchenMint.opacity(0.18))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    isOver ? Color.red.opacity(0.3) : Color.kitchenMint.opacity(0.4),
+                    lineWidth: 1
+                )
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            isOver
+                ? String(format: "screen.kitchen.over.a11y".localized, consumed - goal)
+                : String(format: "screen.kitchen.remaining.a11y".localized, remaining)
+        )
+    }
+
+    func caloriesConsumedToday() -> Int {
+        let plannedTotal = kitchenStore.adheredPlannedMealsToday()
+            .compactMap(\.calories)
+            .reduce(0, +)
+        let loggedTotal = kitchenStore.loggedMealsToday()
+            .compactMap(\.meal.calories)
+            .reduce(0, +)
+        return plannedTotal + loggedTotal
     }
 
     func mealSection(titleKey: String, type: MealType) -> some View {
@@ -256,9 +353,17 @@ private extension KitchenMealType {
 struct MealDetailSheet: View {
     let meal: Meal
     let pinnedMeal: KitchenPlannedMeal?
+    var onMarkEaten: (() -> Void)?
+
+    @State private var isCookModePresented = false
 
     private var presentation: MealDetailPresentation {
         MealImageSpecFactory.details(for: meal, pinnedMeal: pinnedMeal)
+    }
+
+    private var canCook: Bool {
+        guard let steps = pinnedMeal?.steps else { return false }
+        return !steps.isEmpty
     }
 
     var body: some View {
@@ -276,6 +381,10 @@ struct MealDetailSheet: View {
                 Text(meal.name_ar)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
+
+                if let cookingMinutes = pinnedMeal?.cookingMinutes, cookingMinutes > 0 {
+                    cookingTimeBadge(minutes: cookingMinutes)
+                }
 
                 HStack(spacing: 10) {
                     detailStatCard(
@@ -342,11 +451,100 @@ struct MealDetailSheet: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+
+                if let steps = pinnedMeal?.steps, !steps.isEmpty {
+                    cookingStepsSection(steps: steps)
+                }
+
+                if canCook {
+                    startCookingButton
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
         .safeAreaPadding(.bottom, 12)
+        .fullScreenCover(isPresented: $isCookModePresented) {
+            if let pinnedMeal {
+                CookModeView(meal: pinnedMeal, onMarkEaten: onMarkEaten)
+            }
+        }
+    }
+
+    private var startCookingButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            isCookModePresented = true
+        } label: {
+            Label("kitchen.mealdetail.startCooking".localized, systemImage: "play.circle.fill")
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.kitchenMint)
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+
+    private func cookingTimeBadge(minutes: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "timer")
+                .font(.system(size: 12, weight: .bold))
+            Text(
+                String(
+                    format: "kitchen.mealdetail.cookingMinutes".localized,
+                    minutes
+                )
+            )
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+        }
+        .foregroundStyle(.primary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(.tertiarySystemFill))
+        )
+    }
+
+    private func cookingStepsSection(steps: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("kitchen.mealdetail.steps".localized)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 8) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(width: 26, height: 26)
+                            .background(
+                                Circle().fill(Color.kitchenMint)
+                            )
+
+                        Text(step)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(.secondarySystemBackground))
+                    )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     func detailStatCard(title: String, subtitle: String) -> some View {
