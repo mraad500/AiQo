@@ -368,7 +368,7 @@ struct WeeklyReviewView: View {
                 ?? normalized(env["COACH_BRAIN_LLM_API_KEY"])
                 ?? normalized(info["COACH_BRAIN_LLM_API_KEY"] as? String)
 
-            guard let apiKey, let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
+            guard let apiKey, let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent") else {
                 return nil
             }
 
@@ -376,6 +376,7 @@ struct WeeklyReviewView: View {
             request.httpMethod = "POST"
             request.timeoutInterval = 25
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
 
             let body: [String: Any] = [
                 "systemInstruction": [
@@ -395,6 +396,8 @@ struct WeeklyReviewView: View {
             ]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
+            // TODO(privacy): route through CloudBrainService — bypasses AuditLogger today.
+            // See AiQo_Master_Blueprint_18.md §4.1.1.
             let (data, response) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse,

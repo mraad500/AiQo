@@ -1,9 +1,11 @@
 # Changelog
 
-## v1.0.2 — 2026-04-20
+## v1.0.2 (build 19) — 2026-05-11
 
 ### New
 
+- **Plan world-class upgrade** — the workout plan surface (Plan, Workout Runner, Insights, Weekly Stats, Exercise Detail, Template Library, Intake Chips, Workout Cards, Flow Views) is rebuilt on a unified four-color brand palette (mint · sand · lavender · lemon) via the new `PlanPalette`. Visual hierarchy now comes from typography, spacing, and material layering — not color noise.
+- **Captain cognitive brain refactor (§33–§50)** — 14-layer cognitive brain refactor across the 11 Brain subsystems (00_Foundation → 10_Observability). App-Knowledge v2 (sliced + struct-generated), first-workout toast, dynamic welcome composer, and Captain metrics observability.
 - **Learning Spark Stage 2** — a new 5-course picker lands in Stage 2, slot 3, letting the user choose one free course from a curated set (Edraak + Coursera). Course titles, Arabic descriptions, and "~hours" pills help you pick by your time budget.
 - Stage 2 picker header: "اختر الكورس اللي يلهمك الآن — تقدر تجرب غيره بالمرحلة الجاية" — the user holds agency, Stage 3+ can offer a different path.
 - On-device certificate verification extended to Stage 2 as-is — same `HamoudiVerificationReasoner` pipeline, zero new privacy labels, image never leaves the device.
@@ -12,12 +14,19 @@
 
 ### Improved
 
+- Captain chat keeps the latest reply visible when the keyboard is open (no more cut-off bottom reply).
 - Certificate URL field in the Stage 1 / Stage 2 submission flow is now optional. The image is sufficient for verification; label and placeholder now explicitly mark the field as "(اختياري)" / "(Optional)".
 - Career-path course title tuned to match the exact string on the issued Misk certificate ("...ناجح" suffix) — fewer false "pending review" results.
 - Audit log entries now segment verification outcomes by stage (`learningSpark.stage1` vs `learningSpark.stage2`) for funnel analysis later.
 
+### Security
+
+- **API keys moved from URL query strings to the `X-goog-api-key` request header** in the three remaining direct-Gemini callers (MemoryExtractor, SmartFridgeCameraViewModel, WeeklyReviewView). URL query strings can leak into HTTP logs, NSURLSession debug output, and proxy server logs — header-based auth eliminates that surface. Aligns these three callers with the canonical `HybridBrain` pattern.
+- `HRMoodReading.unknown` marked `nonisolated` to remove a Sendable warning.
+
 ### Behind the scenes
 
+- Project hygiene pass (Blueprint 18, 2026-05-10): 30+ historical markdown files reorganized into `docs/` (archive / explainers / security); 1.5 GB build/ + 19 .DS_Store + the "untitled folder" stash removed; Finder-duplicate blueprint deleted. Zero source code touched.
 - Plank Ladder (the legacy Stage 2 slot-3 challenge) is retained fully compilable behind `PLANK_LADDER_CHALLENGE_ENABLED`. It can be re-enabled at any time for rollback. Emergency both-flags-off shows a non-interactive "قريباً" placeholder.
 - Zero new App Store privacy labels, zero new cloud endpoints, zero new data collected.
 - New `QuestXPRewards` lookup table: only Learning Spark quests currently carry an explicit XP value — other quests will receive values via future product-tuning PRs (no silent stage-default grants).

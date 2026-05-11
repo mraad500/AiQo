@@ -236,6 +236,8 @@ struct MemoryExtractor: Sendable {
 
             let request = try await makeExtractorRequest(body: body)
 
+            // TODO(privacy): route through CloudBrainService — bypasses AuditLogger today.
+            // See AiQo_Master_Blueprint_18.md §4.1.1.
             let (data, response) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse,
@@ -335,6 +337,7 @@ struct MemoryExtractor: Sendable {
         request.httpMethod = "POST"
         request.timeoutInterval = 15
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config.apiKey, forHTTPHeaderField: "X-goog-api-key")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
     }
@@ -356,7 +359,7 @@ struct MemoryExtractor: Sendable {
         guard let apiKey else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent") else {
             throw URLError(.badURL)
         }
 

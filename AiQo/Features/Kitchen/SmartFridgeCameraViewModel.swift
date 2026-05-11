@@ -179,12 +179,15 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
             ]
         ]
 
-        let endpoint = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)")!
+        // TODO(privacy): route through CloudBrainService — bypasses AuditLogger today.
+        // See AiQo_Master_Blueprint_18.md §4.1.1.
+        let endpoint = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent")!
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = 15
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
