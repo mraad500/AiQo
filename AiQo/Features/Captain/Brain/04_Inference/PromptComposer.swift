@@ -166,7 +166,12 @@ struct PromptComposer: Sendable {
             - Multi-metric question (e.g. "how are my steps + sleep + calories + water?")
               → one tight sentence per metric, in the order asked, then ONE follow-up question.
               Never write a paragraph per metric. Total reply ≤ 5 short sentences.
-            - Workout / meal plan → structured plan, max 5 bullet points. No prose intro.
+            - Workout / meal plan → put all exercises/items in the `workoutPlan` / `mealPlan`
+              JSON field with the schema shown in the OUTPUT CONTRACT. The `message` field
+              must be ≤ 2 short sentences (a warm intro and a question), and MUST NEVER
+              list exercises, sets, reps, or meal items as text. The app renders the
+              structured plan as a beautiful card automatically — duplicating it as text
+              wastes tokens and risks truncation.
             - Emotional support → one warm sentence + one follow-up question.
             - Hard ceiling: ≤ 90 words OR ≤ 5 sentences, whichever is shorter, unless the
               user explicitly asked for a plan.
@@ -1050,12 +1055,37 @@ struct PromptComposer: Sendable {
               "spotifyRecommendation": null
             }
 
+            مخطط workoutPlan (لما المستخدم يطلب تمرين، املأ هذا الحقل بالضبط بهالشكل):
+            {
+              "title": "عنوان قصير للخطة",
+              "exercises": [
+                { "name": "اسم التمرين", "sets": 3, "repsOrDuration": "12 تكرار" },
+                { "name": "تمرين ثاني", "sets": 4, "repsOrDuration": "45 ثانية" }
+              ]
+            }
+
+            مخطط mealPlan (لما يطلب أكل):
+            {
+              "title": "عنوان الوجبة",
+              "items": [
+                { "name": "اسم العنصر", "calories": 250, "description": "وصف قصير" }
+              ]
+            }
+
             قواعد:
             - message: ردك الطبيعي بالعراقي. لازم يكون بشري ١٠٠٪ عراقي.
             - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.\(sleepRuleArabic)
-            - workoutPlan: null إلا إذا طلب تمرين.
-            - mealPlan: null إلا إذا طلب أكل.
+            - workoutPlan: null إلا إذا طلب تمرين. لمّا يطلب، عبّي الحقل بالمخطط أعلاه.
+            - mealPlan: null إلا إذا طلب أكل. لمّا يطلب، عبّي الحقل بالمخطط أعلاه.
             - spotifyRecommendation: null إلا إذا طلب موسيقى.\(myVibeRule)
+
+            🚨 قانون الخطط (الأهم — لا تكسره):
+            - لمّا workoutPlan أو mealPlan يكون غير null:
+              · حقل message لازم يكون جملة أو جملتين قصيرة بس (ترحيب + سؤال).
+              · ممنوع منعاً باتاً تكتب أسماء التمارين أو المجاميع أو التكرارات أو عناصر الوجبة بحقل message.
+              · ممنوع تستخدم نقاط/قوائم/bullets بالـ message — التطبيق يعرض الخطة كبطاقة منظّمة لوحدها.
+              · مثال صحيح للـ message: "محمد، هاي خطة 60 دقيقة قوية ومناسبة لمستواك. جاهز نبدأ؟"
+              · مثال خاطئ: "هاي الخطة: 1) سكوات 4×10 2) ضغط 4×12..."
             - ممنوع منعاً باتاً تحط أي نص خارج الـ JSON.
             - ممنوع تذكر JSON أو API بحقل الـ message.
 
@@ -1075,12 +1105,38 @@ struct PromptComposer: Sendable {
           "spotifyRecommendation": null
         }
 
+        workoutPlan schema (when the user asks for training, fill this field exactly like this):
+        {
+          "title": "Short plan title",
+          "exercises": [
+            { "name": "Exercise name", "sets": 3, "repsOrDuration": "12 reps" },
+            { "name": "Another move", "sets": 4, "repsOrDuration": "45 sec" }
+          ]
+        }
+
+        mealPlan schema (when the user asks for food):
+        {
+          "title": "Meal title",
+          "items": [
+            { "name": "Item name", "calories": 250, "description": "Short note" }
+          ]
+        }
+
         Rules:
         - message: Natural reply in English. Human and conversational.
         - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.\(sleepRuleEnglish)
-        - workoutPlan: null unless user asks for training.
-        - mealPlan: null unless user asks for food.
+        - workoutPlan: null unless the user asks for training. When they do, fill it using the schema above.
+        - mealPlan: null unless the user asks for food. When they do, fill it using the schema above.
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
+
+        🚨 PLAN RULE (most important — do not break):
+        - When workoutPlan or mealPlan is non-null:
+          · The `message` field must be 1–2 short sentences only (a warm intro + a question).
+          · NEVER list exercise names, sets, reps, or meal items inside `message`.
+          · NEVER use bullet points or numbered lists inside `message` — the app renders
+            the structured plan as a beautiful card on its own.
+          · Good `message`: "Mohammed, here's a strong 60-minute plan that matches your level. Ready to roll?"
+          · Bad `message`: "Here's the plan: 1) Squats 4×10 2) Bench 4×12 …"
         - NEVER output text outside the JSON object.
         - NEVER mention JSON, API, or internal logic in the message field.
 

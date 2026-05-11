@@ -11,6 +11,7 @@ struct ExerciseDetailSheet: View {
     }
 
     private var muscleAccent: Color { insights.muscleGroup.accent }
+    private var muscleInk: Color { insights.muscleGroup.ink }
     private var isArabic: Bool { language == .arabic }
 
     var body: some View {
@@ -53,7 +54,7 @@ struct ExerciseDetailSheet: View {
         .background(
             LinearGradient(
                 colors: [
-                    muscleAccent.opacity(0.16),
+                    muscleAccent.opacity(0.32),
                     Color(.systemBackground)
                 ],
                 startPoint: .top,
@@ -81,24 +82,17 @@ struct ExerciseDetailSheet: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [muscleAccent.opacity(0.95), muscleAccent.opacity(0.55)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(muscleAccent)
                     Image(systemName: insights.muscleGroup.icon)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundStyle(muscleInk)
                 }
                 .frame(width: 56, height: 56)
-                .shadow(color: muscleAccent.opacity(0.45), radius: 12, x: 0, y: 6)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(isArabic ? insights.muscleGroup.arabicLabel : insights.muscleGroup.englishLabel)
                         .font(.system(size: 12, weight: .heavy, design: .rounded))
-                        .foregroundStyle(muscleAccent.opacity(0.95))
+                        .foregroundStyle(muscleInk)
                         .textCase(.uppercase)
 
                     Text(exercise.name)
@@ -148,7 +142,7 @@ struct ExerciseDetailSheet: View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(muscleAccent)
+                .foregroundStyle(muscleInk)
             Text(label)
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
@@ -181,7 +175,7 @@ struct ExerciseDetailSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(muscleAccent)
+                    .foregroundStyle(muscleInk)
                 Text(title)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
                     .foregroundStyle(.primary)
@@ -204,9 +198,9 @@ struct ExerciseDetailSheet: View {
     private func cueRow(_ cue: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(muscleAccent)
-                .frame(width: 7, height: 7)
-                .padding(.top, 7)
+                .fill(muscleInk)
+                .frame(width: 6, height: 6)
+                .padding(.top, 8)
             Text(cue)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(.primary)
@@ -218,12 +212,12 @@ struct ExerciseDetailSheet: View {
     private func alternativeRow(_ alt: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "arrow.triangle.swap")
-                .font(.system(size: 12, weight: .heavy))
-                .foregroundStyle(muscleAccent)
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(muscleInk)
                 .frame(width: 22, height: 22)
                 .background(
                     Circle()
-                        .fill(muscleAccent.opacity(0.18))
+                        .fill(muscleAccent.opacity(0.55))
                 )
             Text(alt)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -271,7 +265,7 @@ struct ExerciseDetailSheet: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(muscleAccent.opacity(0.14))
+                .fill(muscleAccent.opacity(0.45))
         )
     }
 

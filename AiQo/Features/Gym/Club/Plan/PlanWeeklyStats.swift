@@ -92,62 +92,53 @@ struct PlanWeeklyStatsHero: View {
     private var isArabic: Bool { language == .arabic }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "chart.bar.xaxis")
-                    .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(Color(red: 0.55, green: 0.72, blue: 0.95))
-                Text(isArabic ? "أرقامك بالأسبوع" : "Your week in numbers")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isArabic ? "أرقامك بالأسبوع" : "Your week")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
 
             HStack(spacing: 9) {
                 statCard(
                     title: isArabic ? "جلسات" : "Sessions",
                     value: "\(stats.sessionsCompleted)",
                     subtitle: stats.totalSessions == 0 ? "—" : "/ \(stats.totalSessions)",
-                    icon: "checkmark.circle.fill",
-                    tint: Color(red: 0.45, green: 0.83, blue: 0.78)
+                    family: .mint
                 )
 
                 statCard(
                     title: isArabic ? "دقائق" : "Minutes",
                     value: "\(stats.totalMinutes)",
                     subtitle: isArabic ? "هاي الأسبوع" : "this week",
-                    icon: "clock.fill",
-                    tint: Color(red: 0.55, green: 0.72, blue: 0.95)
+                    family: .sand
                 )
 
                 statCard(
                     title: isArabic ? "إنجاز" : "Completion",
                     value: "\(Int((stats.completionRatio * 100).rounded()))%",
                     subtitle: completionLabel,
-                    icon: "target",
-                    tint: Color(red: 0.99, green: 0.78, blue: 0.45)
+                    family: .lavender
                 )
 
                 statCard(
                     title: isArabic ? "سلسلة" : "Streak",
                     value: "\(stats.streakDays)",
                     subtitle: isArabic ? "أيام متتالية" : "days in a row",
-                    icon: "flame.fill",
-                    tint: Color(red: 0.96, green: 0.50, blue: 0.55)
+                    family: .lemon
                 )
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
     }
 
     private var completionLabel: String {
@@ -158,18 +149,14 @@ struct PlanWeeklyStatsHero: View {
         return isArabic ? "إبدأ بقوة" : "ramp up"
     }
 
-    private func statCard(title: String, value: String, subtitle: String, icon: String, tint: Color) -> some View {
+    private func statCard(title: String, value: String, subtitle: String, family: PlanPalette.Family) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .heavy))
-                Text(title)
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
-                    .textCase(.uppercase)
-                    .tracking(0.4)
-            }
-            .foregroundStyle(tint)
+            Text(title)
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .lineLimit(1)
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .foregroundStyle(family.ink)
 
             Text(value)
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
@@ -184,14 +171,10 @@ struct PlanWeeklyStatsHero: View {
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
+        .padding(11)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(tint.opacity(0.13))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(tint.opacity(0.25), lineWidth: 1)
+                .fill(family.pastel.opacity(0.32))
         )
     }
 }

@@ -15,6 +15,7 @@ struct WorkoutTemplate: Identifiable {
     let exercisesEn: [Exercise]
     let icon: String
     let tint: Color
+    let ink: Color
     let descriptorAr: String
     let descriptorEn: String
 
@@ -56,7 +57,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Bodyweight Squat", sets: 2, repsOrDuration: "10 reps")
             ],
             icon: "bolt.fill",
-            tint: Color(red: 0.99, green: 0.78, blue: 0.45),
+            tint: PlanPalette.lemon,
+            ink: PlanPalette.lemonDeep,
             descriptorAr: "ابدأ يومك بطاقة عالية وبدون معدّات",
             descriptorEn: "Wake up the body in five — no gear"
         ),
@@ -82,7 +84,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Shoulder & Chest Opener", sets: 2, repsOrDuration: "45 sec")
             ],
             icon: "figure.flexibility",
-            tint: Color(red: 0.72, green: 0.80, blue: 0.96),
+            tint: PlanPalette.lavender,
+            ink: PlanPalette.lavenderDeep,
             descriptorAr: "تخفيف الشد وتحسين المدى الحركي",
             descriptorEn: "Decompress, lengthen, restore range"
         ),
@@ -108,7 +111,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Leg Raise", sets: 3, repsOrDuration: "12 reps")
             ],
             icon: "figure.core.training",
-            tint: Color(red: 0.45, green: 0.83, blue: 0.78),
+            tint: PlanPalette.mint,
+            ink: PlanPalette.mintDeep,
             descriptorAr: "كور قوي = توازن أفضل وظهر محمي",
             descriptorEn: "Sturdy core, balanced body, safer back"
         ),
@@ -136,7 +140,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Plank", sets: 3, repsOrDuration: "40 sec")
             ],
             icon: "figure.mixed.cardio",
-            tint: Color(red: 0.55, green: 0.72, blue: 0.95),
+            tint: PlanPalette.sand,
+            ink: PlanPalette.sandDeep,
             descriptorAr: "جسم كامل بدون معدّات وبفعالية عالية",
             descriptorEn: "Whole-body session, zero equipment"
         ),
@@ -164,7 +169,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Cool-Down Walk", sets: 1, repsOrDuration: "3 min")
             ],
             icon: "heart.fill",
-            tint: Color(red: 0.96, green: 0.50, blue: 0.55),
+            tint: PlanPalette.lemon,
+            ink: PlanPalette.lemonDeep,
             descriptorAr: "حرق سعرات وتعزيز قوة القلب",
             descriptorEn: "Burn calories, build a stronger heart"
         ),
@@ -194,7 +200,8 @@ enum WorkoutTemplateCatalog {
                 Exercise(name: "Cool-Down Stretch", sets: 1, repsOrDuration: "3 min")
             ],
             icon: "figure.strengthtraining.traditional",
-            tint: Color(red: 0.85, green: 0.66, blue: 0.96),
+            tint: PlanPalette.lavender,
+            ink: PlanPalette.lavenderDeep,
             descriptorAr: "بناء قوة ووضوح في كل المجموعات",
             descriptorEn: "Build strength across every major group"
         )
@@ -212,25 +219,24 @@ struct QuickStartTemplatesStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(Color(red: 0.99, green: 0.78, blue: 0.45))
                 Text(isArabic ? "بدء فوري" : "Quick start")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
                 Spacer()
                 Text(isArabic ? "بضغطة وحدة" : "One-tap pin")
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .foregroundStyle(PlanPalette.mintDeep)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
                     .background(
-                        Capsule(style: .continuous).fill(Color.white.opacity(0.55))
+                        Capsule(style: .continuous).fill(PlanPalette.mint.opacity(0.55))
                     )
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 11) {
+                HStack(spacing: 10) {
                     ForEach(WorkoutTemplateCatalog.all) { template in
                         Button {
                             onPickTemplate(template)
@@ -248,35 +254,19 @@ struct QuickStartTemplatesStrip: View {
 
     private func templateCard(_ template: WorkoutTemplate) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [template.tint, template.tint.opacity(0.65)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: template.icon)
-                        .font(.system(size: 14, weight: .heavy))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 36, height: 36)
-                .shadow(color: template.tint.opacity(0.45), radius: 8, y: 4)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("\(template.durationMinutes) \(isArabic ? "د" : "min")")
-                        .font(.system(size: 10, weight: .heavy, design: .rounded))
-                        .foregroundStyle(template.tint)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
-                    Text("\(template.exercisesAr.count) \(isArabic ? "تمارين" : "moves")")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(template.durationMinutes)")
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundStyle(template.ink)
+                Text(isArabic ? "د" : "min")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(template.ink)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
                 Spacer(minLength: 0)
+                Image(systemName: template.icon)
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundStyle(template.ink)
             }
 
             Text(template.displayTitle(language: language))
@@ -285,6 +275,7 @@ struct QuickStartTemplatesStrip: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(template.descriptor(language: language))
                 .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -293,34 +284,41 @@ struct QuickStartTemplatesStrip: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 4) {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 9, weight: .heavy))
-                Text(isArabic ? "ثبّت الآن" : "Pin now")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+            Spacer(minLength: 4)
+
+            HStack(spacing: 6) {
+                Text("\(template.exercisesAr.count) \(isArabic ? "تمارين" : "moves")")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                pinPill(template: template)
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(template.tint)
-            )
         }
-        .padding(13)
-        .frame(width: 175, alignment: .topLeading)
+        .padding(14)
+        .frame(width: 175, height: 175, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(template.tint.opacity(0.32))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(template.tint.opacity(0.16))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                        .stroke(template.tint.opacity(0.5), lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
+    }
+
+    private func pinPill(template: WorkoutTemplate) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.right")
+                .font(.system(size: 9, weight: .heavy))
+            Text(isArabic ? "ثبّت" : "Pin")
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
+        }
+        .foregroundStyle(template.ink)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.8))
+        )
     }
 }

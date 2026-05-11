@@ -36,15 +36,18 @@ enum PlanIntakeGoal: String, CaseIterable, Identifiable {
         }
     }
 
-    var accent: Color {
+    var family: PlanPalette.Family {
         switch self {
-        case .buildMuscle: Color(red: 0.55, green: 0.72, blue: 0.95)
-        case .cutFat: Color(red: 0.96, green: 0.50, blue: 0.45)
-        case .generalFitness: Color(red: 0.45, green: 0.83, blue: 0.78)
-        case .mobility: Color(red: 0.85, green: 0.66, blue: 0.96)
-        case .eventPrep: Color(red: 0.99, green: 0.78, blue: 0.45)
+        case .buildMuscle: .sand
+        case .cutFat: .lemon
+        case .generalFitness: .mint
+        case .mobility: .lavender
+        case .eventPrep: .sand
         }
     }
+
+    var accent: Color { family.pastel }
+    var ink: Color { family.ink }
 }
 
 enum PlanIntakeLevel: String, CaseIterable, Identifiable {
@@ -161,27 +164,20 @@ struct PlanIntakeChipsView: View {
     private var isComplete: Bool { selection.isComplete }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(red: 0.45, green: 0.83, blue: 0.78))
-                Text(isArabic ? "اختر بسرعة، وارسلها لي" : "Pick fast — I'll handle the rest")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.4)
-                Spacer(minLength: 0)
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            Text(isArabic ? "اختر بسرعة، أبنيلك خطّة بثواني" : "Pick fast — I'll build it in seconds")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
 
             section(title: isArabic ? "الهدف" : "Goal") {
                 wrap {
                     ForEach(PlanIntakeGoal.allCases) { goal in
                         chip(
                             isSelected: selection.goal == goal,
-                            icon: goal.icon,
                             text: isArabic ? goal.arabicLabel : goal.englishLabel,
-                            tint: goal.accent
+                            family: goal.family
                         ) {
                             selection.goal = goal
                         }
@@ -194,9 +190,8 @@ struct PlanIntakeChipsView: View {
                     ForEach(PlanIntakeLevel.allCases) { level in
                         chip(
                             isSelected: selection.level == level,
-                            icon: level.icon,
                             text: isArabic ? level.arabicLabel : level.englishLabel,
-                            tint: Color(red: 0.66, green: 0.86, blue: 0.50)
+                            family: .mint
                         ) {
                             selection.level = level
                         }
@@ -209,9 +204,8 @@ struct PlanIntakeChipsView: View {
                     ForEach(PlanIntakeDuration.allCases) { duration in
                         chip(
                             isSelected: selection.duration == duration,
-                            icon: duration.icon,
                             text: duration.label(arabic: isArabic),
-                            tint: Color(red: 0.55, green: 0.72, blue: 0.95)
+                            family: .sand
                         ) {
                             selection.duration = duration
                         }
@@ -224,9 +218,8 @@ struct PlanIntakeChipsView: View {
                     ForEach(PlanIntakeEquipment.allCases) { equipment in
                         chip(
                             isSelected: selection.equipment == equipment,
-                            icon: equipment.icon,
                             text: isArabic ? equipment.arabicLabel : equipment.englishLabel,
-                            tint: Color(red: 0.85, green: 0.66, blue: 0.96)
+                            family: .lavender
                         ) {
                             selection.equipment = equipment
                         }
@@ -237,52 +230,38 @@ struct PlanIntakeChipsView: View {
             Button(action: onSubmit) {
                 HStack(spacing: 8) {
                     Image(systemName: "paperplane.fill")
-                        .font(.system(size: 14, weight: .heavy))
+                        .font(.system(size: 13, weight: .heavy))
                     Text(isComplete
                          ? (isArabic ? "اطلب الخطة من الكابتن" : "Generate my plan")
                          : (isArabic ? "اختر الباقي حتى أبدأ" : "Pick the rest to begin"))
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(isComplete ? PlanPalette.mintDeep : PlanPalette.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: isComplete
-                                    ? [Color(red: 0.45, green: 0.83, blue: 0.78), Color(red: 0.55, green: 0.72, blue: 0.95)]
-                                    : [Color.gray.opacity(0.6), Color.gray.opacity(0.5)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                )
-                .shadow(
-                    color: (isComplete ? Color(red: 0.45, green: 0.83, blue: 0.78) : Color.gray).opacity(0.3),
-                    radius: 12,
-                    y: 6
+                        .fill(isComplete ? PlanPalette.mint : PlanPalette.surfaceTint)
                 )
             }
             .buttonStyle(.plain)
             .disabled(!isComplete)
             .padding(.top, 4)
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.07), radius: 14, y: 7)
     }
 
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                 .foregroundStyle(.secondary)
@@ -292,31 +271,22 @@ struct PlanIntakeChipsView: View {
         }
     }
 
-    private func chip(isSelected: Bool, icon: String, text: String, tint: Color, action: @escaping () -> Void) -> some View {
+    private func chip(isSelected: Bool, text: String, family: PlanPalette.Family, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .heavy))
-                Text(text)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(isSelected ? .white : tint)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 8)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(
-                        isSelected
-                            ? AnyShapeStyle(LinearGradient(colors: [tint, tint.opacity(0.78)], startPoint: .leading, endPoint: .trailing))
-                            : AnyShapeStyle(tint.opacity(0.12))
-                    )
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(tint.opacity(isSelected ? 0 : 0.4), lineWidth: 1)
-            )
-            .shadow(color: tint.opacity(isSelected ? 0.4 : 0), radius: 7, y: 3)
+            Text(text)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .lineLimit(1)
+                .foregroundStyle(isSelected ? family.ink : PlanPalette.textPrimary.opacity(0.85))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? family.pastel : Color.clear)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(isSelected ? Color.clear : PlanPalette.hairline, lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
     }

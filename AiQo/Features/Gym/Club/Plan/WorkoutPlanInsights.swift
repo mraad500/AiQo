@@ -51,20 +51,25 @@ enum WorkoutMuscleGroup: String, CaseIterable {
         }
     }
 
-    var accent: Color {
+    /// Brand family for the muscle group. Mapped onto the four AiQo
+    /// brand colors only — no saturated coral / blue / orange. The
+    /// distribution groups muscles by training intent so the plan card
+    /// reads as a calm, branded surface rather than a noisy rainbow.
+    var family: PlanPalette.Family {
         switch self {
-        case .chest: Color(red: 0.96, green: 0.62, blue: 0.50)
-        case .back: Color(red: 0.55, green: 0.72, blue: 0.95)
-        case .legs: Color(red: 0.66, green: 0.86, blue: 0.50)
-        case .glutes: Color(red: 0.92, green: 0.70, blue: 0.85)
-        case .shoulders: Color(red: 0.99, green: 0.78, blue: 0.45)
-        case .arms: Color(red: 0.85, green: 0.66, blue: 0.96)
-        case .core: Color(red: 0.45, green: 0.83, blue: 0.78)
-        case .fullBody: Color(red: 0.60, green: 0.72, blue: 0.92)
-        case .cardio: Color(red: 0.96, green: 0.50, blue: 0.55)
-        case .mobility: Color(red: 0.72, green: 0.80, blue: 0.96)
+        // Strength / warm presses → sand
+        case .chest, .back, .shoulders: .sand
+        // Movement / lower body → lavender
+        case .legs, .glutes: .lavender
+        // Control / sculpting → mint
+        case .arms, .core, .mobility: .mint
+        // Energy → lemon
+        case .cardio, .fullBody: .lemon
         }
     }
+
+    var accent: Color { family.pastel }
+    var ink: Color { family.ink }
 }
 
 enum WorkoutEquipment: String, CaseIterable {
@@ -126,13 +131,16 @@ enum WorkoutDifficulty {
         }
     }
 
-    var accent: Color {
+    var family: PlanPalette.Family {
         switch self {
-        case .beginner: Color(red: 0.50, green: 0.80, blue: 0.60)
-        case .intermediate: Color(red: 0.95, green: 0.78, blue: 0.45)
-        case .advanced: Color(red: 0.95, green: 0.50, blue: 0.50)
+        case .beginner: .mint
+        case .intermediate: .sand
+        case .advanced: .lavender
         }
     }
+
+    var accent: Color { family.pastel }
+    var ink: Color { family.ink }
 }
 
 // MARK: - Per-exercise insights

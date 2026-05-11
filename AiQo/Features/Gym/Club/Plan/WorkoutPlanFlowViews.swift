@@ -193,20 +193,11 @@ struct WorkoutPlanDashboard: View {
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: hasPinnedPlan
-                                ? [
-                                    Color(red: 0.77, green: 0.94, blue: 0.86).opacity(0.85),
-                                    Color(red: 1.00, green: 0.93, blue: 0.72).opacity(0.85)
-                                  ]
-                                : [
-                                    Color(red: 0.85, green: 0.96, blue: 0.90).opacity(0.85),
-                                    Color(red: 0.90, green: 0.96, blue: 1.00).opacity(0.85)
-                                  ],
+                                ? [PlanPalette.mint.opacity(0.55), PlanPalette.lemon.opacity(0.45)]
+                                : [PlanPalette.mint.opacity(0.45), PlanPalette.sand.opacity(0.42)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -214,9 +205,8 @@ struct WorkoutPlanDashboard: View {
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.5), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.07), radius: 14, y: 7)
         )
     }
 
@@ -250,24 +240,26 @@ struct WorkoutPlanDashboard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "calendar")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(red: 0.45, green: 0.83, blue: 0.78))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.secondary)
                 Text(snapshot.formattedDate)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.4)
                 Spacer()
                 Text("\(snapshot.completedCount)/\(snapshot.workouts.count)")
                     .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 8)
+                    .foregroundStyle(snapshot.completedCount == snapshot.workouts.count
+                                     ? PlanPalette.mintDeep
+                                     : .primary)
+                    .padding(.horizontal, 9)
                     .padding(.vertical, 3)
                     .background(
                         Capsule(style: .continuous)
                             .fill(snapshot.completedCount == snapshot.workouts.count
-                                  ? Color(red: 0.45, green: 0.83, blue: 0.78).opacity(0.3)
-                                  : Color.white.opacity(0.6))
+                                  ? PlanPalette.mint.opacity(0.55)
+                                  : PlanPalette.surfaceTint)
                     )
             }
 
@@ -281,7 +273,7 @@ struct WorkoutPlanDashboard: View {
                 HStack(spacing: 8) {
                     Image(systemName: workout.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(workout.isCompleted ? Color(red: 0.45, green: 0.83, blue: 0.78) : .secondary)
+                        .foregroundStyle(workout.isCompleted ? PlanPalette.mintDeep : .secondary)
                     Text(workout.title)
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.primary)
@@ -300,64 +292,58 @@ struct WorkoutPlanDashboard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
     }
 
     private var emptyStateSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color(red: 0.99, green: 0.78, blue: 0.45))
-                Text(isArabic ? "شنو رح تنحصل" : "What you'll get")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-            }
+            Text(isArabic ? "شنو رح تنحصل" : "What you'll get")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
 
             ForEach(emptyStateFeatures, id: \.title) { feature in
                 emptyFeatureRow(feature)
             }
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
     }
 
     private func emptyFeatureRow(_ feature: EmptyFeature) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(feature.tint.opacity(0.18))
+                    .fill(feature.family.pastel.opacity(0.55))
                 Image(systemName: feature.icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(feature.tint)
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundStyle(feature.family.ink)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature.title)
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .foregroundStyle(.primary)
                 Text(feature.subtitle)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
@@ -370,25 +356,25 @@ struct WorkoutPlanDashboard: View {
                     icon: "target",
                     title: "تخصيص ذكي",
                     subtitle: "خطّة بناءً على هدفك، مستواك، وقتك، ومعدّاتك",
-                    tint: Color(red: 0.55, green: 0.72, blue: 0.95)
+                    family: .mint
                 ),
                 EmptyFeature(
                     icon: "list.bullet.rectangle.portrait.fill",
                     title: "تمارين واضحة بمجاميع وعدّات",
                     subtitle: "كل تمرين عليه شرح فورم، بدائل، وزمن تقريبي",
-                    tint: Color(red: 0.45, green: 0.83, blue: 0.78)
+                    family: .sand
                 ),
                 EmptyFeature(
                     icon: "chart.line.uptrend.xyaxis",
                     title: "تتبّع تقدّمك",
                     subtitle: "علم على التمارين المكتملة وتابع سلسلة أيامك",
-                    tint: Color(red: 0.96, green: 0.50, blue: 0.45)
+                    family: .lavender
                 ),
                 EmptyFeature(
                     icon: "bubble.left.and.bubble.right.fill",
                     title: "محادثة عربية بلهجة عراقية",
                     subtitle: "كابتن حمّودي يفهمك ويرد عليك بأسلوب احترافي",
-                    tint: Color(red: 0.85, green: 0.66, blue: 0.96)
+                    family: .lemon
                 )
             ]
         }
@@ -397,25 +383,25 @@ struct WorkoutPlanDashboard: View {
                 icon: "target",
                 title: "Smart personalization",
                 subtitle: "Plans built from your goal, level, time, and equipment",
-                tint: Color(red: 0.55, green: 0.72, blue: 0.95)
+                family: .mint
             ),
             EmptyFeature(
                 icon: "list.bullet.rectangle.portrait.fill",
                 title: "Clean exercises with sets & reps",
                 subtitle: "Each move ships with form cues, alternatives, and pacing",
-                tint: Color(red: 0.45, green: 0.83, blue: 0.78)
+                family: .sand
             ),
             EmptyFeature(
                 icon: "chart.line.uptrend.xyaxis",
                 title: "Track your progress",
                 subtitle: "Tick off completed work and grow a daily streak",
-                tint: Color(red: 0.96, green: 0.50, blue: 0.45)
+                family: .lavender
             ),
             EmptyFeature(
                 icon: "bubble.left.and.bubble.right.fill",
                 title: "Captain Hamoudi at your side",
                 subtitle: "Refine the plan in plain language anytime",
-                tint: Color(red: 0.85, green: 0.66, blue: 0.96)
+                family: .lemon
             )
         ]
     }
@@ -423,7 +409,7 @@ struct WorkoutPlanDashboard: View {
     private var dashboardBackground: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.85, green: 0.96, blue: 0.90).opacity(0.55),
+                PlanPalette.mint.opacity(0.32),
                 Color(.systemBackground),
                 Color(.systemBackground)
             ],
@@ -510,7 +496,7 @@ struct WorkoutPlanDashboard: View {
         let icon: String
         let title: String
         let subtitle: String
-        let tint: Color
+        let family: PlanPalette.Family
     }
 }
 
@@ -664,16 +650,12 @@ struct CaptainPlanChatView: View {
                             .fill(.ultraThinMaterial)
 
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(
-                                (message.isUser
-                                    ? Color(red: 0.82, green: 0.95, blue: 0.87)
-                                    : Color(red: 0.92, green: 0.89, blue: 0.83)).opacity(0.82)
-                            )
+                            .fill(message.isUser ? PlanPalette.mint.opacity(0.6) : PlanPalette.sand.opacity(0.5))
                     }
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
 
             if !message.isUser { Spacer(minLength: 36) }
@@ -697,12 +679,12 @@ struct CaptainPlanChatView: View {
                         .fill(.ultraThinMaterial)
 
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(red: 0.98, green: 0.90, blue: 0.78).opacity(0.7))
+                        .fill(PlanPalette.sand.opacity(0.5))
                 }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                    .stroke(PlanPalette.hairline, lineWidth: 1)
             )
 
             Spacer(minLength: 36)
@@ -712,7 +694,7 @@ struct CaptainPlanChatView: View {
     // MARK: - Refinement chips
 
     private func refinementChips(for plan: WorkoutPlan) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(isArabic ? "صقّل الخطة بضغطة" : "Refine in a tap")
                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                 .foregroundStyle(.secondary)
@@ -720,51 +702,27 @@ struct CaptainPlanChatView: View {
                 .tracking(0.5)
 
             FlowLayout(spacing: 7) {
-                refinementChip(
-                    icon: "minus.circle.fill",
-                    text: isArabic ? "اقصرها" : "Make it shorter",
-                    tint: Color(red: 0.55, green: 0.72, blue: 0.95)
-                ) {
+                refinementChip(text: isArabic ? "اقصرها" : "Shorter") {
                     sendRefinement(isArabic
                                    ? "خلّيها أقصر، ركّز على الأساسيات بنفس الجودة."
                                    : "Make it shorter — keep the essentials at the same quality.")
                 }
-
-                refinementChip(
-                    icon: "flame.fill",
-                    text: isArabic ? "صعّبها" : "Make it harder",
-                    tint: Color(red: 0.96, green: 0.50, blue: 0.45)
-                ) {
+                refinementChip(text: isArabic ? "صعّبها" : "Harder") {
                     sendRefinement(isArabic
                                    ? "صعّبها شوية، زِد المجاميع أو شدّة التمارين."
                                    : "Push intensity up — add a set or harder variations.")
                 }
-
-                refinementChip(
-                    icon: "leaf.fill",
-                    text: isArabic ? "سهّلها" : "Make it easier",
-                    tint: Color(red: 0.66, green: 0.86, blue: 0.50)
-                ) {
+                refinementChip(text: isArabic ? "سهّلها" : "Easier") {
                     sendRefinement(isArabic
                                    ? "خفّفها واعطني نسخة مبتدئ مع نفس الأهداف."
                                    : "Tone it down to a beginner-friendly version of the same plan.")
                 }
-
-                refinementChip(
-                    icon: "arrow.triangle.swap",
-                    text: isArabic ? "بدائل" : "Swap exercises",
-                    tint: Color(red: 0.85, green: 0.66, blue: 0.96)
-                ) {
+                refinementChip(text: isArabic ? "بدائل" : "Swap moves") {
                     sendRefinement(isArabic
                                    ? "اقترح بدائل لكل تمرين بنفس الفعالية."
                                    : "Swap each exercise for an equivalent alternative.")
                 }
-
-                refinementChip(
-                    icon: "house.fill",
-                    text: isArabic ? "بدون معدّات" : "No equipment",
-                    tint: Color(red: 0.99, green: 0.78, blue: 0.45)
-                ) {
+                refinementChip(text: isArabic ? "بدون معدّات" : "No gear") {
                     sendRefinement(isArabic
                                    ? "اعطني نفس الخطة بس بدون أي معدّات (وزن جسم بس)."
                                    : "Same plan but bodyweight only — no equipment.")
@@ -775,34 +733,26 @@ struct CaptainPlanChatView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                        .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
     }
 
-    private func refinementChip(icon: String, text: String, tint: Color, action: @escaping () -> Void) -> some View {
+    private func refinementChip(text: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .heavy))
-                Text(text)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(tint)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 8)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(tint.opacity(0.14))
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(tint.opacity(0.4), lineWidth: 1)
-            )
+            Text(text)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .lineLimit(1)
+                .foregroundStyle(PlanPalette.mintDeep)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(PlanPalette.mint.opacity(0.55))
+                )
         }
         .buttonStyle(.plain)
         .disabled(globalBrain.isLoading || isSavingPlan)
@@ -833,33 +783,25 @@ struct CaptainPlanChatView: View {
                 sendCurrentMessage()
             } label: {
                 Image(systemName: "paperplane.fill")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.black.opacity(0.82))
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundStyle(PlanPalette.mintDeep)
                     .frame(width: 44, height: 44)
                     .background(
-                        Circle()
-                            .fill(Color(red: 0.82, green: 0.95, blue: 0.87))
+                        Circle().fill(PlanPalette.mint)
                     )
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(.plain)
             .disabled(trimmedInput.isEmpty || isSavingPlan || globalBrain.isLoading)
         }
         .padding(8)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(red: 0.82, green: 0.95, blue: 0.87).opacity(0.42))
-            }
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(.systemBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                .stroke(PlanPalette.hairline, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 6)
     }
 
     private func pinPlanButton(for workoutPlan: WorkoutPlan) -> some View {
@@ -880,8 +822,8 @@ struct CaptainPlanChatView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(red: 1.00, green: 0.93, blue: 0.72),
-                                Color(red: 0.98, green: 0.90, blue: 0.78)
+                                PlanPalette.lemon,
+                                PlanPalette.sand
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
@@ -907,7 +849,7 @@ struct CaptainPlanChatView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(red: 0.82, green: 0.95, blue: 0.87).opacity(0.6))
+                .fill(PlanPalette.mint.opacity(0.55))
         )
     }
 
@@ -919,14 +861,14 @@ struct CaptainPlanChatView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(red: 0.98, green: 0.90, blue: 0.78).opacity(0.6))
+                    .fill(PlanPalette.sand.opacity(0.55))
             )
     }
 
     private var chatBackground: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.82, green: 0.95, blue: 0.87).opacity(0.35),
+                PlanPalette.mint.opacity(0.32),
                 Color(.systemBackground),
                 Color(.systemBackground)
             ],
