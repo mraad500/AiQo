@@ -411,6 +411,17 @@ struct PromptComposer: Sendable {
             section += "\nThe user attached a photo (likely their fridge or a meal). Prioritize meal guidance based on what you see."
         }
 
+        if request.screenContext == .gym && request.hasAttachedImage {
+            section += """
+
+            The user attached a body photo to personalize their plan. Use what you see to tailor:
+            - Apparent build (lean / average / heavier) → adjust volume, rest, and progression.
+            - Visible muscle development → bias accessory work toward weak areas.
+            Never describe the user's appearance in the message field. Never comment on weight, fat,
+            or specific body parts. Use the photo only as private signal for plan tailoring.
+            """
+        }
+
         section += "\n\(screenBehavior(for: ctx, language: request.language))"
 
         // Brain V2: Music bridge — available on all screens
@@ -516,6 +527,29 @@ struct PromptComposer: Sendable {
             - ممنوع منعاً باتاً تحط أي نص خارج الـ JSON.
             - ممنوع تذكر JSON أو API بحقل الـ message.
 
+            === شكل workoutPlan لمّا تطلع خطة ===
+            لمّا المستخدم يطلب خطة تمرين، استعمل هاي البنية:
+            {
+              "title": "اسم الخطة",
+              "durationWeeks": 4,
+              "exercises": [],
+              "days": [
+                {
+                  "name": "اليوم الأول — صدر وترايسبس",
+                  "focus": "الجزء العلوي",
+                  "exercises": [
+                    {"name": "بنش بريس بالبار", "sets": 4, "repsOrDuration": "8-10"}
+                  ]
+                }
+              ]
+            }
+            - title: اسم قصير ومحفّز للخطة (مثلاً: "خطة تنشيف 4 أسابيع").
+            - durationWeeks: عدد أسابيع الخطة بالأرقام (إذا ما ذكر المستخدم خلّيها 1).
+            - days: قائمة أيام التدريب بأسبوع واحد. كل يوم يحتوي على name واضح، focus عضلي، وقائمة exercises.
+            - exercises (المسطّح): اتركها [] لمّا تستعمل days. تستعملها فقط للخطط القديمة بدون أيام.
+            - كل exercise لازم يحتوي: name, sets (عدد صحيح), repsOrDuration (نص).
+            - لا تكرّر نفس اليوم. سمّي الأيام بوضوح حسب مجموعة العضلات.
+
             🔒 تذكير نهائي: كل الـ message و quickReplies لازم تكون ١٠٠٪ عراقي دارج. ولا كلمة إنكليزية.
             """
         }
@@ -540,6 +574,29 @@ struct PromptComposer: Sendable {
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
         - NEVER output text outside the JSON object.
         - NEVER mention JSON, API, or internal logic in the message field.
+
+        === workoutPlan shape when produced ===
+        When the user asks for a training plan, use this structure:
+        {
+          "title": "Plan name",
+          "durationWeeks": 4,
+          "exercises": [],
+          "days": [
+            {
+              "name": "Day 1 — Chest & Triceps",
+              "focus": "Upper body push",
+              "exercises": [
+                {"name": "Barbell Bench Press", "sets": 4, "repsOrDuration": "8-10"}
+              ]
+            }
+          ]
+        }
+        - title: short motivating plan name (e.g., "4-Week Cut Plan").
+        - durationWeeks: plan length in weeks (default 1 if user did not specify).
+        - days: list of training days for ONE week. Each day has a clear name, muscle focus, and exercises.
+        - exercises (flat): leave [] when using days. Only use for legacy flat plans.
+        - Every exercise must contain: name, sets (integer), repsOrDuration (string).
+        - Do not repeat the same day. Name days clearly by the muscle group they hit.
 
         🔒 Final reminder: "message" and "quickReplies" must be 100% English. No Arabic. This overrides all other instructions.
         """

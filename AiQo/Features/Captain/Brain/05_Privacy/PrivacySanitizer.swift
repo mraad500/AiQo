@@ -176,9 +176,16 @@ struct PrivacySanitizer: Sendable {
             knownUserName: knownUserName
         )
         let sanitizedContext = sanitizeHealthContext(request.contextData)
-        let sanitizedImageData = request.screenContext == .kitchen
-            ? sanitizeKitchenImageData(request.attachedImageData)
-            : nil
+        // Image is allowed for kitchen vision and gym body-photo tailoring.
+        // Both go through the same EXIF/GPS-strip + downsize pipeline; the
+        // body-photo consent gate is enforced separately by the caller.
+        let sanitizedImageData: Data?
+        switch request.screenContext {
+        case .kitchen, .gym:
+            sanitizedImageData = sanitizeKitchenImageData(request.attachedImageData)
+        default:
+            sanitizedImageData = nil
+        }
 
         let safeIntent = sanitizePromptForCloud(request.intentSummary, knownUserName: knownUserName)
         let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -381,15 +381,26 @@ struct MealPlan: Codable, Equatable, Sendable {
 struct WorkoutPlan: Codable, Equatable, Sendable {
     let title: String
     let exercises: [Exercise]
+    let days: [WorkoutDay]?
+    let durationWeeks: Int?
 
     private enum CodingKeys: String, CodingKey {
         case title
         case exercises
+        case days
+        case durationWeeks
     }
 
-    init(title: String, exercises: [Exercise]) {
+    init(
+        title: String,
+        exercises: [Exercise],
+        days: [WorkoutDay]? = nil,
+        durationWeeks: Int? = nil
+    ) {
         self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         self.exercises = exercises
+        self.days = days?.isEmpty == false ? days : nil
+        self.durationWeeks = durationWeeks.flatMap { $0 > 0 ? $0 : nil }
     }
 
     init(from decoder: Decoder) throws {
@@ -405,22 +416,90 @@ struct WorkoutPlan: Codable, Equatable, Sendable {
             )
         }
 
-        let decodedExercises = try container.decode([Exercise].self, forKey: .exercises)
-        guard !decodedExercises.isEmpty else {
+        let decodedDays = try container.decodeIfPresent([WorkoutDay].self, forKey: .days)
+        let decodedExercises = try container.decodeIfPresent([Exercise].self, forKey: .exercises)
+        let decodedDurationWeeks = try container.decodeIfPresent(Int.self, forKey: .durationWeeks)
+
+        let resolvedDays: [WorkoutDay]? = (decodedDays?.isEmpty == false) ? decodedDays : nil
+        let resolvedExercises: [Exercise]
+        if let flat = decodedExercises, !flat.isEmpty {
+            resolvedExercises = flat
+        } else if let days = resolvedDays {
+            resolvedExercises = days.flatMap { $0.exercises }
+        } else {
+            resolvedExercises = []
+        }
+
+        guard !resolvedExercises.isEmpty else {
             throw DecodingError.dataCorruptedError(
                 forKey: .exercises,
                 in: container,
-                debugDescription: "WorkoutPlan.exercises must contain at least one exercise."
+                debugDescription: "WorkoutPlan must contain at least one exercise (flat or via days)."
             )
         }
 
         title = normalizedTitle
-        exercises = decodedExercises
+        exercises = resolvedExercises
+        days = resolvedDays
+        durationWeeks = decodedDurationWeeks.flatMap { $0 > 0 ? $0 : nil }
     }
 
     var isMeaningful: Bool {
         !title.isEmpty && !exercises.isEmpty
     }
+}
+
+struct WorkoutDay: Codable, Equatable, Identifiable, Sendable {
+    var id = UUID()
+    let name: String
+    let focus: String?
+    let exercises: [Exercise]
+
+    private enum CodingKeys: String, CodingKey {
+        case name
+        case focus
+        case exercises
+    }
+
+    init(id: UUID = UUID(), name: String, focus: String?, exercises: [Exercise]) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.focus = focus?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmptyOrNil
+        self.exercises = exercises
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let rawName = try container.decode(String.self, forKey: .name)
+        let normalizedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .name,
+                in: container,
+                debugDescription: "WorkoutDay.name must not be empty."
+            )
+        }
+
+        let rawFocus = try container.decodeIfPresent(String.self, forKey: .focus)
+        let decodedExercises = try container.decode([Exercise].self, forKey: .exercises)
+        guard !decodedExercises.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .exercises,
+                in: container,
+                debugDescription: "WorkoutDay.exercises must contain at least one exercise."
+            )
+        }
+
+        id = UUID()
+        name = normalizedName
+        focus = rawFocus?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmptyOrNil
+        exercises = decodedExercises
+    }
+}
+
+private extension String {
+    var nonEmptyOrNil: String? { isEmpty ? nil : self }
 }
 
 struct Exercise: Codable, Equatable, Identifiable, Sendable {

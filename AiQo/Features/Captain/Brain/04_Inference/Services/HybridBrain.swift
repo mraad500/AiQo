@@ -518,9 +518,12 @@ private extension HybridBrainService {
             let role = message.role == .assistant ? "model" : "user"
             var parts: [[String: Any]] = [["text": trimmed]]
 
-            // Attach kitchen image to the last user message only
+            // Attach an inline image to the last user message only. Kitchen
+            // (fridge vision) and Gym (body-photo plan tailoring) both ride
+            // this path — the privacy sanitizer is the gate that decides
+            // whether `attachedImageData` survives the cloud handoff.
             if index == lastUserIndex,
-               request.screenContext == .kitchen,
+               (request.screenContext == .kitchen || request.screenContext == .gym),
                let imageData = request.attachedImageData {
                 parts.append([
                     "inlineData": [
