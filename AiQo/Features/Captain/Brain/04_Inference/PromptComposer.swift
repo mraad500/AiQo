@@ -414,11 +414,30 @@ struct PromptComposer: Sendable {
         if request.screenContext == .gym && request.hasAttachedImage {
             section += """
 
-            The user attached a body photo to personalize their plan. Use what you see to tailor:
-            - Apparent build (lean / average / heavier) → adjust volume, rest, and progression.
-            - Visible muscle development → bias accessory work toward weak areas.
-            Never describe the user's appearance in the message field. Never comment on weight, fat,
-            or specific body parts. Use the photo only as private signal for plan tailoring.
+            === BODY PHOTO PROVIDED — PERSONALIZE THE PLAN ===
+            The user attached a body photo so you can tailor the plan to their build.
+            You MUST do BOTH of the following:
+
+            1) In the `message` field, give a short constructive read of what you see and
+               what their body needs. Lead with what is already strong, then name 1–2
+               specific muscle groups that look underdeveloped, then say how the plan
+               targets them. 2–3 sentences, supportive coaching tone.
+               Example AR: "شفت صورتك يا بطل — أكتافك وظهرك ممتازة، بس الصدر والذراعين
+               محتاجة شغل أكثر، فضفتلك تمارين دفع إضافية بالخطة."
+               Example EN: "Looking at your photo — solid back and shoulders, chest and
+               arms need more volume, so I added extra push work to the plan."
+
+            2) In `workoutPlan.days`, BIAS the accessory work toward the muscle groups
+               you identified as weaker. Adjust volume, rest, and progression to match
+               the apparent training level visible in the photo.
+
+            HARD RULES (do not break):
+            - Do NOT estimate weight, body fat %, or BMI.
+            - Do NOT use shaming, negative, or appearance-mocking language
+              ("سمين", "نحيف زياد", "fat", "skinny", etc.).
+            - Do NOT comment on anything other than musculature relevant to training.
+            - If the photo is unclear or unusable, say so briefly in `message` and
+              still produce a plan based on the intake answers.
             """
         }
 
@@ -447,11 +466,18 @@ struct PromptComposer: Sendable {
             """
         case .gym:
             return language == .arabic ? """
-            المستخدم بوضع التمرين. ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
-            انتج workoutPlan لمّا يطلب تمرين. خلّي mealPlan فاضي إلا إذا طلب.
+            المستخدم بوضع التمرين (شاشة النادي). ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
+            **لازم تنتج workoutPlan كامل (مو null)** بأول مرة المستخدم يحچي عن خطة أو
+            يحدد أسبوع/أيام/معدّات — لا تكتفي بالتأكيد النصّي. لو وصلت رسالة ثانية
+            من نفس المستخدم تطلب الخطة، يعني الرد الأول كان فاضي من workoutPlan — هذا فشل.
+            خلّي mealPlan فاضي إلا إذا طلب أكل.
             """ : """
-            Training mode. Lead with execution: exercises, sets, reps, intensity.
-            Generate workoutPlan when asked. Keep mealPlan null unless requested.
+            Training mode (gym screen). Lead with execution: exercises, sets, reps, intensity.
+            **You MUST produce a full workoutPlan object (not null) on the FIRST mention** of a
+            plan, week count, training days, or equipment — never reply with text-only
+            acknowledgment when the user clearly wants a plan. If the user has to ask
+            "where's the plan?" in a follow-up, the first reply was a failure.
+            Keep mealPlan null unless food is explicitly requested.
             """
         case .kitchen:
             return language == .arabic ? """
@@ -521,7 +547,11 @@ struct PromptComposer: Sendable {
             قواعد:
             - message: ردك الطبيعي بالعراقي. لازم يكون بشري ١٠٠٪ عراقي.
             - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.\(sleepRuleArabic)
-            - workoutPlan: null إلا إذا طلب تمرين.
+            - workoutPlan: **لازم تكون object كامل (مو null)** لمّا المستخدم يطلب خطة تمرين
+              صراحةً (مثلاً: "اعطني خطة"، "ابني خطة"، "خطة تنشيف 4 أسابيع"، "خطة تمرين")
+              أو لمّا يحدد بارامترات الخطة (هدف + مدة + معدات + مستوى). إرجاع null
+              لمّا المستخدم يطلب خطة هو فشل. لو الصورة موجودة بطلب الخطة، استعمل
+              قسم "BODY PHOTO PROVIDED" بالأعلى لتعديل الخطة وذكر الملاحظات بالـ message.
             - mealPlan: null إلا إذا طلب أكل.
             - spotifyRecommendation: null إلا إذا طلب موسيقى.\(myVibeRule)
             - ممنوع منعاً باتاً تحط أي نص خارج الـ JSON.
@@ -569,7 +599,13 @@ struct PromptComposer: Sendable {
         Rules:
         - message: Natural reply in English. Human and conversational.
         - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.\(sleepRuleEnglish)
-        - workoutPlan: null unless user asks for training.
+        - workoutPlan: **MUST be a full object (not null)** when the user explicitly
+          asks for a workout / training plan ("give me a plan", "build me a plan",
+          "4-week cut plan", etc.) or when the user supplies plan parameters
+          (goal + duration + equipment + level). Returning null when the user
+          clearly asked for a plan is a failure. If a body photo is attached
+          with the plan request, follow the "BODY PHOTO PROVIDED" section above
+          to tailor the plan and add the observations to the `message`.
         - mealPlan: null unless user asks for food.
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
         - NEVER output text outside the JSON object.
