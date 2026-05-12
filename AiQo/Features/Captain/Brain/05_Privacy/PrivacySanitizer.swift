@@ -349,6 +349,59 @@ struct PrivacySanitizer: Sendable {
         guard CGImageDestinationFinalize(destination) else { return nil }
         return destinationData as Data
     }
+
+    // MARK: - Error Sanitization (Crashlytics)
+
+    /// Keys retained when forwarding an `NSError` to Crashlytics. Everything
+    /// else in `userInfo` is dropped. String values inside whitelisted keys
+    /// are still scrubbed through `sanitizeText` — system keys (especially
+    /// URL-bearing ones) can contain user data in query parameters.
+    static let crashlyticsKeyWhitelist: Set<String> = [
+        NSLocalizedDescriptionKey,
+        NSLocalizedFailureReasonErrorKey,
+        NSLocalizedRecoverySuggestionErrorKey,
+        NSURLErrorFailingURLErrorKey,
+        NSUnderlyingErrorKey
+    ]
+
+    /// Returns a Crashlytics-safe copy of `error`. All values from the
+    /// original `userInfo` are dropped unless their key is in
+    /// `crashlyticsKeyWhitelist`, and whitelisted `String`/`URL` values
+    /// are still passed through `sanitizeText` (URLs can carry emails
+    /// or phone numbers in query parameters). `NSUnderlyingErrorKey`
+    /// recurses.
+    func sanitizeError(_ error: Error) -> NSError {
+        let nsError = error as NSError
+        var safeUserInfo: [String: Any] = [:]
+
+        for (key, value) in nsError.userInfo {
+            guard Self.crashlyticsKeyWhitelist.contains(key) else { continue }
+
+            if key == NSUnderlyingErrorKey, let underlying = value as? Error {
+                safeUserInfo[key] = sanitizeError(underlying)
+            } else if let stringValue = value as? String {
+                safeUserInfo[key] = sanitizeText(stringValue, knownUserName: nil)
+            } else if let url = value as? URL {
+                safeUserInfo[key] = sanitizeText(url.absoluteString, knownUserName: nil)
+            }
+            // All other types (Data, custom Swift values, etc.) are dropped.
+        }
+
+        // Always rewrite the user-visible description through the sanitizer —
+        // many SDKs put PII directly into `localizedDescription` without
+        // populating `NSLocalizedDescriptionKey` in `userInfo`, so the
+        // whitelist alone is not enough.
+        let safeDescription = sanitizeText(nsError.localizedDescription, knownUserName: nil)
+        if safeUserInfo[NSLocalizedDescriptionKey] == nil {
+            safeUserInfo[NSLocalizedDescriptionKey] = safeDescription
+        }
+
+        return NSError(
+            domain: nsError.domain,
+            code: nsError.code,
+            userInfo: safeUserInfo
+        )
+    }
 }
 
 // MARK: - Private Helpers

@@ -117,6 +117,22 @@ final class LiveWorkoutSession: ObservableObject {
         !isControlPending && remoteConnectionState != .disconnected && remoteConnectionState != .failed
     }
 
+    /// Stable bounded-cardinality label for analytics. Maps `HKWorkoutActivityType`
+    /// values used in this app to short strings; everything else collapses to `"other"`
+    /// so a new HK type doesn't silently inflate the analytics dimension.
+    private var workoutTypeLabel: String {
+        switch activityType {
+        case .running: return "running"
+        case .walking: return "walking"
+        case .cycling: return "cycling"
+        case .traditionalStrengthTraining: return "strength"
+        case .highIntensityIntervalTraining: return "hiit"
+        case .swimming: return "swimming"
+        case .yoga: return "yoga"
+        default: return "other"
+        }
+    }
+
     var isZone2GuidedWorkout: Bool {
         coachingProfile == .captainHamoudiZone2
     }
@@ -296,6 +312,8 @@ final class LiveWorkoutSession: ObservableObject {
 
     func forceEndFromPhoneImmediately() {
         guard phase != .idle else { return }
+
+        AnalyticsService.shared.track(.workoutCancelled)
 
         shouldIgnoreIncomingSnapshots = true
         lastError = nil
@@ -479,6 +497,12 @@ final class LiveWorkoutSession: ObservableObject {
             heartRate: heartRate,
             distanceMeters: distanceMeters
         )
+
+        AnalyticsService.shared.track(.workoutCompleted(
+            type: workoutTypeLabel,
+            durationMin: elapsedSeconds / 60,
+            calories: Int(activeEnergy.rounded())
+        ))
 
         resetWorkoutState()
         withAnimation(.snappy) {
@@ -697,6 +721,7 @@ final class LiveWorkoutSession: ObservableObject {
             phase = .starting
         }
         lastError = nil
+        AnalyticsService.shared.track(.workoutStarted(type: workoutTypeLabel))
     }
 
     private func startCaptainWarmupAudioIfNeeded() {

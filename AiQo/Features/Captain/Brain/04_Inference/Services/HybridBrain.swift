@@ -123,7 +123,7 @@ enum HybridBrainServiceError: LocalizedError {
 
 // MARK: - Gemini API Configuration
 
-private enum GeminiConfig {
+enum GeminiConfig {
     static let baseEndpoint = "https://generativelanguage.googleapis.com/v1beta/models"
     static let requestTimeoutSeconds: TimeInterval = 35
     static let resourceTimeoutSeconds: TimeInterval = 40

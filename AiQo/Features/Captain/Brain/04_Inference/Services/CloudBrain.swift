@@ -177,3 +177,132 @@ struct CloudBrainService: Sendable {
         )
     }
 }
+
+// MARK: - Kitchen Vision
+
+extension CloudBrainService {
+    /// Privacy-wrapped Gemini vision call for the Kitchen fridge scanner.
+    ///
+    /// Mirrors the sanitization + audit guarantees of `generateReply`:
+    /// 1. Image data runs through `sanitizer.sanitizeKitchenImageData` (EXIF/GPS strip + resize)
+    /// 2. Prompt runs through `sanitizer.sanitizePromptForCloud` (PII regex + numeric bucketing)
+    /// 3. Outbound call is bracketed by `AuditLogger.Entry(purpose: .kitchen)` records
+    /// 4. Tier-based model selection (Pro → reasoning, others → `gemini-2.5-flash`)
+    ///
+    /// Returns the raw model output text — the kitchen caller decodes the
+    /// JSON array (`[{"name":…}]`) itself; the Captain structured-response
+    /// parser is not used.
+    func generateKitchenAnalysis(
+        rawImageData: Data?,
+        userName: String?
+    ) async throws -> String {
+        if !DevOverride.unlockAllFeatures {
+            guard TierGate.shared.canAccess(.captainChat) else {
+                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
+            }
+        }
+        try await AICloudConsentGate.requireConsent()
+
+        let startedAt = Date()
+        let activeTier = await MainActor.run { AccessManager.shared.activeTier }
+        let model = activeTier.effectiveAccessTier == .pro
+            ? "gemini-3-flash-preview"
+            : "gemini-2.5-flash"
+
+        guard let imageData = sanitizer.sanitizeKitchenImageData(rawImageData) else {
+            throw HybridBrainServiceError.invalidResponse
+        }
+
+        let promptText = sanitizer.sanitizePromptForCloud(
+            "Return JSON only. Visible food items only. Schema: [{\"name\": string, \"quantity\": number, \"unit\": string|null}]. Use generic food names.",
+            knownUserName: userName
+        )
+
+        let body: [String: Any] = [
+            "contents": [
+                [
+                    "role": "user",
+                    "parts": [
+                        ["text": promptText],
+                        ["inlineData": [
+                            "mimeType": "image/jpeg",
+                            "data": imageData.base64EncodedString()
+                        ]]
+                    ]
+                ]
+            ],
+            "generationConfig": [
+                "maxOutputTokens": 220,
+                "temperature": 0.1,
+                "responseMimeType": "application/json"
+            ]
+        ]
+
+        let urlRequest = try makeKitchenURLRequest(model: model, body: body)
+        let promptBytes = promptText.utf8.count + imageData.count
+        let tierLabel = activeTier.auditLabel
+
+        func recordAudit(outcome: AuditLogger.Entry.Outcome, responseBytes: Int) async {
+            await AuditLogger.shared.record(AuditLogger.Entry(
+                id: UUID(),
+                timestamp: startedAt,
+                destination: model,
+                tier: tierLabel,
+                promptBytes: promptBytes,
+                responseBytes: responseBytes,
+                latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000),
+                consentGranted: true,
+                sanitizationApplied: true,
+                purpose: RequestPurpose.kitchen.rawValue,
+                outcome: outcome
+            ))
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                await recordAudit(outcome: .failure, responseBytes: 0)
+                throw HybridBrainServiceError.badStatusCode(
+                    (response as? HTTPURLResponse)?.statusCode ?? -1
+                )
+            }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let candidates = json["candidates"] as? [[String: Any]],
+                  let firstCandidate = candidates.first,
+                  let candidateContent = firstCandidate["content"] as? [String: Any],
+                  let parts = candidateContent["parts"] as? [[String: Any]],
+                  let content = parts.first?["text"] as? String else {
+                await recordAudit(outcome: .failure, responseBytes: data.count)
+                throw HybridBrainServiceError.invalidResponse
+            }
+
+            await recordAudit(outcome: .success, responseBytes: content.utf8.count)
+            return content
+        } catch {
+            // Status-code and decode paths already audited before throwing.
+            // Only record an extra failure entry for network-level errors
+            // (URLSession threw before any HTTP response was available).
+            if !(error is HybridBrainServiceError) {
+                await recordAudit(outcome: .failure, responseBytes: 0)
+            }
+            throw error
+        }
+    }
+
+    private func makeKitchenURLRequest(
+        model: String,
+        body: [String: Any]
+    ) throws -> URLRequest {
+        let apiKey = try GeminiConfig.resolvedAPIKey()
+        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL(for: model))
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 15
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return urlRequest
+    }
+}

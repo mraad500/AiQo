@@ -136,77 +136,13 @@ final class SmartFridgeCameraViewModel: NSObject, ObservableObject {
     }
 
     private func callVisionAPI(image: UIImage) async throws -> [FridgeItem] {
-        if !DevOverride.unlockAllFeatures {
-            guard TierGate.shared.canAccess(.captainChat) else {
-                diag.info("SmartFridgeCameraViewModel.callVisionAPI blocked by TierGate(.captainChat)")
-                throw BrainError.tierRequired(TierGate.shared.requiredTier(for: .captainChat))
-            }
-        }
-        try await AICloudConsentGate.requireConsent()
-
-        // Resolve API key using the same logic as HybridBrainService
-        let apiKey = try resolveAPIKey()
-
-        // Sanitize image: resize to max 1280px, strip EXIF/GPS, compress to JPEG 0.78
-        guard let imageData = sanitizer.sanitizeKitchenImageData(image.jpegData(compressionQuality: 1.0)) else {
-            throw FridgeAnalysisError.imageProcessingFailed
-        }
-
-        let base64Image = imageData.base64EncodedString()
-
-        // Build the Gemini request body
-        let requestBody: [String: Any] = [
-            "contents": [
-                [
-                    "role": "user",
-                    "parts": [
-                        [
-                            "text": "Return JSON only. Visible food items only. Schema: [{\"name\": string, \"quantity\": number, \"unit\": string|null}]. Use generic food names."
-                        ],
-                        [
-                            "inlineData": [
-                                "mimeType": "image/jpeg",
-                                "data": base64Image
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            "generationConfig": [
-                "maxOutputTokens": 220,
-                "temperature": 0.1,
-                "responseMimeType": "application/json"
-            ]
-        ]
-
-        let endpoint = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)")!
-        var urlRequest = URLRequest(url: endpoint)
-        urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 15
-        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            logger.error("Vision API returned status \(statusCode)")
-            throw FridgeAnalysisError.badStatusCode(statusCode)
-        }
-
-        // Parse the Gemini response
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let candidates = json["candidates"] as? [[String: Any]],
-              let firstCandidate = candidates.first,
-              let candidateContent = firstCandidate["content"] as? [String: Any],
-              let parts = candidateContent["parts"] as? [[String: Any]],
-              let content = parts.first?["text"] as? String else {
-            throw FridgeAnalysisError.invalidResponse
-        }
-
-        return parseFridgeItems(from: content)
+        let rawJpeg = image.jpegData(compressionQuality: 1.0)
+        let cloudBrain = CloudBrainService()
+        let outputText = try await cloudBrain.generateKitchenAnalysis(
+            rawImageData: rawJpeg,
+            userName: nil
+        )
+        return parseFridgeItems(from: outputText)
     }
 
     private func resolveAPIKey() throws -> String {
