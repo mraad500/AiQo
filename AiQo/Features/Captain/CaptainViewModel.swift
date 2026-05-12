@@ -406,6 +406,8 @@ final class CaptainViewModel: ObservableObject {
         currentMealPlan = nil
         quickReplies = []
 
+        AnalyticsService.shared.track(.captainChatOpened)
+
         let welcome = ChatMessage(
             text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", comment: "Captain first message"),
             isUser: false

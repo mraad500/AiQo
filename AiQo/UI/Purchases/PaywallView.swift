@@ -16,6 +16,7 @@ struct PaywallView: View {
     @State private var statusMessage: String?
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
+    @State private var didEmitViewed = false
 
     private let supportedTiers: [SubscriptionTier] = [.max, .pro]
     private let onPurchaseSuccess: (() -> Void)?
@@ -176,6 +177,16 @@ struct PaywallView: View {
         }
         .safeAreaInset(edge: .bottom) {
             purchaseActionBar
+        }
+        .onAppear {
+            // `.task` fires `paywallShown(source:)` only after `reloadProducts()`
+            // resolves (typically 1–3s post-mount). `paywallViewed` fires the
+            // moment the surface actually has non-zero geometry — this is the
+            // impression metric, distinct from the source-attribution funnel
+            // input. Both events coexist by design.
+            guard !didEmitViewed else { return }
+            didEmitViewed = true
+            AnalyticsService.shared.track(.paywallViewed)
         }
         .task {
             await reloadProducts()

@@ -49,6 +49,7 @@ final class CrashReportingService {
     // MARK: - Non-Fatal Errors
 
     /// Records a non-fatal error with optional context string.
+    /// `error` is sanitized via `PrivacySanitizer.sanitizeError` before reaching Crashlytics.
     func record(_ error: Error, context: String? = nil) {
 #if canImport(FirebaseCore) && canImport(FirebaseCrashlytics)
         var userInfo: [String: Any] = [:]
@@ -57,16 +58,21 @@ final class CrashReportingService {
         }
         let wrapped = error as NSError
         let annotated = NSError(domain: wrapped.domain, code: wrapped.code, userInfo: userInfo.merging(wrapped.userInfo) { new, _ in new })
-        Crashlytics.crashlytics().record(error: annotated)
+        let sanitized = PrivacySanitizer().sanitizeError(annotated)
+        Crashlytics.crashlytics().record(error: sanitized)
 #endif
     }
 
     /// Records a message as a non-fatal error under the "AiQo" domain.
+    /// Both the message and the synthetic error are run through `PrivacySanitizer` first.
     func record(message: String, context: String? = nil) {
 #if canImport(FirebaseCore) && canImport(FirebaseCrashlytics)
-        let userInfo: [String: String] = context.map { [NSLocalizedDescriptionKey: $0] } ?? [:]
+        let sanitizer = PrivacySanitizer()
+        let safeMessage = sanitizer.sanitizeText(message, knownUserName: nil)
+        let safeContext = context.map { sanitizer.sanitizeText($0, knownUserName: nil) }
+        let userInfo: [String: String] = safeContext.map { [NSLocalizedDescriptionKey: $0] } ?? [:]
         let error = NSError(domain: "com.aiqo.app", code: -1, userInfo: userInfo)
-        Crashlytics.crashlytics().log(message)
+        Crashlytics.crashlytics().log(safeMessage)
         Crashlytics.crashlytics().record(error: error)
 #endif
     }
