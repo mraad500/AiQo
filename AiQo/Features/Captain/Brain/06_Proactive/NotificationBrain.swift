@@ -20,6 +20,22 @@ public actor NotificationBrain {
         public let systemRequestID: String?    // UN identifier
     }
 
+    /// Defensive hard cap on TOP of GlobalBudget. Prevents the 15-trigger proactive
+    /// cascade from spamming a user in their first session (v1.0.4 enables Memory V4
+    /// globally — all triggers register at once).
+    /// Tightening these is fine; loosening should be a deliberate decision.
+    public static let hardCapInterval: TimeInterval = 4 * 3600   // 4 hours between deliveries
+    public static let hardCapDailyLimit = 3                       // 3 deliveries per calendar day
+
+    private enum HardCapKeys {
+        static let lastDelivered = "aiqo.notif.brain.hardcap.lastDelivered"
+        static let dailyCount = "aiqo.notif.brain.hardcap.dailyCount"
+        static let dailyCountDate = "aiqo.notif.brain.hardcap.dailyCountDate"
+    }
+
+    private var hasSubscribed = false
+    private var observerTokens: [NSObjectProtocol] = []
+
     private init() {}
 
     /// Primary entry point. Legacy senders (BATCH 6) funnel through here.
@@ -45,6 +61,23 @@ public actor NotificationBrain {
         identifier: String? = nil
     ) async -> DeliveryResult {
         let now = Date()
+
+        // Gate 0 (v1.0.4): hard cap. 1 per 4h, 3 per day. Defensive layer on top
+        // of GlobalBudget — see hardCapInterval / hardCapDailyLimit above.
+        if let cappedReason = hardCapRejection(now: now) {
+            await AuditLogger.shared.record(
+                event: .notificationRejected,
+                kind: intent.kind.rawValue,
+                requestedBy: intent.requestedBy
+            )
+            diag.info("NotificationBrain hardCap skip kind=\(intent.kind.rawValue) reason=\(cappedReason.rawValue)")
+            return DeliveryResult(
+                intentID: intent.id,
+                decision: .rejected(cappedReason),
+                deliveredAt: nil,
+                systemRequestID: nil
+            )
+        }
 
         // Gate 1: budget check
         let decision = await GlobalBudget.shared.evaluate(intent, now: now)
@@ -154,6 +187,7 @@ public actor NotificationBrain {
         do {
             try await UNUserNotificationCenter.current().add(request)
             await GlobalBudget.shared.recordDelivered(intent)
+            recordHardCapDelivery(now: Date())
             await AuditLogger.shared.record(
                 event: .notificationDelivered,
                 kind: intent.kind.rawValue,
@@ -174,6 +208,117 @@ public actor NotificationBrain {
                 systemRequestID: nil
             )
         }
+    }
+
+    // MARK: - v1.0.4: Subscriptions for XP / Streak events
+
+    /// Wired from `AppDelegate.didFinishLaunchingWithOptions` when
+    /// `NOTIFICATION_BRAIN_ENABLED` is true. Idempotent: safe to call twice.
+    public func subscribe() {
+        guard !hasSubscribed else { return }
+        hasSubscribed = true
+
+        let center = NotificationCenter.default
+
+        let xpToken = center.addObserver(
+            forName: .aiqoXPGranted, object: nil, queue: nil
+        ) { note in
+            let payload = note.userInfo
+            Task { await NotificationBrain.shared.handleXPGranted(payload: payload) }
+        }
+        let streakToken = center.addObserver(
+            forName: .aiqoStreakIncremented, object: nil, queue: nil
+        ) { note in
+            let payload = note.userInfo
+            Task { await NotificationBrain.shared.handleStreakIncremented(payload: payload) }
+        }
+        let riskToken = center.addObserver(
+            forName: .aiqoStreakRisk, object: nil, queue: nil
+        ) { note in
+            let payload = note.userInfo
+            Task { await NotificationBrain.shared.handleStreakRisk(payload: payload) }
+        }
+
+        observerTokens = [xpToken, streakToken, riskToken]
+        diag.info("NotificationBrain: subscribed to XP + streak NotificationCenter events")
+    }
+
+    private func handleXPGranted(payload: [AnyHashable: Any]?) async {
+        // Only notify on a level-up; raw XP grants alone would be too noisy.
+        guard let didLevelUp = payload?["didLevelUp"] as? Bool, didLevelUp else { return }
+        let amount = payload?["amount"] as? Int ?? 0
+        let level = payload?["level"] as? Int ?? 0
+
+        let intent = NotificationIntent(
+            kind: .achievementUnlocked,
+            priority: .high,
+            signals: IntentSignals(customPayload: [
+                "xpAmount": "\(amount)",
+                "newLevel": "\(level)"
+            ]),
+            requestedBy: "NotificationBrain.XPLevelUp"
+        )
+        _ = await request(intent)
+    }
+
+    private func handleStreakIncremented(payload: [AnyHashable: Any]?) async {
+        // Milestone-only — we don't ping on every single day.
+        let streak = payload?["streak"] as? Int ?? 0
+        let milestones: Set<Int> = [3, 7, 14, 30, 60, 90, 180, 365]
+        guard milestones.contains(streak) else { return }
+
+        let intent = NotificationIntent(
+            kind: .streakSave,
+            priority: .medium,
+            signals: IntentSignals(customPayload: ["streak": "\(streak)"]),
+            requestedBy: "NotificationBrain.StreakMilestone"
+        )
+        _ = await request(intent)
+    }
+
+    private func handleStreakRisk(payload: [AnyHashable: Any]?) async {
+        let streak = payload?["streak"] as? Int ?? 0
+        guard streak > 0 else { return }
+
+        let intent = NotificationIntent(
+            kind: .streakRisk,
+            priority: .high,
+            signals: IntentSignals(customPayload: ["streak": "\(streak)"]),
+            requestedBy: "NotificationBrain.StreakRisk"
+        )
+        _ = await request(intent)
+    }
+
+    // MARK: - Hard cap helpers
+
+    private func hardCapRejection(now: Date) -> BudgetDecision.Reason? {
+        let defaults = UserDefaults.standard
+        if let last = defaults.object(forKey: HardCapKeys.lastDelivered) as? Date,
+           now.timeIntervalSince(last) < Self.hardCapInterval {
+            return .cooldown
+        }
+        if let countDate = defaults.object(forKey: HardCapKeys.dailyCountDate) as? Date,
+           Calendar.current.isDate(countDate, inSameDayAs: now) {
+            let count = defaults.integer(forKey: HardCapKeys.dailyCount)
+            if count >= Self.hardCapDailyLimit {
+                return .dailyLimitReached
+            }
+        }
+        return nil
+    }
+
+    private func recordHardCapDelivery(now: Date) {
+        let defaults = UserDefaults.standard
+        let nextCount: Int
+        if let countDate = defaults.object(forKey: HardCapKeys.dailyCountDate) as? Date,
+           Calendar.current.isDate(countDate, inSameDayAs: now) {
+            nextCount = defaults.integer(forKey: HardCapKeys.dailyCount) + 1
+        } else {
+            nextCount = 1
+        }
+        defaults.set(now, forKey: HardCapKeys.lastDelivered)
+        defaults.set(nextCount, forKey: HardCapKeys.dailyCount)
+        defaults.set(now, forKey: HardCapKeys.dailyCountDate)
     }
 
     // MARK: - Category mapping
@@ -243,6 +388,22 @@ public actor NotificationBrain {
         if summary.contains("volatile") { return .volatile }
         return .unknown
     }
+}
+
+/// Event names consumed by `NotificationBrain.subscribe()`.
+/// `nonisolated` so the actor-isolated `subscribe()` can reference them without
+/// a Sendable warning under Swift 6 strict concurrency.
+public extension Notification.Name {
+    /// Posted by `LevelStore.addXP(_:)` whenever XP is granted. UserInfo:
+    /// `amount: Int`, `totalXP: Int`, `level: Int`, `didLevelUp: Bool`.
+    nonisolated static let aiqoXPGranted = Notification.Name("aiqo.xp.granted")
+    /// Posted by `StreakManager.markTodayAsActive()` on streak increment.
+    /// UserInfo: `streak: Int`, `longest: Int`.
+    nonisolated static let aiqoStreakIncremented = Notification.Name("aiqo.streak.incremented")
+    /// Posted by `StreakManager.checkStreakContinuity()` when 22h+ have elapsed
+    /// since the user's last active day and they haven't completed today yet.
+    /// UserInfo: `streak: Int`.
+    nonisolated static let aiqoStreakRisk = Notification.Name("aiqo.streak.risk")
 }
 
 /// Minimal audit event for notification delivery.

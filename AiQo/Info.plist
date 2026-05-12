@@ -14,12 +14,25 @@
 		<string>aiqo.notifications.inactivity-check</string>
 		<string>aiqo.brain.nightly</string>
 	</array>
+	<!--
+	  BRAIN_DASHBOARD_ENABLED — Dead flag as of v1.0.4. Declared so a future build
+	  can flip the in-app debug dashboard (BrainDashboard.swift) on without an
+	  additional plist add. Currently no functional reader uses it.
+	-->
 	<key>BRAIN_DASHBOARD_ENABLED</key>
 	<false/>
 	<key>CAPTAIN_API_KEY</key>
 	<string>$(CAPTAIN_API_KEY)</string>
 		<key>CAPTAIN_BRAIN_V2_ENABLED</key>
 		<true/>
+		<!--
+		  CAPTAIN_QUALITY_REGEN_ENABLED — Quality-regeneration loop in
+		  BrainOrchestrator.swift:338. Reads via Bundle.main.infoDictionary
+		  with default false. Declared here so the read is no longer a
+		  "ghost flag" (declared in code, missing from plist).
+		-->
+		<key>CAPTAIN_QUALITY_REGEN_ENABLED</key>
+		<false/>
 		<key>CAPTAIN_VOICE_API_KEY</key>
 		<string>$(CAPTAIN_VOICE_API_KEY)</string>
 		<key>CAPTAIN_VOICE_API_URL</key>
@@ -46,8 +59,20 @@
 	</array>
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
+	<!--
+	  CRISIS_DETECTOR_ENABLED — As of v1.0.4 wires CrisisDetector.shared
+	  registration in AppDelegate. Previously dead (declared but unread).
+	  CrisisDetector is a passive safety-net actor that listens to emotional
+	  pattern + bio signals; instantiation is sufficient to wire it.
+	-->
 	<key>CRISIS_DETECTOR_ENABLED</key>
 	<true/>
+	<!--
+	  LEARNING_CHALLENGE_V2_ENABLED — Dead at the call-site level. Only the
+	  property wrapper at AiQoFeatureFlags.swift:111 exists; no functional
+	  reader. Retained for dark-launch rollback path per the comment in
+	  AiQoFeatureFlags.swift.
+	-->
 	<key>LEARNING_CHALLENGE_V2_ENABLED</key>
 	<true/>
 	<key>LEARNING_SPARK_STAGE2_ENABLED</key>
@@ -61,10 +86,23 @@
 		<string>instagram-stories</string>
 		<string>instagram</string>
 	</array>
+	<!--
+	  MEMORY_V4_ENABLED — Globally ON as of v1.0.4. The runtime gate at
+	  MemoryV4Gate.isOn ALSO checks the remote Supabase kill switch
+	  (memory_v4_globally_disabled) and the local migration-failure fallback
+	  flag (aiqo.memory.v4.disabled.fallback). Flip back to false here only
+	  as a "kill V4 in next build" — for live disable use the Supabase row.
+	-->
 	<key>MEMORY_V4_ENABLED</key>
-	<false/>
+	<true/>
+	<!--
+	  NOTIFICATION_BRAIN_ENABLED — As of v1.0.4 wires NotificationBrain.shared.subscribe()
+	  in AppDelegate. Listens for XP grants, streak increments, and streak risk.
+	  Hard-capped at 1 notification per 4 hours and 3 per day (NotificationBrain.swift)
+	  on top of the existing GlobalBudget pipeline.
+	-->
 	<key>NOTIFICATION_BRAIN_ENABLED</key>
-	<false/>
+	<true/>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>AiQo uses alarm access to save your smart wake time as an alarm on your device.</string>
 	<key>NSAppTransportSecurity</key>
@@ -87,10 +125,24 @@
 	<false/>
 	<key>SMART_WATER_TRACKING_ENABLED</key>
 	<true/>
+	<!--
+	  PROACTIVE_CULTURAL_ENABLED — Dead. Reserved for the Ramadan/Eid/Jumuah
+	  trigger path inside CulturalTrigger; no current reader. Flag stays for
+	  remote-config parity once we ship the back-channel.
+	-->
 	<key>PROACTIVE_CULTURAL_ENABLED</key>
 	<false/>
+	<!--
+	  PROACTIVE_EMOTIONAL_ENABLED — Dead. Reserved for EmotionalFollowUpTrigger /
+	  MoodShiftTrigger gating. The triggers themselves register unconditionally
+	  inside the V4 cascade today.
+	-->
 	<key>PROACTIVE_EMOTIONAL_ENABLED</key>
 	<false/>
+	<!--
+	  PROACTIVE_MEMORY_CALLBACK_ENABLED — Dead. Reserved for MemoryCallbackTrigger
+	  gating. Same situation as PROACTIVE_EMOTIONAL_ENABLED.
+	-->
 	<key>PROACTIVE_MEMORY_CALLBACK_ENABLED</key>
 	<false/>
 	<key>SAFARI_VIEW_CONTROLLER_ENABLED</key>
@@ -103,6 +155,12 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>TRIBE_BACKEND_ENABLED</key>
 	<false/>
+	<!--
+	  TRIBE_FEATURE_VISIBLE — Dead at the read-site level (only comment refs in
+	  TribeExperienceFlow.swift). Retained because the Tribe surface is still in
+	  dev and TRIBE_BACKEND_ENABLED + TRIBE_SUBSCRIPTION_GATE_ENABLED rely on
+	  the same triplet of flags to be coherent when we ship Tribe v2.
+	-->
 	<key>TRIBE_FEATURE_VISIBLE</key>
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>

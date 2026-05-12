@@ -86,7 +86,7 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                 }
                 diag.info("Memory v3→v4 staged \(oldFacts.count) legacy facts")
             } catch {
-                diag.error("Memory v3→v4 failed to read CaptainMemory", error: error)
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_facts_failed")
             }
 
             do {
@@ -110,7 +110,7 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                     "Memory v3→v4 staged \(pendingV4Payload.episodes.count) episodes from \(oldMessages.count) legacy messages"
                 )
             } catch {
-                diag.error("Memory v3→v4 failed to read PersistentChatMessage", error: error)
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_messages_failed")
             }
         },
         didMigrate: { context in
@@ -168,11 +168,12 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                 }
 
                 UserDefaults.standard.set(true, forKey: "memory.v4.migrated")
+                UserDefaults.standard.set(true, forKey: MemoryV4Gate.migratedUserDefaultsKey)
                 diag.info(
                     "Memory schema v3→v4 migration complete. Migrated \(insertedFacts) facts, \(insertedEpisodes) episodes from \(pendingV4Payload.sourceMessageCount) messages"
                 )
             } catch {
-                diag.error("Memory v3→v4 destination write failed", error: error)
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_write_failed")
             }
         }
     )

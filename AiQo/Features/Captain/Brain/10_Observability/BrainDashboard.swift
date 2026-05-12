@@ -66,6 +66,7 @@ struct BrainDashboard: View {
 
             Section("Feature Flags") {
                 LabeledContent("MEMORY_V4_ENABLED", value: FeatureFlags.memoryV4Enabled ? "true" : "false")
+                LabeledContent("MemoryV4Gate.isOn", value: MemoryV4Gate.isOn ? "true" : "false")
                 LabeledContent("CAPTAIN_BRAIN_V2_ENABLED", value: FeatureFlags.brainV2Enabled ? "true" : "false")
                 LabeledContent("HAMOUDI_BLEND_ENABLED", value: FeatureFlags.hamoudiBlendEnabled ? "true" : "false")
                 LabeledContent("TRIBE_SUB_GATE_ENABLED", value: FeatureFlags.tribeSubscriptionGateEnabled ? "true" : "false")

@@ -3,6 +3,10 @@ import HealthKit
 import UIKit
 import Combine
 
+// NOTE: Despite the "Legacy" prefix and v1.0.4 audit notes, this view is still
+// the active calculation screen wired into SceneDelegate's `.legacy` onboarding
+// step (SceneDelegate.swift:404-406). Do not flag-gate without first migrating
+// the call site to a replacement.
 struct LegacyCalculationScreenView: View {
     @StateObject private var viewModel = LegacyCalculationViewModel()
     @State private var introAppeared = false

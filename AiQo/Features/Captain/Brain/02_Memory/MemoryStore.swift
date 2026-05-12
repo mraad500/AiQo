@@ -1198,7 +1198,7 @@ final class MemoryStore {
         salience: Double,
         storageMode: StorageMode
     ) {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         let factCategory = Self.factCategory(for: category)
         let factSource = Self.factSource(for: source)
@@ -1223,7 +1223,7 @@ final class MemoryStore {
     }
 
     private func shadowRemoveSemanticFact(_ key: String) {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         Task(priority: .utility) {
             await SemanticStore.shared.delete(storageKey: key)
@@ -1231,7 +1231,7 @@ final class MemoryStore {
     }
 
     private func shadowClearSemanticFacts() {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         Task(priority: .utility) {
             await SemanticStore.shared.deleteAll()
@@ -1239,7 +1239,7 @@ final class MemoryStore {
     }
 
     private func shadowPruneSemanticFacts(olderThan cutoff: Date, belowConfidence threshold: Double) {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         Task(priority: .utility) {
             _ = await SemanticStore.shared.pruneStale(
@@ -1250,7 +1250,7 @@ final class MemoryStore {
     }
 
     private func shadowRecordEpisode(from chatMessage: ChatMessage, sessionID: UUID) {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         Task(priority: .utility) {
             let snapshots = await currentShadowSnapshots(for: chatMessage)

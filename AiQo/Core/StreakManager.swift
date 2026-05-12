@@ -30,6 +30,7 @@ final class StreakManager: ObservableObject {
     /// يسجّل يوم نشط — ينادى لما المستخدم يحقق هدف يومي
     func markTodayAsActive() {
         let today = Calendar.current.startOfDay(for: Date())
+        let previousStreak = currentStreak
 
         // إذا سبق سجّلنا اليوم
         if let last = lastActiveDate, Calendar.current.isDate(last, inSameDayAs: today) {
@@ -61,11 +62,20 @@ final class StreakManager: ObservableObject {
 
         saveState()
         addToHistory(date: today)
+
+        if currentStreak > previousStreak {
+            NotificationCenter.default.post(
+                name: .aiqoStreakIncremented,
+                object: self,
+                userInfo: ["streak": currentStreak, "longest": longestStreak]
+            )
+        }
     }
 
     /// يتحقق هل الـ streak لسه مستمر (يُنادى عند فتح التطبيق)
     func checkStreakContinuity() {
         let today = Calendar.current.startOfDay(for: Date())
+        let now = Date()
 
         guard let last = lastActiveDate else {
             todayCompleted = false
@@ -82,6 +92,14 @@ final class StreakManager: ObservableObject {
             // انقطع — reset
             currentStreak = 0
             saveState()
+        } else if currentStreak > 0 && now.timeIntervalSince(last) >= 22 * 3600 {
+            // Yesterday-active, streak still alive, but we're in the 22h+ window —
+            // user is at risk of losing it today.
+            NotificationCenter.default.post(
+                name: .aiqoStreakRisk,
+                object: self,
+                userInfo: ["streak": currentStreak]
+            )
         }
         todayCompleted = false
     }

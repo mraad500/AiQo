@@ -98,11 +98,23 @@ final class LevelStore: ObservableObject {
         totalXP += amount
         recomputeLevelAndCurrentXP()
 
-        if level > oldLevel {
+        let didLevelUp = level > oldLevel
+        if didLevelUp {
             notifyUI(didLevelUp: true)
         }
 
         save()
+
+        NotificationCenter.default.post(
+            name: .aiqoXPGranted,
+            object: self,
+            userInfo: [
+                "amount": amount,
+                "totalXP": totalXP,
+                "level": level,
+                "didLevelUp": didLevelUp
+            ]
+        )
 
         let syncXP = totalXP
         let syncLevel = level

@@ -820,13 +820,15 @@ private extension BrainOrchestrator {
 
 private extension BrainOrchestrator {
     /// Persists a successful LLM exchange to EpisodicStore and kicks off non-blocking
-    /// fact extraction into SemanticStore. Only runs when MEMORY_V4_ENABLED.
-    /// Never called on error / fallback paths — we don't poison memory with canned replies.
+    /// fact extraction into SemanticStore. Only runs when `MemoryV4Gate.isOn`
+    /// (Info.plist flag AND remote kill switch off AND no local migration-failure
+    /// fallback). Never called on error / fallback paths — we don't poison memory
+    /// with canned replies.
     func persistIfMemoryEnabled(
         request: HybridBrainRequest,
         reply: HybridBrainServiceReply
     ) async {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         let userMessage = latestUserMessage(in: request)
         let captainResponse = reply.message
