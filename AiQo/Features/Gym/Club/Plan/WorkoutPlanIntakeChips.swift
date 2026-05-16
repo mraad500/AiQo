@@ -357,36 +357,30 @@ struct PlanIntakeChipsView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(isArabic ? "خطة الكابتن" : "Captain's plan")
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(PlanPalette.mintDeep)
-                    .textCase(.uppercase)
-                    .tracking(0.8)
-
-                Text(isArabic ? "ابنِ خطتك بثواني" : "Build your plan in seconds")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(isArabic ? "ابنِ خطتك" : "Build your plan")
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-            }
 
-            Spacer(minLength: 8)
+                Spacer(minLength: 8)
 
-            ZStack {
-                Circle()
-                    .stroke(PlanPalette.hairline, lineWidth: 4)
-                Circle()
-                    .trim(from: 0, to: max(Double(answeredCount) / Double(totalSteps), 0.001))
-                    .stroke(
-                        isComplete ? PlanPalette.mintDeep : PlanPalette.mintDeep.opacity(0.85),
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
                 Text("\(answeredCount)/\(totalSteps)")
                     .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isComplete ? PlanPalette.mintDeep : .secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isComplete ? PlanPalette.mint.opacity(0.6) : PlanPalette.surfaceTint)
+                    )
             }
-            .frame(width: 46, height: 46)
+
+            Text(isArabic
+                 ? "اختر الخيارات وكابتن حمّودي يبنيلك خطة بثواني"
+                 : "Pick your options — Captain builds it in seconds")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
         }
     }
 

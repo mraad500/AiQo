@@ -542,35 +542,11 @@ struct CaptainPlanChatView: View {
         ZStack {
             chatBackground.ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                messagesSection
-
-                if showIntakeChips {
-                    PlanIntakeChipsView(
-                        selection: $intakeSelection,
-                        language: language,
-                        onSubmit: submitIntake
-                    )
-                }
-
-                if let workoutPlan = globalBrain.currentWorkoutPlan {
-                    refinementChips(for: workoutPlan)
-                    pinPlanButton(for: workoutPlan)
-                }
-
-                HealthComplianceCard(compact: true)
-
-                if showSuccessState {
-                    successCard
-                }
-
-                if let errorMessage {
-                    errorCard(errorMessage)
-                }
+            if showIntakeChips {
+                intakeScroll
+            } else {
+                conversationStack
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 6)
         }
         .navigationTitle(L10n.t("gym.plan.captainChat"))
         .navigationBarTitleDisplayMode(.inline)
@@ -600,6 +576,56 @@ struct CaptainPlanChatView: View {
         !hasUserMessages
             && globalBrain.currentWorkoutPlan == nil
             && !globalBrain.isLoading
+    }
+
+    // First-run: the intake form is the only content. It lives in its own
+    // ScrollView so the tall card scrolls inside the safe area instead of
+    // overflowing under the nav bar / status bar (the cluttered-overlap bug).
+    private var intakeScroll: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
+                PlanIntakeChipsView(
+                    selection: $intakeSelection,
+                    language: language,
+                    onSubmit: submitIntake
+                )
+
+                HealthComplianceCard(compact: true)
+
+                if let errorMessage {
+                    errorCard(errorMessage)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    // Conversation mode: messages thread + plan refinement + pin.
+    private var conversationStack: some View {
+        VStack(spacing: 12) {
+            messagesSection
+
+            if let workoutPlan = globalBrain.currentWorkoutPlan {
+                refinementChips(for: workoutPlan)
+                pinPlanButton(for: workoutPlan)
+            }
+
+            HealthComplianceCard(compact: true)
+
+            if showSuccessState {
+                successCard
+            }
+
+            if let errorMessage {
+                errorCard(errorMessage)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 6)
     }
 
     // MARK: - Messages
