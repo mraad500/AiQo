@@ -225,12 +225,13 @@ struct PlanIntakeChipsView: View {
         VStack(alignment: .leading, spacing: 22) {
             header
             progressBar
+            bodyPhotoSection
+            sectionDivider
             goalSection
             levelSection
             sessionTimeSection
             planLengthSection
             equipmentSection
-            bodyPhotoSection
             cta
         }
         .padding(20)
@@ -533,6 +534,13 @@ struct PlanIntakeChipsView: View {
            let image = UIImage(data: data) {
             await MainActor.run { selection.bodyImage = image }
         }
+    }
+
+    private var sectionDivider: some View {
+        Rectangle()
+            .fill(PlanPalette.hairline)
+            .frame(height: 1)
+            .padding(.vertical, 2)
     }
 
     private func sectionIcon(_ symbol: String, tint: PlanPalette.Family) -> some View {

@@ -551,11 +551,16 @@ struct CaptainPlanChatView: View {
         .navigationTitle(L10n.t("gym.plan.captainChat"))
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            inputBar
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
-                .background(Color.clear)
+            // During the first-run intake the user only taps chips — a chat
+            // input bar would just overlap the form and add clutter. Show it
+            // only once the conversation has actually started.
+            if !showIntakeChips {
+                inputBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .padding(.bottom, 10)
+                    .background(Color.clear)
+            }
         }
         .task {
             bootstrapPlanChatIfNeeded()
