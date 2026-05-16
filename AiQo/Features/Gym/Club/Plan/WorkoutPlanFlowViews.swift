@@ -1035,13 +1035,12 @@ enum WorkoutPlanMemoryStore {
         return formatter
     }()
 
-    private static let recordIDFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = .current
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
+    /// Must be byte-for-byte identical to how `AiQoDailyRecord` stamps its
+    /// own `id` — otherwise a record saved under one string can never be
+    /// fetched again (the pinned-plan-disappears-after-relaunch bug).
+    /// Both now share `AiQoDailyRecord.dayIDFormatter` (en_US_POSIX +
+    /// Gregorian), so a save and a later fetch always agree.
+    private static var recordIDFormatter: DateFormatter { AiQoDailyRecord.dayIDFormatter }
 
     static func savePlan(
         workoutPlan: WorkoutPlan,
