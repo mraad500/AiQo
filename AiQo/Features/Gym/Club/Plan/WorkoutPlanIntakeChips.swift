@@ -211,128 +211,245 @@ struct PlanIntakeChipsView: View {
     private var isArabic: Bool { language == .arabic }
     private var isComplete: Bool { selection.isComplete }
 
+    private let totalSteps = 5
+    private var answeredCount: Int {
+        [selection.goal != nil,
+         selection.level != nil,
+         selection.duration != nil,
+         selection.planLength != nil,
+         selection.equipment != nil].filter { $0 }.count
+    }
+    private var remainingCount: Int { max(totalSteps - answeredCount, 0) }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(isArabic ? "اختر بسرعة، أبنيلك خطّة بثواني" : "Pick fast — I'll build it in seconds")
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            section(title: isArabic ? "الهدف" : "Goal") {
-                wrap {
-                    ForEach(PlanIntakeGoal.allCases) { goal in
-                        chip(
-                            isSelected: selection.goal == goal,
-                            text: isArabic ? goal.arabicLabel : goal.englishLabel,
-                            family: goal.family
-                        ) {
-                            selection.goal = goal
-                        }
-                    }
-                }
-            }
-
-            section(title: isArabic ? "المستوى" : "Level") {
-                wrap {
-                    ForEach(PlanIntakeLevel.allCases) { level in
-                        chip(
-                            isSelected: selection.level == level,
-                            text: isArabic ? level.arabicLabel : level.englishLabel,
-                            family: .mint
-                        ) {
-                            selection.level = level
-                        }
-                    }
-                }
-            }
-
-            section(title: isArabic ? "الوقت بالجلسة" : "Per-session time") {
-                wrap {
-                    ForEach(PlanIntakeDuration.allCases) { duration in
-                        chip(
-                            isSelected: selection.duration == duration,
-                            text: duration.label(arabic: isArabic),
-                            family: .sand
-                        ) {
-                            selection.duration = duration
-                        }
-                    }
-                }
-            }
-
-            section(title: isArabic ? "مدة الخطة" : "Plan length") {
-                wrap {
-                    ForEach(PlanIntakePlanLength.allCases) { length in
-                        chip(
-                            isSelected: selection.planLength == length,
-                            text: length.label(arabic: isArabic),
-                            family: .lemon
-                        ) {
-                            selection.planLength = length
-                        }
-                    }
-                }
-            }
-
-            section(title: isArabic ? "المعدّات" : "Equipment") {
-                wrap {
-                    ForEach(PlanIntakeEquipment.allCases) { equipment in
-                        chip(
-                            isSelected: selection.equipment == equipment,
-                            text: isArabic ? equipment.arabicLabel : equipment.englishLabel,
-                            family: .lavender
-                        ) {
-                            selection.equipment = equipment
-                        }
-                    }
-                }
-            }
-
+        VStack(alignment: .leading, spacing: 22) {
+            header
+            progressBar
+            goalSection
+            levelSection
+            sessionTimeSection
+            planLengthSection
+            equipmentSection
             bodyPhotoSection
-
-            Button(action: onSubmit) {
-                HStack(spacing: 8) {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 13, weight: .heavy))
-                    Text(isComplete
-                         ? (isArabic ? "اطلب الخطة من الكابتن" : "Generate my plan")
-                         : (isArabic ? "اختر الباقي حتى أبدأ" : "Pick the rest to begin"))
-                        .font(.system(size: 15, weight: .heavy, design: .rounded))
-                }
-                .foregroundStyle(isComplete ? PlanPalette.mintDeep : PlanPalette.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isComplete ? PlanPalette.mint : PlanPalette.surfaceTint)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(!isComplete)
-            .padding(.top, 4)
+            cta
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 18, x: 0, y: 8)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .stroke(PlanPalette.hairline, lineWidth: 1)
                 )
         )
+        .animation(.easeInOut(duration: 0.22), value: answeredCount)
+    }
+
+    // MARK: Sections (extracted to keep `body` cheap for the type-checker)
+
+    private var goalSection: some View {
+        sectionBlock(
+            icon: "target",
+            tint: .mint,
+            title: isArabic ? "الهدف" : "Goal",
+            answered: selection.goal != nil
+        ) {
+            wrap {
+                ForEach(PlanIntakeGoal.allCases) { goal in
+                    chip(
+                        isSelected: selection.goal == goal,
+                        text: isArabic ? goal.arabicLabel : goal.englishLabel,
+                        family: goal.family
+                    ) {
+                        selection.goal = goal
+                    }
+                }
+            }
+        }
+    }
+
+    private var levelSection: some View {
+        sectionBlock(
+            icon: "chart.line.uptrend.xyaxis",
+            tint: .lavender,
+            title: isArabic ? "المستوى" : "Level",
+            answered: selection.level != nil
+        ) {
+            wrap {
+                ForEach(PlanIntakeLevel.allCases) { level in
+                    chip(
+                        isSelected: selection.level == level,
+                        text: isArabic ? level.arabicLabel : level.englishLabel,
+                        family: .mint
+                    ) {
+                        selection.level = level
+                    }
+                }
+            }
+        }
+    }
+
+    private var sessionTimeSection: some View {
+        sectionBlock(
+            icon: "clock.fill",
+            tint: .sand,
+            title: isArabic ? "الوقت بالجلسة" : "Per-session time",
+            answered: selection.duration != nil
+        ) {
+            wrap {
+                ForEach(PlanIntakeDuration.allCases) { duration in
+                    chip(
+                        isSelected: selection.duration == duration,
+                        text: duration.label(arabic: isArabic),
+                        family: .sand
+                    ) {
+                        selection.duration = duration
+                    }
+                }
+            }
+        }
+    }
+
+    private var planLengthSection: some View {
+        sectionBlock(
+            icon: "calendar",
+            tint: .lemon,
+            title: isArabic ? "مدة الخطة" : "Plan length",
+            answered: selection.planLength != nil
+        ) {
+            wrap {
+                ForEach(PlanIntakePlanLength.allCases) { length in
+                    chip(
+                        isSelected: selection.planLength == length,
+                        text: length.label(arabic: isArabic),
+                        family: .lemon
+                    ) {
+                        selection.planLength = length
+                    }
+                }
+            }
+        }
+    }
+
+    private var equipmentSection: some View {
+        sectionBlock(
+            icon: "dumbbell.fill",
+            tint: .lavender,
+            title: isArabic ? "المعدّات" : "Equipment",
+            answered: selection.equipment != nil
+        ) {
+            wrap {
+                ForEach(PlanIntakeEquipment.allCases) { equipment in
+                    chip(
+                        isSelected: selection.equipment == equipment,
+                        text: isArabic ? equipment.arabicLabel : equipment.englishLabel,
+                        family: .lavender
+                    ) {
+                        selection.equipment = equipment
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isArabic ? "خطة الكابتن" : "Captain's plan")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(PlanPalette.mintDeep)
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+
+                Text(isArabic ? "ابنِ خطتك بثواني" : "Build your plan in seconds")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer(minLength: 8)
+
+            ZStack {
+                Circle()
+                    .stroke(PlanPalette.hairline, lineWidth: 4)
+                Circle()
+                    .trim(from: 0, to: max(Double(answeredCount) / Double(totalSteps), 0.001))
+                    .stroke(
+                        isComplete ? PlanPalette.mintDeep : PlanPalette.mintDeep.opacity(0.85),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                Text("\(answeredCount)/\(totalSteps)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary)
+            }
+            .frame(width: 46, height: 46)
+        }
+    }
+
+    // MARK: Progress bar
+
+    private var progressBar: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<totalSteps, id: \.self) { index in
+                Capsule(style: .continuous)
+                    .fill(index < answeredCount ? PlanPalette.mintDeep : PlanPalette.hairline)
+                    .frame(height: 5)
+            }
+        }
+    }
+
+    // MARK: Primary CTA
+
+    private var cta: some View {
+        Button(action: onSubmit) {
+            HStack(spacing: 9) {
+                Image(systemName: isComplete ? "paperplane.fill" : "hand.tap.fill")
+                    .font(.system(size: 14, weight: .heavy))
+                Text(isComplete
+                     ? (isArabic ? "اطلب الخطة من الكابتن" : "Generate my plan")
+                     : (isArabic
+                        ? "اختر \(remainingCount) بعد حتى أبدأ"
+                        : "Pick \(remainingCount) more to begin"))
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(isComplete ? PlanPalette.mintDeep : PlanPalette.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isComplete ? PlanPalette.mint : PlanPalette.surfaceTint)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(isComplete ? Color.clear : PlanPalette.hairline, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!isComplete)
+        .padding(.top, 2)
     }
 
     @ViewBuilder
     private var bodyPhotoSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(isArabic ? "صورة جسم (اختياري)" : "Body photo (optional)")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                sectionIcon("person.crop.rectangle.stack", tint: .lavender)
+                Text(isArabic ? "صورة جسم" : "Body photo")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(isArabic ? "اختياري" : "optional")
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+                    .foregroundStyle(PlanPalette.lavenderDeep)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(PlanPalette.lavender.opacity(0.35))
+                    )
                 Spacer(minLength: 0)
                 if selection.hasBodyImage {
                     Button {
@@ -340,7 +457,7 @@ struct PlanIntakeChipsView: View {
                         pickerItem = nil
                     } label: {
                         Text(isArabic ? "إزالة" : "Remove")
-                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
                             .foregroundStyle(PlanPalette.lavenderDeep)
                     }
                     .buttonStyle(.plain)
@@ -352,53 +469,54 @@ struct PlanIntakeChipsView: View {
                 matching: .images,
                 photoLibrary: .shared()
             ) {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     if let image = selection.bodyImage {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 40, height: 40)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .frame(width: 46, height: 46)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     } else if isLoadingImage {
                         ProgressView()
-                            .frame(width: 40, height: 40)
+                            .frame(width: 46, height: 46)
                     } else {
-                        Image(systemName: "person.crop.rectangle.stack")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image(systemName: "plus.viewfinder")
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(PlanPalette.lavenderDeep)
-                            .frame(width: 40, height: 40)
+                            .frame(width: 46, height: 46)
                             .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(PlanPalette.lavender.opacity(0.35))
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(PlanPalette.lavender.opacity(0.3))
                             )
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(selection.hasBodyImage
-                             ? (isArabic ? "صورة مرفقة" : "Photo attached")
+                             ? (isArabic ? "صورة مرفقة ✓" : "Photo attached ✓")
                              : (isArabic ? "أرفق صورة لتفصيل الخطة" : "Attach a photo to tailor the plan"))
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
-                            .foregroundStyle(PlanPalette.textPrimary)
+                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                            .foregroundStyle(selection.hasBodyImage ? PlanPalette.lavenderDeep : PlanPalette.textPrimary)
                             .lineLimit(1)
                         Text(isArabic
-                             ? "تُرسل لـ Google Gemini مرة واحدة. تُحذف بعد التحليل."
-                             : "Sent once to Google Gemini. Discarded after analysis.")
+                             ? "تُرسل لـ Google Gemini مرة واحدة وتُحذف بعد التحليل."
+                             : "Sent once to Google Gemini, discarded after analysis.")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.forward")
-                        .font(.system(size: 11, weight: .heavy))
+                        .font(.system(size: 12, weight: .heavy))
                         .foregroundStyle(.secondary)
                 }
-                .padding(10)
+                .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.clear)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(selection.hasBodyImage ? PlanPalette.lavender.opacity(0.16) : PlanPalette.surfaceTint)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(PlanPalette.hairline, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(selection.hasBodyImage ? PlanPalette.lavender.opacity(0.5) : PlanPalette.hairline, lineWidth: 1)
                         )
                 )
             }
@@ -423,33 +541,64 @@ struct PlanIntakeChipsView: View {
         }
     }
 
-    private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
+    private func sectionIcon(_ symbol: String, tint: PlanPalette.Family) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(tint.ink)
+            .frame(width: 30, height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(tint.pastel.opacity(0.55))
+            )
+    }
+
+    private func sectionBlock<Content: View>(
+        icon: String,
+        tint: PlanPalette.Family,
+        title: String,
+        answered: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(spacing: 10) {
+                sectionIcon(icon, tint: tint)
+                Text(title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+                if answered {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(PlanPalette.mintDeep)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
             content()
         }
     }
 
     private func chip(isSelected: Bool, text: String, family: PlanPalette.Family, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(text)
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                .lineLimit(1)
-                .foregroundStyle(isSelected ? family.ink : PlanPalette.textPrimary.opacity(0.85))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isSelected ? family.pastel : Color.clear)
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(isSelected ? Color.clear : PlanPalette.hairline, lineWidth: 1)
-                )
+            HStack(spacing: 5) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .black))
+                }
+                Text(text)
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(isSelected ? family.ink : PlanPalette.textPrimary.opacity(0.8))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? family.pastel : PlanPalette.surfaceTint)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(isSelected ? family.ink.opacity(0.25) : PlanPalette.hairline, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
