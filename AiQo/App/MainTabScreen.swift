@@ -114,9 +114,10 @@ struct MainTabScreen: View {
         let selectedColor = Colors.accent
         let unselectedColor = UIColor.systemGray
 
-        appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
+        appearance.stackedLayoutAppearance.selected.iconColor = .black
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: selectedColor
+            .foregroundColor: UIColor.black,
+            .font: UIFont.boldSystemFont(ofSize: 10)
         ]
 
         appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
