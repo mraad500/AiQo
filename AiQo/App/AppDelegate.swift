@@ -29,6 +29,11 @@ struct AiQoApp: App {
                 await ProceduralStore.shared.configure(container: v4Container)
                 await EmotionalStore.shared.configure(container: v4Container)
                 await RelationshipStore.shared.configure(container: v4Container)
+                // 11_Directives — user-taught standing instructions.
+                await DirectiveStore.shared.configure(container: v4Container)
+                // Re-surface every still-active standing order into the prompt
+                // mirror so it survives relaunch and the Captain never forgets.
+                await DirectiveCoordinator.shared.hydratePromptMirror()
             }
             BackgroundCoordinator.shared.registerTasks()
             BackgroundCoordinator.shared.scheduleNextNightly()
@@ -107,7 +112,10 @@ struct AiQoApp: App {
     }
 
     private static func makeCaptainContainerV4() -> ModelContainer {
-        let schema = Schema(versionedSchema: MemorySchemaV4.self)
+        // Target the latest versioned schema (V5 adds LearnedDirective).
+        // The migration plan carries the full V1→…→V5 chain, so existing
+        // V3/V4 stores migrate forward via the lightweight V4→V5 stage.
+        let schema = Schema(versionedSchema: MemorySchemaV5.self)
 
         do {
             let config = ModelConfiguration(

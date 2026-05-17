@@ -25,6 +25,10 @@ final class TierGate: @unchecked Sendable {
         case captainMemory
         case captainNotifications
 
+        // User-taught standing directives (learn / save / remember / execute).
+        // A "smart Captain" intelligence feature, gated like captainMemory.
+        case captainDirectives
+
         // Intelligence Pro exclusives
         case multiWeekPlan(weeks: Int)
         case weeklyInsightsNarrative
@@ -39,6 +43,7 @@ final class TierGate: @unchecked Sendable {
             case .captainChat:               return "captainChat"
             case .captainMemory:             return "captainMemory"
             case .captainNotifications:      return "captainNotifications"
+            case .captainDirectives:         return "captainDirectives"
             case .multiWeekPlan(let w):      return "multiWeekPlan(\(w)w)"
             case .weeklyInsightsNarrative:   return "weeklyInsightsNarrative"
             case .monthlyReflection:         return "monthlyReflection"
@@ -94,7 +99,7 @@ final class TierGate: @unchecked Sendable {
         switch feature {
         case .basicLifeNotifications:
             return .none
-        case .captainChat, .captainMemory, .captainNotifications:
+        case .captainChat, .captainMemory, .captainNotifications, .captainDirectives:
             return .max
         case .multiWeekPlan(let weeks):
             return weeks > 1 ? .pro : .max
@@ -135,16 +140,16 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated var maxMemoryRetrievalDepth: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 25
-        case .max: return 10
+        case .pro: return 40
+        case .max: return 18
         default:   return 0
         }
     }
 
     nonisolated var maxSemanticFacts: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 500
-        case .max: return 200
+        case .pro: return 1_200
+        case .max: return 500
         default:   return 0
         }
     }

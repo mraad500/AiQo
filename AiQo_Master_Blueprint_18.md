@@ -57,6 +57,27 @@
 
 ---
 
+> **2026-05-17 (later still) — read this fourth.** A **twelfth Brain subsystem
+> shipped: `11_Directives`**, the learn-and-execute layer the Captain previously
+> lacked. The user can now **teach the Captain a durable standing instruction** in
+> natural Iraqi/English ("بعد كل تمرين حلّل تمريني وقارنه بالي قبله ودزّلي إشعار");
+> it is parsed on-device (no LLM round-trip), persisted in a new **Memory Schema V5**
+> (one additive model, lightweight V4→V5 migration — same proven pattern as V2→V3),
+> mirrored back into every prompt's Working Memory so the Captain confirms it and
+> **never forgets it**, and **executed automatically after every workout** through
+> `AIWorkoutSummaryService` (deterministic, offline, Iraqi analyze-vs-previous
+> notification — no network/LLM/cost on the hot path). Captain memory was also
+> **enlarged** per the same request (semantic-fact cap Pro 500→1200 / Max 200→500,
+> retrieval depth 25→40 / 10→18, prompt budget 800→1200 tokens & 30→48 entries,
+> workout-history window 7→30, persisted chat 200→400). The submission is **re-cut
+> as v1.0.5 (build 23)** — `MARKETING_VERSION` 1.0.6→1.0.5, `CURRENT_PROJECT_VERSION`
+> 22→23 (build number still increments over the withdrawn 1.0.5/21, satisfying
+> Apple's higher-build requirement). Clean Release simulator build green (0 errors /
+> 0 warnings, Swift-6 concurrency clean). Full account in **§2A → "v1.0.5 build 23 —
+> Captain Directives layer + memory expansion"**.
+
+---
+
 ## 0. How to use this document
 
 This blueprint is structured to answer five questions in order:
@@ -87,7 +108,7 @@ AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Ca
 |---|---|
 | iOS app source | **~600 Swift files**, ~120k LOC across the main target |
 | Test target | ~63 Swift test files |
-| Brain OS | 11 numbered subsystems (`00_Foundation` → `10_Observability`), ~131 Swift files |
+| Brain OS | **12** numbered subsystems (`00_Foundation` → `11_Directives`), ~137 Swift files (v1.0.5/23 added `11_Directives` — the learn/save/recall/execute layer) |
 | Active branch | `release/v1.0.4-memory-v4` (HEAD `d816d78` — v1.0.6 monetization hard-wall + trial-journey anchor, pushed; was `2df0a9a` at the 2026-05-17 update) |
 | Product version / build | **1.0.6 / 22** (v1.0.5 / 21 was submitted to review then withdrawn by the author pre-approval) |
 | Subscription tiers | Free (`.none`) · Max ($9.99) · Intelligence Pro ($19.99) · Trial ≡ Pro. **v1.0.6:** trial is Apple's card-required 7-day StoreKit introductory offer (the auto no-card custom trial is no longer minted); legacy active custom trials are grandfathered |
@@ -100,11 +121,11 @@ AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Ca
 
 1. **Privacy is enforced at the boundary, not by convention.** Every cloud call should pass through `PrivacySanitizer` (PII redaction + numeric bucketing + 4-message conversation cap) and be recorded in `AuditLogger`. The pipeline works for the canonical Captain chat path through `HybridBrain`, but **three feature-level callers bypass it** (see §4.1.1) — the hygiene pass elevates this from "tech debt" to a **P0 fix-before-the-next-release**.
 2. **Tier-gating and DevOverride are the two switches that matter.** `TierGate.shared` is the single gate for paid features; `DevOverride.unlockAllFeatures` (DEBUG-only, Info.plist `AIQO_DEV_UNLOCK_ALL`) bypasses every gate so Mohammed can dogfood without paying his own paywall. Of the 46 `canAccess` call sites, 43 are wrapped with the DevOverride bypass pattern.
-3. **The Brain has eleven subsystems but they form one pipeline.** A user message flows Sensing → Memory → Reasoning → Inference (cloud or on-device LLM) → Persona → Privacy → Wellbeing → reply. Proactive notifications run a parallel pipeline driven by Triggers and gated by GlobalBudget. See Blueprint 17 §3 for the full diagram and §4 for the data-flow trace.
+3. **The Brain has twelve subsystems but they form one pipeline.** A user message flows Sensing → Memory → Reasoning → Inference (cloud or on-device LLM) → Persona → Privacy → Wellbeing → reply. Proactive notifications run a parallel pipeline driven by Triggers and gated by GlobalBudget. **`11_Directives` (v1.0.5/23)** adds a third path: a taught standing instruction is persisted, surfaced into every prompt's Working Memory, and fired automatically by its trigger (today: workout completion → analyze-and-compare notification). See Blueprint 17 §3 for the full diagram and §4 for the data-flow trace.
 
 ---
 
-## 2A. Release timeline since the hygiene pass (v1.0.2 → v1.0.6)
+## 2A. Release timeline since the hygiene pass (v1.0.2 → v1.0.5 build 23)
 
 This section was added in the 2026-05-12 refresh. It documents what shipped between the original Blueprint 18 cut (2026-05-10, HEAD `39ca529`) and the v1.0.5 staging on `release/v1.0.4-memory-v4` (HEAD `ab6885e`). Each entry is anchored to a real commit on a release branch so future blueprints have a clean handoff.
 
@@ -227,6 +248,22 @@ The opener was then upgraded per author request to be **genuinely time-aware and
 
 ---
 
+### v1.0.5 build 23 — Captain Directives layer + memory expansion (2026-05-17 — HEAD pending)
+
+The Captain had a rich **fact** memory (`SemanticFact`) and **silent-habit** observation (`ProceduralPattern`), but **no way for the user to teach it a durable, executable standing instruction** — e.g. *"بعد كل تمرين حلّل تمريني وقارنه بالي قبله ودزّلي إشعار"* ("after every workout, analyze it and compare it to the previous one and notify me"). The Gemini prompt's `memoryUpdate` schema field was never even parsed in Swift; the post-workout notification was a static one-liner. This release adds the missing capability as a **twelfth Brain subsystem, `11_Directives`** — the learn → save → recall → execute loop — plus the memory enlargement the same request asked for. One bundled commit; clean **Release** simulator build green (`** BUILD SUCCEEDED **`, 0 errors / 0 warnings, Swift-6 concurrency clean) at the tip.
+
+**Thread 11 — the `11_Directives` subsystem (six new files).** [DirectiveTaxonomy.swift](AiQo/Features/Captain/Brain/11_Directives/DirectiveTaxonomy.swift) defines extensible `DirectiveTrigger` (`afterWorkout` fully wired; `beforeBedtime` / `everyMorning` / `afterPoorSleep` / `weeklyReview` recognized-but-scaffold so the taxonomy grows without a schema change) and `DirectiveAction` (`analyzeAndCompareWorkout`, `notify`), plus `nonisolated` Sendable draft/snapshot value types. [LearnedDirective.swift](AiQo/Features/Captain/Brain/02_Memory/Models/LearnedDirective.swift) is the `@Model` (raw-string-encoded enums + JSON params blob, mirroring `ProceduralPattern`'s shape). [DirectiveStore.swift](AiQo/Features/Captain/Brain/11_Directives/DirectiveStore.swift) is an `actor` cloned from `ProceduralStore`'s conventions exactly (per-call `ModelContext`, `#Predicate` fetches, graceful no-op before `configure(container:)`, capacity eviction). [DirectiveLearner.swift](AiQo/Features/Captain/Brain/11_Directives/DirectiveLearner.swift) is an on-device Arabic/English parser (no LLM, no network — like `IntentClassifier`); it is deliberately conservative — it requires a recurrence marker **and** an action verb **and** a recognized trigger domain, so a one-off "حلّل تمريني" never creates a standing rule. [DirectiveEngine.swift](AiQo/Features/Captain/Brain/11_Directives/DirectiveEngine.swift) executes on workout completion and contains `WorkoutComparisonComposer`, a pure deterministic Iraqi/English composer that diffs duration / calories / avg-HR / distance against the previous recorded workout. [DirectiveCoordinator.swift](AiQo/Features/Captain/Brain/11_Directives/DirectiveCoordinator.swift) bridges chat ↔ persistence ↔ recall in one call.
+
+**Thread 12 — wiring into the existing layers (no new parallel channels).** Persistence: a new **`MemorySchemaV5`** ([MemorySchemaV5.swift](AiQo/Features/Captain/Brain/02_Memory/Models/MemorySchemaV5.swift)) = V4 models + `LearnedDirective`, with a **lightweight `migrateV4toV5`** stage appended to [CaptainSchemaMigrationPlan.swift](AiQo/Features/Captain/Brain/02_Memory/Models/CaptainSchemaMigrationPlan.swift) — the same proven additive pattern as V1→V2 / V2→V3 — and `makeCaptainContainerV4()` retargeted to V5 (the existing V5→V3 failure fallback is untouched, so the degraded path is unchanged). Recall: rather than bolt on a parallel prompt channel, `DirectiveCoordinator` mirrors each active directive into `MemoryStore` under a new `directive` category, and [CognitivePipeline.swift](AiQo/Features/Captain/Brain/03_Reasoning/CognitivePipeline.swift) `buildWorkingMemorySummary` emits an **always-on `[active_standing_directives]` block** — the exact mechanism the brain already uses for `[active_record_project]`, so the Captain confirms the order in the *same* reply and a relaunch re-hydrates it (`DirectiveCoordinator.hydratePromptMirror()` from [AppDelegate.swift](AiQo/App/AppDelegate.swift)). Execution: the chokepoint is `AIWorkoutSummaryService.handleWorkoutEnded` in [NotificationService.swift](AiQo/Services/Notifications/NotificationService.swift) — it already fires after **every** HealthKit workout (Watch / external / in-app) and already sent a static line; it now asks `DirectiveEngine` first and sends the analyze-vs-previous body when a directive is active, falling back to the static line otherwise. Gating: new `TierGate.captainDirectives` (required tier `.max`, consistent with `captainMemory` / `captainNotifications`) honoring `DevOverride`. Inter-layer signalling: `BrainBus.Event` gained `directiveLearned` / `directiveFired` / `workoutCompleted` (the critical path stays a direct `await`, the bus is the decoupled observability channel).
+
+**Thread 13 — memory enlargement (the second half of the request).** [TierGate.swift](AiQo/Features/Captain/Brain/00_Foundation/TierGate.swift): `maxSemanticFacts` Pro 500→**1200** / Max 200→**500**; `maxMemoryRetrievalDepth` 25→**40** / 10→**18**. [MemoryStore.swift](AiQo/Features/Captain/Brain/02_Memory/MemoryStore.swift): `buildPromptContext` default budget 800→**1200** tokens and 30→**48** entries; `retrieveRelevantMemories` default 8→**12**; `maxPersistedMessages` 200→**400**. [WorkoutHistoryStore.swift](AiQo/Features/Captain/Brain/02_Memory/Stores/WorkoutHistoryStore.swift): rolling window 7→**30** (only the most recent 14 are folded into the single `workout_history` prompt memory, so a deeper store doesn't bloat the prompt). The prompt-token guard is preserved end-to-end, so the larger store doesn't blow latency/cost.
+
+**Design decisions recorded in-session.** (1) Directive parsing is **on-device, deterministic** (not an LLM structured-output field) — it adds zero latency to chat, never touches the strict JSON contract / `LLMJSONParser`, and can't be gamed by a model hallucination. (2) The post-workout analysis body is **deterministic and offline by design** — a "do this after *every* workout" promise must run instantly, for free, in the background with no network; the model-written deeper analysis still happens when the user opens the app and asks. (3) Directives surface through the **existing Working Memory mechanism** (`[active_standing_directives]` alongside `[active_record_project]`) rather than a new plumbed `HybridBrainRequest` field — architectural consistency over a parallel channel, and zero risk to the ~6 request copy-sites. (4) Honest scope limit: compilation + integration are verified; **the real-device workout→notification cycle was not executed here** and should be validated on a device before relying on it in review.
+
+**Version + submission.** `MARKETING_VERSION` 1.0.6 → **1.0.5** and `CURRENT_PROJECT_VERSION` 22 → **23** across every build config in `project.pbxproj` — the author's decision to resubmit under the 1.0.5 marketing string (the 1.0.5/21 that was withdrawn was never approved) with an incremented build number (23 > 22 > 21 satisfies Apple's strictly-increasing build requirement). This commit also carries pre-existing in-progress work staged before this thread ([MainTabScreen.swift](AiQo/App/MainTabScreen.swift), [CaptainScreen.swift](AiQo/Features/Captain/CaptainScreen.swift)) — authored outside this thread, compiles clean in the same green build, back-fill into a future blueprint by whoever authored it. The App Store Connect intro-offer prerequisite from the v1.0.6 entry above **still applies** to this submission.
+
+---
+
 ## 2. The 2026-05-10 Hygiene Pass
 
 This blueprint is itself the deliverable of a project-wide cleanup pass run on 2026-05-10. The pass touched **only files that were not part of the active in-flight branch work** — every modified Swift file in the brain-refactor branch (PromptComposer + Plan/* + the new PlanPalette) was preserved untouched. The cleanup sits *around* that work, not on top of it.
@@ -341,7 +378,7 @@ AiQo/
 ├── Core/                  # 40 files — Config, Keychain, Localization, Models, Purchases, Security, Utilities
 ├── DesignSystem/          # 13 files — AiQoTheme, AiQoColors, AiQoTokens, Components, Modifiers
 ├── Features/              # 411 files — 18 feature modules
-│   ├── Captain/           #   171 files — Brain (11 subsystems) + Voice
+│   ├── Captain/           #   177 files — Brain (12 subsystems) + Voice
 │   ├── Cardio/            #     1 file  — ZoneCoachingVoiceService (live, not a stub)
 │   ├── Challenges/        #    10 files — General challenge system
 │   ├── Compliance/        #     6 files — Legal, privacy, disclaimers
@@ -371,7 +408,7 @@ AiQo/
 
 ### 3.3 The Brain OS (`AiQo/Features/Captain/Brain/`)
 
-Eleven numbered subsystems, ~131 files. See [Blueprint 17 §3.2](AiQo_Master_Blueprint_17.md) for the full file-by-file inventory.
+Twelve numbered subsystems, ~137 files. See [Blueprint 17 §3.2](AiQo_Master_Blueprint_17.md) for the full file-by-file inventory (subsystems 00–10; `11_Directives` is documented in §2A).
 
 | # | Subsystem | Files | Role |
 |---|---|---:|---|
@@ -386,8 +423,11 @@ Eleven numbered subsystems, ~131 files. See [Blueprint 17 §3.2](AiQo_Master_Blu
 | 08 | Persona | 9 | CaptainIdentity, DialectLibrary (4×9 phrase banks), HumorEngine, WisdomLibrary, CaptainPersonaBuilder, CaptainPersonalization, plus stubs |
 | 09 | Wellbeing | 4 | CrisisDetector, InterventionPolicy, SafetyNet, ProfessionalReferral (region-aware) |
 | 10 | Observability | 5 | BrainDashboard (DEBUG-only), CaptainMemorySettingsView, plus stubs |
+| 11 | **Directives** | 6 | **(v1.0.5/23)** `LearnedDirective` (@Model, Schema V5) + `DirectiveTaxonomy` (trigger/action enums) + `DirectiveStore` (actor, mirrors `ProceduralStore`) + `DirectiveLearner` (on-device NL parser) + `DirectiveEngine` (executor + `WorkoutComparisonComposer`) + `DirectiveCoordinator` (chat↔memory bridge). The learn/save/recall/execute layer. |
 
 > **v1.0.5 note (2026-05-17):** subsystems **00 Foundation** (`TierGate` — new `.basicLifeNotifications` feature) and **06 Proactive** (`NotificationBrain` tier-scaled hard cap + trial-lane bypass, `GlobalBudget` trial-lane bypass, `QuietHoursManager` 23:00 start) were materially reworked in the notification redesign. `TrialJourneyOrchestrator` (in `Services/Trial/`, not the Brain) is now the sole cadence governor for the trial lane. See §2A → "v1.0.5 post-refresh hardening" and [AiQo_Notifications_System.md](AiQo_Notifications_System.md).
+
+> **v1.0.5/23 note (2026-05-17):** new subsystem **11 Directives** added (the standing-instruction learn/execute layer), and **00 Foundation** (`TierGate.captainDirectives`, `BrainBus` directive/workout events), **02 Memory** (`MemorySchemaV5` + lightweight `migrateV4toV5`; expanded `maxSemanticFacts` / `maxMemoryRetrievalDepth` / `buildPromptContext` budget / `WorkoutHistoryStore` window 7→30 / `maxPersistedMessages` 200→400), and **03 Reasoning** (`CognitivePipeline` always-on `[active_standing_directives]` block) were extended. Execution hooks into `AIWorkoutSummaryService` (in `Services/Notifications/`, not the Brain). See §2A → "v1.0.5 build 23 — Captain Directives layer + memory expansion".
 
 ### 3.4 What lives at the root of `AiQo/`
 

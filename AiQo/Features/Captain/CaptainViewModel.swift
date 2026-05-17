@@ -290,6 +290,16 @@ final class CaptainViewModel: ObservableObject {
 
             ConversationThreadManager.shared.logUserMessage(content: trimmedText)
 
+            // 11_Directives — if the user just taught a standing instruction
+            // ("after every workout, analyze it and compare it to the previous
+            // one and notify me"), save it durably + mirror it into recallable
+            // memory now, so the Captain confirms it in THIS reply and never
+            // forgets it. The post-workout execution runs independently via
+            // DirectiveEngine regardless of this chat.
+            if let directiveDraft = DirectiveLearner.detect(from: trimmedText) {
+                await DirectiveCoordinator.shared.learn(draft: directiveDraft)
+            }
+
             let conversation = self.buildConversationHistory()
             let userName = self.captainReplyUserName()
             let promptContext = self.cognitivePipeline.buildPromptContext(

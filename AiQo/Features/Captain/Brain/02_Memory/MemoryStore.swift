@@ -226,7 +226,7 @@ final class MemoryStore {
     func retrieveRelevantMemories(
         for message: String,
         screenContext: ScreenContext,
-        limit: Int = 8,
+        limit: Int = 12,
         allowedCategories: Set<String>? = nil
     ) -> [CaptainMemorySnapshot] {
         guard isEnabled else { return [] }
@@ -311,7 +311,7 @@ final class MemoryStore {
         return lines.joined(separator: "\n")
     }
 
-    func buildPromptContext(maxTokens: Int = 800) -> String {
+    func buildPromptContext(maxTokens: Int = 1_200) -> String {
         guard isEnabled else { return "" }
         if let cached = promptContextCache[maxTokens] {
             return cached
@@ -334,7 +334,7 @@ final class MemoryStore {
             var lines: [String] = []
             var estimatedTokens = 0
 
-            for memory in Array(projectRecords.prefix(5)) + Array(otherRecords.prefix(30)) {
+            for memory in Array(projectRecords.prefix(5)) + Array(otherRecords.prefix(48)) {
                 let line = "- \(memory.key): \(memory.value)"
                 let lineTokens = line.count / 4
                 if estimatedTokens + lineTokens > maxTokens { break }
@@ -526,7 +526,7 @@ final class MemoryStore {
         }
     }
 
-    private static let maxPersistedMessages = 200
+    private static let maxPersistedMessages = 400
     private static let trimCheckInterval = 12
 
     func persistMessage(_ chatMessage: ChatMessage, sessionID: UUID) {

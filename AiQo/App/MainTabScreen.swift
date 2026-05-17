@@ -12,7 +12,7 @@ struct MainTabScreen: View {
     /// on `CaptainLockedView` until the next cold launch.
     @ObservedObject private var entitlementStore = EntitlementStore.shared
     private let tierGate = TierGate.shared
-    private let appTint = Color.aiqoAccent
+    private let appTint = Color(hex: "FFDF63")
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
@@ -117,12 +117,12 @@ struct MainTabScreen: View {
         appearance.shadowColor = .clear
         appearance.shadowImage = UIImage()
 
-        let selectedColor = Colors.accent
+        let selectedColor = UIColor(Color(hex: "FFDF63"))
         let unselectedColor = UIColor.systemGray
 
-        appearance.stackedLayoutAppearance.selected.iconColor = .black
+        appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor.black,
+            .foregroundColor: selectedColor,
             .font: UIFont.boldSystemFont(ofSize: 10)
         ]
 

@@ -41,12 +41,13 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             CaptainSchemaV1.self,
             CaptainSchemaV2.self,
             CaptainSchemaV3.self,
-            MemorySchemaV4.self
+            MemorySchemaV4.self,
+            MemorySchemaV5.self
         ]
     }
 
     static var stages: [MigrationStage] {
-        [migrateV1toV2, migrateV2toV3, migrateV3toV4]
+        [migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5]
     }
 
     /// V1 -> V2 is purely additive (two new models). Lightweight migration is safe.
@@ -59,6 +60,14 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
     static let migrateV2toV3 = MigrationStage.lightweight(
         fromVersion: CaptainSchemaV2.self,
         toVersion: CaptainSchemaV3.self
+    )
+
+    /// V4 -> V5 adds LearnedDirective (user-taught standing instructions).
+    /// Purely additive — one new model, no changes to existing models — so a
+    /// lightweight migration is safe, exactly like V1→V2 and V2→V3.
+    static let migrateV4toV5 = MigrationStage.lightweight(
+        fromVersion: MemorySchemaV4.self,
+        toVersion: MemorySchemaV5.self
     )
 
     static let migrateV3toV4 = MigrationStage.custom(
