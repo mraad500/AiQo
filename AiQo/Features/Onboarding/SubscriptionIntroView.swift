@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Onboarding wrapper around `PaywallView`. The paywall is a HARD gate: the
-/// only way to finish onboarding is a successful StoreKit purchase (Apple's
-/// card-required 7-day free trial). The "Skip" chip is shown ONLY to users who
-/// still have a legacy custom trial on file, so they can finish that trial
-/// without being forced to pay (grandfathering). New users get no skip.
+/// Onboarding wrapper around `PaywallView`. The paywall is SKIPPABLE: a
+/// prominent "Skip" chip lets anyone enter the app without subscribing. The
+/// premium surfaces are instead locked in-app behind their own paywall —
+/// Captain / Kitchen / My Vibe / Battle require Max, Peaks requires Pro —
+/// exactly like the Captain gate. Subscribing (or starting Apple's StoreKit
+/// free trial) unlocks everything immediately.
 struct SubscriptionIntroView: View {
     let onContinue: () -> Void
 
@@ -18,23 +19,20 @@ struct SubscriptionIntroView: View {
         ZStack(alignment: .topTrailing) {
             PaywallView(source: .manual, onPurchaseSuccess: onContinue)
 
-            // Grandfathering: only users who still have an active legacy custom
-            // trial may skip past the paywall. New users have no escape here —
-            // they must start Apple's real subscription to finish onboarding.
-            if FreeTrialManager.shared.isTrialActive {
-                PaywallDismissChip(
-                    label: NSLocalizedString(
-                        "subscriptionIntro.skip",
-                        value: isArabic ? "تخطي" : "Skip",
-                        comment: ""
-                    ),
-                    icon: isArabic ? "chevron.left" : "chevron.right",
-                    action: onContinue
-                )
-                .padding(.top, 6)
-                .padding(.trailing, 18)
-                .accessibilityIdentifier("subscription-intro-skip")
-            }
+            // Always skippable: users enter the app free; premium surfaces are
+            // gated in-app (Captain/Kitchen/My Vibe/Battle → Max, Peaks → Pro).
+            PaywallDismissChip(
+                label: NSLocalizedString(
+                    "subscriptionIntro.skip",
+                    value: isArabic ? "تخطي" : "Skip",
+                    comment: ""
+                ),
+                icon: isArabic ? "chevron.left" : "chevron.right",
+                action: onContinue
+            )
+            .padding(.top, 6)
+            .padding(.trailing, 18)
+            .accessibilityIdentifier("subscription-intro-skip")
         }
         .environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)
         .environment(\.locale, Locale(identifier: isArabic ? "ar" : "en"))

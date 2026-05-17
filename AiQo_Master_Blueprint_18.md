@@ -54,6 +54,16 @@
 > **§2A → "v1.0.6 — hard-wall Apple trial + clean resubmission"**. **Public App Store
 > is still v1.0.2 (build 19)**; v1.0.6 build 22 is the next submission, gated on
 > App Store Connect intro-offer setup (no code left — see §2A and §6).
+>
+> **Correction (same day, rev-2 — supersedes the hard-wall description above):**
+> the onboarding hard wall was **reversed**. The paywall is **skippable** again
+> (the `SubscriptionIntroView` Skip chip always shows); premium surfaces are gated
+> **in-app** instead, mirroring the Captain `CaptainLockedView` pattern via
+> `AccessManager`: **Captain / Kitchen / My Vibe / Battle → Max, Peaks → Pro**.
+> Subscribing (or starting Apple's StoreKit trial) unlocks everything immediately.
+> This is the App-Store-safer model ("be smarter than Apple and the user").
+> `SceneDelegate` no-auto-trial and the trial-journey re-anchor still stand.
+> rev-2 is **uncommitted** at time of writing (`d816d78` is the hard-wall version).
 
 ---
 

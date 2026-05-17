@@ -266,12 +266,27 @@ struct HomeView: View {
 private struct HomeKitchenRootView: View {
     @State private var viewModel = KitchenViewModel(repository: LocalMealsRepository())
     @StateObject private var kitchenStore = KitchenPersistenceStore()
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
+    @State private var showKitchenPaywall = false
 
     var body: some View {
-        KitchenScreen(
-            viewModel: viewModel,
-            kitchenStore: kitchenStore
-        )
+        if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessKitchen {
+            KitchenScreen(
+                viewModel: viewModel,
+                kitchenStore: kitchenStore
+            )
+        } else {
+            CaptainLockedView(config: .init(
+                title: "المطبخ",
+                subtitle: "افتح المطبخ مع اشتراك AiQo Max — مسح الثلاجة وخطط الأكل على هدفك.",
+                iconSystemName: "refrigerator.fill",
+                tier: .max,
+                onUpgradeTap: { showKitchenPaywall = true }
+            ))
+            .sheet(isPresented: $showKitchenPaywall) {
+                PaywallView(source: .kitchenGate)
+            }
+        }
     }
 }
 

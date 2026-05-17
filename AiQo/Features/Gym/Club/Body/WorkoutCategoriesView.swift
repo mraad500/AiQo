@@ -100,18 +100,18 @@ struct WorkoutCategoriesView: View {
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                        .foregroundStyle(isSelected ? Color(.label) : Color(.secondaryLabel))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "AEB9C5")))
                         .frame(width: 56, height: 62)
                         .background(
                             Capsule()
-                                .fill(isSelected ? Color.aiqoAccent : Color.clear)
+                                .fill(isSelected ? Color(hex: "FFE68C") : Color.clear)
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .background(Color(.systemGray6).opacity(0.9))
+        .background(Color(light: Color(hex: "F5F5F5"), dark: Color(hex: "1F2A35")))
         .clipShape(RoundedRectangle(cornerRadius: 25))
         .padding(.top, 120)
         .animation(.easeInOut(duration: 0.3), value: selection)
@@ -187,6 +187,10 @@ private struct ClubWorkoutCard: View {
                 )
         )
         .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        // Card background is a fixed light pastel in both appearances, so its
+        // content must render in light mode — otherwise label colors flip to
+        // white in dark mode and become unreadable on the pastel.
+        .environment(\.colorScheme, .light)
         .opacity(isVisible ? 1 : 0.001)
         .offset(y: isVisible ? 0 : 22)
         .scaleEffect(isVisible ? 1 : 0.96)

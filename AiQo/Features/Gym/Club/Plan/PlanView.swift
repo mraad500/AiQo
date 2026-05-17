@@ -136,7 +136,7 @@ struct PlanView: View {
                 } label: {
                     Text(period)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "8898A8")))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "AEB9C5")))
                         .frame(width: 44, height: 62)
                         .background {
                             if isSelected {
@@ -265,5 +265,8 @@ private struct CaptainLiveWorkoutPlanCard: View {
                 )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+        // Fixed light sand background in both appearances — force light scheme
+        // so .primary/.secondary text stays dark and readable in dark mode.
+        .environment(\.colorScheme, .light)
     }
 }
