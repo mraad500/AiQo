@@ -28,7 +28,15 @@ struct DynamicWelcomeComposer {
 
     /// Wall-clock budget for the cloud call. Beyond this we drop the
     /// dynamic greeting and let the caller render the static fallback.
-    private static let timeoutSeconds: TimeInterval = 7.0
+    ///
+    /// This is the *first* and therefore *coldest* cloud call of the session
+    /// (DNS + TLS + model cold-start + the full 7-layer prompt), so it must
+    /// share the same tolerance the normal chat path already proves workable
+    /// (`CaptainViewModel.globalProcessingTimeout = 30`). At the old 7 s the
+    /// cold call almost never finished in time, so the composer returned nil
+    /// and the static line shipped on *every* open — the dynamic greeting
+    /// effectively never ran. Keep this in lockstep with the chat budget.
+    private static let timeoutSeconds: TimeInterval = 30.0
 
     /// Returns the personalized welcome message, or `nil` if anything goes
     /// wrong (offline mode, consent missing, tier-gate, network failure,
