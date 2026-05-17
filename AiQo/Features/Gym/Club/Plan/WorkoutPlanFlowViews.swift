@@ -1121,6 +1121,24 @@ enum WorkoutPlanMemoryStore {
         return try? modelContext.fetch(descriptor).first
     }
 
+    /// Reconstructs a flat `WorkoutPlan` from today's persisted record so a
+    /// pinned plan can be restored into memory after an app relaunch. Used
+    /// by `PlanView` on appear — the Plan tab otherwise only renders the
+    /// in-memory `currentWorkoutPlan`, so a pinned plan looked "lost" after
+    /// a cold start even though it was saved.
+    static func restoredPlan(modelContext: ModelContext, isArabic: Bool) -> WorkoutPlan? {
+        guard let record = fetchTodayRecord(modelContext: modelContext),
+              !record.workouts.isEmpty else { return nil }
+        let exercises = record.workouts.compactMap { task -> Exercise? in
+            ExerciseSerialization.parse(taskTitle: task.title)
+        }
+        guard !exercises.isEmpty else { return nil }
+        let title = record.captainDailySuggestion.isEmpty
+            ? (isArabic ? "خطة الكابتن" : "Captain's plan")
+            : record.captainDailySuggestion
+        return WorkoutPlan(title: title, exercises: exercises)
+    }
+
     static func fetchSavedPlans(modelContext: ModelContext) -> [WorkoutPlanDailySnapshot] {
         let descriptor = FetchDescriptor<AiQoDailyRecord>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]

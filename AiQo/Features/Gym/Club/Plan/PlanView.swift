@@ -1,10 +1,14 @@
+import SwiftData
 import SwiftUI
 
 struct PlanView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
+    @Environment(\.modelContext) private var modelContext
     @State private var railSelection = 0
     @State private var activeRecordProject: RecordProject?
     @State private var navigateToRecordProject = false
+
+    private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     private let periods = [
         NSLocalizedString("plan.period.today", value: "اليوم", comment: "Today filter"),
@@ -39,11 +43,26 @@ struct PlanView: View {
         .environment(\.layoutDirection, .leftToRight)
         .onAppear {
             activeRecordProject = RecordProjectManager.shared.activeProject()
+            restorePinnedPlanIfNeeded()
         }
         .navigationDestination(isPresented: $navigateToRecordProject) {
             if let project = activeRecordProject {
                 RecordProjectView(project: project)
             }
+        }
+    }
+
+    /// Restores a previously pinned plan from SwiftData into memory so the
+    /// Plan tab shows it after an app relaunch. Without this the tab only
+    /// rendered `globalBrain.currentWorkoutPlan`, which is in-memory only and
+    /// is empty on every cold start — making a saved plan look lost.
+    private func restorePinnedPlanIfNeeded() {
+        guard globalBrain.currentWorkoutPlan == nil else { return }
+        if let restored = WorkoutPlanMemoryStore.restoredPlan(
+            modelContext: modelContext,
+            isArabic: isArabic
+        ) {
+            globalBrain.currentWorkoutPlan = restored
         }
     }
 
