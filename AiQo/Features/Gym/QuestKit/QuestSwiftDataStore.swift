@@ -26,11 +26,34 @@ final class QuestPersistenceController: PlayerStatsSyncing {
         self.legacyProgressStore = UserDefaultsQuestProgressStore(defaults: defaults)
         self.definitionsByID = Dictionary(uniqueKeysWithValues: QuestDefinitions.all.map { ($0.id, $0) })
 
+        // IMPORTANT: this container is attached to `AppRootView` via
+        // `.modelContainer(QuestPersistenceController.shared.container)`,
+        // which OVERRIDES the outer `.modelContainer(for:)` declared in
+        // `AiQoApp`. SwiftUI uses the innermost container for the whole
+        // subtree, so this schema is the *only* one the app's
+        // `@Environment(\.modelContext)` ever sees.
+        //
+        // It must therefore list every model the app persists through the
+        // environment context — not just Quest models. AiQoDailyRecord /
+        // WorkoutTask were missing, so a pinned workout plan was inserted
+        // into a context whose schema didn't know the type and never
+        // survived an app relaunch. Adding model types is an additive,
+        // non-destructive SwiftData migration (existing Quest data is
+        // untouched).
         let schema = Schema([
             PlayerStats.self,
             QuestStage.self,
             QuestRecord.self,
-            Reward.self
+            Reward.self,
+            // App-wide models reached via @Environment(\.modelContext):
+            AiQoDailyRecord.self,
+            WorkoutTask.self,
+            ArenaTribe.self,
+            ArenaTribeMember.self,
+            ArenaWeeklyChallenge.self,
+            ArenaTribeParticipation.self,
+            ArenaEmirateLeaders.self,
+            ArenaHallOfFameEntry.self
         ])
         let configuration = ModelConfiguration(
             "QuestLootEngine",
