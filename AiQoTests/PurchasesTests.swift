@@ -74,7 +74,11 @@ final class PurchasesTests: XCTestCase {
 
         XCTAssertEqual(store.currentTier, .pro)
         XCTAssertTrue(store.hasIntelligenceProAccess)
-        XCTAssertFalse(store.canCreateTribe)
+        // A legacy Pro SKU maps to the Intelligence Pro tier, which grants
+        // tribe creation (`unlocksTribeCreation` aliases
+        // `unlocksIntelligenceProFeatures`) — same as the canonical
+        // `intelligenceProMonthly` product asserted elsewhere.
+        XCTAssertTrue(store.canCreateTribe)
     }
 
     func testNextExpiryAfterPurchaseExtendsExistingActiveWindow() {

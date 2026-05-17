@@ -18,6 +18,12 @@ final class StreakManager: ObservableObject {
         static let longestStreak = "aiqo.streak.longest"
         static let lastActiveDate = "aiqo.streak.lastActive"
         static let streakHistory = "aiqo.streak.history"
+        static let lastRiskPostDay = "aiqo.streak.lastRiskPostDay"
+    }
+
+    private static func dayKey(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
     }
 
     private init() {
@@ -95,11 +101,20 @@ final class StreakManager: ObservableObject {
         } else if currentStreak > 0 && now.timeIntervalSince(last) >= 22 * 3600 {
             // Yesterday-active, streak still alive, but we're in the 22h+ window —
             // user is at risk of losing it today.
-            NotificationCenter.default.post(
-                name: .aiqoStreakRisk,
-                object: self,
-                userInfo: ["streak": currentStreak]
-            )
+            //
+            // Debounce: this method runs from BOTH `StreakManager.init()` and
+            // `AppDelegate` (and again on every becomeActive), so without this
+            // guard the risk event posts 2+ times per launch → duplicate
+            // "streak at risk" notifications. Post at most once per calendar day.
+            let todayKey = Self.dayKey(today)
+            if defaults.string(forKey: Keys.lastRiskPostDay) != todayKey {
+                defaults.set(todayKey, forKey: Keys.lastRiskPostDay)
+                NotificationCenter.default.post(
+                    name: .aiqoStreakRisk,
+                    object: self,
+                    userInfo: ["streak": currentStreak]
+                )
+            }
         }
         todayCompleted = false
     }

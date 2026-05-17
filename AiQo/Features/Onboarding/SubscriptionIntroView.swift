@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Onboarding wrapper around `PaywallView`. Shows the full paywall as part of
-/// the first-run flow, plus a prominent "Skip" button at the top so users who
-/// don't want to subscribe can still finish onboarding.
+/// Onboarding wrapper around `PaywallView`. The paywall is a HARD gate: the
+/// only way to finish onboarding is a successful StoreKit purchase (Apple's
+/// card-required 7-day free trial). The "Skip" chip is shown ONLY to users who
+/// still have a legacy custom trial on file, so they can finish that trial
+/// without being forced to pay (grandfathering). New users get no skip.
 struct SubscriptionIntroView: View {
     let onContinue: () -> Void
 
@@ -16,18 +18,23 @@ struct SubscriptionIntroView: View {
         ZStack(alignment: .topTrailing) {
             PaywallView(source: .manual, onPurchaseSuccess: onContinue)
 
-            PaywallDismissChip(
-                label: NSLocalizedString(
-                    "subscriptionIntro.skip",
-                    value: isArabic ? "تخطي" : "Skip",
-                    comment: ""
-                ),
-                icon: isArabic ? "chevron.left" : "chevron.right",
-                action: onContinue
-            )
-            .padding(.top, 6)
-            .padding(.trailing, 18)
-            .accessibilityIdentifier("subscription-intro-skip")
+            // Grandfathering: only users who still have an active legacy custom
+            // trial may skip past the paywall. New users have no escape here —
+            // they must start Apple's real subscription to finish onboarding.
+            if FreeTrialManager.shared.isTrialActive {
+                PaywallDismissChip(
+                    label: NSLocalizedString(
+                        "subscriptionIntro.skip",
+                        value: isArabic ? "تخطي" : "Skip",
+                        comment: ""
+                    ),
+                    icon: isArabic ? "chevron.left" : "chevron.right",
+                    action: onContinue
+                )
+                .padding(.top, 6)
+                .padding(.trailing, 18)
+                .accessibilityIdentifier("subscription-intro-skip")
+            }
         }
         .environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)
         .environment(\.locale, Locale(identifier: isArabic ? "ar" : "en"))

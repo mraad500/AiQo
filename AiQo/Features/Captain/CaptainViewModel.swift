@@ -397,7 +397,7 @@ final class CaptainViewModel: ObservableObject {
         startNewChat()
     }
 
-    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية
+    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية متغيّرة كل فتحة
     func startNewChat() {
         currentSessionID = UUID()
         messages.removeAll()
@@ -406,15 +406,47 @@ final class CaptainViewModel: ObservableObject {
         currentMealPlan = nil
         quickReplies = []
 
+        responseTask?.cancel()
+        activeRequestID = nil
+
         AnalyticsService.shared.track(.captainChatOpened)
 
-        let welcome = ChatMessage(
-            text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", comment: "Captain first message"),
-            isUser: false
-        )
-        messages.append(welcome)
-        // Don't persist the welcome message — the session is only persisted once the user sends their first message.
-        // This prevents stale single-message sessions accumulating in SwiftData on every cold launch.
+        isLoading = true
+        coachState = .typing
+
+        let sessionID = currentSessionID
+        let capturedOrchestrator = orchestrator
+        responseTask = Task { [weak self] in
+            let dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+            self?.applyWelcomeMessage(dynamic, for: sessionID)
+        }
+    }
+
+    /// Inserts the welcome bubble after the dynamic generator settles, or
+    /// drops in the static fallback if generation returned nil. Bails out
+    /// silently if the user has already started another session in the
+    /// meantime (e.g., tapped a chat-history entry).
+    private func applyWelcomeMessage(_ dynamic: String?, for sessionID: UUID) {
+        guard currentSessionID == sessionID else { return }
+
+        let trimmed = dynamic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let text = trimmed.isEmpty
+            ? NSLocalizedString(
+                "captain.welcome",
+                value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
+                comment: "Captain first message"
+            )
+            : trimmed
+
+        let welcome = ChatMessage(text: text, isUser: false)
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+            messages.append(welcome)
+        }
+        isLoading = false
+        coachState = .idle
+        // Don't persist the welcome — the session is only persisted on first
+        // user reply, so we never leave stale single-message sessions in
+        // SwiftData on every cold launch.
     }
 
     /// يحمّل جلسة قديمة — يستبدل الرسائل الحالية برسائل الجلسة المختارة

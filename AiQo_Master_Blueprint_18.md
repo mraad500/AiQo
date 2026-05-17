@@ -28,6 +28,19 @@
 
 ---
 
+> **2026-05-17 update — read this second.** Eleven commits landed after the 2026-05-12
+> refresh (cut at `ab6885e`) before the App Store archive — HEAD is now `2df0a9a`. The
+> headline is a **notification-system v1.0.5 redesign** (free-tier basic-life
+> notifications, an uncapped trial lane, a tier-scaled hard cap, unified quiet hours)
+> plus a **world-class Plan-intake redesign**, a Captain "always produce a plan"
+> guarantee, UI polish + art refresh, and a pinned-plan persistence triple-fix. Full
+> account in **§2A → "v1.0.5 post-refresh hardening (2026-05-17)"**. A clean Release
+> build at `2df0a9a` is green (0 errors / 0 warnings). **Public App Store is still at
+> v1.0.2 (build 19)** — v1.0.3/1.0.4 were engineering cuts on the release line, not
+> public releases; v1.0.5 build 21 is the next public submission.
+
+---
+
 ## 0. How to use this document
 
 This blueprint is structured to answer five questions in order:
@@ -49,7 +62,7 @@ AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Ca
 - **v1.0.2** — initial brain-refactor merge (§32–§36 from Blueprint 17: App-Knowledge layer, dynamic welcome, comparative workout analysis, Kitchen world-class upgrade, §35 14-layer cognitive brain refactor).
 - **v1.0.3** — privacy hardening + critical telemetry events.
 - **v1.0.4** — `MEMORY_V4_ENABLED` flipped globally, NotificationBrain fully wired, cleanup sprint.
-- **v1.0.5** — **Plan world-class surface restored to the release line** (PlanPalette + Workout Runner + Insights + Weekly Stats + Exercise Detail + Template Library + Intake Chips + Workout Cards + Flow Views), **multi-day workout plans** (new `WorkoutDay`, `days[]`, `durationWeeks` fields on `WorkoutPlan` + day-picker UI in the active card + day-scoped runner), and **optional body-photo personalization** routed through the same Gemini path as kitchen vision with a dedicated per-purpose consent (`BodyPhotoConsent` + bilingual gesture-locked sheet + Settings revoke surface).
+- **v1.0.5** — **Plan world-class surface restored to the release line** (PlanPalette + Workout Runner + Insights + Weekly Stats + Exercise Detail + Template Library + Intake Chips + Workout Cards + Flow Views), **multi-day workout plans** (new `WorkoutDay`, `days[]`, `durationWeeks` fields on `WorkoutPlan` + day-picker UI in the active card + day-scoped runner), and **optional body-photo personalization** routed through the same Gemini path as kitchen vision with a dedicated per-purpose consent (`BodyPhotoConsent` + bilingual gesture-locked sheet + Settings revoke surface). **Post-refresh (2026-05-17, §2A):** a **notification-system v1.0.5 redesign** (free-tier basic-life notifications via `TierGate.basicLifeNotifications`, an uncapped trial lane governed solely by `TrialJourneyOrchestrator`, a tier-scaled hard cap, quiet hours unified to 23:00–07:00), a **world-class Plan-intake redesign**, a Captain "always produce a `workoutPlan`" guarantee, kitchen/nutrition/profile/chat polish + art refresh, and a pinned-plan persistence triple-fix.
 
 **Snapshot at the 2026-05-12 refresh:**
 
@@ -58,11 +71,11 @@ AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Ca
 | iOS app source | **~600 Swift files**, ~120k LOC across the main target |
 | Test target | ~63 Swift test files |
 | Brain OS | 11 numbered subsystems (`00_Foundation` → `10_Observability`), ~131 Swift files |
-| Active branch | `release/v1.0.4-memory-v4` (HEAD `ab6885e` — Captain prompt v1.0.5 follow-up fix) |
+| Active branch | `release/v1.0.4-memory-v4` (HEAD `2df0a9a` — pinned-plan relaunch fix; was `ab6885e` at the 2026-05-12 refresh) |
 | Product version / build | **1.0.5 / 21** |
 | Subscription tiers | Free (`.none`) · Max ($9.99) · Intelligence Pro ($19.99) · Trial ≡ Pro |
 | Cloud surface | Gemini 2.5-flash (free) / 3-flash-preview (Pro) — chat + kitchen vision + **plan-body vision (v1.0.5)** + extraction + verification; MiniMax (TTS); Supabase (proxy + auth + leaderboard) |
-| App Store status | **v1.0.4 live; v1.0.5 staged on `release/v1.0.4-memory-v4`, ready to archive** |
+| App Store status | **v1.0.2 (build 19) live publicly; v1.0.3/1.0.4 were release-line engineering cuts, not public releases; v1.0.5 build 21 staged on `release/v1.0.4-memory-v4`, Release build green, ready to archive** |
 | Per-purpose consent surfaces | `AIDataConsentManager` (cloud AI) · `CaptainVoiceConsent` (MiniMax TTS) · **`BodyPhotoConsent` (Plan vision, new in v1.0.5)** |
 | Live region | UAE launch (American University of the Emirates partnership), Saudi + Iraq + Gulf-other support shipping |
 
@@ -135,6 +148,36 @@ The photo lives in `@State` only — never written to disk, never on AiQo server
 The Gemini prompt for the gym-context-with-image path was tuned twice. The first cut said "Never describe the user's appearance in the message field" — too restrictive, the user wanted Captain to actually call out what muscles need work. The follow-up (`ab6885e`) requires Captain to give a short 2–3-sentence constructive read of strengths + 1–2 underdeveloped muscle groups + the training implication in the `message`, *and* to bias the `days[]` accessory work toward those groups. Hard guardrails kept: no weight / body-fat / BMI estimates, no shaming language, no commentary outside musculature. The same follow-up tightened the gym-screen behavior so the model MUST produce a full `workoutPlan` object on the first mention of a plan / weeks / training days / equipment — a "where's the plan?" follow-up from the user is now explicitly flagged in the prompt as a failure case.
 
 **Plan dashboard reorder (cosmetic):** the active plan card jumps right under the hero (primary content first), and the `HealthComplianceCard` footer drops to the bottom. Vertical rhythm is now `spacing: 18` with `bottom: 24` to respect the tab bar.
+
+### v1.0.5 post-refresh hardening (2026-05-17 — HEAD `2df0a9a`)
+
+The 2026-05-12 refresh above was cut at `ab6885e`. Eleven more commits landed on `release/v1.0.4-memory-v4` before the App Store archive, in four threads. Each is anchored to a real commit; a clean Release build at the tip (`2df0a9a`) is green with **0 errors / 0 warnings**.
+
+**Thread 4 — Plan intake, world-class redesign.** The chip-driven intake (Goal · Level · Per-session time · Plan length · Equipment · optional Body photo) was rebuilt:
+
+- `b1c0dd5` — world-class redesign of the Captain plan intake.
+- `10590ec` — intake no longer overflows under the nav / status bar (safe-area fix).
+- `d6a6333` — photo card surfaces first; the chat input is hidden during intake so the flow can't be derailed mid-collection.
+- `ed02f80` — legacy sample content deleted from the Plan tab (no placeholder plans ship in the binary).
+
+**Thread 5 — Captain always produces a plan when asked.** `b459b48` is a follow-up on `ab6885e`: the prompt + post-parse path now *guarantee* a `workoutPlan` object whenever the user asked for one (gym screen, a "weeks / days / equipment" mention, or an explicit "where's my plan?" follow-up). A plan-less reply to a plan request is treated as a hard failure, not a soft miss.
+
+**Thread 6 — Notification system v1.0.5 redesign (the big one).** The proactive stack (`06_Proactive` + `00_Foundation/TierGate`) was redesigned from a pure anti-spam funnel into a tier-aware engagement engine (`f0084f2`). Four product decisions, all implemented:
+
+1. **Free / post-trial (`.none`) users now get BASIC LIFE notifications** — water, streak, sleep, workout, weekly reminder — via the new `TierGate.Feature.basicLifeNotifications` (required tier `.none`). "Smart Captain" background intelligence (coach nudge, AI-inactivity) stays gated to `.captainNotifications` (`.max`+). `SmartNotificationScheduler` now schedules the recurring basic-life set for every tier; only the background-task nudges remain tier-gated.
+2. **The 7-day trial runs in a dedicated lane.** Intents with `kind == .trialDay` bypass the `NotificationBrain` hard cap *and* the `GlobalBudget` daily-cap + cooldown. `TrialJourneyOrchestrator` is the sole cadence governor for trial (its own per-day caps 1/2/3 + 90-min cooldown). The lane still respects quiet hours, the iOS 64-pending limit, `PersonaGuard`, and privacy scrubbing.
+3. **The hard cap is tier-scaled, not flat.** `.none` 3/day · 4h (floor); `.max` 5/day · 3h; `.pro` 6/day · 2h. Trial bypasses entirely. `NotificationBrain.hardCapLimits()` switches on `TierGate.shared.currentTier.effectiveAccessTier`.
+4. **Quiet hours unified to 23:00–07:00.** `QuietHoursManager.startHour` moved 22→23 so a brain-routed and a directly-scheduled notification agree on the same window (the 22:30 sleep reminder is no longer deferred to morning).
+
+Supporting changes in the same commit: `CaptainIdentity.emojiAllowedKinds` extended to the trial-journey + streak + hydration + workout-summary + weekly-insight surfaces (celebration copy stays warm; `inactivityNudge` / `sleepDebtAcknowledgment` stay deliberately plain). `TrialJourneyOrchestrator` gained a **Day 5 feature reveal** (Zone-2 coaching for sport-minded users, Smart Wake otherwise) and a **Day 7 final-day** morning beat distinct from the evening weekly-recap; it also force-requests notification authorization on trial start as a belt-and-suspenders guard if the onboarding-gated request was skipped. The redesign is documented end-to-end in [AiQo_Notifications_System.md](AiQo_Notifications_System.md); the read-only diagnostic that drove it is [diagnostic.md](diagnostic.md).
+
+**Thread 7 — UI polish + asset refresh + plan persistence.**
+
+- `00f120f` — kitchen scene fridge/captain hotspots repositioned to match the refreshed art; the nutrition summary collapsed into a single macro-chip row (per-meal breakdown dropped); the profile hero identity block aligned `.leading` (correct under the force-RTL `MainTabScreen` container — `.leading` auto-maps to the right edge in RTL, removing a prior `isRTL ? .trailing : .leading` double-flip); chat bubbles matched to the home stat-card mint / sand palette.
+- `774d828` — new `Captain_Hamoudi_DJ` + `imageKitchenHamoudi` 3x artwork (Contents.json updated to match); three unreferenced junk imagesets removed (`Hammoudi5o`, `Hammoudi5٧٨`, `ا`) — verified no Swift references; the live `Hammoudi5` asset is untouched.
+- Pinned-plan persistence was fixed three times as the root cause was chased: `9de7476` (date-ID formatter mismatch), `bc102f8` (`QuestSwiftDataStore` actually persisting), `2df0a9a` (the pinned plan restored into the Plan tab on relaunch). The pinned plan now survives a cold relaunch.
+
+**Build & review verification (2026-05-17).** A clean **Release** build on the iOS 26.4.1 simulator (`CODE_SIGNING_ALLOWED=NO`) succeeds with **zero errors and zero warnings** at HEAD `2df0a9a`. Every new notification symbol was cross-checked against the codebase (`.trialDay`, `effectiveAccessTier`, the new `TrialNotificationKind` cases, `NotificationService.ensureAuthorizationIfNeeded()`, `SmartNotificationScheduler.adjustedAutomationDate(for:)`). No new entitlements, privacy labels, or external endpoints were introduced; `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` and the existing privacy usage strings still cover the binary. **v1.0.5 / build 21** is the App Store archive candidate (build number deliberately kept at 21 — never previously uploaded).
 
 ---
 
@@ -297,6 +340,8 @@ Eleven numbered subsystems, ~131 files. See [Blueprint 17 §3.2](AiQo_Master_Blu
 | 08 | Persona | 9 | CaptainIdentity, DialectLibrary (4×9 phrase banks), HumorEngine, WisdomLibrary, CaptainPersonaBuilder, CaptainPersonalization, plus stubs |
 | 09 | Wellbeing | 4 | CrisisDetector, InterventionPolicy, SafetyNet, ProfessionalReferral (region-aware) |
 | 10 | Observability | 5 | BrainDashboard (DEBUG-only), CaptainMemorySettingsView, plus stubs |
+
+> **v1.0.5 note (2026-05-17):** subsystems **00 Foundation** (`TierGate` — new `.basicLifeNotifications` feature) and **06 Proactive** (`NotificationBrain` tier-scaled hard cap + trial-lane bypass, `GlobalBudget` trial-lane bypass, `QuietHoursManager` 23:00 start) were materially reworked in the notification redesign. `TrialJourneyOrchestrator` (in `Services/Trial/`, not the Brain) is now the sole cadence governor for the trial lane. See §2A → "v1.0.5 post-refresh hardening" and [AiQo_Notifications_System.md](AiQo_Notifications_System.md).
 
 ### 3.4 What lives at the root of `AiQo/`
 
@@ -581,6 +626,8 @@ Strategic items from Blueprint 17 §15 + §17 worth re-flagging:
 | Master forward guidance (this file) | [AiQo_Master_Blueprint_18.md](AiQo_Master_Blueprint_18.md) |
 | Living tech-debt log | [AIQO_TECH_DEBT.md](AIQO_TECH_DEBT.md) |
 | Release notes | [CHANGELOG.md](CHANGELOG.md) |
+| Notification system (full technical reference, v1.0.5) | [AiQo_Notifications_System.md](AiQo_Notifications_System.md) |
+| Notification "no-deliveries" diagnostic (read-only, drove the v1.0.5 redesign) | [diagnostic.md](diagnostic.md) |
 | Build / dev setup | [Configuration/SETUP.md](Configuration/SETUP.md) |
 | English product context (8-doc explainer) | [docs/explainers/en/](docs/explainers/en/) |
 | Arabic product context (5-doc شرح شامل) | [docs/explainers/ar/](docs/explainers/ar/) |
@@ -673,12 +720,13 @@ The *engineering* half of that bar is the §6 P0 items. Until §4.1.1 lands, the
 
 ## 8. Footer
 
-**Author:** Mohammed Raad (mraad500), with the 2026-05-10 hygiene pass; refreshed 2026-05-12 for v1.0.5.
-**Originally generated:** 2026-05-10. **Refreshed:** 2026-05-12.
+**Author:** Mohammed Raad (mraad500), with the 2026-05-10 hygiene pass; refreshed 2026-05-12 for v1.0.5; post-refresh hardening update 2026-05-17 (§2A).
+**Originally generated:** 2026-05-10. **Refreshed:** 2026-05-12. **Updated:** 2026-05-17.
 **Repo HEAD at original generation:** `39ca529` (`fix(captain-brain): mark HRMoodReading.unknown nonisolated`).
 **Repo HEAD at v1.0.5 refresh:** `ab6885e` (`fix(captain): force workoutPlan in gym + allow constructive body-photo feedback`).
+**Repo HEAD at 2026-05-17 update:** `2df0a9a` (`fix(plan): restore the pinned plan into the Plan tab on relaunch`).
 **Active branch:** `release/v1.0.4-memory-v4` (the v1.0.5 release candidate; branch name is legacy from the v1.0.4 memory cut).
 **Supersedes:** Blueprint 17 for forward guidance only. Blueprint 17 remains the canonical historical reference for the §1–§36 batch chronology and the deep-reference text for the eleven Brain subsystems.
-**Status:** ready to read; v1.0.5 staged for App Store archive + upload. Next blueprint cut should follow the v1.1 release.
+**Status:** ready to read; v1.0.5 / build 21 staged, Release build green (0/0), ready for App Store archive + upload. Public App Store is still at v1.0.2 (build 19). Next blueprint cut should follow the v1.1 release.
 
 — *الكابتن حمّودي بانتظار الترقية القادمة.*

@@ -255,6 +255,18 @@ public actor NotificationBrain {
         diag.info("NotificationBrain: subscribed to XP + streak NotificationCenter events")
     }
 
+    /// Stable de-dupe key. A duplicated trigger (e.g. `checkStreakContinuity`
+    /// invoked from BOTH `StreakManager.init` and `AppDelegate`) would otherwise
+    /// stack a second identical notification because each intent gets a random
+    /// UUID identifier. Re-using a deterministic identifier makes iOS REPLACE
+    /// the pending/delivered request instead of adding a duplicate.
+    private func dedupeIdentifier(_ suffix: String) -> String { "aiqo.brain.\(suffix)" }
+
+    private func todayKey() -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+    }
+
     private func handleXPGranted(payload: [AnyHashable: Any]?) async {
         // Only notify on a level-up; raw XP grants alone would be too noisy.
         guard let didLevelUp = payload?["didLevelUp"] as? Bool, didLevelUp else { return }
@@ -270,7 +282,7 @@ public actor NotificationBrain {
             ]),
             requestedBy: "NotificationBrain.XPLevelUp"
         )
-        _ = await request(intent)
+        _ = await request(intent, identifier: dedupeIdentifier("levelUp.\(level)"))
     }
 
     private func handleStreakIncremented(payload: [AnyHashable: Any]?) async {
@@ -285,7 +297,7 @@ public actor NotificationBrain {
             signals: IntentSignals(customPayload: ["streak": "\(streak)"]),
             requestedBy: "NotificationBrain.StreakMilestone"
         )
-        _ = await request(intent)
+        _ = await request(intent, identifier: dedupeIdentifier("streakSave.\(streak)"))
     }
 
     private func handleStreakRisk(payload: [AnyHashable: Any]?) async {
@@ -298,7 +310,7 @@ public actor NotificationBrain {
             signals: IntentSignals(customPayload: ["streak": "\(streak)"]),
             requestedBy: "NotificationBrain.StreakRisk"
         )
-        _ = await request(intent)
+        _ = await request(intent, identifier: dedupeIdentifier("streakRisk.\(todayKey())"))
     }
 
     // MARK: - Hard cap helpers
