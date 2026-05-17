@@ -60,8 +60,8 @@ private extension KitchenSceneView {
         ZStack {
             hotspot(
                 size: size,
-                x: 0.83,
-                y: 0.43,
+                x: 0.24,
+                y: 0.36,
                 width: 0.25,
                 height: 0.30,
                 accessibilityLabel: "kitchen.hotspot.fridge".localized,
@@ -72,8 +72,8 @@ private extension KitchenSceneView {
 
             hotspot(
                 size: size,
-                x: 0.22,
-                y: 0.61,
+                x: 0.34,
+                y: 0.64,
                 width: 0.32,
                 height: 0.38,
                 accessibilityLabel: "kitchen.hotspot.captain".localized,
@@ -126,8 +126,8 @@ private extension KitchenSceneView {
             sceneActionBadge(
                 title: "kitchen.fridge.title".localized,
                 systemImage: "refrigerator.fill",
-                x: 0.82,
-                y: 0.33,
+                x: 0.24,
+                y: 0.36,
                 in: size
             ) {
                 openFridge = true
@@ -136,8 +136,8 @@ private extension KitchenSceneView {
             sceneActionBadge(
                 title: "kitchen.captain.title".localized,
                 systemImage: "person.wave.2.fill",
-                x: 0.20,
-                y: 0.51,
+                x: 0.34,
+                y: 0.64,
                 in: size
             ) {
                 openCaptainChat = true

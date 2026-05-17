@@ -199,11 +199,11 @@ struct ProfileHeroCard: View {
     }
 
     private var textAlignment: Alignment {
-        isRTL ? .trailing : .leading
+        .leading
     }
 
     private var multilineAlignment: TextAlignment {
-        isRTL ? .trailing : .leading
+        .leading
     }
 
     private var shieldSymbol: String {
@@ -341,7 +341,7 @@ struct ProfileHeroCard: View {
     }
 
     private var identityBlock: some View {
-        VStack(alignment: isRTL ? .trailing : .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(NSLocalizedString("screen.profile.chip", value: "Profile", comment: ""))
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(ProfilePalette.textSecondary)

@@ -202,7 +202,7 @@ private extension KitchenScreen {
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .lineLimit(1)
             }
-            .foregroundStyle(.primary)
+            .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
             .background(
