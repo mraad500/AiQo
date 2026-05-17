@@ -24,6 +24,8 @@ public actor NotificationBrain {
     /// cascade from spamming a user in their first session (v1.0.4 enables Memory V4
     /// globally — all triggers register at once).
     /// Tightening these is fine; loosening should be a deliberate decision.
+    /// Conservative free-tier (`.none`) floor. Paid tiers get more headroom via
+    /// `hardCapLimits()`; the trial lane bypasses the cap entirely.
     public static let hardCapInterval: TimeInterval = 4 * 3600   // 4 hours between deliveries
     public static let hardCapDailyLimit = 3                       // 3 deliveries per calendar day
 
@@ -62,9 +64,17 @@ public actor NotificationBrain {
     ) async -> DeliveryResult {
         let now = Date()
 
-        // Gate 0 (v1.0.4): hard cap. 1 per 4h, 3 per day. Defensive layer on top
-        // of GlobalBudget — see hardCapInterval / hardCapDailyLimit above.
-        if let cappedReason = hardCapRejection(now: now) {
+        // The 7-day trial runs in its own lane: TrialJourneyOrchestrator already
+        // governs cadence (per-day caps 1/2/3 + 90-min cooldown), so the generic
+        // anti-spam stack would only suppress the very moments that make a trial
+        // user fall in love with the app. Trial intents skip the hard cap and the
+        // GlobalBudget daily-cap/cooldown (they still respect quiet hours, the
+        // iOS 64-pending limit, PersonaGuard, and privacy scrubbing).
+        let isTrialLane = intent.kind == .trialDay
+
+        // Gate 0 (v1.0.4): hard cap, tier-scaled. Defensive layer on top of
+        // GlobalBudget. Skipped entirely for the trial lane.
+        if !isTrialLane, let cappedReason = hardCapRejection(now: now) {
             await AuditLogger.shared.record(
                 event: .notificationRejected,
                 kind: intent.kind.rawValue,
@@ -187,7 +197,9 @@ public actor NotificationBrain {
         do {
             try await UNUserNotificationCenter.current().add(request)
             await GlobalBudget.shared.recordDelivered(intent)
-            recordHardCapDelivery(now: Date())
+            if !isTrialLane {
+                recordHardCapDelivery(now: Date())
+            }
             await AuditLogger.shared.record(
                 event: .notificationDelivered,
                 kind: intent.kind.rawValue,
@@ -291,16 +303,28 @@ public actor NotificationBrain {
 
     // MARK: - Hard cap helpers
 
+    /// Tier-scaled hard cap. The free-tier (`.none`) floor stays conservative;
+    /// paid tiers get more headroom so a Pro user isn't silenced after 3 pings.
+    /// Trial never reaches here (bypassed in `request`).
+    private func hardCapLimits() -> (interval: TimeInterval, dailyLimit: Int) {
+        switch TierGate.shared.currentTier.effectiveAccessTier {
+        case .pro:  return (2 * 3600, 6)
+        case .max:  return (3 * 3600, 5)
+        default:    return (Self.hardCapInterval, Self.hardCapDailyLimit)
+        }
+    }
+
     private func hardCapRejection(now: Date) -> BudgetDecision.Reason? {
         let defaults = UserDefaults.standard
+        let limits = hardCapLimits()
         if let last = defaults.object(forKey: HardCapKeys.lastDelivered) as? Date,
-           now.timeIntervalSince(last) < Self.hardCapInterval {
+           now.timeIntervalSince(last) < limits.interval {
             return .cooldown
         }
         if let countDate = defaults.object(forKey: HardCapKeys.dailyCountDate) as? Date,
            Calendar.current.isDate(countDate, inSameDayAs: now) {
             let count = defaults.integer(forKey: HardCapKeys.dailyCount)
-            if count >= Self.hardCapDailyLimit {
+            if count >= limits.dailyLimit {
                 return .dailyLimitReached
             }
         }

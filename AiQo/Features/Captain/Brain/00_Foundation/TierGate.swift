@@ -15,6 +15,11 @@ final class TierGate: @unchecked Sendable {
     // MARK: - Feature catalogue
 
     nonisolated enum Feature: Hashable, Sendable {
+        // Basic life notifications (water / streak / sleep / workout / weekly
+        // reminder). Available to EVERY tier incl. `.none` — these keep a free
+        // or post-trial user engaged and are not "smart Captain" intelligence.
+        case basicLifeNotifications
+
         // Captain core (Max-tier and above)
         case captainChat
         case captainMemory
@@ -30,6 +35,7 @@ final class TierGate: @unchecked Sendable {
 
         nonisolated var logName: String {
             switch self {
+            case .basicLifeNotifications:    return "basicLifeNotifications"
             case .captainChat:               return "captainChat"
             case .captainMemory:             return "captainMemory"
             case .captainNotifications:      return "captainNotifications"
@@ -86,6 +92,8 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated func requiredTier(for feature: Feature) -> SubscriptionTier {
         switch feature {
+        case .basicLifeNotifications:
+            return .none
         case .captainChat, .captainMemory, .captainNotifications:
             return .max
         case .multiWeekPlan(let weeks):
