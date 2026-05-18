@@ -607,8 +607,8 @@ struct ChatBubbleView: View {
     }
 
     // v1.1 brand tokens — Apple resubmission palette.
-    private let mintFill = Color(red: 0.718, green: 0.898, blue: 0.824) // #B7E5D2
-    private let sandFill = Color(red: 0.922, green: 0.812, blue: 0.592).opacity(0.35) // #EBCF97 @ 35%
+    private let mintFill = Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB
+    private let sandFill = Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3
     private let ink      = Color(red: 0.059, green: 0.090, blue: 0.129) // #0F1721
 
     /// Cap on bubble width. Avoids `UIScreen.main` (deprecated in iOS 26) by
@@ -651,7 +651,17 @@ struct ChatBubbleView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .leading : .trailing)
-                    .background(bubbleShape.fill(isUser ? mintFill : sandFill))
+                    .background(
+                        bubbleShape.fill(
+                            LinearGradient(
+                                colors: isUser
+                                    ? [mintFill, mintFill.opacity(0.85)]
+                                    : [sandFill, sandFill.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    )
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(isUser ? "User message" : "Captain message")
                     .accessibilityValue(text)

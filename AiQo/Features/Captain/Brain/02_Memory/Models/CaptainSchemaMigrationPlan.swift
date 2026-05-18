@@ -32,6 +32,10 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
         var facts: [FactSeed] = []
         var episodes: [EpisodeSeed] = []
         var sourceMessageCount = 0
+        /// Set when a V3 read in `willMigrate` throws. `didMigrate` then
+        /// skips the partial write + the migrated flag, leaving V4 clean for
+        /// a retry (the V3 fallback is already armed by recordMigrationFailure).
+        var stagingFailed = false
     }
 
     private static var pendingV4Payload = PendingV4Payload()
@@ -41,12 +45,13 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             CaptainSchemaV1.self,
             CaptainSchemaV2.self,
             CaptainSchemaV3.self,
-            MemorySchemaV4.self
+            MemorySchemaV4.self,
+            MemorySchemaV5.self
         ]
     }
 
     static var stages: [MigrationStage] {
-        [migrateV1toV2, migrateV2toV3, migrateV3toV4]
+        [migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5]
     }
 
     /// V1 -> V2 is purely additive (two new models). Lightweight migration is safe.
@@ -59,6 +64,14 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
     static let migrateV2toV3 = MigrationStage.lightweight(
         fromVersion: CaptainSchemaV2.self,
         toVersion: CaptainSchemaV3.self
+    )
+
+    /// V4 -> V5 adds LearnedDirective (user-taught standing instructions).
+    /// Purely additive — one new model, no changes to existing models — so a
+    /// lightweight migration is safe, exactly like V1→V2 and V2→V3.
+    static let migrateV4toV5 = MigrationStage.lightweight(
+        fromVersion: MemorySchemaV4.self,
+        toVersion: MemorySchemaV5.self
     )
 
     static let migrateV3toV4 = MigrationStage.custom(
@@ -80,13 +93,14 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                         firstMentionedAt: old.createdAt,
                         lastConfirmedAt: old.updatedAt,
                         referenceCount: old.accessCount,
-                        isPII: isPII(key: old.key, category: old.category),
-                        isSensitive: isSensitive(category: old.category)
+                        isPII: FactClassification.isPII(key: old.key, category: old.category),
+                        isSensitive: FactClassification.isSensitive(category: old.category)
                     )
                 }
                 diag.info("Memory v3→v4 staged \(oldFacts.count) legacy facts")
             } catch {
-                diag.error("Memory v3→v4 failed to read CaptainMemory", error: error)
+                pendingV4Payload.stagingFailed = true
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_facts_failed")
             }
 
             do {
@@ -110,7 +124,8 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                     "Memory v3→v4 staged \(pendingV4Payload.episodes.count) episodes from \(oldMessages.count) legacy messages"
                 )
             } catch {
-                diag.error("Memory v3→v4 failed to read PersistentChatMessage", error: error)
+                pendingV4Payload.stagingFailed = true
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_messages_failed")
             }
         },
         didMigrate: { context in
@@ -119,6 +134,11 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             }
 
             do {
+                guard !pendingV4Payload.stagingFailed else {
+                    diag.error("Memory v3→v4: staging failed — skipping partial write, leaving V4 clean for retry (V3 fallback already armed)")
+                    return
+                }
+
                 let existingFactIDs = Set(try context.fetch(FetchDescriptor<SemanticFact>()).map(\.id))
                 let existingEpisodeIDs = Set(try context.fetch(FetchDescriptor<EpisodicEntry>()).map(\.id))
 
@@ -128,11 +148,11 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                         id: seed.id,
                         storageKey: seed.storageKey,
                         content: seed.content,
-                        category: mapFactCategory(seed.categoryRaw),
+                        category: FactClassification.category(for: seed.categoryRaw),
                         categoryRawOverride: seed.categoryRaw,
                         confidence: seed.confidence,
                         salience: 0.5,
-                        source: mapFactSource(seed.sourceRaw),
+                        source: FactClassification.source(for: seed.sourceRaw),
                         sourceRawOverride: seed.sourceRaw,
                         firstMentionedAt: seed.firstMentionedAt,
                         lastConfirmedAt: seed.lastConfirmedAt,
@@ -168,68 +188,15 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                 }
 
                 UserDefaults.standard.set(true, forKey: "memory.v4.migrated")
+                UserDefaults.standard.set(true, forKey: MemoryV4Gate.migratedUserDefaultsKey)
                 diag.info(
                     "Memory schema v3→v4 migration complete. Migrated \(insertedFacts) facts, \(insertedEpisodes) episodes from \(pendingV4Payload.sourceMessageCount) messages"
                 )
             } catch {
-                diag.error("Memory v3→v4 destination write failed", error: error)
+                MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_write_failed")
             }
         }
     )
-
-    private static func mapFactCategory(_ rawCategory: String) -> FactCategory {
-        switch rawCategory.lowercased() {
-        case "health", "health_condition", "body", "sleep", "injury", "nutrition":
-            return .health
-        case "preference":
-            return .preference
-        case "goal", "objective", "active_record_project":
-            return .goal
-        case "relationship", "family":
-            return .relationship
-        case "work", "career":
-            return .work
-        case "habit":
-            return .habit
-        case "aspiration":
-            return .aspiration
-        case "fear":
-            return .fear
-        case "accomplishment", "insight", "workout_history":
-            return .accomplishment
-        default:
-            return .other
-        }
-    }
-
-    private static func mapFactSource(_ rawSource: String) -> FactSource {
-        switch rawSource.lowercased() {
-        case "user_explicit", "explicit":
-            return .explicit
-        case "inferred":
-            return .inferred
-        default:
-            return .extracted
-        }
-    }
-
-    private static func isPII(key: String, category: String) -> Bool {
-        let piiKeys: Set<String> = ["user_name", "weight", "height", "age"]
-        return piiKeys.contains(key.lowercased()) || category.lowercased() == "identity"
-    }
-
-    private static func isSensitive(category: String) -> Bool {
-        let sensitiveCategories: Set<String> = [
-            "health",
-            "health_condition",
-            "mental_health",
-            "medical",
-            "body",
-            "sleep",
-            "injury"
-        ]
-        return sensitiveCategories.contains(category.lowercased())
-    }
 
     private static func pairMessages(_ messages: [PersistentChatMessage]) -> [(sessionID: UUID, user: PersistentChatMessage?, captain: PersistentChatMessage?)] {
         let grouped = Dictionary(grouping: messages, by: \.sessionID)

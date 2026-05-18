@@ -79,29 +79,74 @@ actor FactExtractor {
         "ألم", "اكتئاب", "قلق", "دواء", "حزن"
     ]
 
-    private func heuristicExtract(from text: String) -> [CandidateFact] {
+    /// Marker keys that overwhelmingly capture momentary state rather than a
+    /// durable fact ("أنا تعبان", "i'm bored", "عندي صداع"). Only these are
+    /// transience-gated; stable markers (name, like/prefer, goal) stay as-is
+    /// because a goal mentioned "today" is still a goal.
+    private static let ambiguousMarkerKeys: Set<String> = [
+        "i am", "i'm", "أنا", "عندي", "i have", "i don't", "i can't", "ما أقدر"
+    ]
+
+    /// Temporal / momentary-state words. If an ambiguous-marker clause contains
+    /// one, the clause is "I feel X right now", not a durable fact — skip it so
+    /// it never gets persisted and later surfaced by semantic recall.
+    private static let transientMarkers: [String] = [
+        "today", "tonight", "tomorrow", "yesterday", "right now", "currently",
+        "this morning", "this evening", "tired", "sleepy", "exhausted",
+        "bored", "hungry",
+        "اليوم", "هسة", "هسه", "الحين", "باجر", "امبارح", "البارحة", "هاليوم",
+        "هالصبح", "تعبان", "نعسان", "مرهق", "صداع", "زعلان", "جوعان", "مليت",
+        "زهقان", "ملل"
+    ]
+
+    /// Splits on sentence/clause punctuation in both scripts. Arabic rarely
+    /// uses ".", so the old `split(".")` turned a whole Arabic message into one
+    /// 80-char blob — this restores real atomic clauses.
+    private static func clauses(in text: String) -> [String] {
+        text
+            .components(separatedBy: CharacterSet(charactersIn: ".?!,;\n،؛؟۔"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func isTransient(_ text: String) -> Bool {
         let lower = text.lowercased()
+        return Self.transientMarkers.contains { lower.contains($0) }
+    }
+
+    private func heuristicExtract(from text: String) -> [CandidateFact] {
         var results: [CandidateFact] = []
         var seenPrefixes = Set<String>()
 
-        for marker in Self.markers {
-            guard let range = lower.range(of: marker.prefix) else { continue }
-            let key = marker.prefix.trimmingCharacters(in: .whitespaces)
-            guard seenPrefixes.insert(key).inserted else { continue }
+        for clause in Self.clauses(in: text) {
+            let lowerClause = clause.lowercased()
 
-            let startIdx = range.upperBound
-            let remaining = String(lower[startIdx...])
-            let snippet = remaining.split(separator: ".").first.map(String.init) ?? remaining
-            let cleaned = String(snippet.prefix(80)).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard cleaned.count >= 2 else { continue }
+            for marker in Self.markers {
+                // Clause-ANCHORED: the marker must START the clause, not appear
+                // anywhere inside it. Kills "ما عندي مشكلة" / "what i am asking"
+                // false positives the old `range(of:)` produced.
+                guard lowerClause.hasPrefix(marker.prefix) else { continue }
+                let key = marker.prefix.trimmingCharacters(in: .whitespaces)
+                guard seenPrefixes.insert(key).inserted else { continue }
 
-            let content = "\(key) \(cleaned)"
-            results.append(.init(
-                content: content,
-                category: marker.category,
-                confidence: 0.6,
-                sensitive: containsSensitive(cleaned)
-            ))
+                // Slice from the ORIGINAL clause so casing is preserved
+                // ("Mohammed", not "mohammed") for the recalled prompt line.
+                let cleaned = String(clause.dropFirst(marker.prefix.count).prefix(80))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard cleaned.count >= 3 else { continue }
+
+                if Self.ambiguousMarkerKeys.contains(key), isTransient(clause) {
+                    continue
+                }
+
+                let content = "\(key) \(cleaned)"
+                results.append(.init(
+                    content: content,
+                    category: marker.category,
+                    confidence: 0.6,
+                    sensitive: containsSensitive(cleaned)
+                ))
+            }
         }
         return results
     }

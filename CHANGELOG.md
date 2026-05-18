@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.0.5 — 2026-05-12
+
+### New
+
+- **Teach Captain Hamoudi standing instructions — new `11_Directives` Brain layer.** The user can now teach the Captain a durable, executable rule in natural Iraqi/English — e.g. *"بعد كل تمرين حلّل تمريني وقارنه بالي قبله ودزّلي إشعار"* ("after every workout, analyze it and compare it to the previous one and notify me"). It is parsed on-device (no LLM round-trip, no added chat latency), persisted in a new **Memory Schema V5** (`LearnedDirective` @Model; one additive model + lightweight `migrateV4toV5` migration, same proven pattern as V2→V3), mirrored into every prompt's Working Memory so the Captain confirms it in the same reply and never forgets it (re-hydrated on relaunch via `DirectiveCoordinator.hydratePromptMirror()`), and executed automatically after every workout through `AIWorkoutSummaryService` — a deterministic, offline Iraqi analysis comparing the just-finished workout (duration / calories / avg-HR / distance) to the previous one. New subsystem (`AiQo/Features/Captain/Brain/11_Directives/`): `DirectiveTaxonomy`, `DirectiveStore` (actor, mirrors `ProceduralStore`), `DirectiveLearner` (conservative — needs a recurrence marker **and** an action **and** a recognized trigger, so a one-off "حلّل تمريني" never creates a rule), `DirectiveEngine` (+ pure `WorkoutComparisonComposer`), `DirectiveCoordinator`. Gated by a new `TierGate.captainDirectives` (`.max`+, consistent with `captainMemory` / `captainNotifications`); `BrainBus` gains `directiveLearned` / `directiveFired` / `workoutCompleted` events.
+- **Bigger, sharper Captain memory.** `maxSemanticFacts` Pro 500→1200 / Max 200→500; `maxMemoryRetrievalDepth` 25→40 / 10→18; prompt-context budget 800→1200 tokens & 30→48 entries; relevant-memory retrieval 8→12; rolling workout history 7→30; persisted chat history 200→400. The prompt-token guard is preserved end-to-end so the larger store doesn't blow latency/cost.
+- **Multi-day workout plans.** The Plan intake now includes a "Plan length" chip (1 / 2 / 4 / 8 weeks). Captain Hamoudi returns a structured plan split into named training days (e.g. "Day 1 — Chest & Triceps") with a per-day muscle focus and explicit sets/reps.
+- **Day picker in the active plan card.** The Plan dashboard now surfaces a horizontal day-picker over the active plan. Selecting a day re-scopes the exercise list, time/sets/moves stats, and the "Start workout" CTA — the runner now executes only the selected day, not the entire week.
+- **Optional body photo for tailored plans.** An optional photo attachment in the intake lets the user share a body photo. With explicit per-purpose consent, the image is downsized, EXIF/GPS-stripped, and sent to Google Gemini once for plan tailoring. The photo is never written to disk and never stored on AiQo servers.
+- **Dedicated Body Photo consent surface.** A new "Body photo (Plan)" row under Settings → Privacy & AI Data, with grant/revoke controls, last-changed timestamp, and a plain-language explainer. Consent is independent of the AI Data and Captain Voice consents (Apple 5.1.2(II)).
+
+### Improved
+
+- **Plan world-class UI restored.** The unified PlanPalette surface (mint · sand · lavender · lemon) is now active across the Plan dashboard, Workout Runner, Insights, Weekly Stats, Exercise Detail, Template Library, Intake Chips, Workout Cards, and Flow Views. Visual hierarchy comes from typography, spacing, and material layering rather than color noise.
+- **Plan dashboard reorder.** The active plan card now appears immediately after the hero — primary content first. The compliance footer moves to the bottom. Vertical rhythm tuned for breathing room.
+- **Intake chip section names** clarified to separate "Per-session time" (length of one workout) from "Plan length" (overall program duration).
+- **Prompt schema for Captain Hamoudi** updated to describe the multi-day plan output shape (title + durationWeeks + days[] with named days and focus). Backward compatible — older flat plans still decode.
+
+### Privacy & compliance
+
+- Body photo path uses the same audit-logged Gemini pipeline as kitchen vision; the image-handling code runs through `PrivacySanitizer.sanitizeKitchenImageData` (downsize + JPEG re-encode, drops EXIF / GPS).
+- New per-purpose consent class `BodyPhotoConsent` persists state in `UserDefaults` with versioned keys (v1).
+- `PrivacyInfo.xcprivacy` already declares `NSPrivacyCollectedDataTypePhotosorVideos` with purpose `AppFunctionality` — no new privacy labels required.
+- Photo picker uses `PhotosPicker` (out-of-process), so `NSPhotoLibraryUsageDescription` is not needed.
+
 ## v1.0.2 — 2026-04-20
 
 ### New

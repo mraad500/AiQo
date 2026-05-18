@@ -54,11 +54,15 @@ struct ClubRootView: View {
     @State private var selectedTab: ClubTopTab = .body
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
+    @State private var presentedOutdoorRunExercise: GymExercise?
     @State private var isGratitudeSessionPresented = false
     @State private var isProfileSheetPresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
+    @State private var showBattlePaywall = false
+    @State private var showPeaksPaywall = false
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
 
     @StateObject private var winsStore: WinsStore
     @StateObject private var questEngine: QuestEngine
@@ -87,6 +91,12 @@ struct ClubRootView: View {
             }
         .toolbar(.hidden, for: .navigationBar)
         .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
+        .sheet(isPresented: $showPeaksPaywall) {
+            PaywallView(source: .peaksGate)
+        }
+        .sheet(isPresented: $showBattlePaywall) {
+            PaywallView(source: .battleGate)
+        }
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionSheetView(session: presented.session)
@@ -129,6 +139,11 @@ struct ClubRootView: View {
         .fullScreenCover(isPresented: $isGratitudeSessionPresented) {
             GratitudeSessionView()
         }
+        .fullScreenCover(item: $presentedOutdoorRunExercise) { exercise in
+            OutdoorRunSessionView(title: exercise.title) {
+                presentedOutdoorRunExercise = nil
+            }
+        }
     }
 
     private var topHeaderBar: some View {
@@ -160,10 +175,30 @@ struct ClubRootView: View {
             PlanView()
 
         case .peaks:
-            PeaksRecordsView()
+            if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessPeaks {
+                PeaksRecordsView()
+            } else {
+                CaptainLockedView(config: .init(
+                    title: "قِمَم",
+                    subtitle: "قِمَم تحتاج اشتراك AiQo Intelligence Pro — مشاريع كسر الأرقام القياسية.",
+                    iconSystemName: "mountain.2.fill",
+                    tier: .pro,
+                    onUpgradeTap: { showPeaksPaywall = true }
+                ))
+            }
 
         case .battle:
-            BattleChallengesView(questEngine: questEngine)
+            if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessChallenges {
+                BattleChallengesView(questEngine: questEngine)
+            } else {
+                CaptainLockedView(config: .init(
+                    title: "معركة",
+                    subtitle: "افتح معركة مع اشتراك AiQo Max — 10 مراحل تحديات على بياناتك.",
+                    iconSystemName: "flag.checkered",
+                    tier: .max,
+                    onUpgradeTap: { showBattlePaywall = true }
+                ))
+            }
 
         case .impact:
             ImpactContainerView(winsStore: winsStore)
@@ -171,6 +206,17 @@ struct ClubRootView: View {
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
+        if exercise.workoutKind == .outdoorRun {
+            presentedExercise = nil
+            presentedCinematicExercise = nil
+            isGratitudeSessionPresented = false
+            // Re-attaches to the in-progress run if one exists, so opening the
+            // run again shows the same workout still going.
+            ActiveRunStore.shared.attachOrStart(title: exercise.title)
+            presentedOutdoorRunExercise = exercise
+            return
+        }
+
         if let activeSession, activeSession.phase != .idle, let activeExercise {
             presentExercise(activeExercise, session: activeSession)
             return

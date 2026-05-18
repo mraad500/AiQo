@@ -24,6 +24,7 @@ struct PromptComposer: Sendable {
                 intentSummary: request.intentSummary,
                 recentInteractions: request.contextData.recentInteractions
             ),
+            layerCoachingThesis(request: request),
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
             layerScreenContext(request: request),
@@ -356,6 +357,25 @@ struct PromptComposer: Sendable {
             """
         }
 
+        // Brain V2: cross-metric synthesis. TrendAnalyzer computes each metric
+        // independently and the lines above are per-metric; this turns the
+        // snapshot into explicit "X is linked to Y" directives so the model
+        // connects the dots instead of inferring from scattered numbers.
+        if let trend = data.trendSnapshot {
+            let insights = TrendInsightSynthesizer.insights(
+                from: trend,
+                emotional: data.emotionalState,
+                language: language
+            )
+            if !insights.isEmpty {
+                let header = language == .english
+                    ? "--- CONNECTED SIGNALS (internal — use the link, never quote the numbers) ---"
+                    : "--- روابط ملحوظة (داخلي — استعمل الترابط، لا تذكر الأرقام) ---"
+                result += "\n\n" + header + "\n"
+                    + insights.map { "• \($0)" }.joined(separator: "\n")
+            }
+        }
+
         return result
     }
 
@@ -411,6 +431,36 @@ struct PromptComposer: Sendable {
             section += "\nThe user attached a photo (likely their fridge or a meal). Prioritize meal guidance based on what you see."
         }
 
+        if request.screenContext == .gym && request.hasAttachedImage {
+            section += """
+
+            === BODY PHOTO PROVIDED — PERSONALIZE THE PLAN ===
+            The user attached a body photo so you can tailor the plan to their build.
+            You MUST do BOTH of the following:
+
+            1) In the `message` field, give a short constructive read of what you see and
+               what their body needs. Lead with what is already strong, then name 1–2
+               specific muscle groups that look underdeveloped, then say how the plan
+               targets them. 2–3 sentences, supportive coaching tone.
+               Example AR: "شفت صورتك يا بطل — أكتافك وظهرك ممتازة، بس الصدر والذراعين
+               محتاجة شغل أكثر، فضفتلك تمارين دفع إضافية بالخطة."
+               Example EN: "Looking at your photo — solid back and shoulders, chest and
+               arms need more volume, so I added extra push work to the plan."
+
+            2) In `workoutPlan.days`, BIAS the accessory work toward the muscle groups
+               you identified as weaker. Adjust volume, rest, and progression to match
+               the apparent training level visible in the photo.
+
+            HARD RULES (do not break):
+            - Do NOT estimate weight, body fat %, or BMI.
+            - Do NOT use shaming, negative, or appearance-mocking language
+              ("سمين", "نحيف زياد", "fat", "skinny", etc.).
+            - Do NOT comment on anything other than musculature relevant to training.
+            - If the photo is unclear or unusable, say so briefly in `message` and
+              still produce a plan based on the intake answers.
+            """
+        }
+
         section += "\n\(screenBehavior(for: ctx, language: request.language))"
 
         // Brain V2: Music bridge — available on all screens
@@ -436,11 +486,18 @@ struct PromptComposer: Sendable {
             """
         case .gym:
             return language == .arabic ? """
-            المستخدم بوضع التمرين. ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
-            انتج workoutPlan لمّا يطلب تمرين. خلّي mealPlan فاضي إلا إذا طلب.
+            المستخدم بوضع التمرين (شاشة النادي). ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
+            **لازم تنتج workoutPlan كامل (مو null)** بأول مرة المستخدم يحچي عن خطة أو
+            يحدد أسبوع/أيام/معدّات — لا تكتفي بالتأكيد النصّي. لو وصلت رسالة ثانية
+            من نفس المستخدم تطلب الخطة، يعني الرد الأول كان فاضي من workoutPlan — هذا فشل.
+            خلّي mealPlan فاضي إلا إذا طلب أكل.
             """ : """
-            Training mode. Lead with execution: exercises, sets, reps, intensity.
-            Generate workoutPlan when asked. Keep mealPlan null unless requested.
+            Training mode (gym screen). Lead with execution: exercises, sets, reps, intensity.
+            **You MUST produce a full workoutPlan object (not null) on the FIRST mention** of a
+            plan, week count, training days, or equipment — never reply with text-only
+            acknowledgment when the user clearly wants a plan. If the user has to ask
+            "where's the plan?" in a follow-up, the first reply was a failure.
+            Keep mealPlan null unless food is explicitly requested.
             """
         case .kitchen:
             return language == .arabic ? """
@@ -504,17 +561,53 @@ struct PromptComposer: Sendable {
               "quickReplies": ["اقتراح١", "اقتراح٢"],
               "workoutPlan": null,
               "mealPlan": null,
-              "spotifyRecommendation": null
+              "spotifyRecommendation": null,
+              "savedMemory": null,
+              "reminder": null
             }
 
             قواعد:
             - message: ردك الطبيعي بالعراقي. لازم يكون بشري ١٠٠٪ عراقي.
             - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.\(sleepRuleArabic)
-            - workoutPlan: null إلا إذا طلب تمرين.
+            - savedMemory: حطّه فقط لمن المستخدم يطلب صراحةً تتذكر شي ("احفظ هذا"، "خله ببالك"، "تذكر اني...")، أو لمن يذكر معلومة ثابتة ومهمة عنه تستاهل تنحفظ. الشكل: {"note":"الشي اللي تتذكره مكتوب كحقيقة ثابتة وواضحة عن المستخدم","title":"عنوان قصير اختياري"}. خله null بأي رد ثاني.
+            - reminder: حطّه فقط لمن المستخدم يطلب تذكير أو منبه بوقت ساعة محدد. الشكل: {"body":"شنو تذكّره بيه بالعراقي","time":"HH:mm" 24 ساعة بالتوقيت المحلي,"date":"YYYY-MM-DD" اختياري}. إذا الوقت مو واضح، اسأله سؤال قصير عن الوقت بدل ما تخمن — ولا تحط reminder بهالحالة.
+
+            🔒 صدق مطلق (غير قابل للتفاوض):
+            - ممنوع تكول "صار محفوظ" أو "خليته ببالي" أو "محفوظ عندي" إلا إذا فعلاً رجّعت savedMemory بنفس هذا الرد.
+            - ممنوع تكول "رح أذكّرك" أو "دزيتلك منبه" أو "بوصلك إشعار" إلا إذا فعلاً رجّعت reminder بوقت محدد بنفس هذا الرد.
+            - انت ما تكدر تشغّل شي على حدث (مثلاً: لمن تخلّص تمرين، لمن تفتح التطبيق، لمن يصير شي). إذا المستخدم طلب هيك، إما حدّدله وقت ساعة وحط reminder، أو كوله تكدر تسوّيله التحليل هسة بالدردشة لمن يرجع يحچيك — لا توعد بإشعار ما تكدر تدزّه.
+            - workoutPlan: **لازم تكون object كامل (مو null)** لمّا المستخدم يطلب خطة تمرين
+              صراحةً (مثلاً: "اعطني خطة"، "ابني خطة"، "خطة تنشيف 4 أسابيع"، "خطة تمرين")
+              أو لمّا يحدد بارامترات الخطة (هدف + مدة + معدات + مستوى). إرجاع null
+              لمّا المستخدم يطلب خطة هو فشل. لو الصورة موجودة بطلب الخطة، استعمل
+              قسم "BODY PHOTO PROVIDED" بالأعلى لتعديل الخطة وذكر الملاحظات بالـ message.
             - mealPlan: null إلا إذا طلب أكل.
             - spotifyRecommendation: null إلا إذا طلب موسيقى.\(myVibeRule)
             - ممنوع منعاً باتاً تحط أي نص خارج الـ JSON.
             - ممنوع تذكر JSON أو API بحقل الـ message.
+
+            === شكل workoutPlan لمّا تطلع خطة ===
+            لمّا المستخدم يطلب خطة تمرين، استعمل هاي البنية:
+            {
+              "title": "اسم الخطة",
+              "durationWeeks": 4,
+              "exercises": [],
+              "days": [
+                {
+                  "name": "اليوم الأول — صدر وترايسبس",
+                  "focus": "الجزء العلوي",
+                  "exercises": [
+                    {"name": "بنش بريس بالبار", "sets": 4, "repsOrDuration": "8-10"}
+                  ]
+                }
+              ]
+            }
+            - title: اسم قصير ومحفّز للخطة (مثلاً: "خطة تنشيف 4 أسابيع").
+            - durationWeeks: عدد أسابيع الخطة بالأرقام (إذا ما ذكر المستخدم خلّيها 1).
+            - days: قائمة أيام التدريب بأسبوع واحد. كل يوم يحتوي على name واضح، focus عضلي، وقائمة exercises.
+            - exercises (المسطّح): اتركها [] لمّا تستعمل days. تستعملها فقط للخطط القديمة بدون أيام.
+            - كل exercise لازم يحتوي: name, sets (عدد صحيح), repsOrDuration (نص).
+            - لا تكرّر نفس اليوم. سمّي الأيام بوضوح حسب مجموعة العضلات.
 
             🔒 تذكير نهائي: كل الـ message و quickReplies لازم تكون ١٠٠٪ عراقي دارج. ولا كلمة إنكليزية.
             """
@@ -529,17 +622,69 @@ struct PromptComposer: Sendable {
           "quickReplies": ["suggestion1", "suggestion2"],
           "workoutPlan": null,
           "mealPlan": null,
-          "spotifyRecommendation": null
+          "spotifyRecommendation": null,
+          "savedMemory": null,
+          "reminder": null
         }
 
         Rules:
         - message: Natural reply in English. Human and conversational.
         - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.\(sleepRuleEnglish)
-        - workoutPlan: null unless user asks for training.
+        - savedMemory: Set ONLY when the user explicitly asks you to remember
+          something ("remember this", "save that", "keep in mind that ..."),
+          or when they state a durable, important fact about themselves worth
+          pinning. Shape: {"note":"the thing to remember, written as a clear
+          durable fact about the user","title":"optional short label"}.
+          null on every other reply.
+        - reminder: Set ONLY when the user asks for a reminder/alarm at a
+          concrete clock time. Shape: {"body":"what to remind them, in
+          English","time":"HH:mm" 24h local,"date":"YYYY-MM-DD" optional}.
+          If the time is unclear, ask a short clarifying question instead of
+          guessing — and do NOT set reminder in that case.
+
+        🔒 ABSOLUTE HONESTY (NON-NEGOTIABLE):
+        - NEVER say "saved", "got it saved", or "I'll remember that" unless you
+          actually returned savedMemory in THIS reply.
+        - NEVER say "I'll remind you" or "notification sent" unless you actually
+          returned reminder with a concrete time in THIS reply.
+        - You CANNOT trigger anything on an event (e.g. when a workout ends, when
+          the app opens, when something happens). If the user asks for that,
+          either set a clock-time reminder, or tell them you can analyze it in
+          chat when they come back — never promise a push you cannot send.
+        - workoutPlan: **MUST be a full object (not null)** when the user explicitly
+          asks for a workout / training plan ("give me a plan", "build me a plan",
+          "4-week cut plan", etc.) or when the user supplies plan parameters
+          (goal + duration + equipment + level). Returning null when the user
+          clearly asked for a plan is a failure. If a body photo is attached
+          with the plan request, follow the "BODY PHOTO PROVIDED" section above
+          to tailor the plan and add the observations to the `message`.
         - mealPlan: null unless user asks for food.
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
         - NEVER output text outside the JSON object.
         - NEVER mention JSON, API, or internal logic in the message field.
+
+        === workoutPlan shape when produced ===
+        When the user asks for a training plan, use this structure:
+        {
+          "title": "Plan name",
+          "durationWeeks": 4,
+          "exercises": [],
+          "days": [
+            {
+              "name": "Day 1 — Chest & Triceps",
+              "focus": "Upper body push",
+              "exercises": [
+                {"name": "Barbell Bench Press", "sets": 4, "repsOrDuration": "8-10"}
+              ]
+            }
+          ]
+        }
+        - title: short motivating plan name (e.g., "4-Week Cut Plan").
+        - durationWeeks: plan length in weeks (default 1 if user did not specify).
+        - days: list of training days for ONE week. Each day has a clear name, muscle focus, and exercises.
+        - exercises (flat): leave [] when using days. Only use for legacy flat plans.
+        - Every exercise must contain: name, sets (integer), repsOrDuration (string).
+        - Do not repeat the same day. Name days clearly by the muscle group they hit.
 
         🔒 Final reminder: "message" and "quickReplies" must be 100% English. No Arabic. This overrides all other instructions.
         """
@@ -575,6 +720,53 @@ struct PromptComposer: Sendable {
         }
 
         return nil
+    }
+
+    /// Pulls the canonical English goal text (e.g. "Cut Fat") from the
+    /// `- Primary goal:` line of the profile summary written by
+    /// `CognitivePipeline`. Targeted regex so the free-text "Declared goal"
+    /// line can't cause a false match.
+    private func extractPrimaryGoal(from profileSummary: String) -> String? {
+        guard !profileSummary.isEmpty,
+              let regex = try? NSRegularExpression(
+                pattern: #"- Primary goal:\s*([^\n,،]+)"#,
+                options: [.caseInsensitive]
+              ) else { return nil }
+
+        let fullRange = NSRange(profileSummary.startIndex..<profileSummary.endIndex, in: profileSummary)
+        guard let match = regex.firstMatch(in: profileSummary, range: fullRange),
+              match.numberOfRanges > 1,
+              let captureRange = Range(match.range(at: 1), in: profileSummary) else { return nil }
+
+        let goal = String(profileSummary[captureRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return goal.isEmpty ? nil : goal
+    }
+
+    /// The "genius read" layer. Forms a single goal↔reality coaching thesis
+    /// and places it right after working memory so the model leads with
+    /// strategy, not a literal Q&A answer. Skipped in sleepAnalysis (that mode
+    /// has a strict 4-sentence contract that must not be diluted).
+    private func layerCoachingThesis(request: HybridBrainRequest) -> String {
+        guard request.screenContext != .sleepAnalysis else { return "" }
+
+        guard let thesis = CoachingThesisSynthesizer.thesis(
+            goalText: extractPrimaryGoal(from: request.userProfileSummary),
+            trend: request.contextData.trendSnapshot,
+            emotional: request.contextData.emotionalState,
+            intentSummary: request.intentSummary,
+            language: request.language
+        ) else { return "" }
+
+        if request.language == .english {
+            return """
+            === COACHING THESIS (internal — lead with this read, never quote it verbatim) ===
+            \(thesis)
+            """
+        }
+        return """
+        === الأطروحة التدريبية (داخلي — قُد ردك بهالقراءة، لا تقتبسها حرفياً) ===
+        \(thesis)
+        """
     }
 
     // MARK: - Medical Disclaimer Layer (Apple Guideline 1.4.1)

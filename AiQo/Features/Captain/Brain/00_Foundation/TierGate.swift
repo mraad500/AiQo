@@ -15,10 +15,19 @@ final class TierGate: @unchecked Sendable {
     // MARK: - Feature catalogue
 
     nonisolated enum Feature: Hashable, Sendable {
+        // Basic life notifications (water / streak / sleep / workout / weekly
+        // reminder). Available to EVERY tier incl. `.none` — these keep a free
+        // or post-trial user engaged and are not "smart Captain" intelligence.
+        case basicLifeNotifications
+
         // Captain core (Max-tier and above)
         case captainChat
         case captainMemory
         case captainNotifications
+
+        // User-taught standing directives (learn / save / remember / execute).
+        // A "smart Captain" intelligence feature, gated like captainMemory.
+        case captainDirectives
 
         // Intelligence Pro exclusives
         case multiWeekPlan(weeks: Int)
@@ -30,9 +39,11 @@ final class TierGate: @unchecked Sendable {
 
         nonisolated var logName: String {
             switch self {
+            case .basicLifeNotifications:    return "basicLifeNotifications"
             case .captainChat:               return "captainChat"
             case .captainMemory:             return "captainMemory"
             case .captainNotifications:      return "captainNotifications"
+            case .captainDirectives:         return "captainDirectives"
             case .multiWeekPlan(let w):      return "multiWeekPlan(\(w)w)"
             case .weeklyInsightsNarrative:   return "weeklyInsightsNarrative"
             case .monthlyReflection:         return "monthlyReflection"
@@ -86,7 +97,9 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated func requiredTier(for feature: Feature) -> SubscriptionTier {
         switch feature {
-        case .captainChat, .captainMemory, .captainNotifications:
+        case .basicLifeNotifications:
+            return .none
+        case .captainChat, .captainMemory, .captainNotifications, .captainDirectives:
             return .max
         case .multiWeekPlan(let weeks):
             return weeks > 1 ? .pro : .max
@@ -127,17 +140,22 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated var maxMemoryRetrievalDepth: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 25
-        case .max: return 10
+        case .pro: return 40
+        case .max: return 18
         default:   return 0
         }
     }
 
+    /// Hard storage ceiling that triggers lowest-confidence eviction. Kept
+    /// above the user-visible `memoryFactLimit` (100/500/1000) so the displayed
+    /// cap is comfortably reachable. Free is intentionally non-zero so the
+    /// user-requested "Saved Memories" + reminders persist for every tier
+    /// (product decision 2026-05-18).
     nonisolated var maxSemanticFacts: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 500
-        case .max: return 200
-        default:   return 0
+        case .pro: return 1_200
+        case .max: return 600
+        default:   return 120
         }
     }
 

@@ -115,6 +115,40 @@ struct CloudBrainService: Sendable {
                 purpose: request.purpose.rawValue,
                 outcome: .success
             ))
+
+            // Reliability guarantee: when the user clearly asked for a workout
+            // plan (gym screen + plan-request phrasing) but the model replied
+            // with prose only and `workoutPlan == nil`, the user otherwise has
+            // to manually re-ask ("دز الخطة"). Do that one retry silently here
+            // so the failed first pass is never surfaced, then merge the rich
+            // first message with the recovered structured plan.
+            if reply.workoutPlan == nil, Self.looksLikePlanRequest(sanitizedRequest) {
+                let retryStartedAt = Date()
+                if let recovered = try? await Self.retryForWorkoutPlan(
+                    base: sanitizedRequest,
+                    firstReply: reply,
+                    transport: transport,
+                    model: aiModel
+                ) {
+                    await AuditLogger.shared.record(AuditLogger.Entry(
+                        id: UUID(),
+                        timestamp: retryStartedAt,
+                        destination: aiModel,
+                        tier: activeTier.auditLabel,
+                        promptBytes: promptBytes,
+                        responseBytes: recovered.message.utf8.count,
+                        latencyMs: Int(Date().timeIntervalSince(retryStartedAt) * 1000),
+                        consentGranted: true,
+                        sanitizationApplied: true,
+                        purpose: request.purpose.rawValue,
+                        outcome: recovered.workoutPlan == nil ? .failure : .success
+                    ))
+                    if recovered.workoutPlan != nil {
+                        return recovered
+                    }
+                }
+            }
+
             return reply
         } catch {
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
@@ -133,6 +167,71 @@ struct CloudBrainService: Sendable {
             ))
             throw error
         }
+    }
+
+    /// True when the latest user message in a gym-screen request is asking
+    /// for a workout plan (the intake composer, or a free-text ask). Kept
+    /// narrow so ordinary gym chit-chat never triggers a retry.
+    private static func looksLikePlanRequest(_ request: HybridBrainRequest) -> Bool {
+        guard request.screenContext == .gym else { return false }
+        guard let last = request.conversation
+            .last(where: { $0.role == .user })?
+            .content
+            .lowercased()
+        else { return false }
+
+        let needles = [
+            "أبني خطة", "ابني خطة", "خطة تمرين", "خطة تدريب",
+            "اعطني خطة", "اعطيني خطة", "سويلي خطة", "سو لي خطة",
+            "build me a", "workout plan", "training plan", "personalized"
+        ]
+        return needles.contains { last.contains($0.lowercased()) }
+    }
+
+    /// One silent re-request that forces the structured `workoutPlan`. The
+    /// body image is intentionally NOT resent (the visual feedback is already
+    /// captured in `firstReply.message`; resending wastes bandwidth and a
+    /// vision round-trip). On success the rich first message is preserved and
+    /// the recovered plan is attached.
+    private static func retryForWorkoutPlan(
+        base: HybridBrainRequest,
+        firstReply: HybridBrainServiceReply,
+        transport: HybridBrainService,
+        model: String
+    ) async throws -> HybridBrainServiceReply {
+        let force = base.language == .arabic
+            ? "ضروري الحين ترجع نفس الخطة داخل حقل workoutPlan منظّم: title و durationWeeks و days[] (كل يوم: name و focus و exercises مع sets و repsOrDuration). خلّي message قصيرة وحط الخطة كاملة بـ workoutPlan. لا ترد نص فقط."
+            : "You MUST now return the same plan inside a structured workoutPlan object: title, durationWeeks, days[] (each day: name, focus, exercises with sets and repsOrDuration). Keep message short and put the full plan in workoutPlan. Do not reply with prose only."
+
+        var convo = base.conversation
+        convo.append(CaptainConversationMessage(role: .assistant, content: firstReply.message))
+        convo.append(CaptainConversationMessage(role: .user, content: force))
+
+        let retryRequest = HybridBrainRequest(
+            conversation: convo,
+            screenContext: base.screenContext,
+            language: base.language,
+            contextData: base.contextData,
+            userProfileSummary: base.userProfileSummary,
+            intentSummary: base.intentSummary,
+            workingMemorySummary: base.workingMemorySummary,
+            attachedImageData: nil,
+            purpose: base.purpose
+        )
+
+        let retry = try await transport.generateReply(request: retryRequest, model: model)
+
+        guard let plan = retry.workoutPlan else { return firstReply }
+
+        return HybridBrainServiceReply(
+            message: firstReply.message,
+            quickReplies: retry.quickReplies ?? firstReply.quickReplies,
+            workoutPlan: plan,
+            mealPlan: firstReply.mealPlan,
+            spotifyRecommendation: firstReply.spotifyRecommendation,
+            rawText: retry.rawText,
+            truncatedAtMaxTokens: retry.truncatedAtMaxTokens
+        )
     }
 
     private static func estimatedPromptBytes(of request: HybridBrainRequest) -> Int {

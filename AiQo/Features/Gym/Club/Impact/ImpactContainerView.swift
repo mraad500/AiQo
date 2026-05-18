@@ -88,7 +88,7 @@ struct ImpactContainerView: View {
                 } label: {
                     Text(label)
                         .font(.system(size: 9, weight: isSelected ? .heavy : .medium))
-                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "8898A8")))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "AEB9C5")))
                         .frame(width: 44, height: 62)
                         .background {
                             if isSelected {

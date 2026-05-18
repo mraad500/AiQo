@@ -16,13 +16,13 @@ struct MessageBubble<Content: View>: View {
         self.content = content()
     }
 
-    // v1.1 brand tokens — Apple Guideline 4.0.0 resubmission palette.
-    // Mint #B7E5D2 for user bubbles, Sand at 35% alpha for assistant bubbles.
+    // Match the home screen stat-card palette: mint #C4F0DB for user
+    // bubbles, sand #F8D6A3 for the Captain's bubbles.
     private var bubbleColor: Color {
         if isUser {
-            return Color(red: 0.718, green: 0.898, blue: 0.824) // #B7E5D2
+            return Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB
         }
-        return Color(red: 0.922, green: 0.812, blue: 0.592).opacity(0.35) // #EBCF97 @ 35%
+        return Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3
     }
 
     private var textColor: Color {

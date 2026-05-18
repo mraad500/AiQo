@@ -20,8 +20,10 @@ final class TrialJourneyOrchestrator {
         static let firedTodayDate      = "aiqo.trial.firedTodayDate"
         static let firedKindsToday     = "aiqo.trial.firedKindsToday"
         static let welcomeFired        = "aiqo.trial.welcomeFired"
+        static let day5RevealFired     = "aiqo.trial.day5RevealFired"
         static let day6PreviewFired    = "aiqo.trial.day6PreviewFired"
         static let day7RecapFired      = "aiqo.trial.day7RecapFired"
+        static let day7FinalFired      = "aiqo.trial.day7FinalFired"
     }
 
     private var stepObserverQuery: HKObserverQuery?
@@ -42,6 +44,9 @@ final class TrialJourneyOrchestrator {
         }
 
         isStarted = true
+        // Belt-and-suspenders: guarantee the trial path always has notification
+        // permission even if AppDelegate's onboarding-gated request was skipped.
+        Task { _ = await NotificationService.shared.ensureAuthorizationIfNeeded() }
         scheduleStaticNotifications()
         installHealthKitObservers()
         AnalyticsService.shared.track(.trialJourneyStarted)
@@ -77,12 +82,24 @@ final class TrialJourneyOrchestrator {
             scheduleMorningBriefForTomorrow()
         }
 
+        // Day 5 — deeper value: reveal a premium capability they haven't met yet.
+        if day == 5, !UserDefaults.standard.bool(forKey: Keys.day5RevealFired) {
+            scheduleDay5FeatureReveal()
+        }
+
         if day == 6, !UserDefaults.standard.bool(forKey: Keys.day6PreviewFired) {
             scheduleDay6PaywallPreview()
         }
 
-        if day == 7, !UserDefaults.standard.bool(forKey: Keys.day7RecapFired) {
-            scheduleDay7WeeklyRecap()
+        if day == 7 {
+            // Morning nudge ("last day") + evening recap (the payoff). Two
+            // distinct beats; each deduped independently.
+            if !UserDefaults.standard.bool(forKey: Keys.day7FinalFired) {
+                scheduleDay7FinalDay()
+            }
+            if !UserDefaults.standard.bool(forKey: Keys.day7RecapFired) {
+                scheduleDay7WeeklyRecap()
+            }
         }
     }
 
@@ -164,6 +181,37 @@ final class TrialJourneyOrchestrator {
             deepLink: "aiqo://memory?section=weekly"
         )
         UserDefaults.standard.set(true, forKey: Keys.day7RecapFired)
+    }
+
+    private func scheduleDay5FeatureReveal() {
+        let prefs = TrialPersonalizationReader.current()
+        // Sport-minded users → Zone 2 coaching resonates most; everyone else
+        // gets Smart Wake (sleep is universal and visibly "smart").
+        let kind: TrialNotificationKind = (prefs.sport != nil)
+            ? .featureRevealZone2
+            : .featureRevealSmartWake
+
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 18
+        components.minute = 0
+
+        guard let target = Calendar.current.date(from: components) else { return }
+        let adjusted = SmartNotificationScheduler.shared.adjustedAutomationDate(for: target)
+
+        scheduleAtDate(adjusted, kind: kind, identifier: "trial.day5.reveal")
+        UserDefaults.standard.set(true, forKey: Keys.day5RevealFired)
+    }
+
+    private func scheduleDay7FinalDay() {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 10
+        components.minute = 0
+
+        guard let target = Calendar.current.date(from: components) else { return }
+        let adjusted = SmartNotificationScheduler.shared.adjustedAutomationDate(for: target)
+
+        scheduleAtDate(adjusted, kind: .day7FinalDay, identifier: "trial.day7.final")
+        UserDefaults.standard.set(true, forKey: Keys.day7FinalFired)
     }
 
     // MARK: - HealthKit observers

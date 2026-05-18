@@ -8,8 +8,27 @@ struct VibeControlSheet: View {
     @State var isDetailsSheetPresented = false
     @State var showDJChat = false
     @State var showBlendPlaylist = false
+    @State private var showMyVibePaywall = false
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
 
     var body: some View {
+        if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessMyVibe {
+            vibeContent
+        } else {
+            CaptainLockedView(config: .init(
+                title: "ذوقي",
+                subtitle: "افتح My Vibe مع اشتراك AiQo Max — موسيقى وDJ حمودي على مزاجك.",
+                iconSystemName: "music.note.list",
+                tier: .max,
+                onUpgradeTap: { showMyVibePaywall = true }
+            ))
+            .sheet(isPresented: $showMyVibePaywall) {
+                PaywallView(source: .myVibeGate)
+            }
+        }
+    }
+
+    private var vibeContent: some View {
         GeometryReader { _ in
             ZStack(alignment: .topLeading) {
                 backgroundArtwork

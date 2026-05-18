@@ -98,21 +98,25 @@ final class SmartNotificationScheduler {
 
     func refreshAutomationState() {
         Task {
-            if !DevOverride.unlockAllFeatures {
-                guard TierGate.shared.canAccess(.captainNotifications) else {
-                    diag.info("SmartNotificationScheduler.refreshAutomationState blocked by TierGate(.captainNotifications)")
-                    cancelAllAutomatedNotifications()
-                    cancelScheduledBackgroundTasks()
-                    return
-                }
-            }
+            // Basic life notifications (water / streak / sleep / workout /
+            // weekly reminder) are available to EVERY tier incl. `.none` —
+            // they keep free + post-trial users engaged. The "smart Captain"
+            // background nudges (coach nudge + AI inactivity) still require
+            // `.max`+ via `.captainNotifications`.
+            let canSmart = DevOverride.unlockAllFeatures
+                || TierGate.shared.canAccess(.captainNotifications)
 
             let granted = await requestPermission()
             guard granted else { return }
 
             if AppSettingsStore.shared.notificationsEnabled {
                 scheduleRecurringNotifications()
-                scheduleBackgroundTasksIfNeeded()
+                if canSmart {
+                    scheduleBackgroundTasksIfNeeded()
+                } else {
+                    diag.info("SmartNotificationScheduler: basic-life recurring only (TierGate.captainNotifications denied)")
+                    cancelScheduledBackgroundTasks()
+                }
             } else {
                 cancelAllAutomatedNotifications()
                 cancelScheduledBackgroundTasks()
@@ -394,8 +398,8 @@ final class SmartNotificationScheduler {
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         if !DevOverride.unlockAllFeatures {
-            guard TierGate.shared.canAccess(.captainNotifications) else {
-                diag.info("SmartNotificationScheduler recurring add blocked by TierGate(.captainNotifications)")
+            guard TierGate.shared.canAccess(.basicLifeNotifications) else {
+                diag.info("SmartNotificationScheduler recurring add blocked by TierGate(.basicLifeNotifications)")
                 return
             }
         }

@@ -1,4 +1,5 @@
 "NSCameraUsageDescription" = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
 "NSAlarmKitUsageDescription" = "AiQo uses alarm access to save your smart wake time as an alarm on your device.";
+"NSLocationWhenInUseUsageDescription" = "During an Outdoor Running workout, AiQo uses your location to map your route and measure distance, pace and elevation. Tracking continues in the background with the screen locked until you end the run. Your location stays on your device.";
 "NSHealthShareUsageDescription" = "AiQo reads the Health data you choose — steps, heart rate, sleep, active energy, and hydration — to build your daily summaries, workout metrics, and weekly reports. This data stays on-device and is never used for advertising.";
 "NSHealthUpdateUsageDescription" = "AiQo writes your completed workouts and hydration logs back to the Health app so your progress stays in one place.";

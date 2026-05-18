@@ -14,6 +14,11 @@ public actor BrainBus {
         case notificationDelivered(UUID)
         case memoryExtracted([UUID])
         case tierChanged
+        // 11_Directives — standing-order lifecycle signals so any layer
+        // (Observability, Learning, Memory) can react without tight coupling.
+        case directiveLearned(UUID)
+        case directiveFired(UUID)
+        case workoutCompleted
     }
 
     private var subscribers: [(Event) -> Void] = []

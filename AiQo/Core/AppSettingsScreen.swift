@@ -9,6 +9,10 @@ struct AppSettingsScreen: View {
     /// Observed so the "Captain Voice" row's subtitle updates live when the
     /// user grants or revokes cloud-voice consent from `VoiceSettingsScreen`.
     @StateObject private var voiceConsent = CaptainVoiceConsent.shared
+    /// Body-photo consent observer. Drives the subtitle of `bodyPhotoRow`
+    /// so the user can tell at a glance whether the dedicated cloud-vision
+    /// path for plan tailoring is opted in.
+    @StateObject private var bodyPhotoConsent = BodyPhotoConsent.shared
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
@@ -212,6 +216,7 @@ struct AppSettingsScreen: View {
                 }
 
                 captainVoiceRow
+                bodyPhotoRow
 
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -538,6 +543,41 @@ private extension AppSettingsScreen {
             return isArabic ? "الصوت المحسّن مفعّل" : "Enhanced voice on"
         }
         return isArabic ? "الصوت المحلي فقط" : "Local voice only"
+    }
+
+    /// Dedicated row for the body-photo consent (Plan tailoring via Gemini
+    /// vision). Sibling of `captainVoiceRow` under Privacy & AI Data; the
+    /// subtitle reflects live `BodyPhotoConsent` state.
+    @ViewBuilder
+    var bodyPhotoRow: some View {
+        NavigationLink {
+            BodyPhotoSettingsScreen()
+        } label: {
+            let isArabic = AppSettingsStore.shared.appLanguage == .arabic
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isArabic ? "صورة الجسم (الخطة)" : "Body photo (Plan)")
+                        .foregroundStyle(.primary)
+
+                    Text(bodyPhotoSubtitle(isArabic: isArabic))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "person.crop.rectangle.stack")
+                    .foregroundStyle(AiQoColors.mintSoft)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    func bodyPhotoSubtitle(isArabic: Bool) -> String {
+        if bodyPhotoConsent.isGranted {
+            return isArabic ? "إرسال صورة الجسم مفعّل" : "Body photo sending on"
+        }
+        return isArabic ? "الخطط بدون صورة" : "Plans without a photo"
     }
 }
 

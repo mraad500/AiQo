@@ -118,7 +118,12 @@ final class AppFlowController: ObservableObject {
 
     private func finalizeLegacyStep() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
-        FreeTrialManager.shared.startTrialIfNeeded()
+        // No auto-started no-card trial anymore. Access is gated on a real
+        // StoreKit subscription (Apple's card-required 7-day intro offer)
+        // begun from the non-skippable paywall. Users who already have a
+        // legacy custom trial on file keep it until it expires — TierGate
+        // still honors `FreeTrialManager.isTrialActiveSnapshot`, we just stop
+        // minting new ones here.
         TrialJourneyOrchestrator.shared.refresh()
         transition(to: .aiConsent)
     }

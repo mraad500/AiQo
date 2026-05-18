@@ -52,8 +52,22 @@ enum FeatureFlags {
     @FeatureFlag("MEMORY_V4_ENABLED", default: false)
     static var memoryV4Enabled: Bool
 
+    /// Master switch for the NotificationBrain proactive notification pipeline
+    /// (`NotificationBrain.shared.subscribe()`). When ON, XP grants, streak
+    /// increments, and streak-risk windows can fire local notifications routed
+    /// through the same 4-gate budget/cooldown/persona/privacy pipeline used
+    /// by trigger-driven nudges.
+    @FeatureFlag("NOTIFICATION_BRAIN_ENABLED", default: false)
+    static var notificationBrainEnabled: Bool
+
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
+
+    /// As of v1.0.4, controls whether `CrisisDetector.shared` is registered in
+    /// AppDelegate. CrisisDetector is a passive safety-net actor — instantiating
+    /// it via the singleton is sufficient to put it in the DI graph.
+    @FeatureFlag("CRISIS_DETECTOR_ENABLED", default: false)
+    static var crisisDetectorEnabled: Bool
 
     /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
     /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat

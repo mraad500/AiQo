@@ -2247,6 +2247,10 @@
 "memory.cat.insight" = "Insights";
 "memory.cat.recordProject" = "Record projects";
 "memory.cat.hydration" = "Hydration";
+"memory.cat.saved" = "Saved Memories";
+"memory.saved.reminderTitle" = "Reminder";
+"memory.saved.noteTitle" = "Saved";
+"memory.saved.notifDisabled" = "Device notifications are off — enable them so reminders can fire.";
 "memory.key.hydrationGoal" = "Daily water goal";
 "memory.key.hydrationSmart" = "Smart tracking";
 "memory.key.hydrationPattern" = "Hydration pattern";
@@ -3042,3 +3046,30 @@
 "onboarding.healthScreening.underAge.title" = "AiQo is 18+";
 "onboarding.healthScreening.underAge.body" = "AiQo provides general fitness and wellness coaching intended for adults. We can't offer you a personalised plan right now.";
 "onboarding.healthScreening.underAge.support" = "If you believe this is a mistake, reach out at support@aiqo.app.";
+
+/* MARK: - Outdoor Running (live 3D follow-map) */
+"gym.exercise.outdoor_running" = "Outdoor Running";
+"gym.exercise.outdoor_running.subtitle" = "A live 3D map that follows you like a drone while you run";
+"run.metrics.paceUnit" = "/km";
+"run.metrics.timeLabel" = "Time";
+"run.gps.searching" = "Finding GPS signal…";
+"run.gps.weak" = "Weak GPS — accuracy may be low";
+"run.permission.title" = "Location access needed";
+"run.permission.body" = "Outdoor Running uses your location to draw your route on the map and measure distance, pace and elevation. Your location never leaves your device.";
+"run.permission.allow" = "Allow location";
+"run.permission.openSettings" = "Open Settings";
+"run.control.start" = "Start run";
+"run.control.pause" = "Pause";
+"run.control.resume" = "Resume";
+"run.control.finish" = "Finish";
+"run.summary.title" = "Run complete";
+"run.summary.done" = "Done";
+"run.close.confirm.title" = "End this run?";
+"run.close.confirm.message" = "Your run is still active. Finishing will save it and close the map.";
+"run.close.confirm.finish" = "Finish & save";
+"run.close.confirm.keep" = "Keep running";
+"run.summary.shareButton" = "Share your win";
+"run.metrics.calories" = "Calories";
+"run.share.tagline" = "Tracked with AiQo";
+"run.share.caption" = "I just ran %@ with AiQo 🏃‍♂️🔥";
+"run.watch.connected" = "Apple Watch • live heart rate";

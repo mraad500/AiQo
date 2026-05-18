@@ -48,33 +48,42 @@ actor ReceiptValidator {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return .invalid(reason: "Invalid response")
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                let body = String(data: data, encoding: .utf8) ?? "no body"
-                print("🧾 Receipt validation failed with status \(httpResponse.statusCode): \(body)")
-                return .invalid(reason: "Server returned \(httpResponse.statusCode)")
-            }
-
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return .invalid(reason: "Invalid JSON response")
-            }
-
-            let valid = json["valid"] as? Bool ?? false
-            if valid {
-                let expiresAtString = json["expiresAt"] as? String ?? ""
-                let expiresAt = ISO8601DateFormatter().date(from: expiresAtString) ?? Date()
-                return .valid(expiresAt: expiresAt)
-            } else {
-                let reason = json["reason"] as? String ?? "Unknown"
-                return .invalid(reason: reason)
-            }
+            return Self.parseValidationResponse(data: data, response: response)
         } catch {
-            print("🧾 Receipt validation network error: \(error.localizedDescription)")
+            diag.error("Receipt validation network error", error: error)
             return .networkError(error.localizedDescription)
+        }
+    }
+
+    /// Pure mapping of the validate-receipt HTTP response → result. Kept
+    /// `nonisolated static` so the revenue-critical decision logic is
+    /// unit-testable without a StoreKit `Transaction` or a live round-trip.
+    nonisolated static func parseValidationResponse(
+        data: Data,
+        response: URLResponse?
+    ) -> ValidationResult {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return .invalid(reason: "Invalid response")
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? "no body"
+            diag.warning("Receipt validation failed status=\(httpResponse.statusCode) body=\(body)")
+            return .invalid(reason: "Server returned \(httpResponse.statusCode)")
+        }
+
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .invalid(reason: "Invalid JSON response")
+        }
+
+        let valid = json["valid"] as? Bool ?? false
+        if valid {
+            let expiresAtString = json["expiresAt"] as? String ?? ""
+            let expiresAt = ISO8601DateFormatter().date(from: expiresAtString) ?? Date()
+            return .valid(expiresAt: expiresAt)
+        } else {
+            let reason = json["reason"] as? String ?? "Unknown"
+            return .invalid(reason: reason)
         }
     }
 
@@ -86,17 +95,26 @@ actor ReceiptValidator {
 
             switch result {
             case .valid(let expiresAt):
-                print("🧾 Transaction \(transaction.productID) validated. Expires: \(expiresAt)")
+                diag.info("Receipt validated product=\(transaction.productID) expires=\(expiresAt)")
             case .invalid(let reason):
-                print("🧾 Transaction \(transaction.productID) INVALID: \(reason)")
+                diag.warning("Receipt INVALID product=\(transaction.productID) reason=\(reason)")
                 await MainActor.run {
                     AnalyticsService.shared.track(AnalyticsEvent("receipt_validation_failed", properties: [
                         "product_id": transaction.productID,
                         "reason": reason
                     ]))
                 }
-            case .networkError:
-                print("🧾 Could not validate \(transaction.productID) — network issue, falling back to local")
+            case .networkError(let message):
+                // Revenue path: production builds previously logged nothing here
+                // (print is a release no-op) so silent validation outages were
+                // invisible. Surface to os.log + analytics; caller still falls
+                // back to local entitlement.
+                diag.warning("Receipt unvalidated (network) product=\(transaction.productID) — fallback to local: \(message)")
+                await MainActor.run {
+                    AnalyticsService.shared.track(AnalyticsEvent("receipt_validation_network_error", properties: [
+                        "product_id": transaction.productID
+                    ]))
+                }
             }
         }
     }

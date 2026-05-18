@@ -173,7 +173,7 @@ struct ProfileBackdrop: View {
                 .offset(x: 148, y: -110)
 
             RoundedRectangle(cornerRadius: 120, style: .continuous)
-                .fill(Color.white.opacity(0.28))
+                .fill(ProfilePalette.backdropGlow)
                 .frame(width: 300, height: 240)
                 .blur(radius: 72)
                 .offset(y: 240)
@@ -199,11 +199,11 @@ struct ProfileHeroCard: View {
     }
 
     private var textAlignment: Alignment {
-        isRTL ? .trailing : .leading
+        .leading
     }
 
     private var multilineAlignment: TextAlignment {
-        isRTL ? .trailing : .leading
+        .leading
     }
 
     private var shieldSymbol: String {
@@ -317,7 +317,7 @@ struct ProfileHeroCard: View {
                 .clipShape(Circle())
                 .overlay {
                     Circle()
-                        .stroke(Color.white.opacity(0.76), lineWidth: 1.5)
+                        .stroke(ProfilePalette.rimBright, lineWidth: 1.5)
                 }
                 .shadow(color: ProfilePalette.sand.opacity(0.18), radius: 14, x: 0, y: 9)
 
@@ -341,7 +341,7 @@ struct ProfileHeroCard: View {
     }
 
     private var identityBlock: some View {
-        VStack(alignment: isRTL ? .trailing : .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(NSLocalizedString("screen.profile.chip", value: "Profile", comment: ""))
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(ProfilePalette.textSecondary)
@@ -605,7 +605,7 @@ struct PreferenceSelectorCard: View {
                     .fill(ProfilePalette.pearl.opacity(0.22))
                     .overlay {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.42), lineWidth: 1)
+                            .stroke(ProfilePalette.rimMedium, lineWidth: 1)
                     }
             }
         }
@@ -970,7 +970,7 @@ struct ProfilePillSurface: View {
                         LinearGradient(
                             colors: [
                                 ProfilePalette.innerGlow.opacity(0.42),
-                                Color.white.opacity(0.08),
+                                ProfilePalette.glassSheen,
                                 .clear
                             ],
                             startPoint: .top,
@@ -983,8 +983,8 @@ struct ProfilePillSurface: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.78),
-                                Color.white.opacity(0.28)
+                                ProfilePalette.rimBright,
+                                ProfilePalette.rimFaint
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -992,7 +992,7 @@ struct ProfilePillSurface: View {
                         lineWidth: 1
                     )
             }
-            .shadow(color: Color.black.opacity(0.018), radius: 6, x: 0, y: 3)
+            .shadow(color: ProfilePalette.shadowFaint, radius: 6, x: 0, y: 3)
     }
 }
 
@@ -1012,7 +1012,7 @@ struct ProfileIconBadge: View {
                         LinearGradient(
                             colors: [
                                 ProfilePalette.innerGlow.opacity(0.36),
-                                Color.white.opacity(0.08),
+                                ProfilePalette.glassSheen,
                                 .clear
                             ],
                             startPoint: .top,
@@ -1030,8 +1030,8 @@ struct ProfileIconBadge: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.78),
-                                Color.white.opacity(0.26)
+                                ProfilePalette.rimBright,
+                                ProfilePalette.rimFaint
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -1039,7 +1039,7 @@ struct ProfileIconBadge: View {
                         lineWidth: 1
                     )
             }
-            .shadow(color: Color.black.opacity(0.02), radius: 7, x: 0, y: 4)
+            .shadow(color: ProfilePalette.shadowFaint, radius: 7, x: 0, y: 4)
     }
 }
 
@@ -1068,10 +1068,10 @@ struct ProfileProgressBar: View {
 
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.white.opacity(0.36))
+                    .fill(ProfilePalette.trackFill)
                     .overlay {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.34), lineWidth: 1)
+                            .stroke(ProfilePalette.rimFaint, lineWidth: 1)
                     }
 
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1090,13 +1090,13 @@ struct ProfileProgressBar: View {
                     .frame(width: fillWidth)
 
                 Circle()
-                    .fill(Color.white.opacity(0.94))
+                    .fill(ProfilePalette.thumbFill)
                     .frame(width: 12, height: 12)
                     .overlay {
                         Circle()
-                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                            .stroke(ProfilePalette.hairline, lineWidth: 1)
                     }
-                    .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 3)
+                    .shadow(color: ProfilePalette.shadowSoft, radius: 6, x: 0, y: 3)
                     .offset(x: max(0, min(fillWidth - 12, width - 12)))
                     .opacity(progress > 0.02 ? 1 : 0)
             }
@@ -1125,7 +1125,7 @@ struct ProfileSurface: View {
                         LinearGradient(
                             colors: [
                                 tone.topSheen,
-                                Color.white.opacity(0.10),
+                                ProfilePalette.glassSheen,
                                 .clear
                             ],
                             startPoint: .top,
@@ -1180,7 +1180,7 @@ struct ProfileInsetSurface: View {
                         LinearGradient(
                             colors: [
                                 ProfilePalette.innerGlow.opacity(0.38),
-                                Color.white.opacity(0.08),
+                                ProfilePalette.glassSheen,
                                 .clear
                             ],
                             startPoint: .top,
@@ -1193,8 +1193,8 @@ struct ProfileInsetSurface: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.74),
-                                Color.white.opacity(0.22)
+                                ProfilePalette.rimBright,
+                                ProfilePalette.rimFaint
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -1202,7 +1202,7 @@ struct ProfileInsetSurface: View {
                         lineWidth: 1
                     )
             }
-            .shadow(color: Color.black.opacity(0.022), radius: 10, x: 0, y: 5)
+            .shadow(color: ProfilePalette.shadowFaint, radius: 10, x: 0, y: 5)
     }
 }
 

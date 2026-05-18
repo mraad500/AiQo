@@ -60,8 +60,8 @@ enum TrialNotificationCopy {
         case .welcomeEvening:
             let steps = ctx.steps ?? 0
             return isAr
-                ? "مشيت \(steps) خطوة. شفتك اليوم — باجر راح أبدي أحجيك عدل."
-                : "I saw you today — \(steps) steps. Tomorrow we start talking properly."
+                ? "مشيت \(steps) خطوة اليوم — شفتك. أعطيني 7 أيام وأثبتلك إني أعرفك أكثر من أي تطبيق. باجر نبدأ عدل 🌙"
+                : "Saw you today — \(steps) steps. Give me 7 days and I'll prove I know you. We start tomorrow 🌙"
 
         case .morningBrief:
             let sleep = ctx.sleepHours.map { String(format: "%.1f", $0) } ?? "?"
@@ -129,8 +129,8 @@ enum TrialNotificationCopy {
 
         case .day7WeeklyRecapReady:
             return isAr
-                ? "افتح التطبيق — تقرير الأسبوع الأول جاهز."
-                : "Open the app — your first weekly report is ready."
+                ? "7 أيام ورانا. حضّرتلك تقرير يحچي شنو تعلّمت عنك — تعال شوفه 🏆"
+                : "7 days together. I built you a report on what I learned about you — come see 🏆"
 
         case .postTrialWeeklyReport:
             let week = ctx.weekNumber ?? 1

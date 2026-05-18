@@ -68,6 +68,40 @@ enum ShareCardRenderer {
         return await renderView(view, size: CGSize(width: 1080, height: 1920))
     }
 
+    /// بطاقة مشاركة الجري بالخارج — مسارك على القمر الصناعي + إحصائياتك
+    static func renderOutdoorRunCard(
+        routeImage: UIImage?,
+        kicker: String,
+        title: String,
+        dateText: String,
+        distanceValue: String,
+        distanceUnit: String,
+        duration: String,
+        pace: String,
+        paceUnit: String,
+        heartRate: String,
+        elevation: String,
+        calories: String,
+        userName: String
+    ) async -> UIImage? {
+        let view = OutdoorRunShareCard(
+            routeImage: routeImage,
+            kicker: kicker,
+            title: title,
+            dateText: dateText,
+            distanceValue: distanceValue,
+            distanceUnit: distanceUnit,
+            duration: duration,
+            pace: pace,
+            paceUnit: paceUnit,
+            heartRate: heartRate,
+            elevation: elevation,
+            calories: calories,
+            userName: userName
+        )
+        return await renderView(view, size: CGSize(width: 1080, height: 1920))
+    }
+
     /// يولّد صورة من أي SwiftUI View — renders off the main thread
     private static func renderView<V: View>(_ view: V, size: CGSize) async -> UIImage? {
         // ImageRenderer must be created on MainActor, but the heavy render is dispatched off-thread
@@ -366,6 +400,162 @@ private struct WeeklyShareCard: View {
 
             Spacer()
         }
+    }
+}
+
+// MARK: - Outdoor Run Share Card
+
+private struct OutdoorRunShareCard: View {
+    let routeImage: UIImage?
+    let kicker: String
+    let title: String
+    let dateText: String
+    let distanceValue: String
+    let distanceUnit: String
+    let duration: String
+    let pace: String
+    let paceUnit: String
+    let heartRate: String
+    let elevation: String
+    let calories: String
+    let userName: String
+
+    private let mint = Color(red: 0.718, green: 0.890, blue: 0.792)
+    private let runOrange = Color(red: 1.0, green: 0.45, blue: 0.13)
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.07, green: 0.08, blue: 0.07),
+                    Color(red: 0.11, green: 0.13, blue: 0.12),
+                    Color(red: 0.05, green: 0.06, blue: 0.05)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 0) {
+                Spacer().frame(height: 96)
+
+                Text(kicker.uppercased())
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .tracking(8)
+
+                Text(title)
+                    .font(.system(size: 70, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.top, 14)
+
+                Text(dateText)
+                    .font(.system(size: 26, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .padding(.top, 10)
+
+                routeHero
+                    .padding(.horizontal, 70)
+                    .padding(.top, 56)
+
+                HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    Text(distanceValue)
+                        .font(.system(size: 150, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(distanceUnit)
+                        .font(.system(size: 52, weight: .bold, design: .rounded))
+                        .foregroundStyle(mint)
+                }
+                .padding(.top, 54)
+
+                HStack(spacing: 0) {
+                    stat(icon: "clock.fill", value: duration, label: "TIME")
+                    divider
+                    stat(icon: "speedometer", value: pace, label: paceUnit.uppercased())
+                    divider
+                    stat(icon: "heart.fill", value: heartRate, label: "BPM")
+                    divider
+                    stat(icon: "flame.fill", value: calories, label: "KCAL")
+                    divider
+                    stat(icon: "mountain.2.fill", value: elevation, label: "ELEV")
+                }
+                .padding(.horizontal, 60)
+                .padding(.top, 48)
+
+                Spacer()
+
+                footer
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var routeHero: some View {
+        ZStack {
+            if let routeImage {
+                Image(uiImage: routeImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                LinearGradient(
+                    colors: [runOrange.opacity(0.55), Color(red: 0.10, green: 0.12, blue: 0.11)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "figure.run")
+                    .font(.system(size: 150, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+        }
+        .frame(width: 940, height: 940)
+        .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 44, style: .continuous)
+                .stroke(.white.opacity(0.16), lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.5), radius: 30, y: 16)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.12))
+            .frame(width: 1, height: 96)
+    }
+
+    private func stat(icon: String, value: String, label: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 32))
+                .foregroundStyle(mint)
+            Text(value)
+                .font(.system(size: 40, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+            Text(label)
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.5))
+                .tracking(2)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var footer: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(userName)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+                Text("AiQo")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(mint)
+            }
+            Spacer()
+            Image(systemName: "location.north.fill")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(.white.opacity(0.3))
+        }
+        .padding(.horizontal, 70)
+        .padding(.bottom, 110)
     }
 }
 

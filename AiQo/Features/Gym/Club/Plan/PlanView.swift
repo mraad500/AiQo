@@ -1,10 +1,14 @@
+import SwiftData
 import SwiftUI
 
 struct PlanView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
+    @Environment(\.modelContext) private var modelContext
     @State private var railSelection = 0
     @State private var activeRecordProject: RecordProject?
     @State private var navigateToRecordProject = false
+
+    private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     private let periods = [
         NSLocalizedString("plan.period.today", value: "اليوم", comment: "Today filter"),
@@ -39,11 +43,26 @@ struct PlanView: View {
         .environment(\.layoutDirection, .leftToRight)
         .onAppear {
             activeRecordProject = RecordProjectManager.shared.activeProject()
+            restorePinnedPlanIfNeeded()
         }
         .navigationDestination(isPresented: $navigateToRecordProject) {
             if let project = activeRecordProject {
                 RecordProjectView(project: project)
             }
+        }
+    }
+
+    /// Restores a previously pinned plan from SwiftData into memory so the
+    /// Plan tab shows it after an app relaunch. Without this the tab only
+    /// rendered `globalBrain.currentWorkoutPlan`, which is in-memory only and
+    /// is empty on every cold start — making a saved plan look lost.
+    private func restorePinnedPlanIfNeeded() {
+        guard globalBrain.currentWorkoutPlan == nil else { return }
+        if let restored = WorkoutPlanMemoryStore.restoredPlan(
+            modelContext: modelContext,
+            isArabic: isArabic
+        ) {
+            globalBrain.currentWorkoutPlan = restored
         }
     }
 
@@ -117,7 +136,7 @@ struct PlanView: View {
                 } label: {
                     Text(period)
                         .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "8898A8")))
+                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "AEB9C5")))
                         .frame(width: 44, height: 62)
                         .background {
                             if isSelected {
@@ -246,5 +265,8 @@ private struct CaptainLiveWorkoutPlanCard: View {
                 )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+        // Fixed light sand background in both appearances — force light scheme
+        // so .primary/.secondary text stays dark and readable in dark mode.
+        .environment(\.colorScheme, .light)
     }
 }

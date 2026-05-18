@@ -217,7 +217,11 @@ enum CaptainEmotionalSignal: String, Sendable {
     }
 }
 
-enum CaptainCognitiveTextAnalyzer {
+/// Pure, stateless text utility (only reads an immutable stopword set), so it
+/// is `nonisolated` to stay callable from the `MemoryRetriever` actor and any
+/// other isolation domain without a MainActor hop. Swift 6 would otherwise
+/// make the cross-actor call an error.
+nonisolated enum CaptainCognitiveTextAnalyzer {
     private static let stopWords: Set<String> = [
         "a", "an", "and", "are", "as", "at", "be", "for", "from", "how", "i", "im", "in", "is", "it", "me",
         "my", "of", "on", "or", "that", "the", "this", "to", "today", "want", "with", "you", "your",
@@ -364,7 +368,7 @@ private extension CaptainCognitivePipeline {
         let relevantMemories = memoryStore.retrieveRelevantMemories(
             for: userMessage,
             screenContext: screenContext,
-            limit: 8
+            limit: 12
         )
 
         let constraintCategories: Set<String> = ["injury", "sleep", "medical_condition", "body"]
@@ -372,6 +376,23 @@ private extension CaptainCognitivePipeline {
         let strategyAnchors = relevantMemories.filter { !constraintCategories.contains($0.category) }
 
         var sections: [String] = []
+
+        // 11_Directives — standing orders the user explicitly taught the
+        // Captain. Surfaced on EVERY turn (never relevance-gated): a "do this
+        // after every workout" promise must always be visible so the Captain
+        // never forgets it or denies it. Same injection mechanism as the
+        // [active_record_project] block below.
+        let standingDirectives = memoryStore.getByCategory(DirectiveCoordinator.memoryCategory)
+        if !standingDirectives.isEmpty {
+            let lines = standingDirectives.map { "- \($0.value)" }.joined(separator: "\n")
+            sections.append(
+                """
+                [active_standing_directives]
+                \(lines)
+                إلتزم بهذي التعليمات الدائمة ونفّذها دائماً. إذا المستخدم سأل عنها أكّدله إنها شغّالة ومنفّذة فعلاً، ولا تقول أبداً إنك ما تكدر تنفّذها.
+                """
+            )
+        }
 
         if !strategyAnchors.isEmpty {
             sections.append(
