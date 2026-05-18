@@ -69,7 +69,7 @@ final class EntitlementStore: ObservableObject {
         self.expiresAt = expiresAt
         isApplyingEntitlement = false
         updateCurrentTier()
-        print("🛒 Saved entitlement. productId=\(productId ?? "nil"), expiresAt=\(expiresAt?.description ?? "nil")")
+        diag.info("Entitlement saved productId=\(productId ?? "nil") expiresAt=\(expiresAt?.description ?? "nil")")
     }
 
     func clear() {

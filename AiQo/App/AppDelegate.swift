@@ -58,6 +58,12 @@ struct AiQoApp: App {
                 ])
             }
         }
+
+        // Observability subscribes to BrainBus so directive-lifecycle signals
+        // (learned / fired / workout-seen) are auditable instead of silently
+        // dropped. Unconditional + single call site (see BrainBusObserver).
+        Task { await BrainBusObserver.start() }
+
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
         WeeklyMetricsBufferStore.shared.configure(container: captainContainer)

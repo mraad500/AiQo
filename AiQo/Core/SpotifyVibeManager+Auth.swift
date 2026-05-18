@@ -397,10 +397,17 @@ extension SpotifyVibeManager: SPTSessionManagerDelegate {
 
 extension SpotifyVibeManager: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
+        let windowScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) ?? ASPresentationAnchor(windowScene: UIApplication.shared.connectedScenes.first as! UIWindowScene)
+        if let keyWindow = windowScenes.flatMap(\.windows).first(where: \.isKeyWindow) {
+            return keyWindow
+        }
+        if let scene = windowScenes.first {
+            return ASPresentationAnchor(windowScene: scene)
+        }
+        // No active window scene (e.g. invoked while backgrounded): a bare
+        // anchor keeps ASWebAuthenticationSession from crashing the app.
+        return ASPresentationAnchor()
     }
 }
 #endif
