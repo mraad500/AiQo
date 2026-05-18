@@ -72,6 +72,17 @@ enum AppleIntelligence {
 
 ---
 
+## Memory V4 shadow-write silent failures
+
+**Priority**: Low
+**Added**: 2026-05-18
+**Trigger to revisit**: When the V4 actor stores (SemanticStore/EpisodicStore) become the primary read path (i.e. the legacyV3 + shadow-write transition is retired)
+**Rationale**: `MemoryStore` writes the primary store (V3 or V4 per `storageMode`) and additionally shadow-writes into the new actor-based `SemanticStore`/`EpisodicStore` (gated by `MemoryV4Gate.isOn`). Shadow-write failures (`SemanticStore.syncFact` etc.) are not surfaced — if one fails, the actor store silently lags the primary. Impact is currently bounded because the actor stores are not yet the primary read path (intentional transition architecture), so a lagged shadow does not affect what the user sees. Becomes load-bearing only at the actor-only cutover.
+**Estimated effort**: 1–2 hours (add a logged/analytics path on shadow-write failure, mirroring `recordMigrationFailure`)
+**Risk**: Low — additive observability only; do NOT change dual-write semantics pre-release.
+
+---
+
 ## CaptainPersonalizationStore actor conversion
 
 **Priority**: Medium

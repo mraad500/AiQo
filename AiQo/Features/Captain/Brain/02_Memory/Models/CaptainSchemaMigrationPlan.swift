@@ -32,6 +32,10 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
         var facts: [FactSeed] = []
         var episodes: [EpisodeSeed] = []
         var sourceMessageCount = 0
+        /// Set when a V3 read in `willMigrate` throws. `didMigrate` then
+        /// skips the partial write + the migrated flag, leaving V4 clean for
+        /// a retry (the V3 fallback is already armed by recordMigrationFailure).
+        var stagingFailed = false
     }
 
     private static var pendingV4Payload = PendingV4Payload()
@@ -95,6 +99,7 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                 }
                 diag.info("Memory v3→v4 staged \(oldFacts.count) legacy facts")
             } catch {
+                pendingV4Payload.stagingFailed = true
                 MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_facts_failed")
             }
 
@@ -119,6 +124,7 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                     "Memory v3→v4 staged \(pendingV4Payload.episodes.count) episodes from \(oldMessages.count) legacy messages"
                 )
             } catch {
+                pendingV4Payload.stagingFailed = true
                 MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_messages_failed")
             }
         },
@@ -128,6 +134,11 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             }
 
             do {
+                guard !pendingV4Payload.stagingFailed else {
+                    diag.error("Memory v3→v4: staging failed — skipping partial write, leaving V4 clean for retry (V3 fallback already armed)")
+                    return
+                }
+
                 let existingFactIDs = Set(try context.fetch(FetchDescriptor<SemanticFact>()).map(\.id))
                 let existingEpisodeIDs = Set(try context.fetch(FetchDescriptor<EpisodicEntry>()).map(\.id))
 
