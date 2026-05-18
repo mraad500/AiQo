@@ -121,8 +121,8 @@ final class MemoryStore {
                     fact.confidence = min(fact.confidence + 0.05, 1)
                     fact.salience = max(fact.salience, confidence)
                     fact.mentionCount += 1
-                    fact.isPII = fact.isPII || Self.isPII(key: key, category: category)
-                    fact.isSensitive = fact.isSensitive || Self.isSensitive(category: category)
+                    fact.isPII = fact.isPII || FactClassification.isPII(key: key, category: category)
+                    fact.isSensitive = fact.isSensitive || FactClassification.isSensitive(category: category)
                     persistedConfidence = fact.confidence
                     persistedSalience = fact.salience
                     if fact.sourceRaw != "user_explicit" || source == "user_explicit" {
@@ -137,17 +137,17 @@ final class MemoryStore {
                     let fact = SemanticFact(
                         storageKey: key,
                         content: value,
-                        category: Self.factCategory(for: category),
+                        category: FactClassification.category(for: category),
                         categoryRawOverride: category,
                         confidence: confidence,
                         salience: 0.5,
-                        source: Self.factSource(for: source),
+                        source: FactClassification.source(for: source),
                         sourceRawOverride: source,
                         firstMentionedAt: Date(),
                         mentionCount: 1,
                         referenceCount: 0,
-                        isPII: Self.isPII(key: key, category: category),
-                        isSensitive: Self.isSensitive(category: category)
+                        isPII: FactClassification.isPII(key: key, category: category),
+                        isSensitive: FactClassification.isSensitive(category: category)
                     )
                     context.insert(fact)
                     persistedConfidence = fact.confidence
@@ -967,7 +967,7 @@ final class MemoryStore {
                     createdAt: $0.createdAt,
                     updatedAt: $0.updatedAt,
                     accessCount: $0.accessCount,
-                    isCloudSafe: !Self.isPII(key: $0.key, category: $0.category) && !Self.isSensitive(category: $0.category)
+                    isCloudSafe: !FactClassification.isPII(key: $0.key, category: $0.category) && !FactClassification.isSensitive(category: $0.category)
                 )
             }
         case .schemaV4:
@@ -1133,60 +1133,6 @@ final class MemoryStore {
         return count
     }
 
-    private static func factCategory(for rawCategory: String) -> FactCategory {
-        switch rawCategory.lowercased() {
-        case "health", "health_condition", "body", "sleep", "injury", "nutrition":
-            return .health
-        case "preference":
-            return .preference
-        case "goal", "objective", "active_record_project":
-            return .goal
-        case "relationship", "family":
-            return .relationship
-        case "work", "career":
-            return .work
-        case "habit":
-            return .habit
-        case "aspiration":
-            return .aspiration
-        case "fear":
-            return .fear
-        case "accomplishment", "insight", "workout_history":
-            return .accomplishment
-        default:
-            return .other
-        }
-    }
-
-    private static func factSource(for rawSource: String) -> FactSource {
-        switch rawSource.lowercased() {
-        case "user_explicit", "explicit":
-            return .explicit
-        case "inferred":
-            return .inferred
-        default:
-            return .extracted
-        }
-    }
-
-    private static func isPII(key: String, category: String) -> Bool {
-        let piiKeys: Set<String> = ["user_name", "weight", "height", "age"]
-        return piiKeys.contains(key.lowercased()) || category.lowercased() == "identity"
-    }
-
-    private static func isSensitive(category: String) -> Bool {
-        let sensitiveCategories: Set<String> = [
-            "health",
-            "health_condition",
-            "mental_health",
-            "medical",
-            "body",
-            "sleep",
-            "injury"
-        ]
-        return sensitiveCategories.contains(category.lowercased())
-    }
-
     // MARK: - Shadow Writes
 
     private func shadowWriteSemanticFact(
@@ -1200,10 +1146,10 @@ final class MemoryStore {
     ) {
         guard MemoryV4Gate.isOn else { return }
 
-        let factCategory = Self.factCategory(for: category)
-        let factSource = Self.factSource(for: source)
-        let isPII = Self.isPII(key: key, category: category)
-        let isSensitive = Self.isSensitive(category: category)
+        let factCategory = FactClassification.category(for: category)
+        let factSource = FactClassification.source(for: source)
+        let isPII = FactClassification.isPII(key: key, category: category)
+        let isSensitive = FactClassification.isSensitive(category: category)
 
         Task(priority: .utility) {
             _ = await SemanticStore.shared.syncFact(

@@ -89,8 +89,8 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                         firstMentionedAt: old.createdAt,
                         lastConfirmedAt: old.updatedAt,
                         referenceCount: old.accessCount,
-                        isPII: isPII(key: old.key, category: old.category),
-                        isSensitive: isSensitive(category: old.category)
+                        isPII: FactClassification.isPII(key: old.key, category: old.category),
+                        isSensitive: FactClassification.isSensitive(category: old.category)
                     )
                 }
                 diag.info("Memory v3→v4 staged \(oldFacts.count) legacy facts")
@@ -137,11 +137,11 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
                         id: seed.id,
                         storageKey: seed.storageKey,
                         content: seed.content,
-                        category: mapFactCategory(seed.categoryRaw),
+                        category: FactClassification.category(for: seed.categoryRaw),
                         categoryRawOverride: seed.categoryRaw,
                         confidence: seed.confidence,
                         salience: 0.5,
-                        source: mapFactSource(seed.sourceRaw),
+                        source: FactClassification.source(for: seed.sourceRaw),
                         sourceRawOverride: seed.sourceRaw,
                         firstMentionedAt: seed.firstMentionedAt,
                         lastConfirmedAt: seed.lastConfirmedAt,
@@ -186,60 +186,6 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             }
         }
     )
-
-    private static func mapFactCategory(_ rawCategory: String) -> FactCategory {
-        switch rawCategory.lowercased() {
-        case "health", "health_condition", "body", "sleep", "injury", "nutrition":
-            return .health
-        case "preference":
-            return .preference
-        case "goal", "objective", "active_record_project":
-            return .goal
-        case "relationship", "family":
-            return .relationship
-        case "work", "career":
-            return .work
-        case "habit":
-            return .habit
-        case "aspiration":
-            return .aspiration
-        case "fear":
-            return .fear
-        case "accomplishment", "insight", "workout_history":
-            return .accomplishment
-        default:
-            return .other
-        }
-    }
-
-    private static func mapFactSource(_ rawSource: String) -> FactSource {
-        switch rawSource.lowercased() {
-        case "user_explicit", "explicit":
-            return .explicit
-        case "inferred":
-            return .inferred
-        default:
-            return .extracted
-        }
-    }
-
-    private static func isPII(key: String, category: String) -> Bool {
-        let piiKeys: Set<String> = ["user_name", "weight", "height", "age"]
-        return piiKeys.contains(key.lowercased()) || category.lowercased() == "identity"
-    }
-
-    private static func isSensitive(category: String) -> Bool {
-        let sensitiveCategories: Set<String> = [
-            "health",
-            "health_condition",
-            "mental_health",
-            "medical",
-            "body",
-            "sleep",
-            "injury"
-        ]
-        return sensitiveCategories.contains(category.lowercased())
-    }
 
     private static func pairMessages(_ messages: [PersistentChatMessage]) -> [(sessionID: UUID, user: PersistentChatMessage?, captain: PersistentChatMessage?)] {
         let grouped = Dictionary(grouping: messages, by: \.sessionID)

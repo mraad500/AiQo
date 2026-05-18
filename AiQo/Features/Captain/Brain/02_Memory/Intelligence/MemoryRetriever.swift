@@ -75,9 +75,20 @@ actor MemoryRetriever {
         var scored: [(snapshot: SemanticFactSnapshot, score: Double)] = []
         for fact in candidates {
             var similarity = 0.0
-            if let qEmb = queryEmbedding,
-               let factEmb = await EmbeddingIndex.shared.embed(fact.content) {
-                similarity = EmbeddingIndex.cosine(qEmb, factEmb)
+            if let qEmb = queryEmbedding {
+                // Prefer the embedding persisted at write time; only compute
+                // on the fly for legacy facts stored before persistence (the
+                // EmbeddingIndex text cache still covers those).
+                let factEmb: [Double]?
+                if let data = fact.embeddingJSON,
+                   let stored = try? JSONDecoder().decode([Double].self, from: data) {
+                    factEmb = stored
+                } else {
+                    factEmb = await EmbeddingIndex.shared.embed(fact.content)
+                }
+                if let factEmb {
+                    similarity = EmbeddingIndex.cosine(qEmb, factEmb)
+                }
             }
             // Lexical overlap is the robustness floor. Apple ships no Arabic
             // word vectors on many devices (embedding nil), and an Arabic
