@@ -62,6 +62,15 @@ final class DirectiveCoordinator {
 
         await BrainBus.shared.publish(.directiveLearned(id))
         diag.info("DirectiveCoordinator learned directive trigger=\(draft.trigger.rawValue) action=\(draft.action.rawValue)")
+
+        // Wire the offline execution arm for time-based triggers: a repeating
+        // daily notification so an "every morning / before bedtime" standing
+        // order actually fires even if the app is never reopened.
+        await DirectiveNotificationScheduler.reschedule(
+            directives: await store.activeDirectives(),
+            personalization: CaptainPersonalizationStore.shared.currentSnapshot(),
+            requestAuthorization: true
+        )
     }
 
     // MARK: - Hydrate (relaunch)
@@ -74,6 +83,17 @@ final class DirectiveCoordinator {
         guard isGateOpen else { return }
 
         let active = await store.activeDirectives()
+
+        // Reconcile repeating directive notifications from the source of truth
+        // (survives relaunch / reinstall, and self-heals any future
+        // enable/disable/delete). Runs even when empty so stale requests are
+        // cleared. Never prompts for permission on cold launch.
+        await DirectiveNotificationScheduler.reschedule(
+            directives: active,
+            personalization: CaptainPersonalizationStore.shared.currentSnapshot(),
+            requestAuthorization: false
+        )
+
         guard !active.isEmpty else { return }
 
         for snapshot in active {
@@ -112,13 +132,13 @@ final class DirectiveCoordinator {
             return """
             Standing order from the user (\(trigger.rawValue)): \(action.displayEn). \
             Original words: "\(rawInstruction)". \
-            This is already running automatically after every workout — confirm you'll keep doing it, never claim you can't.
+            This is already running automatically \(trigger.displayEn) — confirm you'll keep doing it, never claim you can't.
             """
         }
         return """
         تعليمات دائمة من المستخدم (\(trigger.displayAr)): \(action.displayAr). \
         نص المستخدم: «\(rawInstruction)». \
-        هذا منفّذ تلقائياً بعد كل تمرين فعلاً — أكّد للمستخدم إنك راح تستمر تسويه ولا تنساه ولا تقول ما تكدر.
+        هذا منفّذ تلقائياً \(trigger.displayAr) فعلاً — أكّد للمستخدم إنك راح تستمر تسويه ولا تنساه ولا تقول ما تكدر.
         """
     }
 }

@@ -12,18 +12,23 @@ import Foundation
 // automatically (DirectiveEngine), and never forgets it.
 // ===============================================
 
-/// When a directive fires. Extensible — only `.afterWorkout` is fully wired
-/// end-to-end today; the rest are recognized so the taxonomy can grow without
-/// a schema change (the trigger is stored as a raw string).
+/// When a directive fires. Extensible — `.afterWorkout` (event-driven),
+/// `.everyMorning` and `.beforeBedtime` (repeating daily notification, see
+/// `DirectiveNotificationScheduler`) are wired end-to-end today; the rest are
+/// recognized so the taxonomy can grow without a schema change (the trigger
+/// is stored as a raw string).
 enum DirectiveTrigger: String, Sendable, Codable, CaseIterable {
     /// Immediately after any workout completes (HealthKit-wide: Watch,
     /// external, or in-app). This is the flagship trigger.
     case afterWorkout
 
-    /// Reserved for future wiring — recognized by the learner so the user can
-    /// teach them now and we can light them up incrementally.
+    /// Wired: a repeating daily local notification at the user's bedtime /
+    /// wake time (or sensible fallback) — see `DirectiveNotificationScheduler`.
     case beforeBedtime
     case everyMorning
+
+    /// Reserved for future wiring — recognized by the learner so the user can
+    /// teach them now and we can light them up incrementally.
     case afterPoorSleep
     case weeklyReview
 
@@ -37,10 +42,27 @@ enum DirectiveTrigger: String, Sendable, Codable, CaseIterable {
         }
     }
 
-    /// Whether the engine can actually execute this trigger today. Recognized
+    var displayEn: String {
+        switch self {
+        case .afterWorkout:   return "after every workout"
+        case .beforeBedtime:  return "before bedtime"
+        case .everyMorning:   return "every morning"
+        case .afterPoorSleep: return "after poor sleep"
+        case .weeklyReview:   return "weekly review"
+        }
+    }
+
+    /// Whether the engine actually executes this trigger today. Recognized
     /// but not-yet-wired triggers are still saved (so the promise is kept) and
     /// surfaced to the Captain, but won't auto-fire until wired.
-    var isExecutable: Bool { self == .afterWorkout }
+    var isExecutable: Bool {
+        switch self {
+        case .afterWorkout, .everyMorning, .beforeBedtime:
+            return true
+        case .afterPoorSleep, .weeklyReview:
+            return false
+        }
+    }
 }
 
 /// What the Captain does when a directive fires.
