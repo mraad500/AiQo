@@ -398,6 +398,15 @@ private enum WorkoutCategoriesCatalog {
         ),
         WorkoutSeed(
             item: WorkoutCardItem(
+                title: L10n.t("gym.exercise.outdoor_running"),
+                subtitle: L10n.t("gym.exercise.outdoor_running.subtitle"),
+                iconName: "map.fill",
+                themeColor: AiQoColors.mint
+            ),
+            exerciseKey: "gym.exercise.outdoor_running"
+        ),
+        WorkoutSeed(
+            item: WorkoutCardItem(
                 title: L10n.t("gym.workout.running"),
                 iconName: "figure.run",
                 themeColor: AiQoColors.mint

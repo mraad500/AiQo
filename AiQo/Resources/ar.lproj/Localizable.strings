@@ -3045,3 +3045,30 @@
 "onboarding.healthScreening.underAge.title" = "AiQo للكبار فوق 18";
 "onboarding.healthScreening.underAge.body" = "AiQo يقدّم تدريب لياقة وعافية عامّة مخصصة للكبار. ما نكدر نعطيك خطة شخصية حالياً.";
 "onboarding.healthScreening.underAge.support" = "إذا تعتقد هذا غلط، تواصل معنا: support@aiqo.app.";
+
+/* MARK: - الجري بالخارج (خريطة ثلاثية الأبعاد حية تلحقك) */
+"gym.exercise.outdoor_running" = "الجري بالخارج";
+"gym.exercise.outdoor_running.subtitle" = "خريطة ثلاثية الأبعاد حية تلحقك مثل الطيارة وانت تركض";
+"run.metrics.paceUnit" = "/كم";
+"run.metrics.timeLabel" = "الوقت";
+"run.gps.searching" = "نبحث عن إشارة GPS…";
+"run.gps.weak" = "إشارة GPS ضعيفة — الدقة ممكن تقل";
+"run.permission.title" = "نحتاج إذن الموقع";
+"run.permission.body" = "الجري بالخارج يستخدم موقعك لرسم مسارك على الخريطة وقياس المسافة والسرعة والارتفاع. موقعك ما يطلع من جهازك أبداً.";
+"run.permission.allow" = "اسمح بالموقع";
+"run.permission.openSettings" = "افتح الإعدادات";
+"run.control.start" = "ابدأ الجري";
+"run.control.pause" = "إيقاف مؤقت";
+"run.control.resume" = "كمّل";
+"run.control.finish" = "إنهاء";
+"run.summary.title" = "خلص الجري";
+"run.summary.done" = "تمام";
+"run.close.confirm.title" = "تنهي الجري؟";
+"run.close.confirm.message" = "الجري لساه شغّال. الإنهاء راح يحفظه ويسكّر الخريطة.";
+"run.close.confirm.finish" = "إنهاء وحفظ";
+"run.close.confirm.keep" = "كمّل الجري";
+"run.summary.shareButton" = "شارك إنجازك";
+"run.metrics.calories" = "سعرات";
+"run.share.tagline" = "تتبّعته بـ AiQo";
+"run.share.caption" = "ركضت %@ ويا AiQo 🏃‍♂️🔥";
+"run.watch.connected" = "Apple Watch • نبض حي";

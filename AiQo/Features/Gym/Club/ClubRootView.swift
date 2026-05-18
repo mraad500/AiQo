@@ -54,6 +54,7 @@ struct ClubRootView: View {
     @State private var selectedTab: ClubTopTab = .body
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
+    @State private var presentedOutdoorRunExercise: GymExercise?
     @State private var isGratitudeSessionPresented = false
     @State private var isProfileSheetPresented = false
     @State private var activeExercise: GymExercise?
@@ -138,6 +139,11 @@ struct ClubRootView: View {
         .fullScreenCover(isPresented: $isGratitudeSessionPresented) {
             GratitudeSessionView()
         }
+        .fullScreenCover(item: $presentedOutdoorRunExercise) { exercise in
+            OutdoorRunSessionView(title: exercise.title) {
+                presentedOutdoorRunExercise = nil
+            }
+        }
     }
 
     private var topHeaderBar: some View {
@@ -200,6 +206,14 @@ struct ClubRootView: View {
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
+        if exercise.workoutKind == .outdoorRun {
+            presentedExercise = nil
+            presentedCinematicExercise = nil
+            isGratitudeSessionPresented = false
+            presentedOutdoorRunExercise = exercise
+            return
+        }
+
         if let activeSession, activeSession.phase != .idle, let activeExercise {
             presentExercise(activeExercise, session: activeSession)
             return

@@ -6,6 +6,7 @@ enum GymWorkoutKind: Hashable {
     case standard
     case cardioWithCaptainHamoudi
     case cinematicGrind
+    case outdoorRun
 }
 
 enum WorkoutCoachingProfile: Hashable {
@@ -90,6 +91,15 @@ extension GymExercise {
             tint: .aiqoMint,
             workoutKind: .cardioWithCaptainHamoudi,
             coachingProfile: .captainHamoudiZone2
+        ),
+        GymExercise(
+            titleKey: "gym.exercise.outdoor_running",
+            subtitleKey: "gym.exercise.outdoor_running.subtitle",
+            type: .running,
+            location: .outdoor,
+            icon: "map.fill",
+            tint: .aiqoMint,
+            workoutKind: .outdoorRun
         ),
         GymExercise(
             titleKey: "gym.exercise.running",
