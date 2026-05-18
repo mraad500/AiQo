@@ -12,23 +12,58 @@ import MapKit
 import SwiftUI
 import UIKit
 
+/// Thin wrapper presented by the `fullScreenCover`. It owns nothing — the run
+/// lives in `ActiveRunStore` so it survives this screen being dismissed. On
+/// open it attaches to the live run (or starts a fresh one); on close it only
+/// tears the run down if it isn't actively in progress.
 struct OutdoorRunSessionView: View {
 
+    let title: String
     let onClose: () -> Void
 
-    @StateObject private var location = RunLocationManager()
-    @StateObject private var session: OutdoorRunSession
+    @ObservedObject private var store = ActiveRunStore.shared
+
+    init(title: String, onClose: @escaping () -> Void) {
+        self.title = title
+        self.onClose = onClose
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if let session = store.session, let location = store.location {
+                OutdoorRunSessionContent(
+                    session: session,
+                    location: location,
+                    onClose: handleClose
+                )
+            }
+        }
+        .task { store.attachOrStart(title: title) }
+    }
+
+    private func handleClose() {
+        // Leaving while a run is in progress keeps it alive in the background;
+        // only a finished/unstarted run is torn down here.
+        if !(store.session?.isActive ?? false) {
+            store.clear()
+        }
+        onClose()
+    }
+}
+
+struct OutdoorRunSessionContent: View {
+
+    @ObservedObject var session: OutdoorRunSession
+    @ObservedObject var location: RunLocationManager
+    let onClose: () -> Void
+
     @ObservedObject private var connectivity = PhoneConnectivityManager.shared
 
     @State private var camera: MapCameraPosition = .automatic
-    @State private var showCloseConfirm = false
     /// 0 = no fix yet, 1 = wide establishing shot shown, 2+ = locked chase glide.
     @State private var introStage = 0
-
-    init(title: String, onClose: @escaping () -> Void) {
-        self.onClose = onClose
-        _session = StateObject(wrappedValue: OutdoorRunSession(title: title))
-    }
 
     var body: some View {
         ZStack {
@@ -79,7 +114,7 @@ struct OutdoorRunSessionView: View {
                     elevationGainMeters: location.elevationGainMeters,
                     calories: session.finalCalories,
                     averageHeartRate: session.finalAvgHeartRate,
-                    routeCoordinates: location.routeCoordinates,
+                    routeCoordinates: resolvedRouteCoordinates,
                     finishedAt: session.finishedAt,
                     onDone: closeImmediately
                 )
@@ -89,7 +124,6 @@ struct OutdoorRunSessionView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.86), value: session.phase)
         .animation(.easeInOut(duration: 0.25), value: location.authorizationStatus)
         .onAppear(perform: handleAppear)
-        .onDisappear { location.endRun() }
         .onChange(of: location.authorizationStatus) { _, _ in
             if location.isAuthorized { location.beginPreview() }
         }
@@ -98,14 +132,6 @@ struct OutdoorRunSessionView: View {
         }
         .onChange(of: location.distanceMeters) { _, meters in
             session.updateDistance(meters)
-        }
-        .alert(L10n.t("run.close.confirm.title"), isPresented: $showCloseConfirm) {
-            Button(L10n.t("run.close.confirm.finish")) {
-                finishRun()
-            }
-            Button(L10n.t("run.close.confirm.keep"), role: .cancel) {}
-        } message: {
-            Text(L10n.t("run.close.confirm.message"))
         }
     }
 
@@ -398,16 +424,27 @@ struct OutdoorRunSessionView: View {
     }
 
     private func finishRun() {
-        session.finish()
+        session.finish(
+            routeCoordinates: resolvedRouteCoordinates,
+            elevationGainMeters: location.elevationGainMeters
+        )
         location.endRun()
     }
 
+    /// The route to draw/save. Falls back to the single last-known fix when the
+    /// runner barely moved, so a finished run still shows its map instead of an
+    /// empty "searching for GPS" box.
+    private var resolvedRouteCoordinates: [CLLocationCoordinate2D] {
+        let route = location.routeCoordinates
+        if !route.isEmpty { return route }
+        if let here = location.currentLocation?.coordinate { return [here] }
+        return []
+    }
+
     private func handleCloseTap() {
-        if session.isActive {
-            showCloseConfirm = true
-        } else {
-            closeImmediately()
-        }
+        // Closing never stops the run — if it's in progress it keeps tracking
+        // in the background and re-opening resumes the same session.
+        onClose()
     }
 
     private func closeImmediately() {
@@ -444,7 +481,7 @@ struct OutdoorRunSessionView: View {
 
     private var elevationValueText: String {
         guard location.hasFix else { return "—" }
-        return "\(Int(location.altitudeMeters.rounded()))"
+        return "\(Int(location.elevationGainMeters.rounded()))"
     }
 
     private var distanceValueText: String {

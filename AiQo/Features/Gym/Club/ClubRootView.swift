@@ -210,6 +210,9 @@ struct ClubRootView: View {
             presentedExercise = nil
             presentedCinematicExercise = nil
             isGratitudeSessionPresented = false
+            // Re-attaches to the in-progress run if one exists, so opening the
+            // run again shows the same workout still going.
+            ActiveRunStore.shared.attachOrStart(title: exercise.title)
             presentedOutdoorRunExercise = exercise
             return
         }

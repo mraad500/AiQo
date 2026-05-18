@@ -8,6 +8,7 @@
 //
 
 import Combine
+import CoreLocation
 import Foundation
 import HealthKit
 import SwiftUI
@@ -30,6 +31,7 @@ final class OutdoorRunSession: ObservableObject {
     @Published private(set) var distanceMeters: Double = 0
     @Published var showMilestone = false
     @Published var milestoneText = ""
+    @Published private(set) var startedAt: Date?
     @Published private(set) var finishedAt: Date?
     /// The Apple Watch companion workout is running (real HR + calories).
     @Published private(set) var isWatchActive = false
@@ -51,12 +53,12 @@ final class OutdoorRunSession: ObservableObject {
     /// the GPS-based estimate so the figure is never blank.
     var liveCalories: Double {
         let watchEnergy = connectivity.activeEnergy
-        return watchEnergy > 0 ? watchEnergy : estimatedCalories
+        return (isWatchActive && watchEnergy > 0) ? watchEnergy : estimatedCalories
     }
 
     /// Live heart rate from the Watch (0 when no Watch / no reading yet).
     var heartRate: Double {
-        connectivity.currentHeartRate
+        isWatchActive ? connectivity.currentHeartRate : 0
     }
 
     // MARK: - Private
@@ -104,6 +106,7 @@ final class OutdoorRunSession: ObservableObject {
     func start() {
         guard phase == .ready else { return }
         phase = .running
+        startedAt = Date()
         accumulatedBeforePause = 0
         segmentStart = Date()
         elapsedSeconds = 0
@@ -134,13 +137,18 @@ final class OutdoorRunSession: ObservableObject {
     private func startWatchCompanionIfAvailable() {
         connectivity.refreshWatchConnectivityState()
         guard connectivity.canStartWorkoutFromPhone else { return }
-        connectivity.launchWatchAppForWorkout(activityType: .running, locationType: .outdoor)
-        isWatchActive = true
+        isWatchActive = connectivity.launchWatchAppForWorkout(
+            activityType: .running,
+            locationType: .outdoor
+        )
     }
 
     /// Ends the run, persists it to the rolling workout history, and reports
     /// analytics. Safe to call once; further calls are ignored.
-    func finish() {
+    func finish(
+        routeCoordinates: [CLLocationCoordinate2D] = [],
+        elevationGainMeters: Double = 0
+    ) {
         guard phase != .finished else { return }
         if phase == .running {
             accumulatedBeforePause += elapsedSinceSegmentStart()
@@ -156,7 +164,10 @@ final class OutdoorRunSession: ObservableObject {
         finishedAt = Date()
         phase = .finished
         if isWatchActive { connectivity.endWorkoutOnWatch() }
-        recordCompletionIfNeeded()
+        recordCompletionIfNeeded(
+            routeCoordinates: routeCoordinates,
+            elevationGainMeters: elevationGainMeters
+        )
     }
 
     // MARK: - Distance feed (driven by the view observing RunLocationManager)
@@ -220,12 +231,16 @@ final class OutdoorRunSession: ObservableObject {
 
     // MARK: - Completion
 
-    private func recordCompletionIfNeeded() {
+    private func recordCompletionIfNeeded(
+        routeCoordinates: [CLLocationCoordinate2D],
+        elevationGainMeters: Double
+    ) {
         guard !hasRecorded else { return }
         hasRecorded = true
 
         let durationMinutes = elapsedSeconds / 60
         let calories = finalCalories > 0 ? finalCalories : estimatedCalories
+        let endedAt = finishedAt ?? Date()
 
         WorkoutHistoryStore.shared.recordCompletion(
             title: title,
@@ -240,5 +255,20 @@ final class OutdoorRunSession: ObservableObject {
             durationMin: durationMinutes,
             calories: Int(calories.rounded())
         ))
+
+        let record = RunRecord(
+            id: UUID(),
+            title: title,
+            startedAt: startedAt ?? endedAt.addingTimeInterval(-Double(elapsedSeconds)),
+            finishedAt: endedAt,
+            distanceMeters: distanceMeters,
+            elapsedSeconds: elapsedSeconds,
+            averagePaceSecondsPerKm: averagePaceSecondsPerKm,
+            elevationGainMeters: elevationGainMeters,
+            calories: calories,
+            averageHeartRate: finalAvgHeartRate,
+            route: routeCoordinates.map(RunRouteCoordinate.init)
+        )
+        RunRecordStore.shared.save(record)
     }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import HealthKit
 import Combine
+import CoreLocation
 
 // =========================
 // File: Features/Gym/RecapView.swift
@@ -46,6 +47,17 @@ struct WorkoutHistoryItem: Identifiable {
     let workoutId: String
     let notes: String?
     let metrics: [WorkoutMetric]
+
+    /// Raw workout start, used to match a saved on-device run (route + map).
+    let startDate: Date?
+    /// An outdoor run logged by AiQo — eligible for the route-map summary.
+    let isOutdoorRun: Bool
+    /// Raw run metrics, so the cinematic summary can open from HealthKit stats
+    /// even when no on-device route was saved for this run.
+    let runDurationSeconds: Int?
+    let runDistanceMeters: Double?
+    let runCalories: Double?
+    let runAvgHeartRate: Double?
 }
 
 // MARK: - Recap View
@@ -53,6 +65,7 @@ struct RecapView: View {
     @StateObject private var viewModel = RecapViewModel()
 
     @State private var selectedItem: WorkoutHistoryItem?
+    @State private var selectedRunSummary: RunSummaryInput?
     @State private var selectedDetent: PresentationDetent = .fraction(0.5)
     var onScrollOffsetChange: ((CGFloat) -> Void)? = nil
 
@@ -75,8 +88,12 @@ struct RecapView: View {
 
                         ForEach(section.items) { item in
                             HistoryCardView(item: item) {
-                                selectedDetent = .fraction(0.5)
-                                selectedItem = item
+                                if let summary = runSummary(for: item) {
+                                    selectedRunSummary = summary
+                                } else {
+                                    selectedDetent = .fraction(0.5)
+                                    selectedItem = item
+                                }
                             }
                         }
                     }
@@ -98,7 +115,12 @@ struct RecapView: View {
             onScrollOffsetChange?(offset)
         }
         .fontDesign(.rounded)
-        .task { await viewModel.loadIfNeeded() }
+        .task {
+            // Recover a run that ended on the Watch while its phone screen was
+            // minimized, so it shows here with its route map.
+            ActiveRunStore.shared.finalizeIfWatchEnded()
+            await viewModel.loadIfNeeded()
+        }
         .sheet(item: $selectedItem) { item in
             WorkoutDetailSheetView(item: item)
                 .presentationDetents([.fraction(0.5), .large], selection: $selectedDetent)
@@ -106,6 +128,44 @@ struct RecapView: View {
                 .presentationBackground(.clear)
                 .presentationCornerRadius(34)
         }
+        .fullScreenCover(item: $selectedRunSummary) { summary in
+            RunSummaryView(
+                title: summary.title,
+                distanceMeters: summary.distanceMeters,
+                elapsedSeconds: summary.elapsedSeconds,
+                averagePaceSecondsPerKm: summary.averagePaceSecondsPerKm,
+                elevationGainMeters: summary.elevationGainMeters,
+                calories: summary.calories,
+                averageHeartRate: summary.averageHeartRate,
+                routeCoordinates: summary.routeCoordinates,
+                finishedAt: summary.finishedAt,
+                onDone: { selectedRunSummary = nil }
+            )
+        }
+    }
+
+    /// The cinematic run summary for a tapped item: a saved on-device run
+    /// (with its route map) if one matches, otherwise — for any outdoor run —
+    /// the same screen built from the workout's real HealthKit stats with no
+    /// route. Returns nil for non-runs so they keep the standard detail sheet.
+    private func runSummary(for item: WorkoutHistoryItem) -> RunSummaryInput? {
+        if let start = item.startDate,
+           let record = RunRecordStore.shared.record(matchingStart: start) {
+            return RunSummaryInput(record: record)
+        }
+
+        guard item.isOutdoorRun, let seconds = item.runDurationSeconds else {
+            return nil
+        }
+
+        return RunSummaryInput(
+            title: item.title,
+            distanceMeters: item.runDistanceMeters ?? 0,
+            elapsedSeconds: seconds,
+            calories: item.runCalories ?? 0,
+            averageHeartRate: item.runAvgHeartRate ?? 0,
+            finishedAt: item.startDate?.addingTimeInterval(Double(seconds))
+        )
     }
 
     // MARK: - Header
@@ -732,7 +792,13 @@ enum WorkoutMapper {
             device: workout.device?.name,
             workoutId: workout.uuid.uuidString,
             notes: nil,
-            metrics: metrics
+            metrics: metrics,
+            startDate: start,
+            isOutdoorRun: workout.workoutActivityType == .running,
+            runDurationSeconds: Int(workout.duration.rounded()),
+            runDistanceMeters: distance,
+            runCalories: kcal,
+            runAvgHeartRate: avgHR
         )
     }
 

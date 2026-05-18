@@ -31,7 +31,10 @@ struct RunSummaryView: View {
 
     private let mint = Color(red: 0.718, green: 0.890, blue: 0.792)
     private let runOrange = Color(red: 1.0, green: 0.45, blue: 0.13)
+    /// Enough points to draw a path line.
     private var hasRoute: Bool { routeCoordinates.count >= 2 }
+    /// Any fix at all — enough to show the map centred on where the run was.
+    private var hasMap: Bool { !routeCoordinates.isEmpty }
 
     var body: some View {
         ZStack {
@@ -95,22 +98,28 @@ struct RunSummaryView: View {
     @ViewBuilder
     private var routeMap: some View {
         Group {
-            if hasRoute {
+            if hasMap {
                 Map(position: $camera, interactionModes: .all) {
-                    MapPolyline(coordinates: routeCoordinates)
-                        .stroke(runOrange.opacity(0.28),
-                                style: StrokeStyle(lineWidth: 13, lineCap: .round, lineJoin: .round))
-                    MapPolyline(coordinates: routeCoordinates)
-                        .stroke(runOrange,
-                                style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    if hasRoute {
+                        MapPolyline(coordinates: routeCoordinates)
+                            .stroke(runOrange.opacity(0.28),
+                                    style: StrokeStyle(lineWidth: 13, lineCap: .round, lineJoin: .round))
+                        MapPolyline(coordinates: routeCoordinates)
+                            .stroke(runOrange,
+                                    style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
 
-                    if let start = routeCoordinates.first {
-                        Annotation("", coordinate: start, anchor: .center) {
-                            RouteEndDot(color: mint)
+                        if let start = routeCoordinates.first {
+                            Annotation("", coordinate: start, anchor: .center) {
+                                RouteEndDot(color: mint)
+                            }
                         }
-                    }
-                    if let finish = routeCoordinates.last {
-                        Annotation("", coordinate: finish, anchor: .center) {
+                        if let finish = routeCoordinates.last {
+                            Annotation("", coordinate: finish, anchor: .center) {
+                                RouteEndDot(color: runOrange)
+                            }
+                        }
+                    } else if let point = routeCoordinates.first {
+                        Annotation("", coordinate: point, anchor: .center) {
                             RouteEndDot(color: runOrange)
                         }
                     }
@@ -287,7 +296,14 @@ struct RunSummaryView: View {
     // MARK: - Camera
 
     private func fitCameraToRoute() {
-        guard hasRoute else { return }
+        guard hasMap else { return }
+        if routeCoordinates.count == 1 {
+            camera = .region(MKCoordinateRegion(
+                center: routeCoordinates[0],
+                span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+            ))
+            return
+        }
         var minLat = routeCoordinates[0].latitude
         var maxLat = routeCoordinates[0].latitude
         var minLon = routeCoordinates[0].longitude
