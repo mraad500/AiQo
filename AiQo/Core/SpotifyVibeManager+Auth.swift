@@ -402,12 +402,17 @@ extension SpotifyVibeManager: ASWebAuthenticationPresentationContextProviding {
         if let keyWindow = windowScenes.flatMap(\.windows).first(where: \.isKeyWindow) {
             return keyWindow
         }
+        if let existingWindow = windowScenes.flatMap(\.windows).first {
+            return existingWindow
+        }
         if let scene = windowScenes.first {
             return ASPresentationAnchor(windowScene: scene)
         }
-        // No active window scene (e.g. invoked while backgrounded): a bare
-        // anchor keeps ASWebAuthenticationSession from crashing the app.
-        return ASPresentationAnchor()
+        // Unreachable in practice: the system only requests an auth-session
+        // anchor while a window scene is active. Both scene-less UIWindow
+        // initializers (`init()`, `init(frame:)`) are deprecated in iOS 26,
+        // so assert the invariant instead of shipping a deprecated call.
+        preconditionFailure("presentationAnchor(for:) requested with no active UIWindowScene")
     }
 }
 #endif
