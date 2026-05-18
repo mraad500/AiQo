@@ -93,6 +93,13 @@ final class CaptainViewModel: ObservableObject {
     @Published var currentMealPlan: MealPlan?
     @Published var inputText: String = ""
     @Published var coachState: CoachCognitiveState = .idle
+    /// Live progressive-reveal state. While `streamingMessageID != nil` the
+    /// chat shows ONE live bubble bound to `streamingText` instead of the
+    /// finalized row — the `messages` array is published exactly once (on
+    /// completion), so a long conversation never re-diffs the whole list
+    /// per character. Kept tiny and isolated on purpose.
+    @Published private(set) var streamingMessageID: UUID?
+    @Published private(set) var streamingText: String = ""
     @Published var showCustomization: Bool = false
     @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
@@ -114,6 +121,10 @@ final class CaptainViewModel: ObservableObject {
     private let orchestrator: BrainOrchestrator
     private let contextBuilder: CaptainContextBuilder
     private let cognitivePipeline: CaptainCognitivePipeline
+    /// Bridges the embedding-RAG `MemoryRetriever` into the live chat prompt.
+    /// Stateless; runs off-MainActor and is parallelized with the HealthKit
+    /// context read, so it adds no perceptible latency.
+    private let chatMemoryEnricher = ChatMemoryEnricher()
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
@@ -496,13 +507,33 @@ final class CaptainViewModel: ObservableObject {
         await Task.yield()
 
         do {
-            // Build HealthKit context (async but lightweight — just reads cached values)
-            var contextData = await contextBuilder.buildContextData()
+            let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
+            // Continuity past the 24-message LLM window: a compact digest of
+            // what the user said EARLIER this session so the Captain never
+            // "forgets" the thread mid-conversation. nil when the whole
+            // conversation already fits the window.
+            let sessionRecap = buildSessionRecap()
+
+            // Run the embedding-RAG semantic recall CONCURRENTLY with the
+            // HealthKit context read. `enrich` is off-MainActor and hops onto
+            // the MemoryRetriever actor while `buildContextData` awaits
+            // HealthKit, so the semantic lookup adds ~no wall-clock latency.
+            // On free tier `MemoryRetriever` returns an empty bundle and
+            // `enrich` returns the lexical base unchanged — no regression.
+            async let contextDataTask = contextBuilder.buildContextData()
+            async let enrichedMemoryTask = chatMemoryEnricher.enrich(
+                baseSummary: prebuiltPromptContext.workingMemorySummary,
+                userMessage: latestUserText,
+                screenContext: screenContext,
+                sessionRecap: sessionRecap
+            )
+
+            var contextData = await contextDataTask
+            let workingMemorySummary = await enrichedMemoryTask
 
             // Brain V2: Detect sentiment from user's message
-            if CaptainContextBuilder.isBrainV2Enabled,
-               let lastUserText = prebuiltConversation.last(where: { $0.role == .user })?.content {
-                contextData.messageSentiment = SentimentDetector.shared.detect(message: lastUserText)
+            if CaptainContextBuilder.isBrainV2Enabled, !latestUserText.isEmpty {
+                contextData.messageSentiment = SentimentDetector.shared.detect(message: latestUserText)
             }
 
             let promptRequest = HybridBrainRequest(
@@ -512,7 +543,7 @@ final class CaptainViewModel: ObservableObject {
                 contextData: contextData,
                 userProfileSummary: prebuiltPromptContext.profileSummary,
                 intentSummary: prebuiltPromptContext.intentSummary,
-                workingMemorySummary: prebuiltPromptContext.workingMemorySummary,
+                workingMemorySummary: workingMemorySummary,
                 attachedImageData: attachedImageData
             )
 
@@ -520,7 +551,6 @@ final class CaptainViewModel: ObservableObject {
             let capturedOrchestrator = orchestrator
             // Sleep analysis runs entirely on-device (HealthKit + Foundation Models) — give it more time.
             // The orchestrator may reroute .mainChat → .sleepAnalysis internally if the message is sleep-related.
-            let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
             let needsSleepTimeout = screenContext == .sleepAnalysis
                 || looksLikeSleepRequest(latestUserText)
             let orchestratorTimeout = needsSleepTimeout
@@ -533,7 +563,13 @@ final class CaptainViewModel: ObservableObject {
                 )
             }
 
-            try await runCognitiveTimeline(requestID: requestID)
+            // The reply is already computed. The old `runCognitiveTimeline`
+            // added ~0.64s of pure Task.sleep here, plus a 0.18s typing hold —
+            // ~0.82s of dead time the user feels as lag AFTER the AI already
+            // answered. Go straight to the reveal. The sub-`minimumLoadingState`
+            // floor is kept only so an instant cached/offline reply still shows
+            // a brief typing flash instead of flickering.
+            try ensureActiveRequest(requestID)
 
             let elapsed = Date().timeIntervalSince(startedAt)
             if elapsed < minimumLoadingStateDuration {
@@ -541,8 +577,8 @@ final class CaptainViewModel: ObservableObject {
                 try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
 
-            try await transitionCoachState(to: .typing, hold: 0.18, requestID: requestID)
             try ensureActiveRequest(requestID)
+            coachState = .typing
 
             // Validate and clean the reply before displaying:
             // 1. Remove duplicate sentences
@@ -575,13 +611,23 @@ final class CaptainViewModel: ObservableObject {
                 spotifyRecommendation: validated.spotifyRecommendation
             )
 
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
-                messages.append(replyMessage)
-            }
+            await revealReply(replyMessage, requestID: requestID)
 
             persistChatMessage(replyMessage)
             ConversationThreadManager.shared.logCaptainResponse(content: assistantReply)
             trimInMemoryMessagesIfNeeded()
+
+            // Turn the model's explicit "remember this" / "remind me at X"
+            // intents into real, visible side effects (Saved Memories row +
+            // a scheduled local notification). Without this the Captain only
+            // *claims* it saved/scheduled — the bug behind this feature.
+            if reply.savedMemory != nil || reply.reminder != nil {
+                await CaptainMemoryActionHandler.apply(
+                    savedMemory: reply.savedMemory,
+                    reminder: reply.reminder,
+                    language: prebuiltLanguage
+                )
+            }
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
             AnalyticsService.shared.track(.captainResponseReceived(latencyMs: latencyMs))
@@ -688,33 +734,97 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
+    /// Compact digest of what the user said EARLIER this session — the turns
+    /// that fall OUTSIDE the 24-message LLM window. Without this, a long
+    /// conversation silently loses its head and the Captain "forgets" the
+    /// thread (asks again about things already told). User turns only (they
+    /// carry the intent); the first turn anchors the session's purpose, the
+    /// tail is the freshest pre-window context. Bounded so the prompt stays
+    /// lean. Returns nil when the whole conversation already fits the window.
+    private func buildSessionRecap() -> String? {
+        let window = Self.maxConversationWindow
+        guard messages.count > window else { return nil }
+
+        let userTurns = messages
+            .dropLast(window)
+            .filter { $0.isUser && !$0.isEphemeral }
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !userTurns.isEmpty else { return nil }
+
+        var ordered: [String] = []
+        if let first = userTurns.first { ordered.append(first) }
+        ordered.append(contentsOf: userTurns.suffix(7))
+
+        var seen = Set<String>()
+        let lines: [String] = ordered.compactMap { turn in
+            let clipped = turn.count > 90 ? String(turn.prefix(90)) + "…" : turn
+            guard seen.insert(clipped.lowercased()).inserted else { return nil }
+            return "- \(clipped)"
+        }
+        guard !lines.isEmpty else { return nil }
+
+        return Array(lines.prefix(8)).joined(separator: "\n")
+    }
+
+    /// Progressively reveals the reply (WhatsApp/ChatGPT-style) instead of
+    /// dumping a wall of text after a long blank wait. Only `streamingText`
+    /// publishes per tick — `messages` is appended exactly once at the end so
+    /// the list never re-diffs mid-reveal. Bounded so even a very long reply
+    /// finishes within ~0.65s (snappy, not a slow crawl). Honors Reduce Motion.
+    private func revealReply(_ message: ChatMessage, requestID: UUID) async {
+        let full = message.text
+        guard !UIAccessibility.isReduceMotionEnabled, full.count > 12 else {
+            appendFinal(message, requestID: requestID)
+            return
+        }
+
+        streamingMessageID = message.id
+        streamingText = ""
+
+        let total = full.count
+        let steps = min(max(total, 1), 40)
+        let chunk = max(1, Int((Double(total) / Double(steps)).rounded(.up)))
+
+        var idx = full.startIndex
+        while idx < full.endIndex {
+            do {
+                try ensureActiveRequest(requestID)
+            } catch {
+                // A newer request now owns the screen — drop the half-revealed
+                // bubble and bail without committing it to `messages`.
+                streamingMessageID = nil
+                streamingText = ""
+                return
+            }
+            let end = full.index(idx, offsetBy: chunk, limitedBy: full.endIndex) ?? full.endIndex
+            streamingText.append(contentsOf: full[idx..<end])
+            idx = end
+            try? await Task.sleep(nanoseconds: 16_000_000)
+        }
+
+        appendFinal(message, requestID: requestID)
+    }
+
+    /// Commits the finalized row and clears the live bubble in ONE synchronous
+    /// mutation so SwiftUI coalesces them into a single render — the real row
+    /// appears exactly as the streaming bubble is removed (same text, same
+    /// position) → seamless, no flicker.
+    private func appendFinal(_ message: ChatMessage, requestID: UUID) {
+        guard activeRequestID == requestID else {
+            streamingMessageID = nil
+            streamingText = ""
+            return
+        }
+        messages.append(message)
+        streamingMessageID = nil
+        streamingText = ""
+        HapticEngine.light()
+    }
+
     private func persistChatMessage(_ message: ChatMessage) {
         let sessionID = currentSessionID
         MemoryStore.shared.persistMessageAsync(message, sessionID: sessionID)
-    }
-
-    private func runCognitiveTimeline(requestID: UUID) async throws {
-        try await transitionCoachState(to: .readingMessage, hold: 0.18, requestID: requestID)
-        try await transitionCoachState(to: .thinkingOnDevice, hold: 0.24, requestID: requestID)
-        try await transitionCoachState(to: .shapingReply, hold: 0.22, requestID: requestID)
-        try ensureActiveRequest(requestID)
-        coachState = .typing
-    }
-
-    private func transitionCoachState(
-        to state: CoachCognitiveState,
-        hold: TimeInterval,
-        requestID: UUID
-    ) async throws {
-        try ensureActiveRequest(requestID)
-        coachState = state
-
-        let nanoseconds = UInt64(max(0, hold) * 1_000_000_000)
-        if nanoseconds > 0 {
-            try await Task.sleep(nanoseconds: nanoseconds)
-        }
-
-        try ensureActiveRequest(requestID)
     }
 
     private func ensureActiveRequest(_ requestID: UUID) throws {

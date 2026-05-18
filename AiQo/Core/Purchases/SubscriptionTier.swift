@@ -95,11 +95,13 @@ nonisolated enum SubscriptionTier: Int, Codable, Sendable, Comparable {
     // state and avoid a 30+ callsite rename.
 
     /// Captain memory fact cap (user-visible count in Captain Memory settings).
+    /// Raised 2026-05-18 (50/200/500 → 100/500/1000) so the Captain can hold a
+    /// much deeper picture of the user, incl. the new "Saved Memories" section.
     nonisolated var memoryFactLimit: Int {
         switch self {
-        case .none: return 50
-        case .max: return 200
-        case .trial, .pro: return 500
+        case .none: return 100
+        case .max: return 500
+        case .trial, .pro: return 1000
         }
     }
 

@@ -2247,6 +2247,10 @@
 "memory.cat.insight" = "Insights";
 "memory.cat.recordProject" = "Record projects";
 "memory.cat.hydration" = "Hydration";
+"memory.cat.saved" = "Saved Memories";
+"memory.saved.reminderTitle" = "Reminder";
+"memory.saved.noteTitle" = "Saved";
+"memory.saved.notifDisabled" = "Device notifications are off — enable them so reminders can fire.";
 "memory.key.hydrationGoal" = "Daily water goal";
 "memory.key.hydrationSmart" = "Smart tracking";
 "memory.key.hydrationPattern" = "Hydration pattern";

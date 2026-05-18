@@ -217,7 +217,11 @@ enum CaptainEmotionalSignal: String, Sendable {
     }
 }
 
-enum CaptainCognitiveTextAnalyzer {
+/// Pure, stateless text utility (only reads an immutable stopword set), so it
+/// is `nonisolated` to stay callable from the `MemoryRetriever` actor and any
+/// other isolation domain without a MainActor hop. Swift 6 would otherwise
+/// make the cross-actor call an error.
+nonisolated enum CaptainCognitiveTextAnalyzer {
     private static let stopWords: Set<String> = [
         "a", "an", "and", "are", "as", "at", "be", "for", "from", "how", "i", "im", "in", "is", "it", "me",
         "my", "of", "on", "or", "that", "the", "this", "to", "today", "want", "with", "you", "your",

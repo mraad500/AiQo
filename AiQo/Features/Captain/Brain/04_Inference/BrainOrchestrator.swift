@@ -90,7 +90,9 @@ struct BrainOrchestrator: Sendable {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
 
         return HybridBrainStreamingSession(
@@ -553,7 +555,9 @@ private extension BrainOrchestrator {
             quickReplies: screenContext == .sleepAnalysis ? nil : reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
         let rawText = try? encode(structuredResponse)
 
@@ -563,6 +567,8 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
+            savedMemory: structuredResponse.savedMemory,
+            reminder: structuredResponse.reminder,
             rawText: rawText ?? reply.rawText,
             // Pass through — name injection does not change generation.
             truncatedAtMaxTokens: reply.truncatedAtMaxTokens
@@ -603,7 +609,9 @@ private extension BrainOrchestrator {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
         let rawText = (try? encode(structuredResponse)) ?? message
 
@@ -613,6 +621,8 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
+            savedMemory: structuredResponse.savedMemory,
+            reminder: structuredResponse.reminder,
             rawText: rawText,
             // Pass through — wellbeing prefix does not change generation.
             truncatedAtMaxTokens: reply.truncatedAtMaxTokens

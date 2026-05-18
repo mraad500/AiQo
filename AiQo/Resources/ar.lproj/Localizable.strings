@@ -2246,6 +2246,10 @@
 "memory.cat.insight" = "الرؤى";
 "memory.cat.recordProject" = "مشاريع الأرقام الشخصية";
 "memory.cat.hydration" = "شرب الماء";
+"memory.cat.saved" = "الذاكرات المحفوظة";
+"memory.saved.reminderTitle" = "تذكير";
+"memory.saved.noteTitle" = "محفوظة";
+"memory.saved.notifDisabled" = "إشعارات الجهاز مطفية — شغّلها حتى تشتغل التذكيرات.";
 "memory.key.hydrationGoal" = "الهدف اليومي للماء";
 "memory.key.hydrationSmart" = "تتبع الماء الذكي";
 "memory.key.hydrationPattern" = "نمط شرب الماء";

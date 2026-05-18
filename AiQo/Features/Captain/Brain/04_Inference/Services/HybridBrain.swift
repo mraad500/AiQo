@@ -68,12 +68,42 @@ struct HybridBrainServiceReply: Sendable {
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
+    /// Explicit "remember this" payload — only the cloud path populates it.
+    let savedMemory: CaptainSavedMemory?
+    /// One-off clock-time reminder payload — only the cloud path populates it.
+    let reminder: CaptainReminder?
     let rawText: String
     /// True when Gemini reported `finishReason: "MAX_TOKENS"` for the cloud
     /// response that produced this reply. Local / fallback / persona replies
     /// always pass `false`. Surfaced to the UI so the bubble can mark the
     /// truncation; analytics tracks it for capacity tuning.
     let truncatedAtMaxTokens: Bool
+
+    /// Explicit memberwise init with the memory/reminder fields defaulted to
+    /// nil so the many fallback/error call sites (offline, tier-gate, sleep
+    /// fallback, persona) keep compiling without change — only the cloud path
+    /// and the orchestrator's reply rebuilders pass them through.
+    init(
+        message: String,
+        quickReplies: [String]?,
+        workoutPlan: WorkoutPlan?,
+        mealPlan: MealPlan?,
+        spotifyRecommendation: SpotifyRecommendation?,
+        savedMemory: CaptainSavedMemory? = nil,
+        reminder: CaptainReminder? = nil,
+        rawText: String,
+        truncatedAtMaxTokens: Bool
+    ) {
+        self.message = message
+        self.quickReplies = quickReplies
+        self.workoutPlan = workoutPlan
+        self.mealPlan = mealPlan
+        self.spotifyRecommendation = spotifyRecommendation
+        self.savedMemory = savedMemory
+        self.reminder = reminder
+        self.rawText = rawText
+        self.truncatedAtMaxTokens = truncatedAtMaxTokens
+    }
 }
 
 struct HybridBrainStreamingSession: Sendable {
@@ -263,6 +293,8 @@ struct HybridBrainService: Sendable {
             workoutPlan: cloudResult.response.workoutPlan,
             mealPlan: cloudResult.response.mealPlan,
             spotifyRecommendation: cloudResult.response.spotifyRecommendation,
+            savedMemory: cloudResult.response.savedMemory,
+            reminder: cloudResult.response.reminder,
             rawText: rawText,
             truncatedAtMaxTokens: cloudResult.truncatedAtMaxTokens
         )
@@ -278,7 +310,9 @@ struct HybridBrainService: Sendable {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
 
         return HybridBrainStreamingSession(

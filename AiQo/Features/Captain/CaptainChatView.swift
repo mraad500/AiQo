@@ -66,6 +66,12 @@ struct CaptainChatView: View {
                 .onChange(of: globalBrain.currentWorkoutPlan != nil) {
                     scrollToBottom(using: proxy)
                 }
+                .onChange(of: globalBrain.streamingText) {
+                    // Keep the growing live bubble pinned to the bottom while
+                    // it types out. No animation on purpose — a spring per
+                    // tick janks; an instant scrollTo tracks it buttery-smooth.
+                    proxy.scrollTo("streaming-bubble", anchor: .bottom)
+                }
             }
         }
         .overlay(alignment: .bottom) {
@@ -328,7 +334,11 @@ private extension CaptainChatView {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            if globalBrain.isLoading {
+            if globalBrain.streamingMessageID != nil {
+                StreamingMessageRow(text: globalBrain.streamingText)
+                    .id("streaming-bubble")
+                    .padding(.top, 8)
+            } else if globalBrain.isLoading {
                 CaptainTypingRow()
                     .id("typing-indicator")
                     .padding(.top, 8)
@@ -552,6 +562,49 @@ private struct ChatMessageRow: View {
             return arabic ? "استمع بالصوت المحسّن" : "Play with enhanced voice"
         }
         return arabic ? "استمع بالصوت المحلي" : "Play with local voice"
+    }
+}
+
+/// The single live bubble shown while the reply types out. Mirrors the
+/// assistant `ChatMessageRow` layout (avatar + bubble + leading alignment) so
+/// that when the reveal finishes and the real row is appended, the swap is
+/// seamless — same text, same position, no jump.
+private struct StreamingMessageRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            CaptainChatAvatarView(size: 28)
+
+            MessageBubble(isUser: false, timestamp: Date()) {
+                HStack(alignment: .bottom, spacing: 3) {
+                    Text(text)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .multilineTextAlignment(.leading)
+                    StreamingCaret()
+                }
+            }
+
+            Spacer(minLength: 26)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}
+
+private struct StreamingCaret: View {
+    @State private var on = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(Color(hex: "5ECDB7"))
+            .frame(width: 2, height: 17)
+            .padding(.bottom, 2)
+            .opacity(on ? 1 : 0.15)
+            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: on)
+            .onAppear { on = true }
+            .accessibilityHidden(true)
     }
 }
 
@@ -921,6 +974,7 @@ private struct ChatComposerBar: View {
     private func send() {
         let message = trimmed
         guard !message.isEmpty else { return }
+        HapticEngine.light()
         onSend(message)
         text = ""
         isFocused = false

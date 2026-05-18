@@ -400,7 +400,7 @@ final class MemoryStore {
             do {
                 let descriptor = FetchDescriptor<CaptainMemory>(
                     predicate: #Predicate {
-                        $0.updatedAt < cutoff && $0.confidence < belowConfidence && $0.category != "active_record_project"
+                        $0.updatedAt < cutoff && $0.confidence < belowConfidence && $0.category != "active_record_project" && $0.category != "saved"
                     }
                 )
                 let stale = try context.fetch(descriptor)
@@ -420,7 +420,7 @@ final class MemoryStore {
             do {
                 let descriptor = FetchDescriptor<SemanticFact>(
                     predicate: #Predicate {
-                        $0.lastConfirmedAt < cutoff && $0.confidence < belowConfidence && $0.categoryRaw != "active_record_project"
+                        $0.lastConfirmedAt < cutoff && $0.confidence < belowConfidence && $0.categoryRaw != "active_record_project" && $0.categoryRaw != "saved"
                     }
                 )
                 let stale = try context.fetch(descriptor)
@@ -927,7 +927,7 @@ final class MemoryStore {
             do {
                 let memories = try context.fetch(FetchDescriptor<CaptainMemory>())
                 if let lowest = memories
-                    .filter({ $0.category != "active_record_project" })
+                    .filter({ $0.category != "active_record_project" && $0.category != "saved" })
                     .sorted(by: { $0.confidence < $1.confidence })
                     .first {
                     context.delete(lowest)
@@ -939,7 +939,7 @@ final class MemoryStore {
             do {
                 let facts = try context.fetch(FetchDescriptor<SemanticFact>())
                 if let lowest = facts
-                    .filter({ $0.categoryRaw != "active_record_project" })
+                    .filter({ $0.categoryRaw != "active_record_project" && $0.categoryRaw != "saved" })
                     .sorted(by: { $0.confidence < $1.confidence })
                     .first {
                     context.delete(lowest)

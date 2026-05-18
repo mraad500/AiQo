@@ -146,11 +146,16 @@ final class TierGate: @unchecked Sendable {
         }
     }
 
+    /// Hard storage ceiling that triggers lowest-confidence eviction. Kept
+    /// above the user-visible `memoryFactLimit` (100/500/1000) so the displayed
+    /// cap is comfortably reachable. Free is intentionally non-zero so the
+    /// user-requested "Saved Memories" + reminders persist for every tier
+    /// (product decision 2026-05-18).
     nonisolated var maxSemanticFacts: Int {
         switch currentTier.effectiveAccessTier {
         case .pro: return 1_200
-        case .max: return 500
-        default:   return 0
+        case .max: return 600
+        default:   return 120
         }
     }
 

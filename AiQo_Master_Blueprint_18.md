@@ -63,7 +63,8 @@
 > Subscribing (or starting Apple's StoreKit trial) unlocks everything immediately.
 > This is the App-Store-safer model ("be smarter than Apple and the user").
 > `SceneDelegate` no-auto-trial and the trial-journey re-anchor still stand.
-> rev-2 is **uncommitted** at time of writing (`d816d78` is the hard-wall version).
+> rev-2 shipped in commit `4450577` (supersedes the hard-wall `d816d78`); the
+> submission is **v1.0.5 / build 23**, simulator build green.
 
 ---
 
@@ -104,13 +105,13 @@ Cross-references use this convention: `Blueprint 17 §3.2.5` means "section 3.2.
 
 ## 1. Executive Summary
 
-AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Captain Hamoudi (الكابتن حمّودي)** — a culturally-rooted AI coach with on-device memory, dialect-aware language, and a wellbeing safety net. **AiQo v1.0.6 (build 22, product version `1.0.6`) is the release candidate on `release/v1.0.4-memory-v4` (HEAD `d816d78`, pushed). v1.0.5 (build 21) was submitted to review then withdrawn by the author after pre-approval issues; v1.0.6 is the clean resubmission.** It rolls up five shipped points since this document was first written:
+AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Captain Hamoudi (الكابتن حمّودي)** — a culturally-rooted AI coach with on-device memory, dialect-aware language, and a wellbeing safety net. **AiQo ships as v1.0.5 (build 23, product version `1.0.5`) — the resubmission candidate on `release/v1.0.4-memory-v4` (HEAD `4450577`, pushed). v1.0.5 build 21 was submitted to review then withdrawn pre-approval; the resubmission keeps the `1.0.5` string with build 23 (1.0.5 never went public — the live store is v1.0.2; build 23 > the withdrawn 21, satisfying Apple's higher-build rule).** It rolls up five shipped points since this document was first written:
 
 - **v1.0.2** — initial brain-refactor merge (§32–§36 from Blueprint 17: App-Knowledge layer, dynamic welcome, comparative workout analysis, Kitchen world-class upgrade, §35 14-layer cognitive brain refactor).
 - **v1.0.3** — privacy hardening + critical telemetry events.
 - **v1.0.4** — `MEMORY_V4_ENABLED` flipped globally, NotificationBrain fully wired, cleanup sprint.
 - **v1.0.5** — **Plan world-class surface restored to the release line** (PlanPalette + Workout Runner + Insights + Weekly Stats + Exercise Detail + Template Library + Intake Chips + Workout Cards + Flow Views), **multi-day workout plans** (new `WorkoutDay`, `days[]`, `durationWeeks` fields on `WorkoutPlan` + day-picker UI in the active card + day-scoped runner), and **optional body-photo personalization** routed through the same Gemini path as kitchen vision with a dedicated per-purpose consent (`BodyPhotoConsent` + bilingual gesture-locked sheet + Settings revoke surface). **Post-refresh (2026-05-17, §2A):** a **notification-system v1.0.5 redesign** (free-tier basic-life notifications via `TierGate.basicLifeNotifications`, an uncapped trial lane governed solely by `TrialJourneyOrchestrator`, a tier-scaled hard cap, quiet hours unified to 23:00–07:00), a **world-class Plan-intake redesign**, a Captain "always produce a `workoutPlan`" guarantee, kitchen/nutrition/profile/chat polish + art refresh, and a pinned-plan persistence triple-fix.
-- **v1.0.6** — **monetization hard-wall** (onboarding paywall now requires Apple's real card-required 7-day StoreKit trial; the auto no-card custom trial is no longer minted; existing active trials grandfathered) and **trial-journey notifications re-anchored** to the real Apple subscription start (`FreeTrialManager.captureStoreKitTrialStart`, called from `PurchaseManager`; `TrialJourneyOrchestrator` logic untouched). Version bumped 1.0.5/21 → 1.0.6/22 (1.0.5 was submitted then withdrawn pre-approval). Commit `d816d78`. Full account in §2A.
+- **v1.0.5 build 23 (resubmission)** — monetization was first **hard-walled** (`d816d78`) then **reversed** to the **live model** (`4450577`): the onboarding paywall is **skippable**; premium surfaces are gated **in-app** via `AccessManager`, mirroring the Captain `CaptainLockedView` pattern — **Captain / Kitchen / My Vibe / Battle → Max, Peaks → Pro**. Subscribing (or starting Apple's StoreKit free trial) unlocks everything immediately. The auto no-card trial is no longer minted; `FreeTrialManager.captureStoreKitTrialStart` re-anchors the 7-day trial-journey notifications to the real Apple subscription (`TrialJourneyOrchestrator` untouched). Same submission also carries the **`11_Directives`** learn/execute layer + Captain-memory expansion (see "read this fourth"). Full account in §2A.
 
 **Snapshot at the 2026-05-12 refresh:**
 
@@ -119,11 +120,11 @@ AiQo is an Arabic-first iOS health-and-coaching app whose differentiator is **Ca
 | iOS app source | **~600 Swift files**, ~120k LOC across the main target |
 | Test target | ~63 Swift test files |
 | Brain OS | **12** numbered subsystems (`00_Foundation` → `11_Directives`), ~137 Swift files (v1.0.5/23 added `11_Directives` — the learn/save/recall/execute layer) |
-| Active branch | `release/v1.0.4-memory-v4` (HEAD `d816d78` — v1.0.6 monetization hard-wall + trial-journey anchor, pushed; was `2df0a9a` at the 2026-05-17 update) |
-| Product version / build | **1.0.6 / 22** (v1.0.5 / 21 was submitted to review then withdrawn by the author pre-approval) |
-| Subscription tiers | Free (`.none`) · Max ($9.99) · Intelligence Pro ($19.99) · Trial ≡ Pro. **v1.0.6:** trial is Apple's card-required 7-day StoreKit introductory offer (the auto no-card custom trial is no longer minted); legacy active custom trials are grandfathered |
+| Active branch | `release/v1.0.4-memory-v4` (HEAD `4450577` — monetization rev-2: skippable paywall + in-app Max/Pro feature gates, pushed; hard-wall `d816d78` superseded) |
+| Product version / build | **1.0.5 / 23** (v1.0.5 / 21 was submitted then withdrawn pre-approval; resubmitting the same version string with a higher build — 1.0.5 never went public) |
+| Subscription tiers | Free (`.none`) · Max ($9.99) · Intelligence Pro ($19.99) · Trial ≡ Pro. **Live model:** onboarding paywall is **skippable**; premium surfaces gated in-app — Captain / Kitchen / My Vibe / Battle → Max, Peaks → Pro; trial = Apple's card-required 7-day StoreKit intro offer (no auto no-card trial); subscribing/trial unlocks everything |
 | Cloud surface | Gemini 2.5-flash (free) / 3-flash-preview (Pro) — chat + kitchen vision + **plan-body vision (v1.0.5)** + extraction + verification; MiniMax (TTS); Supabase (proxy + auth + leaderboard) |
-| App Store status | **v1.0.2 (build 19) live publicly; v1.0.3/1.0.4 were release-line engineering cuts, not public releases; v1.0.5 build 21 was submitted then withdrawn pre-approval; v1.0.6 build 22 (HEAD `d816d78`) is the clean resubmission — Debug simulator build green, pending App Store Connect intro-offer setup before archive** |
+| App Store status | **v1.0.2 (build 19) live publicly; v1.0.3/1.0.4 were release-line engineering cuts, not public releases; v1.0.5 build 21 was submitted then withdrawn pre-approval; v1.0.5 build 23 (HEAD `4450577`) is the resubmission — simulator build green, pending App Store Connect (build 23 + Introductory Offer = Free/1wk on both subs) before archive** |
 | Per-purpose consent surfaces | `AIDataConsentManager` (cloud AI) · `CaptainVoiceConsent` (MiniMax TTS) · **`BodyPhotoConsent` (Plan vision, new in v1.0.5)** |
 | Live region | UAE launch (American University of the Emirates partnership), Saudi + Iraq + Gulf-other support shipping |
 
@@ -229,6 +230,13 @@ Supporting changes in the same commit: `CaptainIdentity.emojiAllowedKinds` exten
 
 ### v1.0.6 — hard-wall Apple trial + clean resubmission (2026-05-17 — HEAD `d816d78`)
 
+> **SUPERSEDED (rev-2, commit `4450577`).** Thread 8's pure hard wall was **reversed** —
+> the onboarding paywall is skippable; premium surfaces are gated in-app
+> (Captain / Kitchen / My Vibe / Battle → Max, Peaks → Pro). Threads 9 & 10
+> (trial-journey re-anchor, dynamic welcome) still stand. The submission is
+> **v1.0.5 / build 23**, not 1.0.6 / 22. This subsection is kept as the
+> commit-anchored record of `d816d78`; the live model is **"v1.0.5 rev-2"** below.
+
 v1.0.5 (build 21) was **submitted to App Store review and then withdrawn by the author** after pre-approval issues were found. Rather than ship a known-flawed binary, the release was re-cut clean as **v1.0.6 (build 22)**. Two product threads landed on top of `2df0a9a`; everything is in one commit, `d816d78`, pushed to `origin/release/v1.0.4-memory-v4`. A clean **Debug** simulator build (`AiQo` scheme, `CODE_SIGNING_ALLOWED=NO`) is green (`** BUILD SUCCEEDED **`) at the tip — this confirms the SourceKit "cannot find in scope" diagnostics seen mid-edit in a headless environment are false positives (unresolved SPM index), not real errors.
 
 **Thread 8 — Monetization: hard-wall Apple trial + grandfathering.** The trial economics were rebuilt for paid user-acquisition. *Before:* onboarding auto-started a 7-day **no-card custom trial** (`FreeTrialManager`, Keychain/UserDefaults) and the paywall carried a "تخطي" (Skip) chip, so the dominant path was a card-free trial with a day-8 wall — the lowest-converting model and a money-loser under paid ads. *After:*
@@ -255,6 +263,22 @@ The opener was then upgraded per author request to be **genuinely time-aware and
 **Version + bundled work.** `MARKETING_VERSION` 1.0.5 → 1.0.6 and `CURRENT_PROJECT_VERSION` 21 → 22 across every build config in `project.pbxproj` (Apple requires a build number higher than the withdrawn 1.0.5/21). A stale duplicate kitchen imageset — a malformed non-ASCII folder name duplicating ~4.6 MB — was removed and the kitchen art refreshed (old PNG deleted, new PNG in the correctly-named imageset). Commit `d816d78` also bundles in-progress work from parallel sessions. The `DynamicWelcomeComposer` / `CaptainMetricsCounter` / `CaptainViewModel` welcome work is now fully documented in **Thread 10** above. The remainder — `NotificationBrain`, `StreakManager`, `EntitlementStore`, `MainTabScreen`, purchase tests, blueprint — is **not individually documented here** (authored outside this thread); it compiles clean in the same green build and should be back-filled into a future blueprint by whoever authored it.
 
 **Still pending — App Store Connect only (no code left).** Create an **Introductory Offer = Free / 1 week** on both subscriptions (`com.mraad5000.aiqo.max`, `com.mraad500.aiqo.Intelligence.pro`); IAPs "Ready to Submit" attached to build 22; Paid Apps Agreement active; an App Review note that the free trial is reachable via the StoreKit sandbox. **Without the intro offer the hard wall has no free entry and review rejection is near-certain.**
+
+---
+
+### v1.0.5 rev-2 — hard wall reversed to skippable paywall + in-app feature gates (2026-05-17 — HEAD `4450577`)
+
+The pure hard wall (Thread 8) was **reversed** by author decision the same day — *"نصير اذكى من ابل ومن المستخدم"* (be smarter than Apple *and* the user): a wall that blocks all functionality pre-purchase is the biggest App Store **3.1.1** rejection magnet, and a resubmission about to carry ad spend cannot afford a rejection round-trip. The live model (commit `4450577`, pushed) is the softer option that had been on the table:
+
+- **Onboarding paywall is skippable again.** `SubscriptionIntroView`'s "تخطي" Skip chip is restored to **always** show (the `if FreeTrialManager.isTrialActive` wrapper removed). Anyone can skip and enter free as `.none`.
+- **Premium surfaces gated in-app**, reusing the Captain `CaptainLockedView` card + a `PaywallView` sheet, on `AccessManager`:
+  - **Max** — Captain (already), **Kitchen** (`HomeKitchenRootView`, [HomeView.swift](AiQo/Features/Home/HomeView.swift)), **My Vibe** (`VibeControlSheet` — the live surface; `MyVibeScreen` is dead/unwired), **Battle/معركة** (`ClubRootView.selectedContentView` `.battle`).
+  - **Pro** — **Peaks/قِمَم** (`ClubRootView.selectedContentView` `.peaks`).
+- New `PaywallSource` cases `kitchenGate` / `myVibeGate` / `battleGate` / `peaksGate`. Gated hosts observe `EntitlementStore.shared` so a successful purchase or trial start re-renders and unlocks everything immediately (`AccessManager.activeTier` ≥ `.max`; trial ≡ `.pro`).
+- **Carried over from the hard-wall work (still correct):** `SceneDelegate` no longer auto-mints a no-card trial; the `FreeTrialManager.captureStoreKitTrialStart` trial-journey re-anchor (Thread 9); `TrialJourneyOrchestrator` untouched.
+- **Version:** resubmission keeps `MARKETING_VERSION = 1.0.5`, `CURRENT_PROJECT_VERSION = 23` (set by the parallel `11_Directives` cut, confirmed by the author) — build 23 > the withdrawn 21, 1.0.5 never went public. `4450577` also bundles parallel-session UI work (WorkoutCategoriesView, SegmentedTabs, ImpactContainerView, PlanView, ProfileScreen*). Clean Debug simulator build green (`** BUILD SUCCEEDED **`).
+
+**Still pending — App Store Connect only:** Introductory Offer = Free / 1 week on both subs, IAPs Ready-to-Submit on **build 23**, Paid Apps Agreement. The hard-wall "no free entry" rejection risk no longer applies — the app is usable free; the trial/subscription is the in-app unlock path.
 
 ---
 
@@ -747,7 +771,7 @@ Strategic items from Blueprint 17 §15 + §17 worth re-flagging:
 - **Do not** modify files in `AiQo/Features/Gym/Club/Plan/` or `AiQo/Features/Captain/Brain/04_Inference/PromptComposer.swift` without reading the §32 / §36 timeline in Blueprint 17 — these have active in-flight work in the brain-refactor branch.
 - **Do not** use `git add -A` or `git add .` from the root after this hygiene pass without reviewing the staged renames first — git will detect the docs/ moves as renames but you should verify before committing.
 - **Do not** commit `Configuration/Secrets.xcconfig`. It is gitignored. If you ever accidentally stage it, treat it as a key-rotation event.
-- **Do not** re-introduce an auto-started no-card trial (the removed `FreeTrialManager.startTrialIfNeeded()` call at onboarding). The v1.0.6 model is: trial = Apple's card-required StoreKit intro offer only; the onboarding paywall is a hard gate; legacy active trials are grandfathered via `FreeTrialManager.isTrialActiveSnapshot`. See §2A Thread 8.
+- **Do not** re-introduce an auto-started no-card trial (the removed `FreeTrialManager.startTrialIfNeeded()` call at onboarding), **and do not re-introduce the onboarding hard wall** — rev-2 reversed it. The live model: the onboarding paywall is **skippable**; premium surfaces are gated **in-app** — Captain / Kitchen / My Vibe / Battle → Max, Peaks → Pro — via `AccessManager` + the Captain `CaptainLockedView` card; subscribing or starting Apple's StoreKit trial unlocks everything. See §2A "v1.0.5 rev-2".
 - **Do not** stage `.claude/` (e.g. `.claude/scheduled_tasks.lock`) into an app commit — it is local Claude Code workspace data, not app source. Scope `git add` to `AiQo AiQoTests AiQo.xcodeproj AiQo_Master_Blueprint_18.md`.
 
 ### 7.3 Runbooks
@@ -824,14 +848,15 @@ The *engineering* half of that bar is the §6 P0 items. Until §4.1.1 lands, the
 
 ## 8. Footer
 
-**Author:** Mohammed Raad (mraad500), with the 2026-05-10 hygiene pass; refreshed 2026-05-12 for v1.0.5; post-refresh hardening update 2026-05-17 (§2A); v1.0.6 monetization hard-wall + trial-journey re-anchor update 2026-05-17 (§2A "v1.0.6").
-**Originally generated:** 2026-05-10. **Refreshed:** 2026-05-12. **Updated:** 2026-05-17 (twice — post-refresh hardening, then v1.0.6 resubmission).
+**Author:** Mohammed Raad (mraad500), with the 2026-05-10 hygiene pass; refreshed 2026-05-12 for v1.0.5; post-refresh hardening 2026-05-17 (§2A); monetization hard-wall then **rev-2 reversal to a skippable paywall + in-app Max/Pro feature gates** 2026-05-17 (§2A "v1.0.5 rev-2"); ships as **v1.0.5 / build 23**.
+**Originally generated:** 2026-05-10. **Refreshed:** 2026-05-12. **Updated:** 2026-05-17 (post-refresh hardening → hard-wall v1.0.6 → rev-2 reversal; resubmitting as v1.0.5 build 23).
 **Repo HEAD at original generation:** `39ca529` (`fix(captain-brain): mark HRMoodReading.unknown nonisolated`).
 **Repo HEAD at v1.0.5 refresh:** `ab6885e` (`fix(captain): force workoutPlan in gym + allow constructive body-photo feedback`).
 **Repo HEAD at 2026-05-17 post-refresh update:** `2df0a9a` (`fix(plan): restore the pinned plan into the Plan tab on relaunch`).
-**Repo HEAD at 2026-05-17 v1.0.6 update:** `d816d78` (`feat(paywall): hard-wall Apple trial + trial-journey fix; v1.0.6 b22`), pushed to `origin/release/v1.0.4-memory-v4`.
-**Active branch:** `release/v1.0.4-memory-v4` (now the v1.0.6 release candidate; branch name is legacy from the v1.0.4 memory cut).
+**Repo HEAD at 2026-05-17 v1.0.6 hard-wall update:** `d816d78` (`feat(paywall): hard-wall Apple trial + trial-journey fix; v1.0.6 b22`) — **superseded by rev-2**.
+**Repo HEAD at 2026-05-17 rev-2 (current):** `4450577` (`feat(paywall): reverse hard wall → skippable + in-app Max/Pro feature gates`), pushed to `origin/release/v1.0.4-memory-v4`.
+**Active branch:** `release/v1.0.4-memory-v4` (now the **v1.0.5 / build 23** resubmission candidate; branch name is legacy from the v1.0.4 memory cut).
 **Supersedes:** Blueprint 17 for forward guidance only. Blueprint 17 remains the canonical historical reference for the §1–§36 batch chronology and the deep-reference text for the eleven Brain subsystems.
-**Status:** ready to read; v1.0.6 / build 22 committed + pushed at `d816d78`, clean Debug simulator build green. **Blocked on App Store Connect only:** Introductory Offer = Free / 1 week on both subs + IAPs Ready-to-Submit on build 22 + Paid Apps Agreement, then archive + upload. Public App Store is still at v1.0.2 (build 19); v1.0.5/21 was withdrawn pre-approval. Next blueprint cut should follow the v1.1 release.
+**Status:** ready to read; **v1.0.5 / build 23** committed + pushed at `4450577` (rev-2: skippable paywall + in-app Max/Pro feature gates; hard-wall `d816d78` superseded), clean Debug simulator build green. **Blocked on App Store Connect only:** Introductory Offer = Free / 1 week on both subs + IAPs Ready-to-Submit on **build 23** + Paid Apps Agreement, then archive + upload. Public App Store is still at v1.0.2 (build 19); v1.0.5/21 was withdrawn pre-approval. Next blueprint cut should follow the v1.1 release.
 
 — *الكابتن حمّودي بانتظار الترقية القادمة.*
