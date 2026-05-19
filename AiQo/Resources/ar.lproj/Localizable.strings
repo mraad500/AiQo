@@ -2705,7 +2705,6 @@
 "gym.plan.pinSuccess" = "تم تثبيت الخطة بنجاح ورح تنعرض بالجدول اليومي.";
 "gym.plan.pinConfirm" = "تمام بطل، ثبتتلك خطة %@ بالجدول اليومي.";
 "gym.plan.pinError" = "تعذر تثبيت الخطة حالياً. حاول مرة ثانية.";
-"gym.plan.kickoff" = "حتى أبني خطة تمرين شخصية، اكتب وزنك الحالي وهدفك مثل: 95 كيلو وتنشيف.";
 "gym.plan.preview" = "Preview";
 "gym.plan.setsFormat" = "%d جولات";
 "gym.plan.taskFormat" = "%@ - %d جولات - %@";

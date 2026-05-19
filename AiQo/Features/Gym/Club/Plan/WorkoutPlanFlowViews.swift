@@ -544,7 +544,6 @@ struct CaptainPlanChatView: View {
     private let chatBottomID = "captain-plan-chat-bottom"
     private var language: AppLanguage { AppSettingsStore.shared.appLanguage }
     private var isArabic: Bool { language == .arabic }
-    private var hasUserMessages: Bool { globalBrain.messages.contains(where: \.isUser) }
 
     var body: some View {
         ZStack {
@@ -570,9 +569,6 @@ struct CaptainPlanChatView: View {
                     .background(Color.clear)
             }
         }
-        .task {
-            bootstrapPlanChatIfNeeded()
-        }
         .sheet(item: $detailExercise) { exercise in
             ExerciseDetailSheet(exercise: exercise, language: language)
                 .presentationDetents([.medium, .large])
@@ -586,9 +582,10 @@ struct CaptainPlanChatView: View {
     }
 
     private var showIntakeChips: Bool {
-        // Root-cause fix: gate on PLAN-scoped engagement, not the global
-        // shared Captain conversation. (Was `!hasUserMessages`, which made the
-        // organized intake disappear forever after any Captain chat anywhere.)
+        // Gate on PLAN-scoped engagement only — never on the Captain
+        // conversation. The organized intake must always show on a fresh
+        // plan entry (this subtree runs its own scoped Captain via
+        // PlanConversationScope; see #18).
         !planFlowEngaged
             && globalBrain.currentWorkoutPlan == nil
             && !globalBrain.isLoading
@@ -1029,19 +1026,6 @@ struct CaptainPlanChatView: View {
 
     private var trimmedInput: String {
         globalBrain.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func bootstrapPlanChatIfNeeded() {
-        guard globalBrain.currentWorkoutPlan == nil else { return }
-        guard !globalBrain.isLoading else { return }
-
-        let kickoffPrompt = L10n.t("gym.plan.kickoff")
-        guard !globalBrain.messages.contains(where: { $0.text == kickoffPrompt }) else { return }
-        guard !hasUserMessages else { return }
-
-        globalBrain.messages.append(
-            ChatMessage(text: kickoffPrompt, isUser: false)
-        )
     }
 }
 

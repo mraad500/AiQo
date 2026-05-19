@@ -2706,7 +2706,6 @@
 "gym.plan.pinSuccess" = "Plan pinned successfully and will show in the daily schedule.";
 "gym.plan.pinConfirm" = "Done champ, I pinned %@ to the daily schedule.";
 "gym.plan.pinError" = "Could not pin the plan right now. Try again.";
-"gym.plan.kickoff" = "To build a personalized workout plan, write your current weight and goal like: 95 kg and cutting.";
 "gym.plan.preview" = "Preview";
 "gym.plan.setsFormat" = "%d sets";
 "gym.plan.taskFormat" = "%@ - %d sets - %@";
