@@ -169,6 +169,10 @@ public actor NotificationBrain {
         content.body = scrubbedBody
         content.sound = .default
         content.categoryIdentifier = category
+        // Group every Captain notification into one thread so they collapse
+        // into a single tidy stack on the lock screen instead of N loose
+        // banners — the "beautiful" axis, zero decision-logic change.
+        content.threadIdentifier = "aiqo.captain"
         if !userInfo.isEmpty {
             content.userInfo = userInfo
         }
