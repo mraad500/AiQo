@@ -2770,10 +2770,6 @@
 "gym.session.status.saving" = "جاري الحفظ...";
 "gym.session.error.connectWatch" = "وصّل Apple Watch حتى تبدأ هذا التمرين.";
 
-/* ─── Gym: Heart View ─── */
-"gym.heart.title" = "مراقب ضربات القلب";
-"gym.heart.comingSoon" = "قريباً";
-
 /* ─── Gym: Rewards ─── */
 "gym.rewards.title" = "المكافآت";
 "gym.rewards.subtitle" = "افتح المكافآت بالاستمرارية";

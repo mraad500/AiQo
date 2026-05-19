@@ -2771,10 +2771,6 @@
 "gym.session.status.saving" = "Saving...";
 "gym.session.error.connectWatch" = "Connect your Apple Watch to start this workout.";
 
-/* ─── Gym: Heart View ─── */
-"gym.heart.title" = "Heart Rate Monitor";
-"gym.heart.comingSoon" = "Coming Soon";
-
 /* ─── Gym: Rewards ─── */
 "gym.rewards.title" = "Rewards";
 "gym.rewards.subtitle" = "Unlock rewards by staying consistent";
