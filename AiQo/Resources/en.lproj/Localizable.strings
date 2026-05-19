@@ -262,6 +262,9 @@
 "kitchen.mealplan.generateButton" = "Generate plan with Captain Hamoudi";
 "kitchen.mealplan.pinned" = "Pinned Plan";
 "kitchen.mealplan.empty" = "No pinned plan yet.";
+"kitchen.mealplan.fallback.title" = "Temporary backup plan";
+"kitchen.mealplan.fallback.message" = "Couldn't reach the smart chef. This is a basic backup — try again.";
+"kitchen.mealplan.fallback.retry" = "Try again";
 "kitchen.mealplan.day" = "Day";
 "kitchen.mealplan.noMealsDay" = "No meals for this day.";
 "kitchen.mealplan.protein" = "Protein";

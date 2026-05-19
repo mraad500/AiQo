@@ -74,12 +74,63 @@ private extension MealPlanView {
         .disabled(isGenerating)
     }
 
+    var fallbackBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "wifi.exclamationmark")
+                    .foregroundStyle(.orange)
+                Text("kitchen.mealplan.fallback.title".localized)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+            Text("kitchen.mealplan.fallback.message".localized)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                generatePlan()
+            } label: {
+                HStack(spacing: 6) {
+                    if isGenerating {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text("kitchen.mealplan.fallback.retry".localized)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.kitchenMint)
+                )
+            }
+            .contentShape(Rectangle())
+            .disabled(isGenerating)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     var pinnedPlanSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("kitchen.mealplan.pinned".localized)
                 .font(.system(size: 20, weight: .heavy, design: .rounded))
 
             if let plan = kitchenStore.pinnedPlan {
+                if plan.isFallback == true {
+                    fallbackBanner
+                }
                 ForEach(1...plan.days, id: \.self) { day in
                     daySection(day: day, plan: plan)
                 }

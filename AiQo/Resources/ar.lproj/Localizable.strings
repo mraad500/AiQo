@@ -264,6 +264,9 @@
 "kitchen.mealplan.generateButton" = "ولّد الخطة مع كابتن حمّودي";
 "kitchen.mealplan.pinned" = "الخطة المثبّتة";
 "kitchen.mealplan.empty" = "ماكو خطة مثبتة حالياً.";
+"kitchen.mealplan.fallback.title" = "خطة احتياطية مؤقتة";
+"kitchen.mealplan.fallback.message" = "ما گدرنا نوصل للشيف الذكي. هاي خطة أساسية مؤقتة — جرّب مرة لخ.";
+"kitchen.mealplan.fallback.retry" = "حاول مرة ثانية";
 "kitchen.mealplan.day" = "اليوم";
 "kitchen.mealplan.noMealsDay" = "ماكو وجبات مسجلة لهذا اليوم.";
 "kitchen.mealplan.protein" = "بروتين";
