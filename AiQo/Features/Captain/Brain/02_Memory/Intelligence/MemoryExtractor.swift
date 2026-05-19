@@ -136,6 +136,34 @@ struct MemoryExtractor: Sendable {
             }
         }
 
+        // تفضيل / كره — رول-بيسد حتى الكابتن يتذكّر "ما أحب الجري" فوراً
+        // ولكل تير (قبل هذا كان يعتمد على استخراج LLM كل 3 رسائل + بوابة تير).
+        // category "preference" أصلاً موزون قوي بالاسترجاع (workout=3.8 إلخ).
+        if let match = text.range(
+            of: #"(ما\s*أحب|ما\s*احب|ماحب|ما\s*يعجبني|ما\s*اطيق|ما\s*ودي|أكره|اكره|أمل\s*من|مالي\s*خلق)\s*.{0,25}"#,
+            options: .regularExpression
+        ) {
+            store.set("dislike", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(?:i\s*hate|i\s*don'?t\s*like|i\s*dislike|i\s*can'?t\s*stand)\s+\w+(?:\s+\w+){0,3}"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            store.set("dislike", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(أحب|احب|يعجبني|أفضّل|افضّل|افضل|أفضل)\s*.{0,25}(تمرين|تمارين|رياضة|جري|مشي|سباحة|حديد|يوغا|كارديو|دراجة|أكل|طعام|وجبات|دجاج|سمك|رز)"#,
+            options: .regularExpression
+        ) {
+            store.set("preference_like", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(?:i\s*love|i\s*really\s*like|i\s*prefer|i\s*enjoy)\s+\w+(?:\s+\w+){0,3}"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            store.set("preference_like", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+
         // نوم
         if let match = text.range(of: #"(\d{1,2})\s*(ساعة|ساعات)\s*(نوم)?"#, options: .regularExpression) {
             let numberRange = text[match].range(of: #"\d{1,2}"#, options: .regularExpression)
