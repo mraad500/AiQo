@@ -2,9 +2,9 @@ name: Swift
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "release/**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "release/**" ]
 
 jobs:
   build:
@@ -30,12 +30,25 @@ jobs:
     - name: Select Xcode
       run: sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
 
-    - name: Build
+    - name: Build for testing
       run: |
-        xcodebuild build \
+        set -o pipefail
+        xcodebuild build-for-testing \
           -project AiQo.xcodeproj \
           -scheme AiQo \
           -destination 'platform=iOS Simulator,name=iPhone 16' \
           -skipPackagePluginValidation \
           CODE_SIGNING_ALLOWED=NO \
-          | tail -20
+          | tail -40
+
+    - name: Test
+      run: |
+        set -o pipefail
+        xcodebuild test-without-building \
+          -project AiQo.xcodeproj \
+          -scheme AiQo \
+          -destination 'platform=iOS Simulator,name=iPhone 16' \
+          -only-testing:AiQoTests \
+          -skipPackagePluginValidation \
+          CODE_SIGNING_ALLOWED=NO \
+          | tail -60
