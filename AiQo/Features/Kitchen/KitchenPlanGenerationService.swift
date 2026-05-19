@@ -64,8 +64,20 @@ struct KitchenPlanGenerationService {
                ) {
                 return mapped
             }
+
+            // Reply arrived but neither path produced a usable plan — a silent
+            // degradation the user would otherwise never see. Record it.
+            await CrashReportingService.shared.record(
+                message: "Kitchen plan: AI reply unparseable; using offline fallback",
+                context: "kitchen_plan_unparsed"
+            )
         } catch {
-            // Fall back to deterministic local generation.
+            // AI generation failed — record it (flows to Crashlytics via the
+            // CrashReporter bridge) instead of failing silently.
+            await CrashReportingService.shared.record(
+                error,
+                context: "kitchen_plan_generation_failed"
+            )
         }
 
         return deterministicFallbackPlan(
@@ -284,7 +296,9 @@ struct KitchenPlanGenerationService {
             }
         }
 
-        return KitchenMealPlan(startDate: Date(), days: days, meals: meals)
+        // Marked so the UI can transparently tell the user this is the
+        // offline fallback (AI failed/unparseable), not a real AI plan.
+        return KitchenMealPlan(startDate: Date(), days: days, meals: meals, isFallback: true)
     }
 
     private func fallbackTemplate(

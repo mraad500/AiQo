@@ -204,12 +204,23 @@ struct KitchenMealPlan: Identifiable, Codable, Equatable {
     var startDate: Date
     var days: Int
     var meals: [KitchenPlannedMeal]
+    /// True when this plan is the offline deterministic fallback (the AI call
+    /// failed or returned an unparseable reply) rather than a real AI plan.
+    /// Optional so old persisted plans (no key) decode safely as `nil`.
+    var isFallback: Bool?
 
-    init(id: UUID = UUID(), startDate: Date = Date(), days: Int, meals: [KitchenPlannedMeal]) {
+    init(
+        id: UUID = UUID(),
+        startDate: Date = Date(),
+        days: Int,
+        meals: [KitchenPlannedMeal],
+        isFallback: Bool? = nil
+    ) {
         self.id = id
         self.startDate = startDate
         self.days = days
         self.meals = meals
+        self.isFallback = isFallback
     }
 }
 
