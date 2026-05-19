@@ -20,6 +20,7 @@ struct PromptComposer: Sendable {
             layerIdentity(language: request.language, firstName: firstName, screenContext: request.screenContext),
             layerStableProfile(profileSummary: request.userProfileSummary),
             layerWorkingMemory(
+                language: request.language,
                 workingMemorySummary: request.workingMemorySummary,
                 intentSummary: request.intentSummary,
                 recentInteractions: request.contextData.recentInteractions
@@ -235,6 +236,7 @@ struct PromptComposer: Sendable {
     // MARK: - Layer 3: Working Memory
 
     private func layerWorkingMemory(
+        language: AppLanguage,
         workingMemorySummary: String,
         intentSummary: String,
         recentInteractions: String?
@@ -265,10 +267,23 @@ struct PromptComposer: Sendable {
             )
         }
 
-        // Brain V2: Recent interaction timeline
-        let interactions = recentInteractions ?? "لا توجد تفاعلات سابقة"
+        // Brain V2: Recent interaction timeline. Language-branched: feeding
+        // hardcoded Arabic into an English prompt directly contradicts the
+        // "No Arabic — overrides all other instructions" lock and degrades
+        // instruction-following + continuity for the entire English cohort.
+        let isEnglish = language == .english
+        let interactions = recentInteractions
+            ?? (isEnglish ? "No previous interactions" : "لا توجد تفاعلات سابقة")
         sections.append(
+            isEnglish
+            ? """
+            --- Recent interactions ---
+            \(interactions)
+            ---
+            If the user opened a notification before messaging you, tie your reply to that notification's topic. Don't ignore the context.
+            If you sent a notification and it wasn't opened, don't repeat the same topic.
             """
+            : """
             --- آخر التفاعلات ---
             \(interactions)
             ---
