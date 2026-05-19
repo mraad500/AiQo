@@ -64,10 +64,59 @@ final class QuestPersistenceController: PlayerStatsSyncing {
         do {
             container = try ModelContainer(for: schema, configurations: configuration)
         } catch {
-            fatalError("Failed to initialize Quest & Loot SwiftData container: \(error)")
+            // This container backs the ENTIRE @Environment(\.modelContext)
+            // subtree (see the comment above). A corrupt on-disk store
+            // (interrupted write, disk pressure, schema drift) must NEVER
+            // hard-crash the app on launch — recover instead of fatalError.
+            CrashReporter.shared.recordError(error, context: "quest_container_init_failed")
+
+            if !inMemory, let rebuilt = Self.rebuildCorruptStore(schema: schema) {
+                // Deleted the corrupt store + recreated it on disk: the app
+                // launches and persistence keeps working going forward
+                // (only local quest/loot + records were reset, not the account).
+                container = rebuilt
+            } else if let memory = try? ModelContainer(
+                for: schema,
+                configurations: ModelConfiguration(
+                    "QuestLootEngine", schema: schema, isStoredInMemoryOnly: true
+                )
+            ) {
+                // Last resort: run this session in memory so the app is fully
+                // usable instead of crash-looping. Persistence resumes next
+                // launch once the rebuilt store is healthy.
+                CrashReporter.shared.recordError(
+                    error, context: "quest_container_in_memory_fallback"
+                )
+                container = memory
+            } else {
+                // Truly impossible (SwiftData itself broken on this device).
+                // Keep a controlled, REPORTED failure — never a silent hang.
+                CrashReporter.shared.recordError(
+                    error, context: "quest_container_unrecoverable"
+                )
+                preconditionFailure(
+                    "Quest & Loot container unrecoverable: \(error)"
+                )
+            }
         }
 
         bootstrapIfNeeded()
+    }
+
+    /// Crash-safe launch recovery: deletes a corrupt on-disk "QuestLootEngine"
+    /// SwiftData store (and its `-wal`/`-shm` SQLite sidecars) and recreates an
+    /// empty one. Returns the fresh container, or `nil` if recreation still
+    /// fails. Used only from `init`'s catch path — never on the happy path.
+    private static func rebuildCorruptStore(schema: Schema) -> ModelContainer? {
+        let storeURL = ModelConfiguration("QuestLootEngine", schema: schema).url
+        let fm = FileManager.default
+        for path in [storeURL.path, storeURL.path + "-wal", storeURL.path + "-shm"] {
+            try? fm.removeItem(at: URL(fileURLWithPath: path))
+        }
+        return try? ModelContainer(
+            for: schema,
+            configurations: ModelConfiguration("QuestLootEngine", schema: schema)
+        )
     }
 
     func installQuestPersistence(into engine: QuestEngine? = nil) {

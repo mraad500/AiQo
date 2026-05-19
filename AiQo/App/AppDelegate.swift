@@ -149,7 +149,20 @@ struct AiQoApp: App {
             let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             return try ModelContainer(for: schema, configurations: [memoryConfig])
         } catch {
-            fatalError("Failed to create even an in-memory ModelContainer: \(error)")
+            // Even an in-memory container failed — effectively "SwiftData is
+            // broken on this device". This last resort previously had NO
+            // telemetry (unlike the V3 path) and a bare fatalError. Record it,
+            // retry once with an isolated config, then keep a controlled,
+            // REPORTED failure rather than a silent crash.
+            CrashReporter.shared.recordError(error, context: "captain_in_memory_container_failed")
+            if let retry = try? ModelContainer(
+                for: schema,
+                configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]
+            ) {
+                return retry
+            }
+            CrashReporter.shared.recordError(error, context: "captain_container_unrecoverable")
+            preconditionFailure("Captain memory container unrecoverable even in-memory: \(error)")
         }
     }
 
