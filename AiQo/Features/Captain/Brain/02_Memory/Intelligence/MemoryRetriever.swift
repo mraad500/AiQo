@@ -103,7 +103,17 @@ actor MemoryRetriever {
                 + recencyBoost * 0.05
             scored.append((fact, score))
         }
-        return scored.sorted { $0.score > $1.score }.prefix(limit).map { $0.snapshot }
+        let selected = scored.sorted { $0.score > $1.score }.prefix(limit).map { $0.snapshot }
+
+        // Mark the chosen facts referenced so `lastReferencedAt` reflects
+        // real use. Previously `markReferenced` had NO production caller, so a
+        // fact recalled every day looked identically "never used" to one
+        // never recalled — breaking re-surfacing / stale-pruning logic.
+        // Fire-and-forget so this bookkeeping never adds latency to the reply.
+        let chosenIDs = selected.map(\.id)
+        Task { for id in chosenIDs { await SemanticStore.shared.markReferenced(id) } }
+
+        return selected
     }
 
     private func fetchEpisodes(
