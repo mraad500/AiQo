@@ -1,8 +1,12 @@
 import Foundation
 
 // AiQo Brain OS — 00_Foundation
-// Status: SCAFFOLDING (P1.1)
-// TODO(P3+): implement pub/sub for cross-component signals.
+// Status: IMPLEMENTED & LOAD-BEARING (not scaffolding). Minimal in-memory
+// pub/sub for decoupled cross-component signals. Live consumer:
+// BrainBusObserver, subscribed exactly once at AppDelegate launch, which
+// wires the 11_Directives lifecycle (directiveLearned / directiveFired /
+// workoutCompleted) into Observability + CaptainMetricsCounter — i.e. the
+// "teach Captain standing instructions" feature depends on this working.
 
 public actor BrainBus {
     public static let shared = BrainBus()
