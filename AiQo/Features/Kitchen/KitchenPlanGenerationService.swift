@@ -67,14 +67,14 @@ struct KitchenPlanGenerationService {
 
             // Reply arrived but neither path produced a usable plan — a silent
             // degradation the user would otherwise never see. Record it.
-            await CrashReportingService.shared.record(
+            CrashReportingService.shared.record(
                 message: "Kitchen plan: AI reply unparseable; using offline fallback",
                 context: "kitchen_plan_unparsed"
             )
         } catch {
             // AI generation failed — record it (flows to Crashlytics via the
             // CrashReporter bridge) instead of failing silently.
-            await CrashReportingService.shared.record(
+            CrashReportingService.shared.record(
                 error,
                 context: "kitchen_plan_generation_failed"
             )
