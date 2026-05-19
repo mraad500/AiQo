@@ -531,6 +531,14 @@ struct CaptainPlanChatView: View {
     @State private var intakeSelection = PlanIntakeSelection()
     @State private var detailExercise: Exercise?
     @State private var showBodyPhotoConsent = false
+    /// Plan-creation engagement is PLAN-SCOPED, not global. `globalBrain` is
+    /// the app-wide shared CaptainViewModel, so keying the intake form off its
+    /// global message history meant: the moment the user chatted with Captain
+    /// anywhere, the organized Plan intake vanished forever and Plan opened the
+    /// shared Captain conversation instead. This flag flips only when the user
+    /// actually engages the PLAN flow (submit chips / send a plan message), so
+    /// the intake reliably shows on entry regardless of unrelated Captain chat.
+    @State private var planFlowEngaged = false
     @FocusState private var inputFieldFocused: Bool
 
     private let chatBottomID = "captain-plan-chat-bottom"
@@ -578,7 +586,10 @@ struct CaptainPlanChatView: View {
     }
 
     private var showIntakeChips: Bool {
-        !hasUserMessages
+        // Root-cause fix: gate on PLAN-scoped engagement, not the global
+        // shared Captain conversation. (Was `!hasUserMessages`, which made the
+        // organized intake disappear forever after any Captain chat anywhere.)
+        !planFlowEngaged
             && globalBrain.currentWorkoutPlan == nil
             && !globalBrain.isLoading
     }
@@ -950,6 +961,7 @@ struct CaptainPlanChatView: View {
         let composed = intakeSelection.composedMessage(language: language)
         showSuccessState = false
         errorMessage = nil
+        planFlowEngaged = true
 
         // The image is consumed once — clear it from the intake state to
         // avoid re-sending on a refinement message.
@@ -962,6 +974,7 @@ struct CaptainPlanChatView: View {
     private func sendRefinement(_ text: String) {
         showSuccessState = false
         errorMessage = nil
+        planFlowEngaged = true
         globalBrain.sendMessage(text, context: .gym)
     }
 
@@ -970,6 +983,7 @@ struct CaptainPlanChatView: View {
         guard !message.isEmpty else { return }
         showSuccessState = false
         errorMessage = nil
+        planFlowEngaged = true
         globalBrain.sendMessage(message, context: .gym)
     }
 
