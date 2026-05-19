@@ -115,6 +115,24 @@ enum AppKnowledge {
             keywords: ["privacy", "خصوصية", "بياناتي", "بيانات", "أمان", "consent", "موافقة", "تصدير", "حذف", "data"],
             summary: "AiQo privacy-first: أغلب المعالجة على الجهاز، وأي إرسال للسحابة يمرّ بمعقّم يشيل المعلومات الحسّاسة قبل الإرسال، وتحتاج موافقتك الصريحة لميزات الذكاء السحابي. تقدر تصدّر بياناتك أو تحذفها من الإعدادات."
         ),
+        // Overview: catches BROAD "what is this app / what can it do" asks that
+        // name no specific feature, so the lexical retriever would otherwise
+        // return nil and leave the Captain ungrounded on exactly the question
+        // most prone to hallucination. order=14 (highest) so any specific-
+        // feature entry always wins a score tie — this only surfaces when
+        // nothing more specific matched.
+        AppKnowledgeEntry(
+            id: "overview",
+            order: 14,
+            keywords: [
+                "aiqo", "ايكو", "ايكيو", "التطبيق", "تطبيق", "تطبيقكم", "البرنامج",
+                "شنو يسوي", "شيسوي", "شنو يكدر", "شيكدر", "وش يسوي", "ايش يسوي",
+                "شنو هذا", "شنو هو", "عن التطبيق", "ميزات", "مزايا", "خصائص",
+                "features", "what is", "what can", "capabilities", "شلون يساعدني",
+                "شنو فايدة", " شنو الفرق", "كلشي", "كل شي", "وش هذا"
+            ],
+            summary: "AiQo نظام تشغيل حيوي-رقمي: محوره كابتن حمّودي (مدرّب ذكي يحجي عراقي يتذكّرك ويقرأ بيانات صحتك). يضمّ خطط تمارين وكوتشينج صوتي وZone 2، تحليل نوم وتوقيت استيقاظ أذكى، المطبخ (تصوّر ثلاجتك ويطلّع خطة وجبات)، Peaks (تحديات أسطورية متدرّجة)، My Vibe (موسيقى حسب إيقاعك)، Learning Spark، تتبّع ماي وخطوات وستريك ونقاط XP، وتطبيق Apple Watch — كله privacy-first. الاشتراك: Max للأساسيات اليومية، وIntelligence Pro يضيف ذكاء وذاكرة أعمق وPeaks الكاملة."
+        ),
     ]
 
     // MARK: - Retrieval (deterministic, on-device, zero-latency)
