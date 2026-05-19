@@ -41,6 +41,23 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
 }
 
 @MainActor
+/// Scopes the Plan tab to its OWN `CaptainViewModel`: it is still the real
+/// Captain (BrainOrchestrator / MemoryStore.shared live inside the VM, so
+/// full intelligence + long-term memory are preserved) — but it holds a
+/// SEPARATE conversation from the main Captain tab, started fresh every time
+/// the user enters Plan. Founder UX decision (#18): plan chat ≠ Captain chat,
+/// new plan conversation on each entry. The app-wide `globalBrain` keeps
+/// serving the Captain tab and everything else unchanged.
+private struct PlanConversationScope: View {
+    @StateObject private var planBrain = CaptainViewModel()
+
+    var body: some View {
+        PlanView()
+            .environmentObject(planBrain)
+            .onAppear { planBrain.startNewChat() }
+    }
+}
+
 struct ClubRootView: View {
     private static let gratitudeExerciseKey = "gym.exercise.gratitude"
 
@@ -172,7 +189,7 @@ struct ClubRootView: View {
             BodyView(onSelectExercise: handleExerciseSelection)
 
         case .plan:
-            PlanView()
+            PlanConversationScope()
 
         case .peaks:
             if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessPeaks {
