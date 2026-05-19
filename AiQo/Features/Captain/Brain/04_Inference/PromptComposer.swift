@@ -27,6 +27,7 @@ struct PromptComposer: Sendable {
             layerCoachingThesis(request: request),
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
+            layerAppKnowledge(request: request),
             layerScreenContext(request: request),
             layerMedicalDisclaimer(language: request.language),
             layerOutputContract(screenContext: request.screenContext, language: request.language)
@@ -280,6 +281,20 @@ struct PromptComposer: Sendable {
         === ACTIVE WORKING MEMORY ===
         \(sections.joined(separator: "\n\n"))
         """
+    }
+
+    // MARK: - App Knowledge (authoritative facts about AiQo's own features)
+
+    /// Renders the retrieved App-Knowledge block (built by `AppKnowledge`,
+    /// injected via the trusted sanitizer path). The block carries its own
+    /// header; this layer just gates on emptiness so unrelated turns add
+    /// nothing to the prompt (mirrors `layerWorkingMemory`'s contract).
+    private func layerAppKnowledge(request: HybridBrainRequest) -> String {
+        guard let block = request.appKnowledge?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !block.isEmpty
+        else { return "" }
+        return block
     }
 
     // MARK: - Layer 4: Bio-State (Current HealthKit Metrics — Masked)

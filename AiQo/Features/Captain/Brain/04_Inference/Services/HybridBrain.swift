@@ -36,6 +36,11 @@ struct HybridBrainRequest: Sendable {
     let workingMemorySummary: String
     let attachedImageData: Data?
     let purpose: RequestPurpose
+    /// Authoritative, static facts about AiQo's own features (from
+    /// `AppKnowledge`). Injected by `PrivacySanitizer.sanitizeForCloud` as a
+    /// trusted PII-free string. Optional + defaulted nil so every existing
+    /// call site keeps compiling unchanged (same pattern as `purpose`).
+    let appKnowledge: String?
 
     var hasAttachedImage: Bool { attachedImageData != nil }
 
@@ -48,7 +53,8 @@ struct HybridBrainRequest: Sendable {
         intentSummary: String,
         workingMemorySummary: String,
         attachedImageData: Data?,
-        purpose: RequestPurpose = .captainChat
+        purpose: RequestPurpose = .captainChat,
+        appKnowledge: String? = nil
     ) {
         self.conversation = conversation
         self.screenContext = screenContext
@@ -59,6 +65,7 @@ struct HybridBrainRequest: Sendable {
         self.workingMemorySummary = workingMemorySummary
         self.attachedImageData = attachedImageData
         self.purpose = purpose
+        self.appKnowledge = appKnowledge
     }
 }
 

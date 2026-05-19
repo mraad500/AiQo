@@ -50,6 +50,16 @@ struct CloudBrainService: Sendable {
         let startedAt = Date()
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
 
+        // App-knowledge grounding: static, PII-free, deterministic on-device
+        // lexical retrieval — pure/sync, computed off-MainActor. Lets Captain
+        // answer "شنو Peaks؟ / شلون أستخدم المطبخ؟ / فرق الاشتراكات؟"
+        // accurately instead of hallucinating. nil on unrelated turns → no
+        // prompt bloat.
+        let appKnowledgeBlock = AppKnowledge.relevantBlock(
+            for: latestUserMessage,
+            screenHint: String(describing: request.screenContext).lowercased()
+        )
+
         // Single MainActor hop — tier, memories, consent, and coaching profile
         // in one round-trip.
         let (activeTier, cloudSafeMemories, consentGranted, cloudSafeProfile) = await MainActor.run {
@@ -88,7 +98,8 @@ struct CloudBrainService: Sendable {
             request,
             knownUserName: userName,
             cloudSafeProfile: cloudSafeProfile,
-            cloudSafeMemories: cloudSafeMemories
+            cloudSafeMemories: cloudSafeMemories,
+            cloudSafeAppKnowledge: appKnowledgeBlock ?? ""
         )
 
         let aiModel = activeTier.effectiveAccessTier == .pro

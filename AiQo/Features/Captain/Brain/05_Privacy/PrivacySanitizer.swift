@@ -169,7 +169,8 @@ struct PrivacySanitizer: Sendable {
         _ request: HybridBrainRequest,
         knownUserName: String?,
         cloudSafeProfile: CloudSafeProfile? = nil,
-        cloudSafeMemories: String = ""
+        cloudSafeMemories: String = "",
+        cloudSafeAppKnowledge: String = ""
     ) -> HybridBrainRequest {
         let sanitizedConversation = sanitizeConversation(
             request.conversation,
@@ -190,6 +191,10 @@ struct PrivacySanitizer: Sendable {
         let safeIntent = sanitizePromptForCloud(request.intentSummary, knownUserName: knownUserName)
         let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
         let profileSummary = cloudSafeProfile?.asSummaryLines() ?? ""
+        // App knowledge is static, app-authored, PII-free constant text — like
+        // cloudSafeMemories it is trusted: trimmed but NOT run through
+        // sanitizeText (which would mangle the Arabic feature copy).
+        let safeAppKnowledge = cloudSafeAppKnowledge.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return HybridBrainRequest(
             conversation: sanitizedConversation,
@@ -200,7 +205,8 @@ struct PrivacySanitizer: Sendable {
             intentSummary: safeIntent,
             workingMemorySummary: safeWorkingMemory,
             attachedImageData: sanitizedImageData,
-            purpose: request.purpose
+            purpose: request.purpose,
+            appKnowledge: safeAppKnowledge.isEmpty ? nil : safeAppKnowledge
         )
     }
 
