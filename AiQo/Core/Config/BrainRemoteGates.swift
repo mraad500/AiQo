@@ -31,7 +31,20 @@ enum NotificationBrainGate {
 ///   1. Remote kill switch — `RemoteFlags.shared.captainBrainV2GloballyDisabled`.
 ///   2. Info.plist feature flag — `FeatureFlags.brainV2Enabled` (`CAPTAIN_BRAIN_V2_ENABLED`).
 enum CaptainBrainV2Gate {
+    #if DEBUG
+    /// Test-only override seam. When non-nil it short-circuits `isOn`, letting
+    /// unit tests force Brain V2 on/off without touching Info.plist or the remote
+    /// kill switch. Defaults to `nil` (and does not exist at all in Release
+    /// builds), so production gating is byte-identical: `isOn` falls through to
+    /// the real kill-switch + feature-flag logic whenever this is `nil`. Tests
+    /// reset it to `nil` in `tearDown`.
+    static var testOverride: Bool?
+    #endif
+
     static var isOn: Bool {
+        #if DEBUG
+        if let testOverride { return testOverride }
+        #endif
         if RemoteFlags.shared.captainBrainV2GloballyDisabled { return false }
         return FeatureFlags.brainV2Enabled
     }

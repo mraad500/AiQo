@@ -5,16 +5,16 @@ import XCTest
 final class ProactiveEngineTests: XCTestCase {
 
     private let engine = ProactiveEngine.shared
-    private var savedBrainV2Flag = false
 
     override func setUp() {
         super.setUp()
-        savedBrainV2Flag = CaptainContextBuilder.isBrainV2Enabled
-        CaptainContextBuilder.isBrainV2Enabled = true
+        // Force Brain V2 on so the downstream-gate tests aren't short-circuited by
+        // Gate 0. tearDown resets the override to nil (real flag logic restored).
+        CaptainBrainV2Gate.testOverride = true
     }
 
     override func tearDown() {
-        CaptainContextBuilder.isBrainV2Enabled = savedBrainV2Flag
+        CaptainBrainV2Gate.testOverride = nil
         super.tearDown()
     }
 
@@ -99,7 +99,7 @@ final class ProactiveEngineTests: XCTestCase {
     // MARK: - Gate 0: Brain V2 Kill Switch
 
     func testGate0_brainV2Disabled_blocksAll() {
-        CaptainContextBuilder.isBrainV2Enabled = false
+        CaptainBrainV2Gate.testOverride = false
         let ctx = makeContext()
         assertBlocked(engine.evaluate(context: ctx), reason: "brain_v2_disabled")
     }
