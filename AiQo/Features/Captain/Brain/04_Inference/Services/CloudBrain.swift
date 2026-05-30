@@ -9,11 +9,6 @@ import Foundation
 /// 4. Normalizes user names to "User"
 /// 5. Buckets health data (steps by 50, calories by 10)
 struct CloudBrainService: Sendable {
-    private enum GeminiModel {
-        static let fast = "gemini-2.5-flash"
-        static let reasoning = "gemini-3-flash-preview"
-    }
-
     private let transport: HybridBrainService
     private let sanitizer: PrivacySanitizer
     private let activeTierProvider: @Sendable () async -> SubscriptionTier
@@ -102,25 +97,25 @@ struct CloudBrainService: Sendable {
             cloudSafeAppKnowledge: appKnowledgeBlock ?? ""
         )
 
+        // Model is gated by `GEMINI_3_PREVIEW_ENABLED`: when the flag is OFF,
+        // `GeminiModelPolicy.reasoning == .fast`, so every tier uses the stable
+        // `gemini-2.5-flash` and no preview call is ever made.
         let aiModel = activeTier.effectiveAccessTier == .pro
-            ? GeminiModel.reasoning
-            : GeminiModel.fast
+            ? GeminiModelPolicy.reasoning
+            : GeminiModelPolicy.fast
         let promptBytes = Self.estimatedPromptBytes(of: sanitizedRequest)
 
-        do {
-            let reply = try await transport.generateReply(
-                request: sanitizedRequest,
-                model: aiModel
-            )
-            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+        // Audits a successful call and runs the silent workout-plan recovery, so
+        // the primary path and the fallback path get identical treatment.
+        func finalize(_ reply: HybridBrainServiceReply, model: String, callStartedAt: Date) async -> HybridBrainServiceReply {
             await AuditLogger.shared.record(AuditLogger.Entry(
                 id: UUID(),
-                timestamp: startedAt,
-                destination: aiModel,
+                timestamp: callStartedAt,
+                destination: model,
                 tier: activeTier.auditLabel,
                 promptBytes: promptBytes,
                 responseBytes: reply.message.utf8.count,
-                latencyMs: latencyMs,
+                latencyMs: Int(Date().timeIntervalSince(callStartedAt) * 1000),
                 consentGranted: true,
                 sanitizationApplied: true,
                 purpose: request.purpose.rawValue,
@@ -139,12 +134,12 @@ struct CloudBrainService: Sendable {
                     base: sanitizedRequest,
                     firstReply: reply,
                     transport: transport,
-                    model: aiModel
+                    model: model
                 ) {
                     await AuditLogger.shared.record(AuditLogger.Entry(
                         id: UUID(),
                         timestamp: retryStartedAt,
-                        destination: aiModel,
+                        destination: model,
                         tier: activeTier.auditLabel,
                         promptBytes: promptBytes,
                         responseBytes: recovered.message.utf8.count,
@@ -161,22 +156,44 @@ struct CloudBrainService: Sendable {
             }
 
             return reply
-        } catch {
-            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+        }
+
+        // Audits a failed call (metadata only — never content).
+        func auditFailure(model: String, callStartedAt: Date) async {
             await AuditLogger.shared.record(AuditLogger.Entry(
                 id: UUID(),
-                timestamp: startedAt,
-                destination: aiModel,
+                timestamp: callStartedAt,
+                destination: model,
                 tier: activeTier.auditLabel,
                 promptBytes: promptBytes,
                 responseBytes: 0,
-                latencyMs: latencyMs,
+                latencyMs: Int(Date().timeIntervalSince(callStartedAt) * 1000),
                 consentGranted: true,
                 sanitizationApplied: true,
                 purpose: request.purpose.rawValue,
                 outcome: .failure
             ))
-            throw error
+        }
+
+        do {
+            let reply = try await transport.generateReply(request: sanitizedRequest, model: aiModel)
+            return await finalize(reply, model: aiModel, callStartedAt: startedAt)
+        } catch {
+            await auditFailure(model: aiModel, callStartedAt: startedAt)
+
+            // Automatic fallback: a preview-model failure/timeout retries once on
+            // the stable `gemini-2.5-flash` so the user never feels it. Only fires
+            // when the failed call actually used a non-fast (preview) model.
+            guard aiModel != GeminiModelPolicy.fast else { throw error }
+            diag.info("CloudBrainService: \(aiModel) failed (\(error.localizedDescription)); falling back to \(GeminiModelPolicy.fast)")
+            let fallbackStartedAt = Date()
+            do {
+                let fallbackReply = try await transport.generateReply(request: sanitizedRequest, model: GeminiModelPolicy.fast)
+                return await finalize(fallbackReply, model: GeminiModelPolicy.fast, callStartedAt: fallbackStartedAt)
+            } catch {
+                await auditFailure(model: GeminiModelPolicy.fast, callStartedAt: fallbackStartedAt)
+                throw error
+            }
         }
     }
 
@@ -324,8 +341,8 @@ extension CloudBrainService {
         let startedAt = Date()
         let activeTier = await MainActor.run { AccessManager.shared.activeTier }
         let model = activeTier.effectiveAccessTier == .pro
-            ? "gemini-3-flash-preview"
-            : "gemini-2.5-flash"
+            ? GeminiModelPolicy.reasoning
+            : GeminiModelPolicy.fast
 
         guard let imageData = sanitizer.sanitizeKitchenImageData(rawImageData) else {
             throw HybridBrainServiceError.invalidResponse

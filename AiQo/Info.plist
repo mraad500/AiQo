@@ -60,6 +60,18 @@
 	<key>COACH_BRAIN_LLM_API_KEY</key>
 	<string>$(COACH_BRAIN_LLM_API_KEY)</string>
 	<!--
+	  GEMINI_3_PREVIEW_ENABLED — Master kill switch for the gemini-3-flash-preview
+	  reasoning model. OFF by default: preview models can change behavior, hit
+	  tighter rate limits, or be withdrawn by Google without notice, so we do not
+	  bind the paid Pro tier to one unless we opt in. When OFF, GeminiModelPolicy
+	  routes every cloud call (chat, kitchen, memory extraction, weekly review) to
+	  the stable gemini-2.5-flash. The captain-chat Edge Function whitelists both
+	  models, so this flip is client-side only. CloudBrain also auto-falls-back to
+	  gemini-2.5-flash if a preview call errors/times out.
+	-->
+	<key>GEMINI_3_PREVIEW_ENABLED</key>
+	<false/>
+	<!--
 	  CRISIS_DETECTOR_ENABLED — As of v1.0.4 wires CrisisDetector.shared
 	  registration in AppDelegate. Previously dead (declared but unread).
 	  CrisisDetector is a passive safety-net actor that listens to emotional
@@ -78,6 +90,16 @@
 	<key>LEARNING_SPARK_STAGE2_ENABLED</key>
 	<true/>
 	<key>LEARNING_VERIFICATION_ON_DEVICE_ENABLED</key>
+	<true/>
+	<!--
+	  HIGH_FIDELITY_3D_ENABLED — Master switch for full-fidelity 3D: the OutdoorRun
+	  realistic-elevation satellite map + pitched cinematic chase camera, and the
+	  RealityKit Captain avatar. ON by default. DevicePerformanceTier additionally
+	  auto-downgrades on lower-RAM devices (< ~5 GB) and under thermal stress
+	  (.serious/.critical). Set to NO to force the lighter path everywhere (flat
+	  imagery, fixed follow camera, 2D avatar). Never removes the feature.
+	-->
+	<key>HIGH_FIDELITY_3D_ENABLED</key>
 	<true/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

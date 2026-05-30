@@ -326,12 +326,13 @@ struct MemoryExtractor: Sendable {
     /// Builds the Gemini POST request for memory extraction. Routes through
     /// the Supabase `captain-chat` Edge Function when `USE_CLOUD_PROXY` is
     /// on; otherwise hits Gemini directly with the client-embedded key.
-    /// Uses the preview reasoning model (`gemini-3-flash-preview`) because
-    /// extraction quality matters more than latency here.
+    /// Uses the reasoning model (`gemini-3-flash-preview` when
+    /// `GEMINI_3_PREVIEW_ENABLED` is on, otherwise the stable `gemini-2.5-flash`)
+    /// because extraction quality matters more than latency here.
     ///
     /// Must be `static` — the only caller, `extractWithLLM`, is also static.
     private static func makeExtractorRequest(body: [String: Any]) async throws -> URLRequest {
-        let model = "gemini-3-flash-preview"
+        let model = GeminiModelPolicy.reasoning
 
         if CaptainProxyConfig.isChatEnabled {
             guard let endpoint = CaptainProxyConfig.endpointURL(for: .chat) else {
@@ -358,7 +359,7 @@ struct MemoryExtractor: Sendable {
             return request
         }
 
-        let config = try Self.resolveLLMConfig()
+        let config = try Self.resolveLLMConfig(model: model)
         var request = URLRequest(url: config.endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 15
@@ -372,7 +373,7 @@ struct MemoryExtractor: Sendable {
         let apiKey: String
     }
 
-    private static func resolveLLMConfig() throws -> LLMConfig {
+    private static func resolveLLMConfig(model: String) throws -> LLMConfig {
         let info = Bundle.main.infoDictionary ?? [:]
         let env = ProcessInfo.processInfo.environment
 
@@ -384,7 +385,7 @@ struct MemoryExtractor: Sendable {
         guard let apiKey else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)") else {
             throw URLError(.badURL)
         }
 

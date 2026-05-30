@@ -221,9 +221,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         }
 
         // Subscribe NotificationBrain to XP / streak events so proactive Captain
-        // notifications can fire. Gated by both the Memory V4 cascade AND its own
-        // Info.plist flag so we can dark-launch independently.
-        if FeatureFlags.notificationBrainEnabled {
+        // notifications can fire. `NotificationBrainGate` combines the Info.plist
+        // flag with the Supabase remote kill switch so it can be disabled live
+        // (for the real users it already shipped to) without an App Store release.
+        if NotificationBrainGate.isOn {
             Task {
                 await NotificationBrain.shared.subscribe()
             }

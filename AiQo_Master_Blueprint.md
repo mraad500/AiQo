@@ -169,7 +169,7 @@ Brand palette (used in-app and across all marketing): Mint `#C4F0DB` / `#CDF4E4`
 
 The Captain is AiQo's crown jewel and most complex subsystem. It lives under `AiQo/Features/Captain/`, with the cognitive engine under `Brain/` organized into **12 numbered layers (00–11)**.
 
-### 5.1 The 11-layer Brain (folder = responsibility)
+### 5.1 The 12-layer Brain — folders `00`–`11` (folder = responsibility)
 ```
 00_Foundation/   BrainBus (event bus), TierGate (subscription gating), BrainError, DevOverride, DiagnosticsLogger, CaptainLockedView
 01_Sensing/      ContextSensor, BioStateEngine, BehavioralObserver, CaptainHealthSnapshotService; Bridges/ (HealthKit, Weather, Music)
@@ -212,6 +212,8 @@ The Captain is AiQo's crown jewel and most complex subsystem. It lives under `Ai
 | **Voice** | Apple TTS (default) · **MiniMax** cloud TTS (premium/Pro) | spoken replies | Premium voice gated; key isolated per-user in Keychain |
 
 Cloud calls can route **directly** to Gemini/MiniMax **or** through Supabase Edge Functions (`captain-chat`, `captain-voice`) when the `USE_CLOUD_PROXY` flag is on (proxy holds server-side keys + validates the user JWT).
+
+> **Model selection is centralized in `GeminiModelPolicy`** (`Brain/04_Inference/`) and gated by `GEMINI_3_PREVIEW_ENABLED` (default **OFF**). When OFF, every cloud path (chat, kitchen vision, memory extraction, weekly review) uses the stable `gemini-2.5-flash`; the preview model is opt-in only. `CloudBrain.generateReply` adds an **automatic fallback**: if a preview call errors/times out it silently retries once on `gemini-2.5-flash` and audits both attempts.
 
 ### 5.4 The 7-layer system prompt (`PromptComposer`)
 Stacked, empty layers filtered out: **(1)** reply-language lock (Arabic *or* English only) · **(2)** safety rules · **(3)** identity ("أنت الكابتن حمودي" + traits/values) · **(4)** stable profile summary · **(5)** **injury constraints** (hard rules — e.g. knee injury ⇒ "ممنوع: سكوات عميق/لانجز/قفز" + safer alternatives) · **(6)** working memory (active directives — never filtered — + relevant facts + pinned constraints) · **(7)** coaching thesis (emotional + cultural modulation) + bio-state + circadian tone + app-knowledge + screen context + medical disclaimer + **output contract** (the JSON shape below).
@@ -418,9 +420,11 @@ Ranking: `.none(0) < .max(1) ≤ .trial/.pro(2)`. `effectiveAccessTier`: `.trial
 - **Secrets** injected from `Secrets.xcconfig` → Info.plist: `CAPTAIN_API_KEY`, `CAPTAIN_VOICE_*`, `COACH_BRAIN_LLM_API_KEY`, `SPOTIFY_CLIENT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, proxy flags.
 
 ### 10.2 Feature flags (`Core/Config/AiQoFeatureFlags.swift`, read from Info.plist)
-**Default ON:** `MEMORY_V4_ENABLED`, `NOTIFICATION_BRAIN_ENABLED`, `CAPTAIN_BRAIN_V2_ENABLED`, `CRISIS_DETECTOR_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`.
-**Default OFF:** `HAMOUDI_BLEND_ENABLED`, `TRIBE_SUBSCRIPTION_GATE_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `USE_CLOUD_PROXY` (+ per-path `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`), `AIQO_DEV_UNLOCK_ALL`.
-**Remote kill switch:** Supabase row `memory_v4_globally_disabled` (checked via `MemoryV4Gate.isOn`). DevPanel + `DevOverride` can unlock features in DEBUG.
+**Default ON:** `MEMORY_V4_ENABLED`, `NOTIFICATION_BRAIN_ENABLED`, `CAPTAIN_BRAIN_V2_ENABLED`, `CRISIS_DETECTOR_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `HIGH_FIDELITY_3D_ENABLED`.
+**Default OFF:** `GEMINI_3_PREVIEW_ENABLED`, `HAMOUDI_BLEND_ENABLED`, `TRIBE_SUBSCRIPTION_GATE_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `USE_CLOUD_PROXY` (+ per-path `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`), `AIQO_DEV_UNLOCK_ALL`.
+- `GEMINI_3_PREVIEW_ENABLED` — gates the `gemini-3-flash-preview` model app-wide via `GeminiModelPolicy`; OFF ⇒ everything uses stable `gemini-2.5-flash`. `CloudBrain` also auto-falls-back to `gemini-2.5-flash` if a preview call errors/times out.
+- `HIGH_FIDELITY_3D_ENABLED` — gates full-fidelity 3D (OutdoorRun realistic-elevation map + cinematic chase camera, RealityKit avatar); `DevicePerformanceTier` additionally auto-downgrades on < ~5 GB-RAM devices and under thermal stress (`.serious`/`.critical`).
+**Remote kill switches:** Supabase `remote_flags` table (`flag_name` rows), fetched by `RemoteFlags.shared.refresh()` (cached, fail-safe to enabled). Live-disable rows: `memory_v4_globally_disabled` (`MemoryV4Gate.isOn`), `notification_brain_globally_disabled` (`NotificationBrainGate.isOn`), `captain_brain_v2_globally_disabled` (`CaptainBrainV2Gate.isOn`). DevPanel + `DevOverride` can unlock features in DEBUG.
 
 ---
 
@@ -478,7 +482,7 @@ Privacy is a first-class product value ("بياناتك ملكك"):
 ## 15. Glossary
 - **AiQo** — the app; an Arabic-first Bio-Digital OS.
 - **Captain Hamoudi / كابتن حمودي** — the in-app AI coach and the founder's public persona (same identity).
-- **Brain** — the Captain's 11-layer cognitive engine (`Features/Captain/Brain/`).
+- **Brain** — the Captain's 12-layer cognitive engine, folders `00`–`11` (`Features/Captain/Brain/`).
 - **Directive** — a user-taught standing rule the Captain executes forever (v1.0.5).
 - **Bio-phase / circadian tone** — time-of-day awareness that shifts the Captain's tone/timing.
 - **Peaks (قِمم)** — 4–12 week periodized record challenges (= Legendary Challenges; Pro).

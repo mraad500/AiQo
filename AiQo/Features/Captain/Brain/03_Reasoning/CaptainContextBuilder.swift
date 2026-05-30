@@ -140,8 +140,10 @@ struct CaptainSystemContextSnapshot: Sendable {
 final class CaptainContextBuilder {
     static let shared = CaptainContextBuilder()
 
-    /// Kill switch for Brain V2 features. Set CAPTAIN_BRAIN_V2_ENABLED in Info.plist.
-    static var isBrainV2Enabled: Bool = Bundle.main.infoDictionary?["CAPTAIN_BRAIN_V2_ENABLED"] as? Bool ?? false
+    /// Kill switch for Brain V2 features. Combines the `CAPTAIN_BRAIN_V2_ENABLED`
+    /// Info.plist flag with the Supabase remote kill switch (via `CaptainBrainV2Gate`)
+    /// so Brain V2 can be disabled live without an App Store release.
+    static var isBrainV2Enabled: Bool { CaptainBrainV2Gate.isOn }
 
     // Brain V2: Cached trend data (refreshed every 30 minutes)
     private static var cachedTrendSnapshot: TrendSnapshot?

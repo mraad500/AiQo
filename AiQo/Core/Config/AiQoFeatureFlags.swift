@@ -63,6 +63,24 @@ enum FeatureFlags {
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
 
+    /// Master kill switch for the `gemini-3-flash-preview` reasoning model.
+    /// OFF by default: preview models can change behavior, hit tighter rate
+    /// limits, or be withdrawn by Google without notice, so we don't bind the
+    /// paid Pro tier to one unless we explicitly opt in. When OFF, every cloud
+    /// call uses the stable `gemini-2.5-flash` (see `GeminiModelPolicy`). The
+    /// `captain-chat` Edge Function whitelists both models, so this flip is
+    /// purely client-side.
+    @FeatureFlag("GEMINI_3_PREVIEW_ENABLED", default: false)
+    static var gemini3PreviewEnabled: Bool
+
+    /// Master switch for full-fidelity 3D rendering (OutdoorRun realistic-
+    /// elevation satellite map + pitched chase camera, and the RealityKit Captain
+    /// avatar). ON by default. `DevicePerformanceTier` additionally auto-downgrades
+    /// on lower-RAM devices and when the device is thermally stressed — set this to
+    /// NO to force the lighter path (flat imagery, fixed camera, 2D avatar) everywhere.
+    @FeatureFlag("HIGH_FIDELITY_3D_ENABLED", default: true)
+    static var highFidelity3DEnabled: Bool
+
     /// As of v1.0.4, controls whether `CrisisDetector.shared` is registered in
     /// AppDelegate. CrisisDetector is a passive safety-net actor — instantiating
     /// it via the singleton is sufficient to put it in the DI graph.

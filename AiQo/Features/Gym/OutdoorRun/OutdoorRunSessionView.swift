@@ -64,6 +64,10 @@ struct OutdoorRunSessionContent: View {
     @State private var camera: MapCameraPosition = .automatic
     /// 0 = no fix yet, 1 = wide establishing shot shown, 2+ = locked chase glide.
     @State private var introStage = 0
+    /// Full-fidelity 3D (realistic-elevation imagery + pitched cinematic chase
+    /// camera) vs. the lighter path on lower-end / thermally-stressed devices.
+    /// Re-evaluated live when the thermal state changes (see `.onReceive` below).
+    @State private var highFidelity3D = DevicePerformanceTier.shouldUseHighFidelity3D
 
     var body: some View {
         ZStack {
@@ -124,6 +128,11 @@ struct OutdoorRunSessionContent: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.86), value: session.phase)
         .animation(.easeInOut(duration: 0.25), value: location.authorizationStatus)
         .onAppear(perform: handleAppear)
+        .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in
+            // Auto-downgrade (or restore) the cinematic 3D when the device heats
+            // up or cools down mid-run.
+            highFidelity3D = DevicePerformanceTier.shouldUseHighFidelity3D
+        }
         .onChange(of: location.authorizationStatus) { _, _ in
             if location.isAuthorized { location.beginPreview() }
         }
@@ -166,11 +175,25 @@ struct OutdoorRunSessionContent: View {
                 }
             }
         }
-        .mapStyle(.imagery(elevation: .realistic))
+        // Realistic elevation builds a 3D terrain mesh (GPU-heavy). On lower-end /
+        // thermally-stressed devices drop to flat imagery — still satellite, far
+        // cheaper to render.
+        .mapStyle(.imagery(elevation: highFidelity3D ? .realistic : .flat))
     }
 
     private func updateCameraToRunner() {
         guard let runner = location.currentLocation else { return }
+
+        // Lower-end / thermally-stressed devices: skip the cinematic drone glide
+        // and hold a simple, flatter follow camera. Cheaper to render and no
+        // per-fix pitched-camera animation churn — the run still tracks the runner.
+        guard highFidelity3D else {
+            withAnimation(.linear(duration: 1.0)) {
+                camera = .camera(chaseCamera(for: runner))
+            }
+            return
+        }
+
         switch introStage {
         case 0:
             // First fix: snap to a high, wide establishing shot.
@@ -195,13 +218,15 @@ struct OutdoorRunSessionContent: View {
         }
     }
 
-    /// The locked "drone right behind and above you" framing.
+    /// The runner-follow framing. Full fidelity = the locked "drone right behind
+    /// and above you" chase (close + pitched). Lower fidelity = a higher, flat
+    /// top-down follow that is far lighter on the GPU.
     private func chaseCamera(for runner: CLLocation) -> MapCamera {
         MapCamera(
             centerCoordinate: runner.coordinate,
-            distance: 480,
+            distance: highFidelity3D ? 480 : 900,
             heading: location.smoothedCourseDegrees,
-            pitch: 66
+            pitch: highFidelity3D ? 66 : 0
         )
     }
 

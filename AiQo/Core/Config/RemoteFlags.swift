@@ -26,14 +26,25 @@ import Foundation
 ///     to anon
 ///     using (true);
 ///
-/// Mohammed flips the kill switch by upserting
-/// `('memory_v4_globally_disabled', true)`. Propagation = next cold launch or
-/// next BG fetch tick on each device.
+/// Mohammed flips a kill switch by upserting a row, e.g.
+/// `('memory_v4_globally_disabled', true)`,
+/// `('notification_brain_globally_disabled', true)`, or
+/// `('captain_brain_v2_globally_disabled', true)`. Propagation = next cold
+/// launch or next BG fetch tick on each device.
 final class RemoteFlags: @unchecked Sendable {
     static let shared = RemoteFlags()
 
     private static let userDefaultsPrefix = "aiqo.remoteflags."
     private static let memoryV4DisabledKey = "memory_v4_globally_disabled"
+    private static let notificationBrainDisabledKey = "notification_brain_globally_disabled"
+    private static let captainBrainV2DisabledKey = "captain_brain_v2_globally_disabled"
+
+    /// Every remote flag fetched in one round-trip. Add new kill switches here.
+    private static let allFlagKeys = [
+        memoryV4DisabledKey,
+        notificationBrainDisabledKey,
+        captainBrainV2DisabledKey,
+    ]
 
     private let session: URLSession
     private let defaults: UserDefaults
@@ -43,9 +54,17 @@ final class RemoteFlags: @unchecked Sendable {
         self.defaults = defaults
     }
 
-    /// Synchronous read. Returns the last cached value (default false).
-    var memoryV4GloballyDisabled: Bool {
-        defaults.bool(forKey: Self.userDefaultsPrefix + Self.memoryV4DisabledKey)
+    /// Synchronous read. Returns the last cached value (default false = not disabled).
+    var memoryV4GloballyDisabled: Bool { cachedDisabled(Self.memoryV4DisabledKey) }
+
+    /// Remote kill switch for the proactive NotificationBrain pipeline.
+    var notificationBrainGloballyDisabled: Bool { cachedDisabled(Self.notificationBrainDisabledKey) }
+
+    /// Remote kill switch for Captain Brain V2 features.
+    var captainBrainV2GloballyDisabled: Bool { cachedDisabled(Self.captainBrainV2DisabledKey) }
+
+    private func cachedDisabled(_ flagKey: String) -> Bool {
+        defaults.bool(forKey: Self.userDefaultsPrefix + flagKey)
     }
 
     /// Background refresh. Failures are swallowed — the cache is the source of truth
@@ -69,7 +88,7 @@ final class RemoteFlags: @unchecked Sendable {
             .appending(path: "/rest/v1/remote_flags")
             .appending(queryItems: [
                 URLQueryItem(name: "select", value: "flag_name,bool_value"),
-                URLQueryItem(name: "flag_name", value: "eq.\(Self.memoryV4DisabledKey)")
+                URLQueryItem(name: "flag_name", value: "in.(\(Self.allFlagKeys.joined(separator: ",")))")
             ])
 
         var request = URLRequest(url: url, timeoutInterval: 8)
@@ -85,9 +104,13 @@ final class RemoteFlags: @unchecked Sendable {
                 return
             }
             let rows = (try? JSONDecoder().decode([Row].self, from: data)) ?? []
-            let nextValue = rows.first(where: { $0.flag_name == Self.memoryV4DisabledKey })?.bool_value ?? false
-            defaults.set(nextValue, forKey: Self.userDefaultsPrefix + Self.memoryV4DisabledKey)
-            diag.info("RemoteFlags.refresh ok: memory_v4_globally_disabled=\(nextValue)")
+            // A flag absent from the response means "not disabled" — write false so
+            // a previously-true row that was deleted/flipped resets to enabled.
+            for key in Self.allFlagKeys {
+                let value = rows.first(where: { $0.flag_name == key })?.bool_value ?? false
+                defaults.set(value, forKey: Self.userDefaultsPrefix + key)
+            }
+            diag.info("RemoteFlags.refresh ok: \(rows.count) flag row(s) cached")
         } catch {
             diag.info("RemoteFlags.refresh failed (\(error.localizedDescription)); keeping cache")
         }
