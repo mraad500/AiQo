@@ -31,6 +31,10 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     var isRead: Bool
     var accessory: ChatMessageAccessory?
     var spotifyRecommendation: SpotifyRecommendation?
+    /// A non-conversational, UI-only marker (e.g. the "earlier chat folded into
+    /// memory" pill shown once when compaction kicks in). Never persisted and
+    /// never sent to the model — the window/digest builders skip it.
+    var isSystemNote: Bool
 
     init(
         id: UUID = UUID(),
@@ -41,7 +45,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         isEphemeral: Bool = false,
         isRead: Bool = true,
         accessory: ChatMessageAccessory? = nil,
-        spotifyRecommendation: SpotifyRecommendation? = nil
+        spotifyRecommendation: SpotifyRecommendation? = nil,
+        isSystemNote: Bool = false
     ) {
         self.id = id
         self.text = text
@@ -52,6 +57,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.isRead = isRead
         self.accessory = accessory
         self.spotifyRecommendation = spotifyRecommendation
+        self.isSystemNote = isSystemNote
     }
 
     init(
@@ -145,6 +151,20 @@ final class CaptainViewModel: ObservableObject {
     private var messageCount = 0
     /// كل فتحة تطبيق = جلسة جديدة
     private(set) var currentSessionID = UUID()
+
+    /// Rolling, faithful compaction of the part of the CURRENT session that has
+    /// already been EVICTED from `messages` (the 80-message in-RAM cap). The
+    /// per-turn prompt digest merges this with the in-RAM pre-window head, so the
+    /// Captain never loses the conversation's head — even past the RAM cap — and
+    /// therefore never fabricates to fill a forgotten gap. Reset per session.
+    /// See [[ConversationCompactor]] / `ConversationDigest`.
+    private var sessionDigest: ConversationDigest = .empty
+    /// True once we've crossed into compaction at least once this session — used
+    /// only for a one-time diagnostics breadcrumb, not behavior.
+    private var didLogCompaction = false
+    /// True once the subtle "earlier chat folded into memory" pill has been
+    /// shown this session — it appears exactly once, at the seam.
+    private var didInsertCompactionNote = false
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -282,6 +302,11 @@ final class CaptainViewModel: ObservableObject {
         isLoading = true
         coachState = .readingMessage
         persistChatMessage(userMessage)
+
+        // Once the session grows past the verbatim window, drop a single soft
+        // marker at the seam so the continuity is visible (not a silent gap) —
+        // the Captain keeps the whole thread via the digest, this just shows it.
+        maybeInsertCompactionNote()
 
         let requestID = UUID()
         activeRequestID = requestID
@@ -426,6 +451,9 @@ final class CaptainViewModel: ObservableObject {
         currentWorkoutPlan = nil
         currentMealPlan = nil
         quickReplies = []
+        sessionDigest = .empty
+        didLogCompaction = false
+        didInsertCompactionNote = false
 
         responseTask?.cancel()
         activeRequestID = nil
@@ -478,6 +506,11 @@ final class CaptainViewModel: ObservableObject {
         messageCount = stored.count
         currentWorkoutPlan = nil
         currentMealPlan = nil
+        // Full transcript is back in RAM, so per-turn compaction rebuilds the
+        // digest from scratch — reset the evicted-head accumulator.
+        sessionDigest = .empty
+        didLogCompaction = false
+        didInsertCompactionNote = false
         showChatHistory = false
     }
 
@@ -508,11 +541,22 @@ final class CaptainViewModel: ObservableObject {
 
         do {
             let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
-            // Continuity past the 24-message LLM window: a compact digest of
-            // what the user said EARLIER this session so the Captain never
-            // "forgets" the thread mid-conversation. nil when the whole
-            // conversation already fits the window.
-            let sessionRecap = buildSessionRecap()
+            // Continuity past the verbatim window: a FAITHFUL, structured digest
+            // of the earlier part of this session — opening goal, points the
+            // user made, the Captain's OWN commitments, corrections, and the
+            // last exchange. Built by `ConversationCompactor` from real messages
+            // only, so it can never invent a fact (an LLM summary could). It is
+            // carried as the request's dedicated `conversationState`, NOT folded
+            // into `workingMemorySummary` (which the cloud path rebuilds from
+            // durable memories and would silently drop), so the head of a long
+            // chat actually reaches the model and the Captain stops "forgetting"
+            // and then hallucinating to fill the gap. nil for short chats.
+            let conversationDigest = buildConversationDigest()
+            let conversationStateBlock = conversationDigest.renderedBlock(language: prebuiltLanguage)
+            if conversationStateBlock != nil, !didLogCompaction {
+                didLogCompaction = true
+                diag.info("CaptainViewModel: conversation compaction active (covered≈\(conversationDigest.coveredMessageCount) msgs)")
+            }
 
             // Run the embedding-RAG semantic recall CONCURRENTLY with the
             // HealthKit context read. `enrich` is off-MainActor and hops onto
@@ -520,12 +564,13 @@ final class CaptainViewModel: ObservableObject {
             // HealthKit, so the semantic lookup adds ~no wall-clock latency.
             // On free tier `MemoryRetriever` returns an empty bundle and
             // `enrich` returns the lexical base unchanged — no regression.
+            // Session continuity is no longer threaded here — it now flows
+            // through the reliable `conversationState` channel above.
             async let contextDataTask = contextBuilder.buildContextData()
             async let enrichedMemoryTask = chatMemoryEnricher.enrich(
                 baseSummary: prebuiltPromptContext.workingMemorySummary,
                 userMessage: latestUserText,
-                screenContext: screenContext,
-                sessionRecap: sessionRecap
+                screenContext: screenContext
             )
 
             var contextData = await contextDataTask
@@ -544,7 +589,8 @@ final class CaptainViewModel: ObservableObject {
                 userProfileSummary: prebuiltPromptContext.profileSummary,
                 intentSummary: prebuiltPromptContext.intentSummary,
                 workingMemorySummary: workingMemorySummary,
-                attachedImageData: attachedImageData
+                attachedImageData: attachedImageData,
+                conversationState: conversationStateBlock
             )
 
             let startedAt = Date()
@@ -751,16 +797,56 @@ final class CaptainViewModel: ObservableObject {
     private func trimInMemoryMessagesIfNeeded() {
         guard messages.count > Self.maxInMemoryMessages else { return }
         let excess = messages.count - Self.maxInMemoryMessages
+        // Fold the about-to-be-evicted head into the rolling digest FIRST, so
+        // nothing is lost when it leaves RAM — the Captain keeps the whole
+        // session's context (as faithful compacted state) even past the
+        // in-memory cap. SwiftData still holds the full verbatim transcript.
+        let evicted = Array(messages.prefix(excess))
+        sessionDigest = ConversationCompactor.compact(droppedMessages: evicted, priorDigest: sessionDigest)
         messages.removeFirst(excess)
     }
 
-    /// آخر 24 رسالة فقط — يجب أن تتجاوز سقف PrivacySanitizer بشكل مريح
-    /// (16 رسالة) عشان ما يجوع الـ sanitizer لما تطول الجلسة الحالية.
-    /// Window size > sanitizer cap of 16 by design — see PrivacySanitizer.maxConversationMessages.
+    /// Verbatim window: at most `maxConversationWindow` messages, AND bounded by
+    /// a character budget so a few very long turns can't blow past the model's
+    /// context. Stays comfortably above the PrivacySanitizer cloud cap of 16
+    /// messages by design — see PrivacySanitizer.maxConversationMessages.
+    /// Everything OLDER than this window is preserved by `ConversationDigest`.
     private static let maxConversationWindow = 24
+    /// Never compact below this many recent messages, even if they're long —
+    /// the immediate thread must always be verbatim.
+    private static let minLiveWindow = 8
+    /// Char budget for the verbatim window (~3–4k Arabic tokens). The digest
+    /// carries the rest losslessly, so trimming here costs no continuity.
+    private static let liveWindowCharBudget = 9000
+
+    /// Index in `messages` where the verbatim window begins. Walks newest →
+    /// oldest, keeping turns until the message-count cap or (past the floor) the
+    /// char budget would be exceeded. `messages[start...]` is the live window;
+    /// `messages[0..<start]` is the head that gets compacted into the digest.
+    private func liveWindowStartIndex() -> Int {
+        guard !messages.isEmpty else { return 0 }
+        var count = 0
+        var chars = 0
+        var startIndex = messages.count
+        for i in stride(from: messages.count - 1, through: 0, by: -1) {
+            // UI-only system notes are not turns — never count toward the window.
+            if messages[i].isSystemNote { continue }
+            let nextCount = count + 1
+            let nextChars = chars + messages[i].text.count
+            if nextCount > Self.maxConversationWindow { break }
+            if nextCount > Self.minLiveWindow && nextChars > Self.liveWindowCharBudget { break }
+            count = nextCount
+            chars = nextChars
+            startIndex = i
+        }
+        return startIndex
+    }
 
     private func buildConversationHistory() -> [CaptainConversationMessage] {
-        messages.suffix(Self.maxConversationWindow).compactMap { message in
+        let start = liveWindowStartIndex()
+        guard start < messages.count else { return [] }
+        return messages[start...].compactMap { message in
+            guard !message.isSystemNote else { return nil }
             let trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedText.isEmpty else { return nil }
 
@@ -771,37 +857,37 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
-    /// Compact digest of what the user said EARLIER this session — the turns
-    /// that fall OUTSIDE the 24-message LLM window. Without this, a long
-    /// conversation silently loses its head and the Captain "forgets" the
-    /// thread (asks again about things already told). User turns only (they
-    /// carry the intent); the first turn anchors the session's purpose, the
-    /// tail is the freshest pre-window context. Bounded so the prompt stays
-    /// lean. Returns nil when the whole conversation already fits the window.
-    private func buildSessionRecap() -> String? {
-        let window = Self.maxConversationWindow
-        guard messages.count > window else { return nil }
+    /// Faithful, structured digest of the conversation OUTSIDE the verbatim
+    /// window. Merges `sessionDigest` (the part already evicted from RAM by the
+    /// 80-message cap) with the in-RAM pre-window head, so coverage is complete
+    /// with zero loss no matter how long the session runs. Deterministic and
+    /// extractive — see [[ConversationCompactor]] — so it can't introduce a
+    /// fact the user/Captain never said. `.empty` (renders nil) for short chats.
+    private func buildConversationDigest() -> ConversationDigest {
+        let start = liveWindowStartIndex()
+        let head = start > 0 ? Array(messages[0..<start]) : []
+        guard !head.isEmpty || !sessionDigest.isEmpty else { return .empty }
+        return ConversationCompactor.compact(droppedMessages: head, priorDigest: sessionDigest)
+    }
 
-        let userTurns = messages
-            .dropLast(window)
-            .filter { $0.isUser && !$0.isEphemeral }
-            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard !userTurns.isEmpty else { return nil }
+    /// Inserts a single, soft "earlier chat folded into memory" marker at the
+    /// seam the first time the session grows past the verbatim window. Purely
+    /// cosmetic continuity reassurance — never persisted, never sent to the
+    /// model (the window/digest builders skip `isSystemNote`). Placed right
+    /// before the message the user just sent so it reads as a gentle divider.
+    private func maybeInsertCompactionNote() {
+        guard !didInsertCompactionNote, liveWindowStartIndex() > 0 else { return }
+        didInsertCompactionNote = true
 
-        var ordered: [String] = []
-        if let first = userTurns.first { ordered.append(first) }
-        ordered.append(contentsOf: userTurns.suffix(7))
+        let text = AppSettingsStore.shared.appLanguage == .english
+            ? "Earlier chat folded into memory"
+            : "طويت بداية محادثتنا بذاكرتي حتى أبقى متذكّر كل شي"
+        let note = ChatMessage(text: text, isUser: false, isSystemNote: true)
 
-        var seen = Set<String>()
-        let lines: [String] = ordered.compactMap { turn in
-            let clipped = turn.count > 90 ? String(turn.prefix(90)) + "…" : turn
-            guard seen.insert(clipped.lowercased()).inserted else { return nil }
-            return "- \(clipped)"
+        let insertAt = max(0, messages.count - 1)
+        withAnimation(.easeOut(duration: 0.35)) {
+            messages.insert(note, at: insertAt)
         }
-        guard !lines.isEmpty else { return nil }
-
-        return Array(lines.prefix(8)).joined(separator: "\n")
     }
 
     /// Progressively reveals the reply (WhatsApp/ChatGPT-style) instead of

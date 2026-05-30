@@ -196,6 +196,20 @@ struct PrivacySanitizer: Sendable {
         // sanitizeText (which would mangle the Arabic feature copy).
         let safeAppKnowledge = cloudSafeAppKnowledge.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Compacted session state is derived from the user's own + Captain's own
+        // turns (which already flow to the cloud as the `contents` array), so it
+        // gets the same PII redaction + numeric bucketing as any prompt text.
+        // Preserved as a dedicated field — unlike `workingMemorySummary` it is
+        // NOT overwritten, so long-session continuity actually reaches Gemini.
+        let safeConversationState: String? = {
+            guard let raw = request.conversationState?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
+            else { return nil }
+            let cleaned = sanitizePromptForCloud(raw, knownUserName: knownUserName)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleaned.isEmpty ? nil : cleaned
+        }()
+
         return HybridBrainRequest(
             conversation: sanitizedConversation,
             screenContext: request.screenContext,
@@ -206,7 +220,8 @@ struct PrivacySanitizer: Sendable {
             workingMemorySummary: safeWorkingMemory,
             attachedImageData: sanitizedImageData,
             purpose: request.purpose,
-            appKnowledge: safeAppKnowledge.isEmpty ? nil : safeAppKnowledge
+            appKnowledge: safeAppKnowledge.isEmpty ? nil : safeAppKnowledge,
+            conversationState: safeConversationState
         )
     }
 

@@ -33,6 +33,7 @@ struct PromptComposer: Sendable {
                 intentSummary: request.intentSummary,
                 recentInteractions: request.contextData.recentInteractions
             ),
+            layerConversationState(request: request),
             layerCoachingThesis(request: request),
             layerBioState(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
@@ -453,6 +454,28 @@ struct PromptComposer: Sendable {
         === ACTIVE WORKING MEMORY ===
         \(sections.joined(separator: "\n\n"))
         """
+    }
+
+    // MARK: - Conversation State (compacted head of a long session)
+
+    /// Renders the faithful, compacted `[conversation_state]` block built by
+    /// `ConversationCompactor`/`ConversationDigest` for the part of the current
+    /// session that no longer fits the verbatim window. The block carries its
+    /// own header, structure, and anti-hallucination grounding lock (already in
+    /// the user's language), so this layer just gates on emptiness — exactly
+    /// like `layerAppKnowledge`.
+    ///
+    /// This is the mechanism that keeps a long chat from "forgetting" its head
+    /// and then fabricating to fill the gap. Skipped in strict `sleepAnalysis`
+    /// mode (its 4-sentence contract must not be diluted) and absent on short
+    /// chats (no compaction yet → zero prompt overhead).
+    private func layerConversationState(request: HybridBrainRequest) -> String {
+        guard request.screenContext != .sleepAnalysis else { return "" }
+        guard let block = request.conversationState?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !block.isEmpty
+        else { return "" }
+        return block
     }
 
     // MARK: - App Knowledge (authoritative facts about AiQo's own features)

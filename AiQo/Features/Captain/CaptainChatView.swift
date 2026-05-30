@@ -477,6 +477,45 @@ private struct ChatMessageRow: View {
     var enhancedVoiceActive: Bool = false
 
     var body: some View {
+        if message.isSystemNote {
+            compactionNoteRow
+                .onAppear { onAppearRead?() }
+        } else {
+            standardRow
+        }
+    }
+
+    /// A soft, centered "earlier chat folded into memory" divider. Premium and
+    /// quiet on purpose — a frosted capsule with the Captain's sand accent, a
+    /// small sparkle, and a gentle fade/scale in. It reassures the user that the
+    /// thread is intact when the session grows past the live window.
+    private var compactionNoteRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+            Text(message.text)
+                .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(AiQoColors.sandSoft.opacity(0.85))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 6.5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(AiQoColors.sandSoft.opacity(0.22), lineWidth: 0.5)
+                )
+        )
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 4)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .accessibilityLabel(message.text)
+    }
+
+    private var standardRow: some View {
         HStack(alignment: .bottom, spacing: 10) {
             if message.isUser {
                 Spacer(minLength: 26)

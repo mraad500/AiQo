@@ -41,6 +41,14 @@ struct HybridBrainRequest: Sendable {
     /// trusted PII-free string. Optional + defaulted nil so every existing
     /// call site keeps compiling unchanged (same pattern as `purpose`).
     let appKnowledge: String?
+    /// Faithful, compacted state of the part of THIS chat session that no longer
+    /// fits the verbatim window (built by `ConversationCompactor`, rendered by
+    /// `ConversationDigest`). Carried as a DEDICATED field — not folded into
+    /// `workingMemorySummary` — because the cloud path *rebuilds*
+    /// `workingMemorySummary` from cloud-safe durable memories and would
+    /// otherwise drop the session continuity entirely. `sanitizeForCloud`
+    /// PII-redacts it and `PromptComposer.layerConversationState` renders it.
+    let conversationState: String?
 
     var hasAttachedImage: Bool { attachedImageData != nil }
 
@@ -54,7 +62,8 @@ struct HybridBrainRequest: Sendable {
         workingMemorySummary: String,
         attachedImageData: Data?,
         purpose: RequestPurpose = .captainChat,
-        appKnowledge: String? = nil
+        appKnowledge: String? = nil,
+        conversationState: String? = nil
     ) {
         self.conversation = conversation
         self.screenContext = screenContext
@@ -66,6 +75,7 @@ struct HybridBrainRequest: Sendable {
         self.attachedImageData = attachedImageData
         self.purpose = purpose
         self.appKnowledge = appKnowledge
+        self.conversationState = conversationState
     }
 }
 

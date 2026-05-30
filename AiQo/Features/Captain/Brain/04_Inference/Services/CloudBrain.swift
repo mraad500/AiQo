@@ -252,7 +252,9 @@ struct CloudBrainService: Sendable {
             intentSummary: base.intentSummary,
             workingMemorySummary: base.workingMemorySummary,
             attachedImageData: nil,
-            purpose: base.purpose
+            purpose: base.purpose,
+            appKnowledge: base.appKnowledge,
+            conversationState: base.conversationState
         )
 
         let retry = try await transport.generateReply(request: retryRequest, model: model)
