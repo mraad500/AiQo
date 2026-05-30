@@ -4,10 +4,12 @@ import Foundation
 ///
 /// Before any data reaches the Gemini API, this service:
 /// 1. Fetches cloud-safe memories (no PII — only goals/preferences)
-/// 2. Sanitizes conversation (truncates to last 4 messages)
+/// 2. Sanitizes conversation (last 16 messages or ~6000 chars)
 /// 3. Redacts all PII (emails, phones, UUIDs, IPs)
 /// 4. Normalizes user names to "User"
-/// 5. Buckets health data (steps by 50, calories by 10)
+/// 5. Forwards health data (steps, calories, HR, sleep) at full precision so
+///    the Captain reports the user's exact numbers; privacy is governed by the
+///    cloud-AI consent gate, not by coarsening the user's own metrics.
 struct CloudBrainService: Sendable {
     private let transport: HybridBrainService
     private let sanitizer: PrivacySanitizer

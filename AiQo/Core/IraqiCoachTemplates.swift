@@ -1,7 +1,8 @@
 import Foundation
 
 /// Deterministic Iraqi Arabic coach copy for proactive nudges.
-/// No LLM calls — no privacy surface. All numeric inputs are expected to be bucketed by the caller.
+/// No LLM calls — no privacy surface. Numeric inputs are the user's exact
+/// metrics and are surfaced verbatim (no rounding) so nudges match the dashboard.
 enum IraqiCoachTemplates {
 
     struct Input {
@@ -17,14 +18,12 @@ enum IraqiCoachTemplates {
     }
 
     static func iraqi(_ input: Input) -> String {
-        let stepsBucket = (input.steps / 1000) * 1000
-
         if input.steps < 3000 && (input.timeOfDay == .afternoon || input.timeOfDay == .evening) {
             return "شكد باقي عالليل؟ خلنا نمشي شوية، ما تسوي كلش يعني. خمس دقايق تكفي."
         }
 
         if input.steps < 6000 {
-            return "مشيت \(stepsBucket) تقريباً. مو بطل، بس نقدر نضيف شوية. قوم شوف شنو تقدر تسوي."
+            return "مشيت \(input.steps) خطوة. مو بطل، بس نقدر نضيف شوية. قوم شوف شنو تقدر تسوي."
         }
 
         if input.steps >= input.stepGoal - 2000 && input.steps < input.stepGoal {
@@ -39,13 +38,11 @@ enum IraqiCoachTemplates {
     }
 
     static func english(_ input: Input) -> String {
-        let stepsBucket = (input.steps / 1000) * 1000
-
         if input.steps < 3000 && (input.timeOfDay == .afternoon || input.timeOfDay == .evening) {
             return "Day's winding down. A short 5-minute walk now can change how tomorrow starts."
         }
         if input.steps < 6000 {
-            return "You're around \(stepsBucket) steps. Not bad, but we can do a little more. Get up for a minute."
+            return "You're at \(input.steps) steps. Not bad, but we can do a little more. Get up for a minute."
         }
         if input.steps >= input.stepGoal - 2000 && input.steps < input.stepGoal {
             return "You're close to your goal. Don't stop now — the finish matters more than the start."

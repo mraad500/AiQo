@@ -562,12 +562,10 @@ final class SmartNotificationScheduler {
         language: CoachNotificationLanguage
     ) -> String {
         let input = IraqiCoachTemplates.Input(
-            steps: (context.steps / 500) * 500,
+            steps: max(0, context.steps),
             stepGoal: defaultStepGoal,
-            heartRate: context.heartRate.map { ($0 / 5) * 5 },
-            sleepHours: context.sleepHours > 0
-                ? (context.sleepHours * 2).rounded() / 2
-                : nil,
+            heartRate: context.heartRate.map { max(0, $0) },
+            sleepHours: context.sleepHours > 0 ? max(0, context.sleepHours) : nil,
             timeOfDay: currentTimeOfDay()
         )
 

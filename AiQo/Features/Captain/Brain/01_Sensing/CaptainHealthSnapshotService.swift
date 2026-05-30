@@ -118,22 +118,22 @@ final class CaptainHealthSnapshotService: @unchecked Sendable {
         )
     }
 
-    // MARK: - Context Builder (defensive: all vitals bucketed before interpolation)
+    // MARK: - Context Builder (exact vitals — the Captain reports the user's real numbers)
 
     func buildContextPrompt(
         userInput: String,
         metrics: CaptainDailyHealthMetrics
     ) async -> String {
-        let heartRateText = bucketedHeartRate(metrics.averageOrCurrentHeartRateBPM)
-        let sleepText = bucketedSleep(metrics.sleepHours)
+        let heartRateText = formattedHeartRate(metrics.averageOrCurrentHeartRateBPM)
+        let sleepText = formattedSleep(metrics.sleepHours)
         let runtimeContext = await runtimeContextSummary()
 
         return """
         \(runtimeContext)
 
         User health snapshot from Apple Health (today, fully local on-device):
-        - Step Count: \(bucketed(steps: metrics.stepCount))
-        - Active Energy Burned: \(bucketed(calories: metrics.activeEnergyKilocalories)) kcal
+        - Step Count: \(max(0, metrics.stepCount))
+        - Active Energy Burned: \(max(0, metrics.activeEnergyKilocalories)) kcal
         - Heart Rate (average/current): \(heartRateText)
         - Sleep Analysis (today): \(sleepText) hours
 
@@ -176,15 +176,12 @@ final class CaptainHealthSnapshotService: @unchecked Sendable {
         """
     }
 
-    private func bucketed(steps: Int) -> Int { (max(0, steps) / 500) * 500 }
-    private func bucketed(calories: Int) -> Int { (max(0, calories) / 10) * 10 }
-    private func bucketedHeartRate(_ heartRate: Int?) -> String {
-        guard let hr = heartRate else { return "Not available" }
-        return "\((max(0, hr) / 5) * 5) bpm"
+    private func formattedHeartRate(_ heartRate: Int?) -> String {
+        guard let hr = heartRate, hr > 0 else { return "Not available" }
+        return "\(max(0, hr)) bpm"
     }
-    private func bucketedSleep(_ hours: Double) -> String {
-        let clamped = max(0, hours)
-        return String(format: "%.1f", ((clamped * 2).rounded() / 2))
+    private func formattedSleep(_ hours: Double) -> String {
+        String(format: "%.1f", max(0, hours))
     }
 
     // MARK: - On-Device AI (used by HandsFreeZone2Manager)

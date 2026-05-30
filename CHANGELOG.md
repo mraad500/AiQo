@@ -8,12 +8,13 @@
 
 ### Improved
 
+- **Captain Hamoudi now reports your exact numbers.** The Captain used to coarsen your live stats before reasoning on them — steps were floored to the nearest 500, so 962 steps showed up as "500" and its answers disagreed with the home dashboard. Health metrics (steps, calories, heart rate, sleep) and your height/weight now reach the Captain at full precision across the chat reply, the session-opener greeting, and proactive nudges, so what it tells you always matches what the app shows. PII redaction (names, emails, phones) is unchanged, and identifiability stays governed by the existing cloud-AI consent gate — not by blurring your own metrics.
 - **Rich workout-plan cards in chat.** Plans the Captain builds now render as full day-by-day cards directly in the conversation (title, weeks, per-day muscle focus, sets/reps), with cross-feature polish so the chat, Plan, and Gym surfaces feel consistent.
 - **Reliability & safety hardening.** Centralized model selection behind a single policy with a remote kill-switch (the `gemini-3-flash-preview` model is gated and OFF by default; every path falls back to the stable `gemini-2.5-flash` automatically on error/timeout). Brain V2, Memory V4, and the Notification Brain each gained a Supabase-backed remote kill switch so they can be disabled live without an App Store release. The realistic-3D surfaces (outdoor-run map, avatar) now auto-downgrade on lower-RAM devices and under thermal stress for smoother performance.
 
 ### Privacy & compliance
 
-- The new conversation memory is derived only from messages that already flow to the cloud, and runs through the same `PrivacySanitizer` PII-redaction + health-bucketing pipeline before any send. No new data types, no new privacy labels, no new endpoints.
+- The new conversation memory is derived only from messages that already flow to the cloud, and runs through the same `PrivacySanitizer` PII-redaction pipeline before any send. No new data types, no new privacy labels, no new endpoints.
 
 ### Behind the scenes
 
