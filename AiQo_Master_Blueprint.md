@@ -207,7 +207,7 @@ The Captain is AiQo's crown jewel and most complex subsystem. It lives under `Ai
 ### 5.3 Inference routing & models
 | Path | Model | When | Privacy |
 |---|---|---|---|
-| **Cloud** | `gemini-2.5-flash` (free/Max default) · `gemini-3-flash-preview` (Pro / reasoning + memory extraction) | gym, kitchen, peaks, myVibe, mainChat | Request sanitized (PII redacted, last ~4 msgs, health bucketed) before send |
+| **Cloud** | `gemini-2.5-flash` (free/Max default) · `gemini-3-flash-preview` (Pro / reasoning + memory extraction) | gym, kitchen, peaks, myVibe, mainChat | Request sanitized (PII redacted, last 16 msgs / ~6000 chars; health metrics forwarded **exact**) before send |
 | **On-device** | Apple Intelligence **sleep agent** · on-device chat engine | **sleep analysis (always)**; cloud fallback | Raw sleep stages never leave the device |
 | **Voice** | Apple TTS (default) · **MiniMax** cloud TTS (premium/Pro) | spoken replies | Premium voice gated; key isolated per-user in Keychain |
 
@@ -347,7 +347,7 @@ Shared `_shared/cors.ts`, `_shared/auth.ts`.
 - **Three-tier brain fallback:** CloudBrain → LocalBrain → persona/offline.
 
 ### 7.5 HealthKit
-Read: heartRate, activeEnergyBurned, distanceWalking/Running + cycling, stepCount, bodyMass, bodyFatPercentage, leanBodyMass, sleepAnalysis, ActivitySummary. Write: workoutType. `HealthKitManager` (singleton, observer query throttled ~60s). Captain health snapshots are bucketed (steps by 50, calories by 10) and time-boxed (2s/query) before any cloud use.
+Read: heartRate, activeEnergyBurned, distanceWalking/Running + cycling, stepCount, bodyMass, bodyFatPercentage, leanBodyMass, sleepAnalysis, ActivitySummary. Write: workoutType. `HealthKitManager` (singleton, observer query throttled ~60s). Captain health snapshots are forwarded **exact** (the Captain must report the user's real numbers, matching the dashboard) and time-boxed (2s/query); cloud use is gated by AI-Data consent, not by coarsening the metrics.
 
 ### 7.6 Location, notifications, analytics, crash
 - **Location:** `RunLocationManager` (CoreLocation, `.fitness`, accuracy gate 50m, step gate 1.5–150m, elevation noise gate 1m, smoothed course).
@@ -431,7 +431,7 @@ Ranking: `.none(0) < .max(1) ≤ .trial/.pro(2)`. `effectiveAccessTier`: `.trial
 
 ## 11. Privacy & compliance
 Privacy is a first-class product value ("بياناتك ملكك"):
-- **Sanitize-before-cloud:** `PrivacySanitizer` redacts emails/phones/UUIDs/IPs, normalizes names to "User," truncates to last ~4 messages, buckets health numbers — before any Gemini/MiniMax call.
+- **Sanitize-before-cloud:** `PrivacySanitizer` redacts emails/phones/UUIDs/IPs, normalizes names to "User," truncates to last 16 messages / ~6000 chars, and forwards health metrics **exact** (no coarsening — the Captain reports the user's real numbers) — before any Gemini/MiniMax call.
 - **On-device guarantees:** sleep analysis, memory embeddings, Learning-Spark certificate OCR/verification, directive parsing — never leave the device.
 - **Per-purpose consent** (Apple 5.1.2(II)): independent classes for AI Data, Captain Voice, and **Body Photo** (`BodyPhotoConsent`, versioned UserDefaults keys) with grant/revoke + timestamps.
 - **Body/meal photos:** downsized, JPEG re-encoded, **EXIF/GPS stripped** (`sanitizeKitchenImageData`), sent once to Gemini, never written to disk or stored on AiQo servers.
