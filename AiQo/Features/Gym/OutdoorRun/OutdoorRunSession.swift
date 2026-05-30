@@ -38,6 +38,7 @@ final class OutdoorRunSession: ObservableObject {
     /// Frozen at finish so the summary/share never disagree with what was saved.
     @Published private(set) var finalCalories: Double = 0
     @Published private(set) var finalAvgHeartRate: Double = 0
+    @Published private(set) var finalDistanceMeters: Double = 0
 
     let title: String
 
@@ -59,6 +60,31 @@ final class OutdoorRunSession: ObservableObject {
     /// Live heart rate from the Watch (0 when no Watch / no reading yet).
     var heartRate: Double {
         isWatchActive ? connectivity.currentHeartRate : 0
+    }
+
+    /// Best-effort live distance. When the Apple Watch companion is active and
+    /// has reported a meaningful distance, prefer it — the Watch fuses onboard
+    /// GPS with pedometer signals, which is consistently more accurate than the
+    /// phone's pocket-bound CLLocation sum (which can either drift-inflate from
+    /// fix jitter or under-report when iOS throttles background tracking). The
+    /// 50 m floor avoids using a zero/near-zero Watch reading in the first few
+    /// seconds before HKHealthKit has accumulated anything.
+    var effectiveDistanceMeters: Double {
+        let watchDistance = connectivity.currentDistance
+        if isWatchActive && watchDistance >= 50 {
+            return watchDistance
+        }
+        return distanceMeters
+    }
+
+    /// What the UI should show. After `finish()` this is locked to the value
+    /// captured at completion so the summary and share card never drift if
+    /// late connectivity packets arrive.
+    var displayedDistanceMeters: Double {
+        if phase == .finished {
+            return finalDistanceMeters > 0 ? finalDistanceMeters : distanceMeters
+        }
+        return effectiveDistanceMeters
     }
 
     // MARK: - Private
@@ -86,10 +112,14 @@ final class OutdoorRunSession: ObservableObject {
     }
 
     /// Average pace over the whole run, in seconds per kilometre. Returns nil
-    /// until enough distance exists for the figure to be meaningful.
+    /// until enough distance exists for the figure to be meaningful. Uses the
+    /// same distance source as the displayed hero so pace can never look
+    /// inverted relative to the kilometres shown (e.g. 48:53 min/km on a 4 km
+    /// run because two different distance sources were divided into duration).
     var averagePaceSecondsPerKm: Double? {
-        guard distanceMeters >= 20, elapsedSeconds > 0 else { return nil }
-        return Double(elapsedSeconds) / (distanceMeters / 1000.0)
+        let dist = displayedDistanceMeters
+        guard dist >= 20, elapsedSeconds > 0 else { return nil }
+        return Double(elapsedSeconds) / (dist / 1000.0)
     }
 
     /// Live pace derived from current GPS speed, falling back to the running
@@ -161,6 +191,10 @@ final class OutdoorRunSession: ObservableObject {
         finalAvgHeartRate = connectivity.currentAverageHeartRate > 0
             ? connectivity.currentAverageHeartRate
             : connectivity.currentHeartRate
+        // Capture the effective distance BEFORE telling the Watch to end its
+        // workout — otherwise a teardown race can zero out the connectivity
+        // distance before we read it.
+        finalDistanceMeters = effectiveDistanceMeters
         finishedAt = Date()
         phase = .finished
         if isWatchActive { connectivity.endWorkoutOnWatch() }
@@ -241,13 +275,16 @@ final class OutdoorRunSession: ObservableObject {
         let durationMinutes = elapsedSeconds / 60
         let calories = finalCalories > 0 ? finalCalories : estimatedCalories
         let endedAt = finishedAt ?? Date()
+        // Saved distance = what the summary shows — Watch HKHealthKit when it
+        // was the active companion, phone GPS otherwise.
+        let savedDistance = finalDistanceMeters > 0 ? finalDistanceMeters : distanceMeters
 
         WorkoutHistoryStore.shared.recordCompletion(
             title: title,
             durationSeconds: elapsedSeconds,
             activeCalories: calories,
             heartRate: finalAvgHeartRate > 0 ? finalAvgHeartRate : nil,
-            distanceMeters: distanceMeters
+            distanceMeters: savedDistance
         )
 
         AnalyticsService.shared.track(.workoutCompleted(
@@ -261,7 +298,7 @@ final class OutdoorRunSession: ObservableObject {
             title: title,
             startedAt: startedAt ?? endedAt.addingTimeInterval(-Double(elapsedSeconds)),
             finishedAt: endedAt,
-            distanceMeters: distanceMeters,
+            distanceMeters: savedDistance,
             elapsedSeconds: elapsedSeconds,
             averagePaceSecondsPerKm: averagePaceSecondsPerKm,
             elevationGainMeters: elevationGainMeters,

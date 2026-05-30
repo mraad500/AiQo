@@ -310,7 +310,11 @@ struct CaptainScreen: View {
                             messages: viewModel.messages,
                             isTyping: viewModel.isTyping,
                             coachState: viewModel.coachState,
-                            scrollEnabled: layout.chatScrollEnabled
+                            scrollEnabled: layout.chatScrollEnabled,
+                            workoutPlan: viewModel.currentWorkoutPlan,
+                            onStartWorkoutTap: handleStartWorkoutTap,
+                            streamingText: viewModel.streamingText,
+                            hasStreamingBubble: viewModel.streamingMessageID != nil
                         )
                         .frame(height: layout.chatHeight)
                         .offset(y: layout.chatOffset)
@@ -339,7 +343,11 @@ struct CaptainScreen: View {
                 messages: viewModel.messages,
                 isTyping: viewModel.isTyping,
                 coachState: viewModel.coachState,
-                scrollEnabled: true
+                scrollEnabled: true,
+                workoutPlan: viewModel.currentWorkoutPlan,
+                onStartWorkoutTap: handleStartWorkoutTap,
+                streamingText: viewModel.streamingText,
+                hasStreamingBubble: viewModel.streamingMessageID != nil
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 12)
@@ -366,6 +374,15 @@ struct CaptainScreen: View {
             )
             .padding(.bottom, 16)
         }
+    }
+
+    /// Tapped from the in-chat `WorkoutPlanCard`. v1 hops into the
+    /// detailed Captain chat view (where the existing plan tooling lives);
+    /// when the dedicated workout runner ships we'll route there instead.
+    /// Lives on the screen instead of the card so the card stays reusable
+    /// across surfaces (Captain main, future Club preview, etc.).
+    private func handleStartWorkoutTap() {
+        AppRootManager.shared.openCaptainChat()
     }
 
     private var topChrome: some View {
@@ -509,7 +526,24 @@ struct ChatContainerView: View {
     var isTyping: Bool = false
     var coachState: CoachCognitiveState = .idle
     var scrollEnabled: Bool = false
+    /// When non-nil, a premium `WorkoutPlanCard` renders inline below the
+    /// last message. Owned by `CaptainViewModel.currentWorkoutPlan` — the
+    /// card shows the day-by-day breakdown so the bubble can stay short.
+    var workoutPlan: WorkoutPlan? = nil
+    /// Tap target for the card's "Start workout" CTA. Hand back navigation
+    /// to the host screen (e.g. push into the Club runner).
+    var onStartWorkoutTap: (() -> Void)? = nil
+    /// Active progressive-reveal stream. When the Captain's reply is being
+    /// streamed out char-by-char, `streamingText` carries the running prefix
+    /// and `streamingMessageID` is the row identity. The bubble is rendered
+    /// in place of the (not-yet-committed) final row so the user sees the
+    /// Captain "talking" instead of a silent gap between their message and
+    /// the plan card. Owned by `CaptainViewModel`.
+    var streamingText: String = ""
+    var hasStreamingBubble: Bool = false
     private let thinkingIndicatorID = "captain-thinking-indicator"
+    private let planCardID = "captain-workout-plan-card"
+    private let streamingBubbleID = "captain-streaming-bubble"
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -527,7 +561,26 @@ struct ChatContainerView: View {
                         ))
                     }
 
-                    if isTyping {
+                    // Progressive-reveal bubble. Rendered ABOVE the workout
+                    // card so the Captain's voice arrives in the same visual
+                    // position the finalized row will take (no jump on swap).
+                    if hasStreamingBubble {
+                        StreamingCaptainBubbleRow(text: streamingText)
+                            .id(streamingBubbleID)
+                            .padding(.top, 2)
+                    }
+
+                    if let workoutPlan {
+                        WorkoutPlanCard(plan: workoutPlan, onStartTap: onStartWorkoutTap)
+                            .id(planCardID)
+                            .padding(.top, 4)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                                removal: .opacity
+                            ))
+                    }
+
+                    if isTyping && !hasStreamingBubble {
                         HStack {
                             TypingIndicatorView(state: coachState)
                             Spacer()
@@ -545,6 +598,7 @@ struct ChatContainerView: View {
                 .padding(.bottom, 20)
                 .animation(.spring(response: 0.38, dampingFraction: 0.82), value: messages.count)
                 .animation(.easeInOut(duration: 0.22), value: isTyping)
+                .animation(.spring(response: 0.4, dampingFraction: 0.84), value: workoutPlan != nil)
             }
             .scrollDisabled(!scrollEnabled)
             .scrollDismissesKeyboard(.immediately)
@@ -557,11 +611,38 @@ struct ChatContainerView: View {
             .onChange(of: isTyping) {
                 scrollToBottom(using: proxy)
             }
+            .onChange(of: hasStreamingBubble) {
+                scrollToBottom(using: proxy)
+            }
+            .onChange(of: streamingText) {
+                // Pin the live bubble to the bottom as it grows char-by-char.
+                // No animation on purpose — a spring per tick janks; an
+                // instant scrollTo tracks it buttery-smooth.
+                guard hasStreamingBubble else { return }
+                proxy.scrollTo(streamingBubbleID, anchor: .bottom)
+            }
+            .onChange(of: workoutPlan != nil) { _, hasPlan in
+                guard hasPlan else { return }
+                withAnimation(.smooth(duration: 0.32)) {
+                    proxy.scrollTo(planCardID, anchor: .bottom)
+                }
+            }
         }
     }
 
     private func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
-        let targetID: AnyHashable? = isTyping ? AnyHashable(thinkingIndicatorID) : messages.last.map { AnyHashable($0.id) }
+        let targetID: AnyHashable? = {
+            if hasStreamingBubble {
+                return AnyHashable(streamingBubbleID)
+            }
+            if isTyping {
+                return AnyHashable(thinkingIndicatorID)
+            }
+            if workoutPlan != nil {
+                return AnyHashable(planCardID)
+            }
+            return messages.last.map { AnyHashable($0.id) }
+        }()
         guard let targetID else { return }
 
         guard animated else {
@@ -642,7 +723,7 @@ struct ChatBubbleView: View {
             if !isUser { Spacer(minLength: 52) }
 
             VStack(alignment: isUser ? .leading : .trailing, spacing: 4) {
-                Text(text)
+                Text.captainMessage(text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(ink)
                     .lineSpacing(3)
@@ -697,6 +778,88 @@ struct ChatBubbleView: View {
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Streaming Captain Bubble
+
+/// The live progressive-reveal row shown while the Captain's reply types out
+/// in `CaptainScreen`. Mirrors `ChatBubbleView`'s assistant layout (right-
+/// aligned in RTL, sand bubble, ink text) so when the reveal finishes and
+/// the real row is appended, the swap is seamless — same text, same
+/// position, no jump. Required because the parent screen hosts the workout
+/// card inline; without an explicit streaming bubble, the Captain looks
+/// mute between the user's message and the card while the text streams.
+struct StreamingCaptainBubbleRow: View {
+    let text: String
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private let sandFill = Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3
+    private let ink      = Color(red: 0.059, green: 0.090, blue: 0.129) // #0F1721
+
+    private var maxBubbleWidth: CGFloat {
+        sizeClass == .regular ? 520 : 300
+    }
+
+    private var bubbleShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: 18,
+            bottomLeadingRadius: 6,
+            bottomTrailingRadius: 18,
+            topTrailingRadius: 18,
+            style: .continuous
+        )
+    }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            Spacer(minLength: 52)
+
+            HStack(alignment: .bottom, spacing: 3) {
+                Text.captainMessage(text)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(ink)
+                    .lineSpacing(3)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                CaptainScreenStreamingCaret()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: maxBubbleWidth, alignment: .trailing)
+            .background(
+                bubbleShape.fill(
+                    LinearGradient(
+                        colors: [sandFill, sandFill.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            )
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}
+
+/// Reveal caret for the streaming bubble. Named with the screen prefix so
+/// it doesn't collide with the same-named primitive inside CaptainChatView.
+private struct CaptainScreenStreamingCaret: View {
+    @State private var on = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(Color(hex: "5ECDB7"))
+            .frame(width: 2, height: 16)
+            .padding(.bottom, 2)
+            .opacity(on ? 1 : 0.15)
+            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: on)
+            .onAppear { on = true }
+            .accessibilityHidden(true)
     }
 }
 

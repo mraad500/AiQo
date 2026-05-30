@@ -180,11 +180,15 @@ struct CloudBrainService: Sendable {
         }
     }
 
-    /// True when the latest user message in a gym-screen request is asking
-    /// for a workout plan (the intake composer, or a free-text ask). Kept
-    /// narrow so ordinary gym chit-chat never triggers a retry.
+    /// True when the latest user message is asking for a workout — in the gym
+    /// screen OR the main Captain chat. The recovery retry only fires when the
+    /// first reply already came back with `workoutPlan == nil` (see call site),
+    /// so a correct first reply never pays the extra round-trip. Phrasings are
+    /// deliberately broad (conversational asks like "اكتبلي تمرين"، not just
+    /// "ابني خطة") because a paid user must never get a teaser instead of a
+    /// real workout.
     private static func looksLikePlanRequest(_ request: HybridBrainRequest) -> Bool {
-        guard request.screenContext == .gym else { return false }
+        guard request.screenContext == .gym || request.screenContext == .mainChat else { return false }
         guard let last = request.conversation
             .last(where: { $0.role == .user })?
             .content
@@ -194,7 +198,11 @@ struct CloudBrainService: Sendable {
         let needles = [
             "أبني خطة", "ابني خطة", "خطة تمرين", "خطة تدريب",
             "اعطني خطة", "اعطيني خطة", "سويلي خطة", "سو لي خطة",
-            "build me a", "workout plan", "training plan", "personalized"
+            "اكتبلي تمرين", "اكتب لي تمرين", "عطني تمرين", "عطيني تمرين",
+            "سويلي تمرين", "سو لي تمرين", "تمرين اليوم", "تمرين قوي",
+            "بدي اتمرن", "بدّي أتمرّن", "ريد تمرين", "أريد تمرين", "اريد اتمرن",
+            "build me a", "workout plan", "training plan", "personalized",
+            "write me a workout", "give me a workout", "workout for"
         ]
         return needles.contains { last.contains($0.lowercased()) }
     }

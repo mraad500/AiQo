@@ -482,7 +482,7 @@ private struct ChatMessageRow: View {
                 Spacer(minLength: 26)
 
                 MessageBubble(isUser: true, timestamp: message.timestamp) {
-                    Text(message.text)
+                    Text.captainMessage(message.text)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.trailing)
                 }
@@ -491,7 +491,7 @@ private struct ChatMessageRow: View {
 
                 MessageBubble(isUser: false, timestamp: message.timestamp) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(message.text)
+                        Text.captainMessage(message.text)
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .multilineTextAlignment(.leading)
 
@@ -578,7 +578,7 @@ private struct StreamingMessageRow: View {
 
             MessageBubble(isUser: false, timestamp: Date()) {
                 HStack(alignment: .bottom, spacing: 3) {
-                    Text(text)
+                    Text.captainMessage(text)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.leading)
                     StreamingCaret()

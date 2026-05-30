@@ -228,7 +228,7 @@ private struct DJCaptainMessageRow: View {
             if message.isUser {
                 Spacer(minLength: 52)
 
-                Text(message.text)
+                Text.captainMessage(message.text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.black.opacity(0.82))
                     .multilineTextAlignment(.trailing)
@@ -253,7 +253,7 @@ private struct DJCaptainMessageRow: View {
     private var assistantContent: some View {
         if let recommendation = message.spotifyRecommendation {
             VStack(alignment: .leading, spacing: 14) {
-                Text(message.text)
+                Text.captainMessage(message.text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.96))
                     .multilineTextAlignment(.leading)
@@ -282,7 +282,7 @@ private struct DJCaptainMessageRow: View {
             .background(captainBubbleBackground)
             .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         } else {
-            Text(message.text)
+            Text.captainMessage(message.text)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.96))
                 .multilineTextAlignment(.leading)

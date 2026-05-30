@@ -28,6 +28,7 @@ struct RunSummaryView: View {
 
     @State private var camera: MapCameraPosition = .automatic
     @State private var isSharing = false
+    @Environment(\.layoutDirection) private var layoutDirection
 
     private let mint = Color(red: 0.718, green: 0.890, blue: 0.792)
     private let runOrange = Color(red: 1.0, green: 0.45, blue: 0.13)
@@ -75,11 +76,16 @@ struct RunSummaryView: View {
                 .font(.system(size: 46, weight: .bold))
                 .foregroundStyle(mint)
 
+            // Arabic glyphs are contextually connected — uppercase has no effect
+            // and tracking shatters ligatures into isolated forms (e.g. "ملخص
+            // الجري" → "ملخ ص ا لجر ي"), so apply the cinematic Latin styling
+            // only when the layout is LTR.
             Text(L10n.t("run.summary.title"))
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: layoutDirection == .rightToLeft ? 18 : 16,
+                              weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.55))
-                .textCase(.uppercase)
-                .tracking(4)
+                .textCase(layoutDirection == .rightToLeft ? nil : .uppercase)
+                .tracking(layoutDirection == .rightToLeft ? 0 : 4)
 
             Text(title)
                 .font(.system(size: 34, weight: .black, design: .rounded))

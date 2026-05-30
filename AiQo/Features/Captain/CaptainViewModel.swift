@@ -580,13 +580,49 @@ final class CaptainViewModel: ObservableObject {
             try ensureActiveRequest(requestID)
             coachState = .typing
 
+            // Silent-Captain fallback. The model is asked (hybrid contract)
+            // to return BOTH a short warm message AND the structured plan.
+            // In practice Gemini sometimes (a) returns an empty `message`
+            // when it judges the card sufficient, (b) returns a one-word
+            // ack ("تدلل!") that collapses to a tiny bubble, or (c) emits
+            // the parser-fallback "connection error" string when the JSON
+            // round-trip glitches. In all three cases the Captain looks
+            // mute beside its own plan card.
+            //
+            // We hard-coerce a warm intro when the model gave us a card
+            // but failed to give us a real message. 60 grapheme clusters
+            // is the bar — that's roughly "a sentence + a pointer". Any
+            // shorter and the bubble doesn't carry the Captain's voice
+            // properly. We also reject the known parser-fallback strings
+            // even when they exceed the length threshold, because they
+            // are coaching-content-free.
+            let warmFallback: String? = {
+                guard reply.workoutPlan != nil || reply.mealPlan != nil else { return nil }
+                let trimmed = reply.message
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let isTooShort = trimmed.count < 60
+                let isParserFallback = trimmed.hasPrefix("عذراً، صار خلل")
+                    || trimmed.hasPrefix("Sorry, something went wrong")
+                    || trimmed.hasPrefix("صار خلل بسيط")
+                    || trimmed.hasPrefix("Captain hit a small issue")
+                guard isTooShort || isParserFallback else { return nil }
+                if reply.workoutPlan != nil {
+                    return AppSettingsStore.shared.appLanguage == .english
+                        ? "Locked in, champ — your plan is ready in the card below. Open it and let's go, knee-safe and dialed in."
+                        : "تدلل يا بطل، رتبتلك خطة قوية ومراعية لركبتك بالكرت تحت. افتحها وابدأ، صوّب على الأداء الصحيح ولا تشد على الركبة."
+                }
+                return AppSettingsStore.shared.appLanguage == .english
+                    ? "Done — your meal plan is in the card below. Tap it for the full breakdown and timing."
+                    : "جاهز — خطة الأكل بالكرت تحت. افتحها وشوف الوجبات والتوقيت كامل."
+            }()
+
             // Validate and clean the reply before displaying:
             // 1. Remove duplicate sentences
             // 2. Trigger fallback if English ratio is too high in Arabic mode
-            let cleanedReplyMessage = cleanAssistantReplyMessage(reply.message)
+            let baseMessage = warmFallback ?? cleanAssistantReplyMessage(reply.message)
             let validated = validateResponse(
                 CaptainStructuredResponse(
-                    message: cleanedReplyMessage,
+                    message: baseMessage,
                     quickReplies: reply.quickReplies,
                     workoutPlan: reply.workoutPlan,
                     mealPlan: reply.mealPlan,
@@ -600,6 +636,7 @@ final class CaptainViewModel: ObservableObject {
             quickReplies = screenContext == .sleepAnalysis ? [] : (validated.quickReplies ?? [])
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
+
             let assistantReply = Self.markIfTruncated(
                 assistantReply: validated.message,
                 truncatedAtMaxTokens: reply.truncatedAtMaxTokens

@@ -3059,7 +3059,7 @@
 "run.control.pause" = "إيقاف مؤقت";
 "run.control.resume" = "كمّل";
 "run.control.finish" = "إنهاء";
-"run.summary.title" = "خلص الجري";
+"run.summary.title" = "ملخص الجري";
 "run.summary.done" = "تمام";
 "run.close.confirm.title" = "تنهي الجري؟";
 "run.close.confirm.message" = "الجري لساه شغّال. الإنهاء راح يحفظه ويسكّر الخريطة.";

@@ -438,10 +438,17 @@ private struct OutdoorRunShareCard: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: 96)
 
-                Text(kicker.uppercased())
-                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                // Arabic glyphs are contextually connected — uppercasing has no
+                // effect and tracking 8 shatters ligatures into isolated forms.
+                // Detect RTL by looking for Arabic-range characters in the
+                // localised kicker (the share card always renders inside an
+                // off-screen UIHostingController so @Environment(\.layoutDirection)
+                // isn't reliable here).
+                let kickerIsRTL = kicker.unicodeScalars.contains { 0x0600...0x06FF ~= $0.value }
+                Text(kickerIsRTL ? kicker : kicker.uppercased())
+                    .font(.system(size: kickerIsRTL ? 34 : 30, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.55))
-                    .tracking(8)
+                    .tracking(kickerIsRTL ? 0 : 8)
 
                 Text(title)
                     .font(.system(size: 70, weight: .black, design: .rounded))

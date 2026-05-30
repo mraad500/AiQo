@@ -108,7 +108,7 @@ struct OutdoorRunSessionContent: View {
             if session.phase == .finished {
                 RunSummaryView(
                     title: session.title,
-                    distanceMeters: session.distanceMeters,
+                    distanceMeters: session.displayedDistanceMeters,
                     elapsedSeconds: session.elapsedSeconds,
                     averagePaceSecondsPerKm: session.averagePaceSecondsPerKm,
                     elevationGainMeters: location.elevationGainMeters,
@@ -485,7 +485,7 @@ struct OutdoorRunSessionContent: View {
     }
 
     private var distanceValueText: String {
-        let meters = session.distanceMeters
+        let meters = session.displayedDistanceMeters
         if meters >= 1000 {
             return String(format: "%.2f", locale: questAppLocale(), meters / 1000)
         }
@@ -493,7 +493,7 @@ struct OutdoorRunSessionContent: View {
     }
 
     private var distanceUnitText: String {
-        session.distanceMeters >= 1000
+        session.displayedDistanceMeters >= 1000
             ? L10n.t("gym.metrics.kmShort")
             : L10n.t("gym.metrics.meterShort")
     }

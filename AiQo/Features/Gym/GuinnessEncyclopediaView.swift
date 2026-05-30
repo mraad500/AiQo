@@ -306,7 +306,7 @@ struct GuinnessBubble: View {
         HStack {
             if message.isUser { Spacer(minLength: 50) }
 
-            Text(message.text)
+            Text.captainMessage(message.text)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(theme.text)
                 .padding(.vertical, 10)

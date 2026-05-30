@@ -506,23 +506,28 @@ private extension HybridBrainService {
     // MARK: - Request Body
 
     func makeRequestBody(request: HybridBrainRequest) -> [String: Any] {
-        // Arabic tokenizes inefficiently in Gemini's BPE (~1.5–2× English).
-        // The structured reply envelope (greeting + per-metric line + advice +
-        // follow-up + quickReplies) plus the JSON wrapper itself eats budget
-        // fast — multi-metric questions ("how are my steps + calories + sleep
-        // + water today?") were hitting MAX_TOKENS at 1400 and clipping mid-
-        // sentence. 2048 gives ~1000–1300 Arabic words of headroom while the
-        // tightened conciseness rules in PromptComposer prevent rambling.
-        // finishReason=MAX_TOKENS is decoded in GeminiResponse — watch the
-        // gemini_max_tokens_hit log; if it still fires we tune per-screen.
+        // Token budget per screen. Arabic tokenizes ~1.5–2× English in Gemini's
+        // BPE so the cap is generous but bounded — the prior 4096 was paid out
+        // in wall-clock latency (cap → longer thinking + slower stream).
+        //
+        // **Hybrid contract (2026-05-20):** plan asks now produce a short
+        // `message` (2–4 lines) plus a structured `workoutPlan` object the
+        // card renders. That envelope is ~300–500 tokens in Arabic, so 2400
+        // leaves ~5× headroom for long multi-day plans without burning the
+        // budget on a paragraph of free-form text. Sleep analysis is bounded
+        // tighter because its 4-sentence contract is strict.
+        // finishReason=MAX_TOKENS is decoded in GeminiResponse — if the
+        // gemini_max_tokens_hit log spikes for a screen, retune that screen.
         let maxOutputTokens: Int = {
             switch request.screenContext {
-            case .mainChat, .myVibe:
+            case .mainChat:
+                return 2400
+            case .myVibe:
                 return 2048
             case .sleepAnalysis:
-                return 1200
+                return 1600
             case .gym, .kitchen, .peaks:
-                return 2048
+                return 2400
             }
         }()
 

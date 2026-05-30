@@ -702,7 +702,7 @@ struct CaptainPlanChatView: View {
         HStack {
             if message.isUser { Spacer(minLength: 36) }
 
-            Text(message.text)
+            Text.captainMessage(message.text)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 14)

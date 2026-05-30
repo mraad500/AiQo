@@ -372,8 +372,22 @@ private extension CaptainCognitivePipeline {
         )
 
         let constraintCategories: Set<String> = ["injury", "sleep", "medical_condition", "body"]
-        let constraints = relevantMemories.filter { constraintCategories.contains($0.category) }
         let strategyAnchors = relevantMemories.filter { !constraintCategories.contains($0.category) }
+
+        // Constraints — injuries especially — must surface on EVERY turn,
+        // not only when today's user message scores them as "relevant" via
+        // embedding similarity. A knee injury silently disappearing when
+        // the user asks "سويلي تمرين قوي لليوم" is exactly how Captain
+        // ends up prescribing squats and lunges to someone who can't do
+        // them. Union the relevance hits with an unconditional pull of
+        // every stored injury / medical_condition record so the prompt's
+        // `layerInjuryConstraints` keyword scan always sees them.
+        var constraints = relevantMemories.filter { constraintCategories.contains($0.category) }
+        let pinnedInjuries = memoryStore.getByCategory("injury")
+            + memoryStore.getByCategory("medical_condition")
+        for pinned in pinnedInjuries where !constraints.contains(where: { $0.key == pinned.key }) {
+            constraints.append(pinned)
+        }
 
         var sections: [String] = []
 
