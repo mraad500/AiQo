@@ -16,6 +16,13 @@ struct BodyPhotoConsentSheet: View {
     /// Called after the user grants consent. Lets the presenter resume the
     /// pending plan-submission that triggered the sheet.
     var onGranted: () -> Void = {}
+    /// Called when the user chooses to continue WITHOUT a photo. The presenter
+    /// must clear the pending body image and resume submission — otherwise the
+    /// intake still carries the image with consent unset, so the next submit
+    /// re-presents this same sheet and the plan never goes through (a dead end).
+    /// Defaults to a no-op so non-submission presenters (e.g. Settings) are
+    /// unaffected.
+    var onContinueWithoutPhoto: () -> Void = {}
 
     private var isArabic: Bool {
         AppSettingsStore.shared.appLanguage == .arabic
@@ -166,6 +173,7 @@ struct BodyPhotoConsentSheet: View {
 
     private var secondaryCTA: some View {
         Button {
+            onContinueWithoutPhoto()
             dismiss()
         } label: {
             Text(isArabic ? "خطة بدون صورة" : "Continue without a photo")

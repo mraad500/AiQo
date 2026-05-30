@@ -32,9 +32,12 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
         var facts: [FactSeed] = []
         var episodes: [EpisodeSeed] = []
         var sourceMessageCount = 0
-        /// Set when a V3 read in `willMigrate` throws. `didMigrate` then
-        /// skips the partial write + the migrated flag, leaving V4 clean for
-        /// a retry (the V3 fallback is already armed by recordMigrationFailure).
+        /// Set when a V3 read in `willMigrate` fails. `willMigrate` now also
+        /// rethrows in that case to abort the migration before SwiftData touches
+        /// the on-disk schema (so the armed V3 fallback can reopen the untouched
+        /// V3 store). This flag + the `didMigrate` guard remain as a defensive
+        /// backstop: if `didMigrate` is ever reached with staging incomplete it
+        /// still skips the partial write + the migrated flag.
         var stagingFailed = false
     }
 
@@ -101,6 +104,14 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             } catch {
                 pendingV4Payload.stagingFailed = true
                 MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_facts_failed")
+                // Abort BEFORE SwiftData rewrites the on-disk schema. Merely
+                // returning from didMigrate is not enough: SwiftData would still
+                // upgrade the store V3→V4→V5 on disk, while the armed V3 fallback
+                // reopens it with the V3 schema next launch — a mismatch that
+                // drops to the in-memory store and loses the user's memories.
+                // Throwing keeps the store at V3 so AppDelegate.makeCaptainContainerV4's
+                // catch can reopen it intact via makeCaptainContainerV3().
+                throw error
             }
 
             do {
@@ -126,6 +137,10 @@ enum CaptainSchemaMigrationPlan: SchemaMigrationPlan {
             } catch {
                 pendingV4Payload.stagingFailed = true
                 MemoryV4Gate.recordMigrationFailure(error, context: "memory_v3_to_v4_read_messages_failed")
+                // Same abort contract as the facts read above — throw so the
+                // on-disk store stays V3 and the V3 fallback can reopen it
+                // intact instead of finding an upgraded schema it can't read.
+                throw error
             }
         },
         didMigrate: { context in

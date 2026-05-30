@@ -575,9 +575,20 @@ struct CaptainPlanChatView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showBodyPhotoConsent) {
-            BodyPhotoConsentSheet(onGranted: dispatchIntake)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
+            BodyPhotoConsentSheet(
+                onGranted: dispatchIntake,
+                onContinueWithoutPhoto: {
+                    // User declined to send the photo for THIS plan: drop the
+                    // pending image and submit without it. Clearing it first
+                    // means submitIntake won't re-trigger the consent gate, so
+                    // the plan actually goes through (consent stays unset for
+                    // any future photo).
+                    intakeSelection.bodyImage = nil
+                    dispatchIntake()
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.hidden)
         }
     }
 
