@@ -40,7 +40,7 @@ Every meaningful action earns XP (workouts, hitting step goals, meals, streaks, 
 Small daily/weekly tasks (steps, plank, push-ups, sleep, calories, distance, Zone-2, mindfulness, kindness, streaks) that award XP. *(AR: التحديات اليومية — "تقدّم يومي. مكافآت حقيقية")*
 
 ### Learning Spark
-Complete an online course (Edraak, Coursera, …), then verify the certificate **on-device** (Vision OCR + text match) to earn a large XP reward.
+*(AR: شرارة التعلّم — "أثبِت لنفسك إنك تبدأ وتكمّل")* A one-time **starter quest** — the first challenge in **Stage 1 (Awakening / الاستيقاظ)** of the **Battle (معركة)** progression, and **free** to start. Pick one of two hand-picked free courses — *Planning a Successful Career Path* (Edraak, Arabic, ~6h) or *Learning How to Learn* (Coursera, English, ~15h) — finish it, then prove it by uploading the certificate (photo or link). Verification runs **entirely on-device** (Vision OCR + on-device reasoning); the certificate never leaves the phone and is never uploaded to a server. A verified completion awards **+1,000 XP** (the largest single-quest reward in early Battle) and is designed to plant the learning habit inside AiQo from day one.
 
 ### Outdoor Run (GPS)
 GPS running with a 3D satellite map, cinematic chase camera, live stats (distance, pace, HR, calories, elevation), per-km milestones, phone↔Watch GPS fusion, and an interactive route replay.

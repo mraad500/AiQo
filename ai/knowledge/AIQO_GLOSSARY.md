@@ -19,7 +19,7 @@
 | **Weekly Review** | ضبط البوصلة الأسبوعي | The Captain's weekly Peaks debrief that adjusts next week's plan. |
 | **Battle / QuestKit Arena** | — | A competitive ladder: 10 stages × 5 challenges × 3 difficulties; stages unlock sequentially. (Max+) |
 | **Quests** | التحديات اليومية | Daily/weekly micro-tasks that award XP. (Free) |
-| **Learning Spark** | — | A quest type: complete an online course and verify the certificate on-device for a large XP reward. |
+| **Learning Spark** | شرارة التعلّم | A one-time starter quest — the first challenge in Battle Stage 1 ("Awakening"), **free** to start. Complete a hand-picked free course (Edraak, Arabic ~6h; or Coursera, English ~15h) and verify the certificate **on-device** (the cert never leaves the phone) for a **+1,000 XP** reward. |
 | **Kitchen (Alchemy Kitchen)** | المطبخ | Fridge-camera → ingredient detection → AI meal plan with macros and a shopping list. (Max) |
 | **My Vibe / DJ Hamoudi** | — | Spotify-powered music that adapts to the user's biometric state and time of day. (Pro) |
 | **Zone 2** | — | Hands-free voice coaching during cardio that keeps the user in the optimal heart-rate zone. |

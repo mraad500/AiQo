@@ -73,6 +73,9 @@ You keep the free features and your data. Premium features (Captain chat, plans,
 **Is Kitchen / the fridge scanner free?**
 No — Kitchen is a Max feature. You photograph your fridge and the Captain builds a meal plan from your ingredients.
 
+**What is Learning Spark?**
+A **free** starter challenge — the first quest in the Battle (معركة) ladder, in Stage 1 ("Awakening"). You complete one of two hand-picked free online courses (Edraak's *Planning a Successful Career Path* in Arabic, ~6h; or Coursera's *Learning How to Learn* in English, ~15h), then upload your certificate (photo or link) to prove it. Verification happens **entirely on-device** — your certificate never leaves your phone — and a verified completion earns **+1,000 XP**. It's there to plant the learning habit from day one.
+
 **Can I use Peaks on Max?**
 On Max you can **view** Peaks (Legendary Challenges) but not start one. Starting and tracking a Peak requires Pro.
 
