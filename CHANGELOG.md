@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.0.6 — 2026-05-30
+
+### New
+
+- **Captain Hamoudi keeps the whole conversation in mind — no matter how long it runs.** Long chats used to lose their beginning once the session grew, so the Captain could "forget" what you told it earlier and answer vaguely. The Captain now performs **rolling, in-place conversation compaction**: as a session grows past its live window, the earlier part is folded into a faithful, structured memory of the chat (your opening goal, the points you made, the plans and promises the Captain itself gave you, and any corrections you made) and carried forward inside the same conversation — no new screen, no lost thread. The summary is **extracted from what was actually said**, never invented, and the Captain is explicitly instructed not to fabricate any detail that isn't in that memory or the recent messages. A soft "طويت بداية محادثتنا بذاكرتي" / "earlier chat folded into memory" marker appears once at the seam so you can see the continuity. Works on every tier; sleep analysis stays on-device and untouched. New `ConversationCompactor` / `ConversationDigest` + a dedicated, PII-sanitized `conversationState` prompt channel and grounding lock.
+
+### Improved
+
+- **Rich workout-plan cards in chat.** Plans the Captain builds now render as full day-by-day cards directly in the conversation (title, weeks, per-day muscle focus, sets/reps), with cross-feature polish so the chat, Plan, and Gym surfaces feel consistent.
+- **Reliability & safety hardening.** Centralized model selection behind a single policy with a remote kill-switch (the `gemini-3-flash-preview` model is gated and OFF by default; every path falls back to the stable `gemini-2.5-flash` automatically on error/timeout). Brain V2, Memory V4, and the Notification Brain each gained a Supabase-backed remote kill switch so they can be disabled live without an App Store release. The realistic-3D surfaces (outdoor-run map, avatar) now auto-downgrade on lower-RAM devices and under thermal stress for smoother performance.
+
+### Privacy & compliance
+
+- The new conversation memory is derived only from messages that already flow to the cloud, and runs through the same `PrivacySanitizer` PII-redaction + health-bucketing pipeline before any send. No new data types, no new privacy labels, no new endpoints.
+
+### Behind the scenes
+
+- Fixed a latent bug where the Captain's session-continuity summary never actually reached the cloud model on the main chat path (the cloud request rebuilt its working-memory block and dropped it); continuity now rides a dedicated request field that survives sanitization.
+- Added a DEBUG-only `CaptainBrainV2Gate.testOverride` seam and repaired `ProactiveEngineTests` (it referenced a now get-only flag), restoring the unit-test target. New `ConversationCompactorTests` include a no-fabrication faithfulness check.
+
 ## v1.0.5 — 2026-05-12
 
 ### New

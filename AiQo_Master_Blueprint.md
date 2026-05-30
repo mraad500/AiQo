@@ -4,7 +4,7 @@
 > The single source of truth for the AiQo product — its identity, founder/persona, architecture, every feature, backend, monetization, privacy, and growth strategy.
 >
 > **Owner:** Mohammed Raad (founder, solo) · **Persona:** Captain Hamoudi (كابتن حمودي)
-> **App version:** `1.0.5` (build `27`) · **Bundle:** `com.mraad500.aiqo` · **Platform:** iOS 26.2+ (SwiftUI)
+> **App version:** `1.0.6` (build `28`) · **Bundle:** `com.mraad500.aiqo` · **Platform:** iOS 26.2+ (SwiftUI)
 > **Doc generated:** 2026-05-30 · **Repo:** `github.com/mraad500/AiQo`
 
 ---
@@ -456,12 +456,12 @@ Privacy is a first-class product value ("بياناتك ملكك"):
 ---
 
 ## 13. Version history (`CHANGELOG.md`)
-- **Unreleased (`program/world-class-completion`, 2026-05-30)** — **Captain conversation compaction** (anti-hallucination for long chats): faithful rolling `ConversationDigest` (opening goal · user points · the Captain's own commitments · corrections) + a prompt grounding lock, delivered via a new `conversationState` request field; **fixed a latent bug** where session continuity never reached Gemini on the cloud path (sanitizeForCloud overwrote `workingMemorySummary`); token-budget live window; a subtle "folded into memory" chat marker; `ConversationCompactorTests`. Also a DEBUG `CaptainBrainV2Gate.testOverride` test seam. (see §5.2, §5.4, §5.6, §5.9, §14.13)
+- **v1.0.6 (2026-05-30, build 28)** — **Captain conversation compaction** (anti-hallucination for long chats): faithful rolling `ConversationDigest` (opening goal · user points · the Captain's own commitments · corrections) + a prompt grounding lock, delivered via a new `conversationState` request field; **fixed a latent bug** where session continuity never reached Gemini on the cloud path (sanitizeForCloud overwrote `workingMemorySummary`); token-budget live window; a subtle "folded into memory" chat marker; `ConversationCompactorTests`. Bundles the earlier branch work since 1.0.5: rich in-chat workout-plan cards + cross-feature polish, and reliability/safety hardening (centralized `GeminiModelPolicy` with the `gemini-3-flash-preview` gate OFF by default + auto-fallback, Supabase remote kill switches for Brain V2 / Memory V4 / Notification Brain, `DevicePerformanceTier` 3D auto-downgrade). Also a DEBUG `CaptainBrainV2Gate.testOverride` test seam. (see §5.2, §5.4, §5.6, §5.9, §14.13)
 - **v1.0.5 (2026-05-12)** — **Directives** (layer 11, on-device, executed after every workout); bigger/sharper memory (Pro facts→1200, Max→500, retrieval 40/18, history 7→30, chat 200→400); **multi-day workout plans** + day-picker; optional **body photo** for tailored plans + dedicated consent surface; Plan "world-class" UI (PlanPalette mint·sand·lavender·lemon).
 - **v1.0.2 (2026-04-20)** — Learning Spark Stage 2 (5-course picker, Edraak+Coursera), challenge XP (+1000 / +2000), on-device verification extended, celebration redesign.
 - **v1.0.1 (2026-04-19)** — Crisis detection, proactive brain, regional safety resources.
 
-> Build number has advanced over time (project currently `CURRENT_PROJECT_VERSION = 27` at marketing version `1.0.5`). Release branches `brain-refactor/*` and `release/*` may lag `main` and the active `program/world-class-completion` branch — a "missing Captain feature" is usually an unmerged branch, not a regression.
+> Build number has advanced over time (project currently `CURRENT_PROJECT_VERSION = 28` at marketing version `1.0.6`). Release branches `brain-refactor/*` and `release/*` may lag `main` and the active `program/world-class-completion` branch — a "missing Captain feature" is usually an unmerged branch, not a regression.
 
 ---
 
