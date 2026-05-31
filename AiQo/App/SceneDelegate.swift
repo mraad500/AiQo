@@ -50,6 +50,16 @@ final class AppFlowController: ObservableObject {
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteSubscriptionIntro)
         }
 
+        // Migration: the QuickStart age/health screen was previously reachable
+        // only from Profile; it is now a required onboarding step (Guideline
+        // 1.4.1 — block under-18). Users who had already finished onboarding
+        // (reached the subscription step) before this change are grandfathered
+        // so the new step doesn't re-interrupt them on upgrade.
+        let hasQuickStartKey = UserDefaults.standard.object(forKey: OnboardingKeys.didCompleteQuickStart) != nil
+        if UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteSubscriptionIntro) && !hasQuickStartKey {
+            UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteQuickStart)
+        }
+
         Task { @MainActor in
             await Task.yield()
             QuestPersistenceController.shared.installQuestPersistence()
@@ -291,6 +301,12 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
+        // Age gate + health screening (Guideline 1.4.1). The screen itself
+        // blocks under-18 and is interactive-dismiss-disabled.
+        if !UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart) {
+            return .quickStart
+        }
+
         if !didCompleteFeatureIntro {
             return .featureIntro
         }
@@ -324,6 +340,12 @@ final class AppFlowController: ObservableObject {
 
         if !didAcknowledgeMedicalDisclaimer {
             return .medicalDisclaimer
+        }
+
+        // Age gate + health screening (Guideline 1.4.1). The screen itself
+        // blocks under-18 and is interactive-dismiss-disabled.
+        if !UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart) {
+            return .quickStart
         }
 
         if !didCompleteFeatureIntro {
