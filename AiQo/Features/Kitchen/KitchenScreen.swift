@@ -125,6 +125,7 @@ private extension KitchenScreen {
         return Meal(
             id: generatedMealID(from: candidate),
             name_ar: candidate.title,
+            name_en: nil,
             calories_kcal: candidate.calories ?? candidate.type.defaultCalories,
             meal_type: type
         )
