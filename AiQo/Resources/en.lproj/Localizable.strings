@@ -2413,7 +2413,7 @@
 "memory.key.smartWakeRecommendedTime" = "Smart wake recommendation";
 
 /* ─── Language Selection ─── */
-"lang.systemAr" = "System language";
+"lang.systemAr" = "لغة النظام";
 "lang.systemEn" = "System language";
 "lang.arabic" = "Arabic";
 "lang.english" = "English";
