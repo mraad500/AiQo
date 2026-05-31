@@ -113,12 +113,19 @@ struct NutritionSummaryCard: View {
     }
 
     private var nutritionAccessibilityLabel: String {
-        var parts = ["\(totalCalories) من \(calorieGoal) سعرة"]
-        parts.append("بروتين \(String(format: "%.0f", totalProtein)) غرام")
-        parts.append("كارب \(String(format: "%.0f", totalCarbs)) غرام")
-        parts.append("دهون \(String(format: "%.0f", totalFat)) غرام")
-        parts.append("ألياف \(String(format: "%.0f", totalFiber)) غرام")
-        return "ملخص التغذية اليومية، " + parts.joined(separator: "، ")
+        let gram = NSLocalizedString("nutrition.gram", value: "غ", comment: "")
+        let summary = NSLocalizedString("nutrition.dailySummary", value: "ملخص التغذية اليومية", comment: "Daily nutrition summary (accessibility)")
+        let separator = NSLocalizedString("nutrition.listSeparator", value: "، ", comment: "Spoken list separator")
+        let calories = String(
+            format: NSLocalizedString("nutrition.calories.accessibility", value: "%d من %d سعرة", comment: "Calories progress (accessibility)"),
+            totalCalories, calorieGoal
+        )
+        var parts = [calories]
+        parts.append("\(NSLocalizedString("nutrition.protein", value: "بروتين", comment: "")) \(String(format: "%.0f", totalProtein)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.carbs", value: "كارب", comment: "")) \(String(format: "%.0f", totalCarbs)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.fat", value: "دهون", comment: "")) \(String(format: "%.0f", totalFat)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.fiber", value: "ألياف", comment: "")) \(String(format: "%.0f", totalFiber)) \(gram)")
+        return summary + separator + parts.joined(separator: separator)
     }
 
     // MARK: - Calorie Progress Bar

@@ -249,6 +249,7 @@
 "kitchen.hotspot.plan.hint" = "افتح النظام الغذائي";
 
 "kitchen.fridge.title" = "الثلاجة";
+"kitchen.fridge.itemCount" = "%d عنصر";
 "kitchen.fridge.add" = "إضافة عنصر";
 "kitchen.fridge.itemNamePlaceholder" = "اسم العنصر";
 "kitchen.fridge.quantityPlaceholder" = "الكمية";
@@ -1386,6 +1387,42 @@
 "vibe.djPick" = "اختيار دي جي حمّودي";
 "vibe.openSpotify" = "افتح في Spotify";
 
+/* Vibe Control Sheet */
+"vibe.done" = "تم";
+"vibe.ok" = "حسناً";
+"vibe.pause" = "إيقاف مؤقت";
+"vibe.resume" = "استئناف";
+"vibe.stop" = "إيقاف";
+"vibe.selectedMode" = "الوضع المختار";
+"vibe.whyUnavailable" = "ليش مو متاح؟";
+"vibe.mixAudio.subtitle" = "خلّي أصوات AiQo شغّالة وية الموسيقى أو البودكاست.";
+"vibe.status.aiqoActive" = "أصوات AiQo شغّالة";
+"vibe.status.aiqoPaused" = "أصوات AiQo متوقفة";
+"vibe.status.aiqoReady" = "أصوات AiQo جاهزة";
+"vibe.status.spotifyConnected" = "Spotify متصل";
+"vibe.status.spotifyDisconnected" = "Spotify غير متصل";
+"vibe.status.spotifyUnavailable" = "Spotify غير متاح";
+"vibe.action.resumeAiqo" = "استأنف أصوات AiQo";
+"vibe.action.playAiqo" = "شغّل أصوات AiQo";
+"vibe.action.playSpotify" = "شغّل بـ Spotify";
+"vibe.action.connectSpotify" = "وصّل Spotify";
+"vibe.hint.spotifyLive" = "Spotify شغّال";
+"vibe.hint.tapControls" = "انقر للصوت والنص";
+"vibe.hint.paused" = "متوقف";
+"vibe.hint.tapConfigureSpotify" = "انقر لإعداد Spotify";
+"vibe.playlist.deepWork.title" = "إيقاعات التركيز العميق";
+"vibe.playlist.deepWork.subtitle" = "اختيار هادئ للتركيز";
+"vibe.playlist.morning.title" = "صحوة الصباح";
+"vibe.playlist.morning.subtitle" = "بداية مشرقة وحيوية";
+"vibe.playlist.zen.title" = "وضع الصفاء";
+"vibe.playlist.zen.subtitle" = "هدوء وصفاء ورحابة";
+"vibe.playButton.aiqoBackground" = "%@ بالخلفية";
+"vibe.cta.installSpotify" = "ثبّت Spotify";
+"vibe.cta.spotifyAuthUnavailable" = "مصادقة Spotify غير متاحة";
+"vibe.cta.startPlaylist" = "شغّل القائمة المختارة";
+"vibe.cta.openSpotifyConnect" = "افتح Spotify للاتصال";
+"vibe.error.audioStart" = "صار خطأ وإحنا نشغّل الصوت.";
+
 /* Fridge */
 "fridge.addOne" = "أضف واحد";
 "fridge.useOne" = "استخدم واحد";
@@ -1571,6 +1608,9 @@
 "nutrition.fat" = "دهون";
 "nutrition.fiber" = "ألياف";
 "nutrition.gram" = "غ";
+"nutrition.dailySummary" = "ملخص التغذية اليومية";
+"nutrition.calories.accessibility" = "%d من %d سعرة";
+"nutrition.listSeparator" = "، ";
 "nutrition.goals.calories" = "السعرات الحرارية";
 "nutrition.goals.calorieValue" = "%d سعرة";
 "nutrition.goals.protein" = "البروتين (غرام)";
@@ -2149,13 +2189,13 @@
 /* ─── Progress Photos ─── */
 "photos.title" = "صور التقدم";
 "photos.startJourney" = "ابدأ رحلة التحول";
-"photos.takeWeekly" = "صوّر جسمك كل أسبوع وشوف الفرق بعينك.\nالصور تنحفظ على جهازك فقط.";
+"photos.emptyDescription" = "صوّر جسمك كل أسبوع وشوف الفرق بعينك.\nالصور تنحفظ على جهازك فقط.";
 "photos.addFirst" = "أضف أول صورة";
-"photos.photoUnit" = "صورة";
-"photos.dayUnit" = "يوم";
-"photos.kgUnit" = "كغم";
+"photos.photo" = "صورة";
+"photos.day" = "يوم";
+"photos.kg" = "كغم";
 "photos.compareProgress" = "قارن التقدم";
-"photos.compareDesc" = "شوف الفرق بين أول صورة وآخر صورة";
+"photos.compareDescription" = "شوف الفرق بين أول صورة وآخر صورة";
 "photos.album" = "الألبوم";
 "photos.takePhoto" = "التقط صورة";
 "photos.useCamera" = "استخدم الكاميرا";
@@ -2169,11 +2209,13 @@
 "photos.weight" = "الوزن";
 "photos.note" = "ملاحظة";
 "photos.from" = "من";
+"photos.since" = "منذ";
+"photos.cancel" = "إلغاء";
 "photos.deletePhoto" = "حذف الصورة";
-"photos.deleteConfirm" = "حذف الصورة؟";
+"photos.deleteConfirmTitle" = "حذف الصورة؟";
 "photos.delete" = "حذف";
 "photos.deleteMessage" = "هالصورة بتنحذف نهائياً من الجهاز.";
-"photos.start" = "البداية";
+"photos.beginning" = "البداية";
 "photos.now" = "الحين";
 "photos.before" = "قبل";
 "photos.after" = "بعد";
@@ -2195,6 +2237,17 @@
 "weeklyReport.avgPerWorkout" = "معدل / تمرين";
 "weeklyReport.preparing" = "جاري تحضير التقرير...";
 "weeklyReport.aboutLastWeek" = "عن الأسبوع الماضي";
+"weeklyReport.shareSubject" = "تقريري الأسبوعي بـ AiQo";
+"weeklyReport.scoreLegendary" = "أسطوري! 🔥";
+"weeklyReport.scoreExcellent" = "ممتاز! 💪";
+"weeklyReport.scoreGood" = "زين! 👏";
+"weeklyReport.scoreKeepGoing" = "ماشي، كمّل! 🚶";
+"weeklyReport.scoreNextWeek" = "الأسبوع الجاي أقوى 🌱";
+"weeklyReport.motiveLegendary" = "أسبوع أسطوري! ثبّت هالمستوى وانت بطل.";
+"weeklyReport.motiveExcellent" = "أداء ممتاز هالأسبوع — استمر بنفس الزخم.";
+"weeklyReport.motiveGood" = "تقدّم زين، خلّي الزخم يكبر أكثر.";
+"weeklyReport.motiveKeepGoing" = "بداية زينة، الأسبوع الجاي نكمّل أقوى.";
+"weeklyReport.motiveNextWeek" = "كل بداية صعبة، الأسبوع الجاي صفحة جديدة.";
 
 /* ─── Feature Intro ─── */
 "featureIntro.skip" = "تخطي";

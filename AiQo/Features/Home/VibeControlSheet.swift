@@ -72,12 +72,11 @@ struct VibeControlSheet: View {
             syncAiQoTrackToSelectedModeIfNeeded()
         }
         .alert("vibe.title".localized, isPresented: errorAlertIsPresented) {
-            Button("OK", role: .cancel) {
+            Button("vibe.ok".localized, role: .cancel) {
                 scheduleActiveAlertClear()
             }
-            .accessibilityLabel("حسنًا")
         } message: {
-            Text(activeAlertMessage ?? "Something went wrong while starting audio.")
+            Text(activeAlertMessage ?? "vibe.error.audioStart".localized)
         }
         .sheet(isPresented: $isDetailsSheetPresented) {
             detailsSheet

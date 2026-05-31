@@ -372,7 +372,7 @@ extension VibeControlSheet {
 
                     Spacer()
 
-                    Button("Done") {
+                    Button("vibe.done".localized) {
                         isDetailsSheetPresented = false
                     }
                     .buttonStyle(.plain)
@@ -399,7 +399,7 @@ extension VibeControlSheet {
 
             HStack(spacing: 10) {
                 secondaryControlButton(
-                    title: currentPlaybackState == .playing ? "Pause" : "Resume",
+                    title: currentPlaybackState == .playing ? "vibe.pause".localized : "vibe.resume".localized,
                     systemName: currentPlaybackState == .playing ? "pause.fill" : "play.fill",
                     isEnabled: isPauseResumeAvailable,
                     accessibilityLabel: currentPlaybackState == .playing
@@ -410,7 +410,7 @@ extension VibeControlSheet {
                 }
 
                 secondaryControlButton(
-                    title: "Stop",
+                    title: "vibe.stop".localized,
                     systemName: "stop.fill",
                     isEnabled: currentPlaybackState != .stopped,
                     accessibilityLabel: "vibe.a11y.stopPlayback".localized
@@ -432,7 +432,7 @@ extension VibeControlSheet {
                 Text("vibe.mixAudio".localized)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
 
-                Text("Keep AiQo Sounds active while music or podcasts play.")
+                Text("vibe.mixAudio.subtitle".localized)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.76))
                     .lineLimit(1)
@@ -475,7 +475,7 @@ extension VibeControlSheet {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Selected Mode")
+                    Text("vibe.selectedMode".localized)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.82))
 
@@ -490,7 +490,7 @@ extension VibeControlSheet {
                 Spacer(minLength: 0)
 
                 if viewModel.selectedSource == .spotify && !vibeManager.isPlaybackAvailable {
-                    Button("Why unavailable?") {
+                    Button("vibe.whyUnavailable".localized) {
                         vibeManager.presentAvailabilityError()
                     }
                     .buttonStyle(.plain)
@@ -634,22 +634,22 @@ extension VibeControlSheet {
         case .aiqoSounds:
             switch aiqoAudioManager.playbackState {
             case .playing:
-                return "AiQo Sounds active"
+                return "vibe.status.aiqoActive".localized
             case .paused:
-                return "AiQo Sounds paused"
+                return "vibe.status.aiqoPaused".localized
             case .stopped:
-                return "AiQo Sounds ready"
+                return "vibe.status.aiqoReady".localized
             }
         case .spotify:
             if vibeManager.isConnected {
-                return "Spotify connected"
+                return "vibe.status.spotifyConnected".localized
             }
 
             if vibeManager.isPlaybackAvailable {
-                return "Spotify disconnected"
+                return "vibe.status.spotifyDisconnected".localized
             }
 
-            return "Spotify unavailable"
+            return "vibe.status.spotifyUnavailable".localized
         }
     }
 
@@ -699,9 +699,9 @@ extension VibeControlSheet {
     var primaryButtonTitle: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return aiqoAudioManager.playbackState == .paused ? "Resume AiQo Sounds" : "Play AiQo Sounds"
+            return aiqoAudioManager.playbackState == .paused ? "vibe.action.resumeAiqo".localized : "vibe.action.playAiqo".localized
         case .spotify:
-            return vibeManager.isConnected ? "Play in Spotify" : "Connect Spotify"
+            return vibeManager.isConnected ? "vibe.action.playSpotify".localized : "vibe.action.connectSpotify".localized
         }
     }
 
@@ -781,11 +781,11 @@ extension VibeControlSheet {
     var compactCardSubtitle: String {
         switch currentPlaybackState {
         case .playing:
-            return viewModel.selectedSource == .spotify ? "Spotify is live" : "Tap for volume and text"
+            return viewModel.selectedSource == .spotify ? "vibe.hint.spotifyLive".localized : "vibe.hint.tapControls".localized
         case .paused:
-            return "Paused"
+            return "vibe.hint.paused".localized
         case .stopped:
-            return viewModel.selectedSource == .spotify ? "Tap to configure Spotify" : "Tap for volume and text"
+            return viewModel.selectedSource == .spotify ? "vibe.hint.tapConfigureSpotify".localized : "vibe.hint.tapControls".localized
         }
     }
 
@@ -801,18 +801,18 @@ extension VibeControlSheet {
     var spotifyPlaylistPreviews: [SpotifyPlaylistPreview] {
         [
             SpotifyPlaylistPreview(
-                title: "Deep Work Beats",
-                subtitle: "Low-noise focus selection",
+                title: "vibe.playlist.deepWork.title".localized,
+                subtitle: "vibe.playlist.deepWork.subtitle".localized,
                 uri: VibeMode.deepFocus.spotifyURI
             ),
             SpotifyPlaylistPreview(
-                title: "Morning Wakeup",
-                subtitle: "Bright start with forward motion",
+                title: "vibe.playlist.morning.title".localized,
+                subtitle: "vibe.playlist.morning.subtitle".localized,
                 uri: VibeMode.awakening.spotifyURI
             ),
             SpotifyPlaylistPreview(
-                title: "Zen Mode",
-                subtitle: "Still, clean, and spacious",
+                title: "vibe.playlist.zen.title".localized,
+                subtitle: "vibe.playlist.zen.subtitle".localized,
                 uri: VibeMode.egoDeath.spotifyURI
             )
         ]
@@ -821,21 +821,21 @@ extension VibeControlSheet {
     var playButtonDetail: String {
         switch viewModel.selectedSource {
         case .aiqoSounds:
-            return "\(selectedAiQoTrackDisplayName) in background"
+            return String(format: "vibe.playButton.aiqoBackground".localized, selectedAiQoTrackDisplayName)
         case .spotify:
             if !vibeManager.isSpotifyAppInstalled {
-                return "Install Spotify"
+                return "vibe.cta.installSpotify".localized
             }
 
             if !vibeManager.canAttemptAuthorization {
-                return "Spotify auth unavailable"
+                return "vibe.cta.spotifyAuthUnavailable".localized
             }
 
             if vibeManager.isConnected {
-                return "Start selected playlist"
+                return "vibe.cta.startPlaylist".localized
             }
 
-            return "Open Spotify to connect"
+            return "vibe.cta.openSpotifyConnect".localized
         }
     }
 

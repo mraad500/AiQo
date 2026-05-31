@@ -49,7 +49,7 @@ struct WeeklyReportView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle(NSLocalizedString("weeklyReport.title", comment: ""))
+            .navigationTitle(NSLocalizedString("weeklyReport.reportTitle", comment: ""))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -67,7 +67,7 @@ struct WeeklyReportView: View {
                         Button {
                             shareAsImage()
                         } label: {
-                            Label(NSLocalizedString("weeklyReport.shareAsImage", comment: ""), systemImage: "photo")
+                            Label(NSLocalizedString("weeklyReport.shareImage", comment: ""), systemImage: "photo")
                         }
 
                         Button {
@@ -79,7 +79,7 @@ struct WeeklyReportView: View {
                         ShareLink(
                             item: shareText,
                             subject: Text(NSLocalizedString("weeklyReport.shareSubject", comment: "")),
-                            message: Text(NSLocalizedString("weeklyReport.shareMessage", comment: ""))
+                            message: Text(NSLocalizedString("weeklyReport.reportMessage", comment: ""))
                         ) {
                             Label(NSLocalizedString("weeklyReport.shareText", comment: ""), systemImage: "text.bubble")
                         }
@@ -319,13 +319,13 @@ struct WeeklyReportView: View {
             HStack(spacing: 20) {
                 workoutStatItem(
                     value: "\(data.workoutCount)",
-                    label: NSLocalizedString("weeklyReport.workout", comment: ""),
+                    label: NSLocalizedString("weeklyReport.workoutUnit", comment: ""),
                     icon: "figure.strengthtraining.traditional"
                 )
 
                 workoutStatItem(
                     value: "\(data.totalWorkoutMinutes)",
-                    label: NSLocalizedString("weeklyReport.minutes", comment: ""),
+                    label: NSLocalizedString("weeklyReport.minuteUnit", comment: ""),
                     icon: "clock.fill"
                 )
 
@@ -391,7 +391,7 @@ struct WeeklyReportView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text(NSLocalizedString("weeklyReport.loading", comment: ""))
+            Text(NSLocalizedString("weeklyReport.preparing", comment: ""))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -533,7 +533,7 @@ struct ReportMetricCard: View {
             Text(String(format: "%.0f%%", abs(metric.changePercent)))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
 
-            Text(NSLocalizedString("weeklyReport.vsLastWeek", comment: ""))
+            Text(NSLocalizedString("weeklyReport.aboutLastWeek", comment: ""))
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
         }

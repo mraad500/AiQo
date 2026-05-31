@@ -247,6 +247,7 @@
 "kitchen.hotspot.plan.hint" = "Open meal plan";
 
 "kitchen.fridge.title" = "Fridge";
+"kitchen.fridge.itemCount" = "%d items";
 "kitchen.fridge.add" = "Add item";
 "kitchen.fridge.itemNamePlaceholder" = "Item name";
 "kitchen.fridge.quantityPlaceholder" = "Quantity";
@@ -1387,6 +1388,42 @@
 "vibe.djPick" = "DJ Hamoudi Pick";
 "vibe.openSpotify" = "Open in Spotify";
 
+/* Vibe Control Sheet */
+"vibe.done" = "Done";
+"vibe.ok" = "OK";
+"vibe.pause" = "Pause";
+"vibe.resume" = "Resume";
+"vibe.stop" = "Stop";
+"vibe.selectedMode" = "Selected Mode";
+"vibe.whyUnavailable" = "Why unavailable?";
+"vibe.mixAudio.subtitle" = "Keep AiQo Sounds active while music or podcasts play.";
+"vibe.status.aiqoActive" = "AiQo Sounds active";
+"vibe.status.aiqoPaused" = "AiQo Sounds paused";
+"vibe.status.aiqoReady" = "AiQo Sounds ready";
+"vibe.status.spotifyConnected" = "Spotify connected";
+"vibe.status.spotifyDisconnected" = "Spotify disconnected";
+"vibe.status.spotifyUnavailable" = "Spotify unavailable";
+"vibe.action.resumeAiqo" = "Resume AiQo Sounds";
+"vibe.action.playAiqo" = "Play AiQo Sounds";
+"vibe.action.playSpotify" = "Play in Spotify";
+"vibe.action.connectSpotify" = "Connect Spotify";
+"vibe.hint.spotifyLive" = "Spotify is live";
+"vibe.hint.tapControls" = "Tap for volume and text";
+"vibe.hint.paused" = "Paused";
+"vibe.hint.tapConfigureSpotify" = "Tap to configure Spotify";
+"vibe.playlist.deepWork.title" = "Deep Work Beats";
+"vibe.playlist.deepWork.subtitle" = "Low-noise focus selection";
+"vibe.playlist.morning.title" = "Morning Wakeup";
+"vibe.playlist.morning.subtitle" = "Bright start with forward motion";
+"vibe.playlist.zen.title" = "Zen Mode";
+"vibe.playlist.zen.subtitle" = "Still, clean, and spacious";
+"vibe.playButton.aiqoBackground" = "%@ in background";
+"vibe.cta.installSpotify" = "Install Spotify";
+"vibe.cta.spotifyAuthUnavailable" = "Spotify auth unavailable";
+"vibe.cta.startPlaylist" = "Start selected playlist";
+"vibe.cta.openSpotifyConnect" = "Open Spotify to connect";
+"vibe.error.audioStart" = "Something went wrong while starting audio.";
+
 /* Fridge */
 "fridge.addOne" = "Add one";
 "fridge.useOne" = "Use one";
@@ -1572,6 +1609,9 @@
 "nutrition.fat" = "Fat";
 "nutrition.fiber" = "Fiber";
 "nutrition.gram" = "g";
+"nutrition.dailySummary" = "Daily nutrition summary";
+"nutrition.calories.accessibility" = "%d of %d calories";
+"nutrition.listSeparator" = ", ";
 "nutrition.goals.calories" = "Calories";
 "nutrition.goals.calorieValue" = "%d cal";
 "nutrition.goals.protein" = "Protein (grams)";
@@ -2150,13 +2190,13 @@
 /* ─── Progress Photos ─── */
 "photos.title" = "Progress Photos";
 "photos.startJourney" = "Start your transformation journey";
-"photos.takeWeekly" = "Photo yourself weekly and see the difference with your own eyes.\nPhotos are saved on your device only.";
+"photos.emptyDescription" = "Photo yourself weekly and see the difference with your own eyes.\nPhotos are saved on your device only.";
 "photos.addFirst" = "Add first photo";
-"photos.photoUnit" = "photo";
-"photos.dayUnit" = "day";
-"photos.kgUnit" = "kg";
+"photos.photo" = "photo";
+"photos.day" = "day";
+"photos.kg" = "kg";
 "photos.compareProgress" = "Compare progress";
-"photos.compareDesc" = "See the difference between first and last photo";
+"photos.compareDescription" = "See the difference between first and last photo";
 "photos.album" = "Album";
 "photos.takePhoto" = "Take photo";
 "photos.useCamera" = "Use camera";
@@ -2170,11 +2210,13 @@
 "photos.weight" = "Weight";
 "photos.note" = "Note";
 "photos.from" = "from";
+"photos.since" = "Since";
+"photos.cancel" = "Cancel";
 "photos.deletePhoto" = "Delete photo";
-"photos.deleteConfirm" = "Delete photo?";
+"photos.deleteConfirmTitle" = "Delete photo?";
 "photos.delete" = "Delete";
 "photos.deleteMessage" = "This photo will be permanently deleted from the device.";
-"photos.start" = "Start";
+"photos.beginning" = "Beginning";
 "photos.now" = "Now";
 "photos.before" = "Before";
 "photos.after" = "After";
@@ -2196,6 +2238,17 @@
 "weeklyReport.avgPerWorkout" = "avg / workout";
 "weeklyReport.preparing" = "Preparing report...";
 "weeklyReport.aboutLastWeek" = "About last week";
+"weeklyReport.shareSubject" = "My AiQo Weekly Report";
+"weeklyReport.scoreLegendary" = "Legendary! 🔥";
+"weeklyReport.scoreExcellent" = "Excellent! 💪";
+"weeklyReport.scoreGood" = "Good! 👏";
+"weeklyReport.scoreKeepGoing" = "Keep going! 🚶";
+"weeklyReport.scoreNextWeek" = "Next week, stronger 🌱";
+"weeklyReport.motiveLegendary" = "A legendary week! Hold this level, champion.";
+"weeklyReport.motiveExcellent" = "Excellent work this week — keep the momentum.";
+"weeklyReport.motiveGood" = "Solid progress — let's build on it.";
+"weeklyReport.motiveKeepGoing" = "Good start — next week we push harder.";
+"weeklyReport.motiveNextWeek" = "Every start is hard — next week, a fresh page.";
 
 /* ─── Feature Intro ─── */
 "featureIntro.skip" = "Skip";
