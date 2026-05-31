@@ -113,7 +113,7 @@ enum QuestDefinitions {
             tiers: [
                 .dualMetric(valueA: 10, unitA: .count, valueB: 70, unitB: .percent),
                 .dualMetric(valueA: 15, unitA: .count, valueB: 85, unitB: .percent),
-                .dualMetric(valueA: 20, unitA: .count, valueB: 100, unitB: .percent)
+                .dualMetric(valueA: 20, unitA: .count, valueB: 95, unitB: .percent)
             ],
             deepLinkAction: nil,
             metricAKey: .pushupReps,
@@ -318,7 +318,7 @@ enum QuestDefinitions {
             tiers: [
                 .dualMetric(valueA: 15, unitA: .count, valueB: 70, unitB: .percent),
                 .dualMetric(valueA: 25, unitA: .count, valueB: 85, unitB: .percent),
-                .dualMetric(valueA: 30, unitA: .count, valueB: 100, unitB: .percent)
+                .dualMetric(valueA: 30, unitA: .count, valueB: 95, unitB: .percent)
             ],
             deepLinkAction: nil,
             metricAKey: .pushupReps,
@@ -469,7 +469,7 @@ enum QuestDefinitions {
             tiers: [
                 .dualMetric(valueA: 30, unitA: .count, valueB: 70, unitB: .percent),
                 .dualMetric(valueA: 40, unitA: .count, valueB: 85, unitB: .percent),
-                .dualMetric(valueA: 50, unitA: .count, valueB: 100, unitB: .percent)
+                .dualMetric(valueA: 50, unitA: .count, valueB: 95, unitB: .percent)
             ],
             deepLinkAction: nil,
             metricAKey: .pushupReps,
@@ -691,7 +691,7 @@ enum QuestDefinitions {
             tiers: [
                 .dualMetric(valueA: 40, unitA: .count, valueB: 70, unitB: .percent),
                 .dualMetric(valueA: 50, unitA: .count, valueB: 85, unitB: .percent),
-                .dualMetric(valueA: 60, unitA: .count, valueB: 100, unitB: .percent)
+                .dualMetric(valueA: 60, unitA: .count, valueB: 95, unitB: .percent)
             ],
             deepLinkAction: nil,
             metricAKey: .pushupReps,
@@ -857,7 +857,7 @@ enum QuestDefinitions {
             tiers: [
                 .dualMetric(valueA: 60, unitA: .count, valueB: 85, unitB: .percent),
                 .dualMetric(valueA: 80, unitA: .count, valueB: 95, unitB: .percent),
-                .dualMetric(valueA: 100, unitA: .count, valueB: 100, unitB: .percent)
+                .dualMetric(valueA: 100, unitA: .count, valueB: 95, unitB: .percent)
             ],
             deepLinkAction: nil,
             metricAKey: .pushupReps,

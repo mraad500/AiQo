@@ -474,16 +474,11 @@ private enum WorkoutCategoriesCatalog {
         )
     ]
 
+    // Only sessions that open a real flow ship here. Breathing / Aura-Charge /
+    // Deep-Clarity concept cards were inert (exerciseKey: nil → tapping did
+    // nothing) and were removed until their sessions exist; re-add with a real
+    // exerciseKey when built. (v1.0.7 review-readiness)
     private static let claritySeeds: [WorkoutSeed] = [
-        WorkoutSeed(
-            item: WorkoutCardItem(
-                title: L10n.t("gym.workout.breathing"),
-                subtitle: L10n.t("gym.workout.breathing.sub"),
-                iconName: "wind",
-                themeColor: AiQoColors.mint
-            ),
-            exerciseKey: nil
-        ),
         WorkoutSeed(
             item: WorkoutCardItem(
                 title: L10n.t("gym.workout.gratitude"),
@@ -501,24 +496,6 @@ private enum WorkoutCategoriesCatalog {
                 themeColor: AiQoColors.mint
             ),
             exerciseKey: "gym.exercise.yoga"
-        ),
-        WorkoutSeed(
-            item: WorkoutCardItem(
-                title: L10n.t("gym.workout.auraCharge"),
-                subtitle: L10n.t("gym.workout.auraCharge.sub"),
-                iconName: "sparkles",
-                themeColor: AiQoColors.beige
-            ),
-            exerciseKey: nil
-        ),
-        WorkoutSeed(
-            item: WorkoutCardItem(
-                title: L10n.t("gym.workout.deepClarity"),
-                subtitle: L10n.t("gym.workout.deepClarity.sub"),
-                iconName: "water.waves",
-                themeColor: AiQoColors.mint
-            ),
-            exerciseKey: nil
         )
     ]
 

@@ -120,8 +120,12 @@ final class DirectiveCoordinator {
     }
 
     /// A compact, instruction-style line the Captain reads in Working Memory.
-    /// It states the standing order AND that it is already being executed
-    /// automatically, so the Captain confirms instead of re-asking.
+    /// It states the standing order and how it is honored. Executable triggers
+    /// fire automatically (engine / scheduled notification), so the Captain
+    /// confirms the auto-execution. Recognized-but-not-yet-wired triggers
+    /// (`isExecutable == false`) are still saved and surfaced — but the Captain
+    /// must NOT claim a background auto-fire it can't perform; it honors them
+    /// inside the conversation instead. Either way it never forgets or refuses.
     private func canonicalDescription(
         trigger: DirectiveTrigger,
         action: DirectiveAction,
@@ -129,16 +133,22 @@ final class DirectiveCoordinator {
         localeCode: String
     ) -> String {
         if localeCode == "en" {
+            let execLine = trigger.isExecutable
+                ? "This is already running automatically \(trigger.displayEn) — confirm you'll keep doing it, never claim you can't."
+                : "This isn't on an automatic background schedule yet, so honor it inside the conversation: raise it yourself when \(trigger.displayEn) is relevant. Promise to keep it in mind and never forget it — but don't claim it fires as an automatic notification."
             return """
             Standing order from the user (\(trigger.rawValue)): \(action.displayEn). \
             Original words: "\(rawInstruction)". \
-            This is already running automatically \(trigger.displayEn) — confirm you'll keep doing it, never claim you can't.
+            \(execLine)
             """
         }
+        let execLine = trigger.isExecutable
+            ? "هذا منفّذ تلقائياً \(trigger.displayAr) فعلاً — أكّد للمستخدم إنك راح تستمر تسويه ولا تنساه ولا تقول ما تكدر."
+            : "هذا لسّه مو مجدول تلقائياً بالخلفية، فنفّذه داخل المحادثة: ذكّر بيه بنفسك لمن يجي وقته (\(trigger.displayAr)). أكّد للمستخدم إنك راح تتذكره ولا تنساه — بس لا تقول إنه يوصل كإشعار تلقائي."
         return """
         تعليمات دائمة من المستخدم (\(trigger.displayAr)): \(action.displayAr). \
         نص المستخدم: «\(rawInstruction)». \
-        هذا منفّذ تلقائياً \(trigger.displayAr) فعلاً — أكّد للمستخدم إنك راح تستمر تسويه ولا تنساه ولا تقول ما تكدر.
+        \(execLine)
         """
     }
 }

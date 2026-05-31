@@ -4,17 +4,10 @@ import SwiftUI
 struct PlanView: View {
     @EnvironmentObject private var globalBrain: CaptainViewModel
     @Environment(\.modelContext) private var modelContext
-    @State private var railSelection = 0
     @State private var activeRecordProject: RecordProject?
     @State private var navigateToRecordProject = false
 
     private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
-
-    private let periods = [
-        NSLocalizedString("plan.period.today", value: "اليوم", comment: "Today filter"),
-        NSLocalizedString("plan.period.month", value: "الشهر", comment: "Month filter"),
-        NSLocalizedString("plan.period.year", value: "السنة", comment: "Year filter")
-    ]
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -36,9 +29,6 @@ struct PlanView: View {
                     MyPlanView()
                 }
             }
-
-            planSideFilter
-                .frame(width: 58)
         }
         .environment(\.layoutDirection, .leftToRight)
         .onAppear {
@@ -121,41 +111,6 @@ struct PlanView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-
-    private var planSideFilter: some View {
-        VStack(spacing: 4) {
-            ForEach(Array(periods.enumerated()), id: \.element) { index, period in
-                let isSelected = railSelection == index
-
-                Button {
-                    UISelectionFeedbackGenerator().selectionChanged()
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        railSelection = index
-                    }
-                } label: {
-                    Text(period)
-                        .font(.system(size: 11, weight: isSelected ? .heavy : .medium))
-                        .foregroundStyle(isSelected ? Color(hex: "1A1A1A") : Color(light: Color(hex: "AAAAAA"), dark: Color(hex: "AEB9C5")))
-                        .frame(width: 44, height: 62)
-                        .background {
-                            if isSelected {
-                                Capsule().fill(Color(hex: "FFE68C"))
-                                    .shadow(color: Color(hex: "FFE68C").opacity(0.4), radius: 4, y: 2)
-                            } else {
-                                Capsule().fill(Color.clear)
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(Color(light: Color(hex: "F5F5F5"), dark: Color(hex: "1F2A35")))
-        .clipShape(RoundedRectangle(cornerRadius: 25))
-        .padding(.top, 120)
-        .animation(.easeInOut(duration: 0.3), value: railSelection)
-        .accessibilityLabel(Text(NSLocalizedString("plan.filter.accessibility", value: "فلاتر الخطة", comment: "Plan filters accessibility")))
     }
 }
 

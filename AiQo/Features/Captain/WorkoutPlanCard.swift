@@ -43,8 +43,10 @@ struct WorkoutPlanCard: View {
         return "\(weeks) weeks"
     }
 
+    // Tapping opens the Captain chat with this plan (not a live workout runner),
+    // so the label reflects that honestly rather than promising "Start Workout".
     private var startButtonTitle: String {
-        isArabic ? "ابدأ التمرين" : "Start Workout"
+        isArabic ? "ناقش الخطة" : "Discuss Plan"
     }
 
     private var exercisesSectionTitle: String {
