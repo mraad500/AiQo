@@ -73,18 +73,21 @@ final class TierGateTests: XCTestCase {
 
     func testMemoryRetrievalDepthLimits() {
         TierGate.shared._setTierForTesting(.max)
-        XCTAssertEqual(TierGate.shared.maxMemoryRetrievalDepth, 10)
+        XCTAssertEqual(TierGate.shared.maxMemoryRetrievalDepth, 18)
         TierGate.shared._setTierForTesting(.pro)
-        XCTAssertEqual(TierGate.shared.maxMemoryRetrievalDepth, 25)
+        XCTAssertEqual(TierGate.shared.maxMemoryRetrievalDepth, 40)
     }
 
     func testSemanticFactLimits() {
+        // Free is intentionally non-zero so Saved Memories + reminders persist for
+        // every tier (product decision 2026-05-18); ceilings sit above the
+        // user-visible fact limit. See TierGate.maxSemanticFacts.
         TierGate.shared._setTierForTesting(.none)
-        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 0)
+        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 120)
         TierGate.shared._setTierForTesting(.max)
-        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 200)
+        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 600)
         TierGate.shared._setTierForTesting(.pro)
-        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 500)
+        XCTAssertEqual(TierGate.shared.maxSemanticFacts, 1_200)
     }
 
     func testNotificationCapsPerTier() {
@@ -149,10 +152,14 @@ final class TierGateTests: XCTestCase {
 
         TierGate.shared._setTierForTesting(.max)
         let maxLimit = await TierGate.shared.cappedMemoryFetchLimit(requested: 1_000, fallback: 50)
-        XCTAssertEqual(maxLimit, 200) // capped at max tier ceiling
+        XCTAssertEqual(maxLimit, 600) // capped at max tier ceiling
 
         TierGate.shared._setTierForTesting(.none)
         let noneLimit = await TierGate.shared.cappedMemoryFetchLimit(requested: 100, fallback: 50)
-        XCTAssertEqual(noneLimit, 1) // floors at 1 even when tier limit is 0
+        XCTAssertEqual(noneLimit, 100) // free ceiling is 120, so 100 passes through
+
+        // Floors at 1 even when both requested and fallback resolve to 0.
+        let flooredLimit = await TierGate.shared.cappedMemoryFetchLimit(requested: 0, fallback: 0)
+        XCTAssertEqual(flooredLimit, 1)
     }
 }

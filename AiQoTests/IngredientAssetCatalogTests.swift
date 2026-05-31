@@ -1,27 +1,12 @@
 import XCTest
 @testable import AiQo
 
+// NOTE: AiQo ships ingredient icons as emoji (`IngredientIconView`); the large
+// `Food_photos` imageset catalog was removed in commit 29db40f. The former
+// "all mapped ingredient assets exist on disk" test is therefore obsolete. What
+// still matters — and is covered below — is that ingredient names resolve to the
+// correct canonical `IngredientKey` (drives emoji, protein estimates, matching).
 final class IngredientAssetCatalogTests: XCTestCase {
-    func testAllMappedIngredientAssetsExistInFoodPhotosCatalog() {
-        let assetNames = IngredientAssetCatalog.mappedAssetNames
-
-        XCTAssertEqual(assetNames.count, Set(assetNames).count, "Ingredient asset mapping should stay unique.")
-        XCTAssertFalse(assetNames.contains("ing_walnuts2"), "Walnuts should resolve through the canonical ing_walnuts asset.")
-
-        let missingImagesets = assetNames.filter { assetName in
-            !FileManager.default.fileExists(
-                atPath: foodPhotosCatalogURL
-                    .appendingPathComponent("\(assetName).imageset", isDirectory: true)
-                    .path
-            )
-        }
-
-        XCTAssertTrue(
-            missingImagesets.isEmpty,
-            "Missing Food_photos imagesets for mapped ingredients: \(missingImagesets.joined(separator: ", "))"
-        )
-    }
-
     func testNewIngredientAliasesResolveToCanonicalKeys() {
         let expectations: [(String, IngredientKey)] = [
             ("almonds", .ing_almonds),
@@ -61,12 +46,5 @@ final class IngredientAssetCatalogTests: XCTestCase {
 
         XCTAssertNil(IngredientCatalog.match(from: "salt"))
         XCTAssertNil(IngredientCatalog.match(from: "pepper"))
-    }
-
-    private var foodPhotosCatalogURL: URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("AiQo/Resources/Assets.xcassets/Food_photos", isDirectory: true)
     }
 }
