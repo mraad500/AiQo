@@ -1575,6 +1575,9 @@
 "settings.deleteAccount.title" = "حذف الحساب";
 "settings.deleteAccount.confirm" = "حذف";
 "settings.deleteAccount.message" = "راح ينحذف حسابك وكل البيانات المرتبطة بيه بشكل نهائي. هاي العملية ما تنعكس.";
+"settings.deleteAccount.error.title" = "تعذّر حذف الحساب";
+"settings.deleteAccount.error.message" = "ما گدرنا نحذف حسابك هسه. تأكد من الاتصال وعاود المحاولة، أو تواصل مع الدعم إذا استمرت المشكلة.";
+"settings.ok" = "حسناً";
 "settings.cancel" = "إلغاء";
 "settings.coachLanguage" = "لغة الكابتن";
 "settings.section.captain" = "كابتن حمّودي";

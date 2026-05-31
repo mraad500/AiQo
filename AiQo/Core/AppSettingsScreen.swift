@@ -16,6 +16,7 @@ struct AppSettingsScreen: View {
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
+    @State private var deleteAccountErrorMessage: String?
     @State private var showAcknowledgements = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
@@ -449,6 +450,19 @@ struct AppSettingsScreen: View {
                 )
             )
         }
+        .alert(
+            NSLocalizedString("settings.deleteAccount.error.title", value: "Couldn't delete account", comment: ""),
+            isPresented: Binding(
+                get: { deleteAccountErrorMessage != nil },
+                set: { if !$0 { deleteAccountErrorMessage = nil } }
+            )
+        ) {
+            Button(NSLocalizedString("settings.ok", value: "OK", comment: ""), role: .cancel) {
+                deleteAccountErrorMessage = nil
+            }
+        } message: {
+            Text(deleteAccountErrorMessage ?? "")
+        }
         .sheet(isPresented: $showAcknowledgements) {
             LegalView(type: .acknowledgements)
         }
@@ -470,11 +484,22 @@ struct AppSettingsScreen: View {
                     .rpc("delete_user_account")
                     .execute()
             } catch {
-                // Even if the server-side deletion fails, sign out locally.
-                // The user can contact support if server-side cleanup is needed.
                 #if DEBUG
                 print("Account deletion RPC failed:", error)
                 #endif
+                // The confirmation promised PERMANENT deletion. If the server
+                // call fails we must NOT sign the user out and imply success —
+                // their data still exists. Surface the failure so they can retry
+                // (App Store Guideline 5.1.1(v): deletion must actually work).
+                await MainActor.run {
+                    isDeletingAccount = false
+                    deleteAccountErrorMessage = NSLocalizedString(
+                        "settings.deleteAccount.error.message",
+                        value: "We couldn't delete your account right now. Please check your connection and try again, or contact support if this keeps happening.",
+                        comment: "Account deletion failure"
+                    )
+                }
+                return
             }
 
             await MainActor.run {

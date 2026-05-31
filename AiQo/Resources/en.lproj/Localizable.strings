@@ -1576,6 +1576,9 @@
 "settings.deleteAccount.title" = "Delete Account";
 "settings.deleteAccount.confirm" = "Delete";
 "settings.deleteAccount.message" = "This will permanently delete your account and all associated data. This action cannot be undone.";
+"settings.deleteAccount.error.title" = "Couldn't delete account";
+"settings.deleteAccount.error.message" = "We couldn't delete your account right now. Please check your connection and try again, or contact support if this keeps happening.";
+"settings.ok" = "OK";
 "settings.cancel" = "Cancel";
 "settings.coachLanguage" = "Coach Language";
 "settings.section.captain" = "Captain Hamoudi";
