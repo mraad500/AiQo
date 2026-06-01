@@ -123,11 +123,10 @@ struct KernelView: View {
                 Text("تفعيل الحماية").font(AiQoTheme.Typography.cardTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
             }
             .tint(AiQoTheme.Colors.accent)
-            .confirmationDialog("راح تكسر التزامك اليوم", isPresented: $showDisableConfirm, titleVisibility: .visible) {
-                Button("أطفئ الحماية وفُكّ الدروع", role: .destructive) { model.setProtection(false) }
-                Button("رجوع", role: .cancel) { }
-            } message: {
-                Text("الدروع كلها راح تنفك وتگدر تستخدم تطبيقاتك. متأكد؟")
+            .sheet(isPresented: $showDisableConfirm) {
+                // Intentional friction (Apple-compliant): a mandatory pause + reflection
+                // before the off switch arms. The user can always complete it.
+                KernelDisableConfirmView(onConfirmDisable: { model.setProtection(false) })
             }
 
             Picker("الوضع", selection: Binding(get: { model.mode }, set: { model.setMode($0) })) {
