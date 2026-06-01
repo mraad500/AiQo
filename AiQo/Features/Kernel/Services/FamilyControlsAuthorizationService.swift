@@ -10,11 +10,22 @@ final class FamilyControlsAuthorizationService: ObservableObject {
     static let shared = FamilyControlsAuthorizationService()
 
     private let center = AuthorizationCenter.shared
+    private var cancellable: AnyCancellable?
 
     @Published private(set) var status: AuthorizationStatus
 
     init() {
         self.status = AuthorizationCenter.shared.authorizationStatus
+        // OBSERVE the framework's published status. Family Controls resolves the
+        // persisted `.individual` approval slightly AFTER launch, so reading it once
+        // (in init / onAppear) can catch a stale `.notDetermined` and wrongly
+        // re-prompt for access on every relaunch even though the user already
+        // granted it. Mirroring the published value keeps `status` correct once the
+        // real (persisted) value loads.
+        cancellable = AuthorizationCenter.shared.$authorizationStatus
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] newStatus in self?.status = newStatus }
     }
 
     var isAuthorized: Bool { status == .approved }

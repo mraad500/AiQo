@@ -148,7 +148,7 @@ struct KernelChallengeView: View {
             // The CAPTAIN himself leads the "enough for today" moment — big photo.
             VStack(spacing: AiQoSpacing.sm) {
                 Image("Hammoudi5").resizable().scaledToFit()
-                    .frame(height: 150)
+                    .frame(height: 132)
                 Text(KernelCaptainBridge.enoughForTodayLead(language: language))
                     .font(AiQoTheme.Typography.sectionTitle)
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -191,7 +191,7 @@ struct KernelChallengeView: View {
     private var celebrationOverlay: some View {
         VStack(spacing: AiQoSpacing.md) {
             Image("Hammoudi5").resizable().scaledToFit()
-                .frame(height: 150)
+                .frame(height: 132)
             Text(celebrationLine.isEmpty ? (isAr ? "انفتح! نواتك اتشحنت 🔋" : "Open! kernel charged 🔋") : celebrationLine)
                 .font(AiQoTheme.Typography.cardTitle)
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -271,7 +271,7 @@ private struct CaptainTrainerSession: View {
             if showHeader {
                 // Full figure — NOT clipped to a circle (which cut off his head).
                 Image("Hammoudi5").resizable().scaledToFit()
-                    .frame(height: 220).frame(maxWidth: .infinity)
+                    .frame(height: 168).frame(maxWidth: .infinity)
             }
             Text(bubble)
                 .font(showHeader ? AiQoTheme.Typography.cardTitle : AiQoTheme.Typography.caption)

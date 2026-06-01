@@ -24,6 +24,8 @@ final class KernelViewModel: ObservableObject {
     /// The bio engine drives live step progress + doomscroll state (observe it in the View).
     let bio = KernelBioEngine.shared
 
+    private var cancellables = Set<AnyCancellable>()
+
     /// The current challenge-screen state, computed live from the store + engine.
     var challengeState: KernelChallengeUIState {
         let s = store.load()
@@ -75,6 +77,14 @@ final class KernelViewModel: ObservableObject {
         loadPersistedSelection()
         refreshFromStore()
         refreshGate()
+        // Re-resolve the gate whenever Family Controls authorization changes — e.g. a
+        // persisted approval that loads just after launch — so the feature never gets
+        // stuck on the "authorize" card after a relaunch.
+        auth.$status
+            .receive(on: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] _ in self?.refreshGate() }
+            .store(in: &cancellables)
     }
 
     func onAppear() {

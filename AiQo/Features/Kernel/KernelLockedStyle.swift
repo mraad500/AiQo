@@ -47,20 +47,20 @@ struct KernelUnlockShieldCard: View {
                             .regular.tint(AiQoTheme.Colors.accent.opacity(0.28)).interactive(),
                             in: ShieldShape()
                         )
-                    VStack(spacing: AiQoSpacing.sm) {
+                    VStack(spacing: AiQoSpacing.xs) {
                         Image(systemName: "bolt.shield.fill")
-                            .font(.system(size: 52))
+                            .font(.system(size: 34))
                             .foregroundStyle(AiQoTheme.Colors.accent)
                         Text(isArabic ? "\(stepTarget) خطوة" : "\(stepTarget) steps")
-                            .font(.system(size: 30, design: .rounded).weight(.bold))
+                            .font(.system(size: 22, design: .rounded).weight(.bold))
                             .foregroundStyle(AiQoTheme.Colors.textPrimary)
                         Text(isArabic ? "اضغط لبدء التحدي" : "Tap to start the challenge")
                             .font(AiQoTheme.Typography.caption)
                             .foregroundStyle(AiQoTheme.Colors.textSecondary)
                     }
-                    .padding(.top, 56)
+                    .padding(.top, 34)
                 }
-                .frame(width: 250, height: 292)
+                .frame(width: 168, height: 196)
             }
             .buttonStyle(.plain)
         }
