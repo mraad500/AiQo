@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// Consent + onboarding sheet for «النواة». Explains the feature and that it uses
+/// Consent + onboarding sheet for the Kernel. Explains the feature and that it uses
 /// Family Controls (to block the user's own chosen apps) and Health (steps/heart,
 /// on-device) — with explicit, revocable consent — before requesting Family
-/// Controls authorization. Styled on the AiQo DesignSystem / Compliance pattern.
+/// Controls authorization. Bilingual (ar/en) on the AiQo DesignSystem.
 struct KernelConsentView: View {
     /// Called when the user explicitly agrees (then the caller requests authorization).
     var onAgree: () -> Void
     @Environment(\.dismiss) private var dismiss
+
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -16,49 +18,49 @@ struct KernelConsentView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(AiQoTheme.Colors.accent)
 
-                Text(L("kernel.consent.title", "النواة"))
+                Text(isAr ? "النواة" : "Kernel")
                     .font(AiQoTheme.Typography.screenTitle)
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
-                Text(L("kernel.consent.subtitle", "اقفل تطبيقاتك، وافتحها بحركتك."))
+                Text(isAr ? "اقفل تطبيقاتك، وافتحها بحركتك." : "Lock your apps, open them with your movement.")
                     .font(AiQoTheme.Typography.body)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
 
                 VStack(alignment: .leading, spacing: AiQoSpacing.md) {
-                    point("apps.iphone", L("kernel.consent.point.familyControls",
-                        "تستخدم Family Controls لحجب التطبيقات التي تختارها أنت فقط."))
-                    point("heart.text.square", L("kernel.consent.point.health",
-                        "تقرأ خطواتك ونبضك من Health لتفتح بالحركة — تبقى على جهازك."))
-                    point("hand.raised", L("kernel.consent.point.control",
-                        "أنت تتحكم: فعّل أو أوقف في أي وقت."))
+                    point("apps.iphone", isAr ? "تستخدم Family Controls لحجب التطبيقات التي تختارها أنت فقط."
+                                              : "Uses Family Controls to block only the apps you choose.")
+                    point("heart.text.square", isAr ? "تقرأ خطواتك ونبضك من Health لتفتح بالحركة — تبقى على جهازك."
+                                                    : "Reads your steps and heart rate from Health to open with movement — stays on your device.")
+                    point("hand.raised", isAr ? "أنت تتحكم: فعّل أو أوقف في أي وقت."
+                                              : "You're in control: enable or turn off anytime.")
                 }
                 .padding(AiQoSpacing.lg)
                 .frame(maxWidth: .infinity)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.card, style: .continuous))
+                .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.card))
 
                 Button {
                     onAgree()
                     dismiss()
                 } label: {
-                    Text(L("kernel.consent.agree", "موافق، فعّل"))
+                    Text(isAr ? "موافق، فعّل" : "Agree & enable")
                         .font(AiQoTheme.Typography.cta)
-                        .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.md)
+                        .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
                 }
-                .background(AiQoTheme.Colors.accent, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-                .foregroundStyle(.white)
+                .buttonStyle(.glassProminent)
+                .tint(AiQoTheme.Colors.accent)
 
                 Button {
                     dismiss()
                 } label: {
-                    Text(L("kernel.consent.later", "ليس الآن"))
+                    Text(isAr ? "ليس الآن" : "Not now")
                         .font(AiQoTheme.Typography.body)
                         .foregroundStyle(AiQoTheme.Colors.textSecondary)
                 }
             }
             .padding(AiQoSpacing.lg)
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, isAr ? .rightToLeft : .leftToRight)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
@@ -74,9 +76,5 @@ struct KernelConsentView: View {
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
             Spacer(minLength: 0)
         }
-    }
-
-    private func L(_ key: String, _ fallback: String) -> String {
-        NSLocalizedString(key, value: fallback, comment: "")
     }
 }

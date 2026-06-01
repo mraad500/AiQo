@@ -31,12 +31,12 @@ struct KernelView: View {
                     .padding(AiQoSpacing.lg)
                 }
             }
-            .navigationTitle("النواة")
+            .navigationTitle(isAr ? "النواة" : "Kernel")
             .navigationBarTitleDisplayMode(.inline)
-            .environment(\.layoutDirection, .rightToLeft)
+            .environment(\.layoutDirection, isAr ? .rightToLeft : .leftToRight)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("تم") { dismiss() }
+                    Button(isAr ? "تم" : "Done") { dismiss() }
                 }
             }
             .familyActivityPicker(
@@ -92,7 +92,7 @@ struct KernelView: View {
                     Text("\(Int(model.chargeLevel * 100))%")
                         .font(.system(size: 34, design: .rounded).weight(.bold))
                         .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    Text("شحنة النواة")
+                    Text(isAr ? "شحنة النواة" : "Kernel charge")
                         .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
                 }
             }
@@ -101,7 +101,7 @@ struct KernelView: View {
             HStack(spacing: AiQoSpacing.sm) {
                 Circle().fill(statusColor).frame(width: 8, height: 8)
                 Text(statusText).font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textPrimary)
-                Text("· \(model.selectedCount) تطبيق محمي")
+                Text(isAr ? "· \(model.selectedCount) تطبيق محمي" : "· \(model.selectedCount) apps protected")
                     .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
             }
         }
@@ -120,7 +120,7 @@ struct KernelView: View {
                     if isOn { model.setProtection(true) } else { showDisableConfirm = true }
                 }
             )) {
-                Text("تفعيل الحماية").font(AiQoTheme.Typography.cardTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
+                Text(isAr ? "تفعيل الحماية" : "Protection").font(AiQoTheme.Typography.cardTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
             }
             .tint(AiQoTheme.Colors.accent)
             .sheet(isPresented: $showDisableConfirm) {
@@ -129,18 +129,19 @@ struct KernelView: View {
                 KernelDisableConfirmView(onConfirmDisable: { model.setProtection(false) })
             }
 
-            Picker("الوضع", selection: Binding(get: { model.mode }, set: { model.setMode($0) })) {
-                Text("ذكي").tag(KernelProtectionMode.smart)
-                Text("صارم").tag(KernelProtectionMode.hard)
+            Picker(isAr ? "الوضع" : "Mode", selection: Binding(get: { model.mode }, set: { model.setMode($0) })) {
+                Text(isAr ? "ذكي" : "Smart").tag(KernelProtectionMode.smart)
+                Text(isAr ? "صارم" : "Strict").tag(KernelProtectionMode.hard)
             }
             .pickerStyle(.segmented)
 
             if model.mode == .smart {
                 Stepper(value: Binding(get: { model.usageThresholdMinutes }, set: { model.setThreshold($0) }), in: 1...120) {
-                    Text("حد الاستخدام: \(model.usageThresholdMinutes) دقيقة")
+                    Text(isAr ? "حد الاستخدام: \(model.usageThresholdMinutes) دقيقة" : "Usage limit: \(model.usageThresholdMinutes) min")
                         .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textPrimary)
                 }
-                Text("بالوضع الذكي: يحجب فقط لو وصلت العتبة وأنت جالس. تمشي وتستخدم — ما يحجب.")
+                Text(isAr ? "بالوضع الذكي: يحجب فقط لو وصلت العتبة وأنت جالس. تمشي وتستخدم — ما يحجب."
+                          : "Smart mode blocks only when you pass the limit while sedentary. Walk and use — it won't block.")
                     .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
             }
         }
@@ -151,7 +152,7 @@ struct KernelView: View {
         Button {
             model.isPresentingPicker = true
         } label: {
-            Label("تعديل التطبيقات المحجوبة", systemImage: "square.grid.2x2")
+            Label(isAr ? "تعديل التطبيقات المحجوبة" : "Edit blocked apps", systemImage: "square.grid.2x2")
                 .font(AiQoTheme.Typography.cta)
                 .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
         }
@@ -162,7 +163,7 @@ struct KernelView: View {
     private var energyCard: some View {
         HStack {
             Image(systemName: "bolt.heart.fill").foregroundStyle(AiQoColors.sandSoft)
-            Text("طاقة اليوم المكتسبة").font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary)
+            Text(isAr ? "طاقة اليوم المكتسبة" : "Energy earned today").font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary)
             Spacer()
             Text("\(model.todayEnergy)").font(AiQoTheme.Typography.sectionTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
         }
@@ -173,10 +174,10 @@ struct KernelView: View {
         HStack {
             Image(systemName: "hourglass").foregroundStyle(AiQoTheme.Colors.accent)
             if let minutes = model.activeSessionRemainingMinutes {
-                Text("جلسة مفتوحة — تنتهي بعد \(minutes) دقيقة")
+                Text(isAr ? "جلسة مفتوحة — تنتهي بعد \(minutes) دقيقة" : "Session open — ends in \(minutes) min")
                     .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textPrimary)
             } else {
-                Text("ماكو جلسات مفتوحة")
+                Text(isAr ? "ماكو جلسات مفتوحة" : "No open sessions")
                     .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary)
             }
             Spacer()
@@ -185,7 +186,8 @@ struct KernelView: View {
     }
 
     private var footnote: some View {
-        Text("الحجب والتحدّي يقودهم نشاطك الحقيقي من Health. تمشي تنفتح، أو تصرف طاقتك المكتسبة.")
+        Text(isAr ? "الحجب والتحدّي يقودهم نشاطك الحقيقي من Health. تمشي تنفتح، أو تصرف طاقتك المكتسبة."
+                  : "Blocking and challenges are driven by your real activity from Health. Walk to open, or spend the energy you earned.")
             .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
             .multilineTextAlignment(.center)
     }
@@ -195,13 +197,14 @@ struct KernelView: View {
     private var authorizeCard: some View {
         VStack(spacing: AiQoSpacing.md) {
             Image(systemName: "bolt.shield").font(.system(size: 44)).foregroundStyle(AiQoTheme.Colors.accent)
-            Text("النواة").font(AiQoTheme.Typography.screenTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
-            Text("اختَر تطبيقاتك وافتحها بالحركة. نحتاج صلاحية Family Controls.")
+            Text(isAr ? "النواة" : "Kernel").font(AiQoTheme.Typography.screenTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
+            Text(isAr ? "اختَر تطبيقاتك وافتحها بالحركة. نحتاج صلاحية Family Controls."
+                      : "Choose your apps and open them with movement. We need Family Controls access.")
                 .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary).multilineTextAlignment(.center)
             Button {
                 showConsent = true
             } label: {
-                Label("فعّل صلاحية الوصول", systemImage: "checkmark.shield")
+                Label(isAr ? "فعّل صلاحية الوصول" : "Enable access", systemImage: "checkmark.shield")
                     .font(AiQoTheme.Typography.cta)
                     .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
             }
@@ -214,17 +217,20 @@ struct KernelView: View {
     private var gateLockedCard: some View {
         VStack(spacing: AiQoSpacing.md) {
             Image(systemName: "lock.fill").font(.system(size: 40)).foregroundStyle(AiQoColors.sandSoft)
-            Text(model.gateState == .tierLocked ? "النواة ضمن AiQo Max" : "النواة غير مفعّلة")
+            Text(model.gateState == .tierLocked ? (isAr ? "النواة ضمن AiQo Max" : "Kernel is part of AiQo Max")
+                                                : (isAr ? "النواة غير مفعّلة" : "Kernel isn't enabled"))
                 .font(AiQoTheme.Typography.sectionTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
-            Text("اشترك بـ Max حتى تحجب تطبيقاتك وتفتحها بالحركة.")
+            Text(isAr ? "اشترك بـ Max حتى تحجب تطبيقاتك وتفتحها بالحركة."
+                      : "Subscribe to Max to block your apps and open them with movement.")
                 .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary).multilineTextAlignment(.center)
         }
         .kernelCard()
     }
 
     private var statusText: String {
-        if model.isLocked { return "تشحن الآن" }
-        return model.isProtectionEnabled ? "محمية" : "مطفأة"
+        if model.isLocked { return isAr ? "تشحن الآن" : "Charging now" }
+        if model.isProtectionEnabled { return isAr ? "محمية" : "Protected" }
+        return isAr ? "مطفأة" : "Off"
     }
 
     private var statusColor: Color {

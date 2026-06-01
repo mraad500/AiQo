@@ -36,7 +36,7 @@ struct KernelChallengeView: View {
             closeButton
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .environment(\.layoutDirection, .rightToLeft)
+        .environment(\.layoutDirection, isAr ? .rightToLeft : .leftToRight)
         .onAppear { model.refreshChallenge() }
         .onChange(of: model.isLocked) { wasLocked, isLocked in
             if wasLocked && !isLocked { celebrateUnlock() }
@@ -54,7 +54,7 @@ struct KernelChallengeView: View {
                 .glassEffect(.regular.interactive(), in: .circle)
         }
         .padding(AiQoSpacing.md)
-        .accessibilityLabel("رجوع")
+        .accessibilityLabel(isAr ? "رجوع" : "Back")
     }
 
     private var titleHeader: some View {
@@ -62,10 +62,10 @@ struct KernelChallengeView: View {
             Image(systemName: "bolt.fill")
                 .font(.system(size: 30, design: .rounded))
                 .foregroundStyle(AiQoTheme.Colors.accent)
-            Text("اشحن نواتك")
+            Text(isAr ? "اشحن نواتك" : "Charge your Kernel")
                 .font(AiQoTheme.Typography.screenTitle)
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
-            Text("تحرّك شوي وتنفتح — جسمك هو المفتاح.")
+            Text(isAr ? "تحرّك شوي وتنفتح — جسمك هو المفتاح." : "Move a little and it opens — your body is the key.")
                 .font(AiQoTheme.Typography.body)
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -122,7 +122,7 @@ struct KernelChallengeView: View {
             Button {
                 _ = model.spendToUnlock()
             } label: {
-                Label("افتح بـ \(price) طاقة", systemImage: "bolt.circle")
+                Label(isAr ? "افتح بـ \(price) طاقة" : "Open with \(price) energy", systemImage: "bolt.circle")
                     .font(AiQoTheme.Typography.cta)
                     .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
             }
@@ -131,7 +131,7 @@ struct KernelChallengeView: View {
             .disabled(!canAfford)
 
             if !canAfford {
-                Text("ما عندك طاقة كافية — تحرّك تكسبها.")
+                Text(isAr ? "ما عندك طاقة كافية — تحرّك تكسبها." : "Not enough energy — move to earn it.")
                     .font(AiQoTheme.Typography.caption)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
             }
@@ -378,6 +378,7 @@ private struct CaptainTrainerSession: View {
 private struct StepRingChallengeView: View {
     let walked: Int
     let target: Int
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
     private var progress: Double { target <= 0 ? 1 : min(1, Double(walked) / Double(target)) }
 
     var body: some View {
@@ -396,13 +397,13 @@ private struct StepRingChallengeView: View {
                     Text("\(walked)")
                         .font(.system(size: 38, design: .rounded).weight(.bold))
                         .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    Text("/ \(target) خطوة")
+                    Text(isAr ? "/ \(target) خطوة" : "/ \(target) steps")
                         .font(AiQoTheme.Typography.caption)
                         .foregroundStyle(AiQoTheme.Colors.textSecondary)
                 }
             }
             .frame(width: 200, height: 200)
-            Text("امشِ لتفتح — يكتمل تلقائياً لمن توصل.")
+            Text(isAr ? "امشِ لتفتح — يكتمل تلقائياً لمن توصل." : "Walk to open — it completes automatically when you reach it.")
                 .font(AiQoTheme.Typography.body)
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -417,6 +418,7 @@ private struct BreathingChallengeView: View {
     let onComplete: () -> Void
     @State private var remaining: Int
     @State private var inhale = false
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(seconds: Int, onComplete: @escaping () -> Void) {
@@ -431,8 +433,8 @@ private struct BreathingChallengeView: View {
                 .fill(AiQoColors.mintSoft.opacity(0.6))
                 .frame(width: inhale ? 180 : 110, height: inhale ? 180 : 110)
                 .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: inhale)
-                .overlay(Text(inhale ? "شهيق" : "زفير").font(AiQoTheme.Typography.cardTitle))
-            Text("تنفّس بهدوء — \(remaining) ثانية")
+                .overlay(Text(inhale ? (isAr ? "شهيق" : "in") : (isAr ? "زفير" : "out")).font(AiQoTheme.Typography.cardTitle))
+            Text(isAr ? "تنفّس بهدوء — \(remaining) ثانية" : "Breathe slowly — \(remaining)s")
                 .font(AiQoTheme.Typography.body)
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
         }
@@ -454,6 +456,7 @@ private struct CalmHeartChallengeView: View {
     let onComplete: () -> Void
     @State private var hold: Int
     @State private var running = false
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(maxBPM: Int, holdSeconds: Int, liveBPM: Int?, onComplete: @escaping () -> Void) {
@@ -468,22 +471,22 @@ private struct CalmHeartChallengeView: View {
         VStack(spacing: AiQoSpacing.md) {
             Image(systemName: "heart.fill").font(.system(size: 40)).foregroundStyle(.pink)
             if let bpm = liveBPM {
-                Text("\(bpm) نبضة")
+                Text(isAr ? "\(bpm) نبضة" : "\(bpm) bpm")
                     .font(.system(size: 30, design: .rounded).weight(.bold))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                Text("خلّي نبضك تحت \(maxBPM) لـ \(hold) ثانية")
+                Text(isAr ? "خلّي نبضك تحت \(maxBPM) لـ \(hold) ثانية" : "Keep your pulse under \(maxBPM) for \(hold)s")
                     .font(AiQoTheme.Typography.body)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
                 if !running {
-                    Button("ابدأ الفحص") { running = true }
+                    Button(isAr ? "ابدأ الفحص" : "Start check") { running = true }
                         .font(AiQoTheme.Typography.cta)
                         .buttonStyle(.borderedProminent).tint(AiQoTheme.Colors.accent)
                 }
             } else {
-                Text("فحص النبض يحتاج Apple Watch.")
+                Text(isAr ? "فحص النبض يحتاج Apple Watch." : "Pulse check needs an Apple Watch.")
                     .font(AiQoTheme.Typography.body)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                Text("تگدر تمشي أو تصرف طاقتك بدالها.")
+                Text(isAr ? "تگدر تمشي أو تصرف طاقتك بدالها." : "You can walk or spend your energy instead.")
                     .font(AiQoTheme.Typography.caption)
                     .foregroundStyle(AiQoTheme.Colors.textSecondary)
             }

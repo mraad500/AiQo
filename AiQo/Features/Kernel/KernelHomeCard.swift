@@ -13,6 +13,7 @@ struct KernelHomeCard: View {
     @State private var feedbackTrigger = 0
 
     private var hasAccess: Bool { TierGate.shared.canAccess(.kernel) }
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     var body: some View {
         Button {
@@ -41,7 +42,7 @@ struct KernelHomeCard: View {
                 .presentationCornerRadius(28)
         }
         .sheet(isPresented: $showPaywall) { PaywallView(source: .kernelGate) }
-        .accessibilityLabel("افتح النواة")
+        .accessibilityLabel(isAr ? "افتح النواة" : "Open Kernel")
         .onAppear {
             guard !AiQoAccessibility.prefersReducedMotion else { return }
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
