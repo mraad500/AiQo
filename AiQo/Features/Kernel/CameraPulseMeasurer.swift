@@ -19,7 +19,7 @@ final class CameraPulseMeasurer: NSObject, ObservableObject {
     @Published private(set) var permissionDenied = false
 
     /// Short by design — camera PPG drifts over longer holds.
-    let windowSeconds: Double = 12
+    let windowSeconds: Double = 20
 
     private let session = AVCaptureSession()
     private let queue = DispatchQueue(label: "com.mraad500.aiqo.kernel.ppg")
@@ -65,8 +65,8 @@ final class CameraPulseMeasurer: NSObject, ObservableObject {
                 self.publish { self.permissionDenied = true }
                 return
             }
-            self.setTorch(true)
             if !self.session.isRunning { self.session.startRunning() }
+            self.setTorch(true)   // AFTER startRunning — the session resets the torch on start
             self.publish {
                 self.bpm = nil
                 self.progress = 0
@@ -101,7 +101,7 @@ final class CameraPulseMeasurer: NSObject, ObservableObject {
         guard let device, device.hasTorch else { return }
         do {
             try device.lockForConfiguration()
-            if on { try? device.setTorchModeOn(level: 0.6) } else { device.torchMode = .off }
+            device.torchMode = on ? .on : .off   // full brightness — reliable; PPG wants strong light
             device.unlockForConfiguration()
         } catch { }
     }
