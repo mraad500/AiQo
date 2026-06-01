@@ -41,6 +41,23 @@ enum ClubTopTab: String, CaseIterable, Identifiable {
 }
 
 @MainActor
+/// Scopes the Plan tab to its OWN `CaptainViewModel`: it is still the real
+/// Captain (BrainOrchestrator / MemoryStore.shared live inside the VM, so
+/// full intelligence + long-term memory are preserved) — but it holds a
+/// SEPARATE conversation from the main Captain tab, started fresh every time
+/// the user enters Plan. Founder UX decision (#18): plan chat ≠ Captain chat,
+/// new plan conversation on each entry. The app-wide `globalBrain` keeps
+/// serving the Captain tab and everything else unchanged.
+private struct PlanConversationScope: View {
+    @StateObject private var planBrain = CaptainViewModel()
+
+    var body: some View {
+        PlanView()
+            .environmentObject(planBrain)
+            .onAppear { planBrain.startNewChat() }
+    }
+}
+
 struct ClubRootView: View {
     private static let gratitudeExerciseKey = "gym.exercise.gratitude"
 
@@ -54,11 +71,15 @@ struct ClubRootView: View {
     @State private var selectedTab: ClubTopTab = .body
     @State private var presentedExercise: PresentedExercise?
     @State private var presentedCinematicExercise: PresentedExercise?
+    @State private var presentedOutdoorRunExercise: GymExercise?
     @State private var isGratitudeSessionPresented = false
     @State private var isProfileSheetPresented = false
     @State private var activeExercise: GymExercise?
     @State private var activeSession: LiveWorkoutSession?
     @State private var activeCinematicContext: CinematicGrindLaunchContext?
+    @State private var showBattlePaywall = false
+    @State private var showPeaksPaywall = false
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
 
     @StateObject private var winsStore: WinsStore
     @StateObject private var questEngine: QuestEngine
@@ -87,6 +108,12 @@ struct ClubRootView: View {
             }
         .toolbar(.hidden, for: .navigationBar)
         .aiqoProfileSheet(isPresented: $isProfileSheetPresented)
+        .sheet(isPresented: $showPeaksPaywall) {
+            PaywallView(source: .peaksGate)
+        }
+        .sheet(isPresented: $showBattlePaywall) {
+            PaywallView(source: .battleGate)
+        }
         .sheet(item: $presentedExercise) { presented in
             ZStack(alignment: .topTrailing) {
                 WorkoutSessionSheetView(session: presented.session)
@@ -129,6 +156,11 @@ struct ClubRootView: View {
         .fullScreenCover(isPresented: $isGratitudeSessionPresented) {
             GratitudeSessionView()
         }
+        .fullScreenCover(item: $presentedOutdoorRunExercise) { exercise in
+            OutdoorRunSessionView(title: exercise.title) {
+                presentedOutdoorRunExercise = nil
+            }
+        }
     }
 
     private var topHeaderBar: some View {
@@ -157,13 +189,33 @@ struct ClubRootView: View {
             BodyView(onSelectExercise: handleExerciseSelection)
 
         case .plan:
-            PlanView()
+            PlanConversationScope()
 
         case .peaks:
-            PeaksRecordsView()
+            if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessPeaks {
+                PeaksRecordsView()
+            } else {
+                CaptainLockedView(config: .init(
+                    title: "قِمَم",
+                    subtitle: "قِمَم تحتاج اشتراك AiQo Intelligence Pro — مشاريع كسر الأرقام القياسية.",
+                    iconSystemName: "mountain.2.fill",
+                    tier: .pro,
+                    onUpgradeTap: { showPeaksPaywall = true }
+                ))
+            }
 
         case .battle:
-            BattleChallengesView(questEngine: questEngine)
+            if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessChallenges {
+                BattleChallengesView(questEngine: questEngine)
+            } else {
+                CaptainLockedView(config: .init(
+                    title: "معركة",
+                    subtitle: "افتح معركة مع اشتراك AiQo Max — 10 مراحل تحديات على بياناتك.",
+                    iconSystemName: "flag.checkered",
+                    tier: .max,
+                    onUpgradeTap: { showBattlePaywall = true }
+                ))
+            }
 
         case .impact:
             ImpactContainerView(winsStore: winsStore)
@@ -171,6 +223,17 @@ struct ClubRootView: View {
     }
 
     private func handleExerciseSelection(_ exercise: GymExercise) {
+        if exercise.workoutKind == .outdoorRun {
+            presentedExercise = nil
+            presentedCinematicExercise = nil
+            isGratitudeSessionPresented = false
+            // Re-attaches to the in-progress run if one exists, so opening the
+            // run again shows the same workout still going.
+            ActiveRunStore.shared.attachOrStart(title: exercise.title)
+            presentedOutdoorRunExercise = exercise
+            return
+        }
+
         if let activeSession, activeSession.phase != .idle, let activeExercise {
             presentExercise(activeExercise, session: activeSession)
             return

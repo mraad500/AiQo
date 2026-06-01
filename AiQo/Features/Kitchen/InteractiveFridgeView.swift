@@ -169,7 +169,7 @@ private struct InteractiveFridgeCanvasCard: View {
                     HStack {
                         Spacer()
 
-                        Text("\(sections.reduce(0) { $0 + $1.items.count }) عنصر")
+                        Text(String(format: NSLocalizedString("kitchen.fridge.itemCount", value: "%d عنصر", comment: "Fridge item count"), sections.reduce(0) { $0 + $1.items.count }))
                             .font(.system(size: 12, weight: .heavy, design: .rounded))
                             .foregroundStyle(Color.kitchenMint.opacity(0.98))
                             .padding(.horizontal, 12)

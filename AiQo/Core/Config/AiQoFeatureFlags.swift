@@ -52,8 +52,40 @@ enum FeatureFlags {
     @FeatureFlag("MEMORY_V4_ENABLED", default: false)
     static var memoryV4Enabled: Bool
 
+    /// Master switch for the NotificationBrain proactive notification pipeline
+    /// (`NotificationBrain.shared.subscribe()`). When ON, XP grants, streak
+    /// increments, and streak-risk windows can fire local notifications routed
+    /// through the same 4-gate budget/cooldown/persona/privacy pipeline used
+    /// by trigger-driven nudges.
+    @FeatureFlag("NOTIFICATION_BRAIN_ENABLED", default: false)
+    static var notificationBrainEnabled: Bool
+
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
+
+    /// Master kill switch for the `gemini-3-flash-preview` reasoning model.
+    /// OFF by default: preview models can change behavior, hit tighter rate
+    /// limits, or be withdrawn by Google without notice, so we don't bind the
+    /// paid Pro tier to one unless we explicitly opt in. When OFF, every cloud
+    /// call uses the stable `gemini-2.5-flash` (see `GeminiModelPolicy`). The
+    /// `captain-chat` Edge Function whitelists both models, so this flip is
+    /// purely client-side.
+    @FeatureFlag("GEMINI_3_PREVIEW_ENABLED", default: false)
+    static var gemini3PreviewEnabled: Bool
+
+    /// Master switch for full-fidelity 3D rendering (OutdoorRun realistic-
+    /// elevation satellite map + pitched chase camera, and the RealityKit Captain
+    /// avatar). ON by default. `DevicePerformanceTier` additionally auto-downgrades
+    /// on lower-RAM devices and when the device is thermally stressed — set this to
+    /// NO to force the lighter path (flat imagery, fixed camera, 2D avatar) everywhere.
+    @FeatureFlag("HIGH_FIDELITY_3D_ENABLED", default: true)
+    static var highFidelity3DEnabled: Bool
+
+    /// As of v1.0.4, controls whether `CrisisDetector.shared` is registered in
+    /// AppDelegate. CrisisDetector is a passive safety-net actor — instantiating
+    /// it via the singleton is sufficient to put it in the DI graph.
+    @FeatureFlag("CRISIS_DETECTOR_ENABLED", default: false)
+    static var crisisDetectorEnabled: Bool
 
     /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
     /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat
@@ -70,6 +102,13 @@ enum FeatureFlags {
 
     @FeatureFlag("TRIBE_SUBSCRIPTION_GATE_ENABLED", default: false)
     static var tribeSubscriptionGateEnabled: Bool
+
+    /// Master switch for the Kernel (النواة) — a digital-wellbeing app lock built
+    /// on Family Controls + DeviceActivity. OFF by default: v1.0.7 ships
+    /// structure + extension wiring only (no shielding/blocking behavior yet).
+    /// When ON, the Max-gated Kernel entry (Profile → AiQo) becomes reachable.
+    @FeatureFlag("KERNEL_ENABLED", default: false)
+    static var kernelEnabled: Bool
 
     // MARK: - Learning Spark (Stage 1) — flag group added 2026-04-19
     //

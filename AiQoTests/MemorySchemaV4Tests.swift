@@ -212,4 +212,120 @@ final class MemorySchemaV4Tests: XCTestCase {
             configurations: [ModelConfiguration(isStoredInMemoryOnly: true)]
         )
     }
+
+    /// Re-opening the V4 store after a successful migration must not duplicate
+    /// the migrated facts/episodes. SwiftData's own version check prevents
+    /// re-running the stage, and `didMigrate` carries an `existingFactIDs`
+    /// dedupe guard for the case where it would run anyway.
+    func testV3ToV4MigrationIdempotent() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let storeURL = tempDir.appendingPathComponent("captain_memory.store")
+        let sessionID = UUID()
+
+        // Seed V3
+        do {
+            let schema = Schema(versionedSchema: CaptainSchemaV3.self)
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [
+                    ModelConfiguration("CaptainMemoryStore", schema: schema, url: storeURL)
+                ]
+            )
+            let context = ModelContext(container)
+            context.insert(CaptainMemory(
+                key: "k1", value: "v1", category: "goal",
+                source: "user_explicit", confidence: 1
+            ))
+            context.insert(PersistentChatMessage(
+                messageID: UUID(),
+                text: "Hi",
+                isUser: true,
+                timestamp: Date(timeIntervalSince1970: 1_700_000_010),
+                sessionID: sessionID
+            ))
+            context.insert(PersistentChatMessage(
+                messageID: UUID(),
+                text: "Hello",
+                isUser: false,
+                timestamp: Date(timeIntervalSince1970: 1_700_000_020),
+                sessionID: sessionID
+            ))
+            try context.save()
+        }
+
+        // First V4 open → migration runs
+        let v4Schema = Schema(versionedSchema: MemorySchemaV4.self)
+        let firstCounts: (facts: Int, episodes: Int)
+        do {
+            let container = try ModelContainer(
+                for: v4Schema,
+                migrationPlan: CaptainSchemaMigrationPlan.self,
+                configurations: [
+                    ModelConfiguration("CaptainMemoryStore", schema: v4Schema, url: storeURL)
+                ]
+            )
+            let ctx = ModelContext(container)
+            firstCounts = (
+                try ctx.fetch(FetchDescriptor<SemanticFact>()).count,
+                try ctx.fetch(FetchDescriptor<EpisodicEntry>()).count
+            )
+        }
+
+        XCTAssertEqual(firstCounts.facts, 1)
+        XCTAssertEqual(firstCounts.episodes, 1)
+
+        // Second V4 open → no migration should run, counts unchanged
+        let secondCounts: (facts: Int, episodes: Int)
+        do {
+            let container = try ModelContainer(
+                for: v4Schema,
+                migrationPlan: CaptainSchemaMigrationPlan.self,
+                configurations: [
+                    ModelConfiguration("CaptainMemoryStore", schema: v4Schema, url: storeURL)
+                ]
+            )
+            let ctx = ModelContext(container)
+            secondCounts = (
+                try ctx.fetch(FetchDescriptor<SemanticFact>()).count,
+                try ctx.fetch(FetchDescriptor<EpisodicEntry>()).count
+            )
+        }
+
+        XCTAssertEqual(secondCounts.facts, firstCounts.facts, "second open must not duplicate facts")
+        XCTAssertEqual(secondCounts.episodes, firstCounts.episodes, "second open must not duplicate episodes")
+    }
+
+    /// Migration failure path: recordMigrationFailure must set the fallback flag,
+    /// which forces MemoryV4Gate.isOn to false on subsequent reads even when the
+    /// underlying Info.plist flag is true.
+    func testMemoryV4GateFallbackFlag() {
+        let key = MemoryV4Gate.fallbackUserDefaultsKey
+        UserDefaults.standard.removeObject(forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: key), "precondition: fallback flag must start clear")
+
+        let error = NSError(domain: "test.memoryV4", code: 42)
+        MemoryV4Gate.recordMigrationFailure(error, context: "unit_test")
+
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: key), "fallback flag must be set after recordMigrationFailure")
+        XCTAssertFalse(MemoryV4Gate.isOn, "MemoryV4Gate.isOn must return false when fallback is set, regardless of Info.plist flag")
+    }
+
+    /// RemoteFlags must default to "kill switch OFF" when no cache is present.
+    /// Verifies a missing Supabase row / first-launch / never-refreshed device
+    /// does not unintentionally disable V4 globally.
+    func testRemoteFlagsDefaultsToKillSwitchOff() {
+        let key = "aiqo.remoteflags.memory_v4_globally_disabled"
+        UserDefaults.standard.removeObject(forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+
+        XCTAssertFalse(
+            RemoteFlags.shared.memoryV4GloballyDisabled,
+            "When no cached value exists, kill switch must default to OFF (V4 enabled)"
+        )
+    }
 }

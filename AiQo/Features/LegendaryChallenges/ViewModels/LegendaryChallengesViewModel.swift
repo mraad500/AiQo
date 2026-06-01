@@ -220,49 +220,120 @@ final class LegendaryChallengesViewModel: ObservableObject {
         )
     }
 
-    // MARK: - Task Generation (unchanged)
+    // MARK: - Task Generation (week-adaptive periodization)
+
+    /// Real periodization for a Legendary week: volume/intensity ramps with
+    /// the week, every 4th week is a deload (recovery), and the final week
+    /// tapers to peak for the benchmark. Deterministic — same week → same plan.
+    private struct WeekProgression {
+        let week: Int
+        let total: Int
+        let progress: Double   // 0.0 at week 1 → 1.0 at the final week
+        let isDeload: Bool
+        let isTaper: Bool
+        let phaseAr: String
+
+        /// Scales a metric from `base` (week 1) toward `peak` (final week),
+        /// pulling volume back on deload weeks and trimming it on the taper.
+        func scaled(_ base: Int, _ peak: Int) -> Int {
+            let ramped = Double(base) + (Double(peak) - Double(base)) * progress
+            if isDeload { return max(base, Int((ramped * 0.70).rounded())) }
+            if isTaper { return max(base, Int((ramped * 0.85).rounded())) }
+            return Int(ramped.rounded())
+        }
+    }
+
+    private func progression(week: Int, totalWeeks rawTotal: Int) -> WeekProgression {
+        let total = max(rawTotal, 1)
+        let w = min(max(week, 1), total)
+        let progress = total > 1 ? Double(w - 1) / Double(total - 1) : 0
+        let isTaper = w == total && total >= 4
+        let isDeload = !isTaper && total >= 4 && w % 4 == 0
+        let phaseAr: String
+        if isTaper {
+            phaseAr = "ذروة واختبار"
+        } else if isDeload {
+            phaseAr = "استشفاء"
+        } else {
+            switch Int((progress * 3).rounded()) {
+            case 0: phaseAr = "تأسيس"
+            case 1: phaseAr = "بناء"
+            case 2: phaseAr = "تكثيف"
+            default: phaseAr = "ذروة"
+            }
+        }
+        return WeekProgression(
+            week: w, total: total, progress: progress,
+            isDeload: isDeload, isTaper: isTaper, phaseAr: phaseAr
+        )
+    }
 
     private func generateWeeklyTasks(for record: LegendaryRecord, week: Int) -> [DailyTask] {
+        let p = progression(week: week, totalWeeks: record.estimatedWeeks)
+        let tag = "أسبوع \(p.week)/\(p.total) · \(p.phaseAr)"
+        let prev = max(1, p.week - 1)
+        func task(_ day: Int, _ titleAr: String, _ target: String) -> DailyTask {
+            DailyTask(id: UUID().uuidString, dayNumber: day, titleAr: titleAr, targetValue: target, isCompleted: false)
+        }
+        let testAr = p.isTaper ? "اختبار نهائي: أقصى أداء" : "اختبار الأسبوع: أقصى أداء"
+        let testTarget = p.week > 1 ? "قِس وقارن بأسبوع \(prev)" : "قياس خط الأساس"
+
         switch record.category {
         case .strength:
+            let sets = p.scaled(3, 5)
+            let reps = p.scaled(10, 18)
+            let speedSets = p.scaled(4, 6)
+            let coreReps = p.scaled(15, 25)
+            let walk = p.scaled(20, 30)
             return [
-                DailyTask(id: UUID().uuidString, dayNumber: 1, titleAr: "إحماء + \(record.titleAr)", targetValue: "3 مجاميع × 10", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 2, titleAr: "تمارين مساعدة للعضلات", targetValue: "3 مجاميع × 12", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 3, titleAr: "راحة نشطة — مشي خفيف", targetValue: "20 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 4, titleAr: "\(record.titleAr) — سرعة", targetValue: "4 مجاميع × 8", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 5, titleAr: "تمارين جذع وتوازن", targetValue: "3 مجاميع × 15", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 6, titleAr: "اختبار: أقصى عدد بدقيقة", targetValue: "قياس أقصى أداء", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 7, titleAr: "راحة كاملة", targetValue: "استشفاء", isCompleted: false),
+                task(1, "\(tag) — إحماء + \(record.titleAr)", "\(sets) مجاميع × \(reps)"),
+                task(2, "تمارين مساعدة للعضلات", "\(sets) مجاميع × \(reps + 2)"),
+                task(3, "راحة نشطة — مشي خفيف", "\(walk) دقيقة"),
+                task(4, "\(record.titleAr) — قوة متفجّرة", "\(speedSets) مجاميع × \(max(6, reps - 4))"),
+                task(5, "تمارين جذع وتوازن", "3 مجاميع × \(coreReps)"),
+                task(6, testAr, testTarget),
+                task(7, "راحة كاملة", "استشفاء"),
             ]
         case .cardio:
+            let easy = p.scaled(20, 35)
+            let main = p.scaled(30, 50)
+            let long = p.scaled(45, 90)
+            let hiit = p.scaled(12, 28)
             return [
-                DailyTask(id: UUID().uuidString, dayNumber: 1, titleAr: "مشي سريع", targetValue: "30 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 2, titleAr: "تمارين كارديو خفيفة", targetValue: "20 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 3, titleAr: "راحة نشطة — تمدد", targetValue: "15 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 4, titleAr: "مشي طويل متوسط السرعة", targetValue: "45 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 5, titleAr: "تمارين HIIT خفيفة", targetValue: "15 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 6, titleAr: "اختبار: قياس المسافة", targetValue: "قياس أقصى أداء", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 7, titleAr: "راحة كاملة", targetValue: "استشفاء", isCompleted: false),
+                task(1, "\(tag) — مشي/جري سريع", "\(main) دقيقة"),
+                task(2, "كارديو ثابت الإيقاع", "\(easy) دقيقة"),
+                task(3, "راحة نشطة — تمدد", "15 دقيقة"),
+                task(4, "مسافة طويلة متواصلة", "\(long) دقيقة"),
+                task(5, "HIIT — فترات شدّة عالية", "\(hiit) دقيقة"),
+                task(6, testAr.replacingOccurrences(of: "أقصى أداء", with: "أقصى مسافة"), testTarget),
+                task(7, "راحة كاملة", "استشفاء"),
             ]
         case .endurance:
+            let holdSec = p.scaled(30, 90)
+            let sets = p.scaled(3, 5)
+            let coreReps = p.scaled(15, 25)
             return [
-                DailyTask(id: UUID().uuidString, dayNumber: 1, titleAr: "ثبات بوضعية البلانك", targetValue: "3 مجاميع × 30 ثانية", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 2, titleAr: "تمارين جذع", targetValue: "3 مجاميع × 15", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 3, titleAr: "راحة نشطة — تنفس عميق", targetValue: "10 دقائق", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 4, titleAr: "بلانك مع تبديل", targetValue: "4 مجاميع × 20 ثانية", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 5, titleAr: "تمارين ثبات وتوازن", targetValue: "3 مجاميع × 12", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 6, titleAr: "اختبار: أقصى ثبات", targetValue: "قياس أقصى أداء", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 7, titleAr: "راحة كاملة", targetValue: "استشفاء", isCompleted: false),
+                task(1, "\(tag) — ثبات بوضعية البلانك", "\(sets) مجاميع × \(holdSec) ثانية"),
+                task(2, "تمارين جذع", "\(sets) مجاميع × \(coreReps)"),
+                task(3, "راحة نشطة — تنفس عميق", "10 دقائق"),
+                task(4, "بلانك مع تبديل", "\(sets + 1) مجاميع × \(max(20, holdSec - 10)) ثانية"),
+                task(5, "تمارين ثبات وتوازن", "3 مجاميع × \(coreReps)"),
+                task(6, testAr.replacingOccurrences(of: "أقصى أداء", with: "أقصى ثبات"), testTarget),
+                task(7, "راحة كاملة", "استشفاء"),
             ]
         case .clarity:
+            let med = p.scaled(10, 30)
+            let rounds = p.scaled(3, 7)
+            let holdSec = p.scaled(15, 60)
+            let box = p.scaled(4, 8)
             return [
-                DailyTask(id: UUID().uuidString, dayNumber: 1, titleAr: "تمرين تنفس — صندوقي", targetValue: "4 جولات × 4 ثوانٍ", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 2, titleAr: "تأمّل مع تركيز على النَفَس", targetValue: "10 دقائق", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 3, titleAr: "تنفس ويم هوف", targetValue: "3 جولات", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 4, titleAr: "حبس نَفَس تدريجي", targetValue: "5 محاولات", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 5, titleAr: "تأمّل عميق", targetValue: "15 دقيقة", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 6, titleAr: "اختبار: أقصى حبس نَفَس", targetValue: "قياس أقصى أداء", isCompleted: false),
-                DailyTask(id: UUID().uuidString, dayNumber: 7, titleAr: "راحة كاملة", targetValue: "استشفاء", isCompleted: false),
+                task(1, "\(tag) — تمرين تنفس صندوقي", "\(rounds) جولات × \(box) ثوانٍ"),
+                task(2, "تأمّل مع تركيز على النَفَس", "\(med) دقيقة"),
+                task(3, "تنفس ويم هوف", "\(rounds) جولات"),
+                task(4, "حبس نَفَس تدريجي", "\(rounds) محاولات × \(holdSec) ثانية"),
+                task(5, "تأمّل عميق", "\(med + 5) دقيقة"),
+                task(6, testAr.replacingOccurrences(of: "أقصى أداء", with: "أقصى حبس نَفَس"), testTarget),
+                task(7, "راحة كاملة", "استشفاء"),
             ]
         }
     }

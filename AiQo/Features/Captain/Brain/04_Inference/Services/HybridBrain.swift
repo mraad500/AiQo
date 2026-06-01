@@ -36,6 +36,19 @@ struct HybridBrainRequest: Sendable {
     let workingMemorySummary: String
     let attachedImageData: Data?
     let purpose: RequestPurpose
+    /// Authoritative, static facts about AiQo's own features (from
+    /// `AppKnowledge`). Injected by `PrivacySanitizer.sanitizeForCloud` as a
+    /// trusted PII-free string. Optional + defaulted nil so every existing
+    /// call site keeps compiling unchanged (same pattern as `purpose`).
+    let appKnowledge: String?
+    /// Faithful, compacted state of the part of THIS chat session that no longer
+    /// fits the verbatim window (built by `ConversationCompactor`, rendered by
+    /// `ConversationDigest`). Carried as a DEDICATED field — not folded into
+    /// `workingMemorySummary` — because the cloud path *rebuilds*
+    /// `workingMemorySummary` from cloud-safe durable memories and would
+    /// otherwise drop the session continuity entirely. `sanitizeForCloud`
+    /// PII-redacts it and `PromptComposer.layerConversationState` renders it.
+    let conversationState: String?
 
     var hasAttachedImage: Bool { attachedImageData != nil }
 
@@ -48,7 +61,9 @@ struct HybridBrainRequest: Sendable {
         intentSummary: String,
         workingMemorySummary: String,
         attachedImageData: Data?,
-        purpose: RequestPurpose = .captainChat
+        purpose: RequestPurpose = .captainChat,
+        appKnowledge: String? = nil,
+        conversationState: String? = nil
     ) {
         self.conversation = conversation
         self.screenContext = screenContext
@@ -59,6 +74,8 @@ struct HybridBrainRequest: Sendable {
         self.workingMemorySummary = workingMemorySummary
         self.attachedImageData = attachedImageData
         self.purpose = purpose
+        self.appKnowledge = appKnowledge
+        self.conversationState = conversationState
     }
 }
 
@@ -68,12 +85,42 @@ struct HybridBrainServiceReply: Sendable {
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
+    /// Explicit "remember this" payload — only the cloud path populates it.
+    let savedMemory: CaptainSavedMemory?
+    /// One-off clock-time reminder payload — only the cloud path populates it.
+    let reminder: CaptainReminder?
     let rawText: String
     /// True when Gemini reported `finishReason: "MAX_TOKENS"` for the cloud
     /// response that produced this reply. Local / fallback / persona replies
     /// always pass `false`. Surfaced to the UI so the bubble can mark the
     /// truncation; analytics tracks it for capacity tuning.
     let truncatedAtMaxTokens: Bool
+
+    /// Explicit memberwise init with the memory/reminder fields defaulted to
+    /// nil so the many fallback/error call sites (offline, tier-gate, sleep
+    /// fallback, persona) keep compiling without change — only the cloud path
+    /// and the orchestrator's reply rebuilders pass them through.
+    init(
+        message: String,
+        quickReplies: [String]?,
+        workoutPlan: WorkoutPlan?,
+        mealPlan: MealPlan?,
+        spotifyRecommendation: SpotifyRecommendation?,
+        savedMemory: CaptainSavedMemory? = nil,
+        reminder: CaptainReminder? = nil,
+        rawText: String,
+        truncatedAtMaxTokens: Bool
+    ) {
+        self.message = message
+        self.quickReplies = quickReplies
+        self.workoutPlan = workoutPlan
+        self.mealPlan = mealPlan
+        self.spotifyRecommendation = spotifyRecommendation
+        self.savedMemory = savedMemory
+        self.reminder = reminder
+        self.rawText = rawText
+        self.truncatedAtMaxTokens = truncatedAtMaxTokens
+    }
 }
 
 struct HybridBrainStreamingSession: Sendable {
@@ -263,6 +310,8 @@ struct HybridBrainService: Sendable {
             workoutPlan: cloudResult.response.workoutPlan,
             mealPlan: cloudResult.response.mealPlan,
             spotifyRecommendation: cloudResult.response.spotifyRecommendation,
+            savedMemory: cloudResult.response.savedMemory,
+            reminder: cloudResult.response.reminder,
             rawText: rawText,
             truncatedAtMaxTokens: cloudResult.truncatedAtMaxTokens
         )
@@ -278,7 +327,9 @@ struct HybridBrainService: Sendable {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
 
         return HybridBrainStreamingSession(
@@ -465,23 +516,28 @@ private extension HybridBrainService {
     // MARK: - Request Body
 
     func makeRequestBody(request: HybridBrainRequest) -> [String: Any] {
-        // Arabic tokenizes inefficiently in Gemini's BPE (~1.5–2× English).
-        // The structured reply envelope (greeting + per-metric line + advice +
-        // follow-up + quickReplies) plus the JSON wrapper itself eats budget
-        // fast — multi-metric questions ("how are my steps + calories + sleep
-        // + water today?") were hitting MAX_TOKENS at 1400 and clipping mid-
-        // sentence. 2048 gives ~1000–1300 Arabic words of headroom while the
-        // tightened conciseness rules in PromptComposer prevent rambling.
-        // finishReason=MAX_TOKENS is decoded in GeminiResponse — watch the
-        // gemini_max_tokens_hit log; if it still fires we tune per-screen.
+        // Token budget per screen. Arabic tokenizes ~1.5–2× English in Gemini's
+        // BPE so the cap is generous but bounded — the prior 4096 was paid out
+        // in wall-clock latency (cap → longer thinking + slower stream).
+        //
+        // **Hybrid contract (2026-05-20):** plan asks now produce a short
+        // `message` (2–4 lines) plus a structured `workoutPlan` object the
+        // card renders. That envelope is ~300–500 tokens in Arabic, so 2400
+        // leaves ~5× headroom for long multi-day plans without burning the
+        // budget on a paragraph of free-form text. Sleep analysis is bounded
+        // tighter because its 4-sentence contract is strict.
+        // finishReason=MAX_TOKENS is decoded in GeminiResponse — if the
+        // gemini_max_tokens_hit log spikes for a screen, retune that screen.
         let maxOutputTokens: Int = {
             switch request.screenContext {
-            case .mainChat, .myVibe:
+            case .mainChat:
+                return 2400
+            case .myVibe:
                 return 2048
             case .sleepAnalysis:
-                return 1200
+                return 1600
             case .gym, .kitchen, .peaks:
-                return 2048
+                return 2400
             }
         }()
 
@@ -518,9 +574,12 @@ private extension HybridBrainService {
             let role = message.role == .assistant ? "model" : "user"
             var parts: [[String: Any]] = [["text": trimmed]]
 
-            // Attach kitchen image to the last user message only
+            // Attach an inline image to the last user message only. Kitchen
+            // (fridge vision) and Gym (body-photo plan tailoring) both ride
+            // this path — the privacy sanitizer is the gate that decides
+            // whether `attachedImageData` survives the cloud handoff.
             if index == lastUserIndex,
-               request.screenContext == .kitchen,
+               (request.screenContext == .kitchen || request.screenContext == .gym),
                let imageData = request.attachedImageData {
                 parts.append([
                     "inlineData": [

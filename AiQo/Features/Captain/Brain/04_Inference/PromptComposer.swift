@@ -19,19 +19,185 @@ struct PromptComposer: Sendable {
             layerSafetyRules(language: request.language),
             layerIdentity(language: request.language, firstName: firstName, screenContext: request.screenContext),
             layerStableProfile(profileSummary: request.userProfileSummary),
+            layerInjuryConstraints(
+                profileSummary: request.userProfileSummary,
+                workingMemorySummary: request.workingMemorySummary,
+                intentSummary: request.intentSummary,
+                conversation: request.conversation,
+                recentInteractions: request.contextData.recentInteractions,
+                language: request.language
+            ),
             layerWorkingMemory(
+                language: request.language,
                 workingMemorySummary: request.workingMemorySummary,
                 intentSummary: request.intentSummary,
                 recentInteractions: request.contextData.recentInteractions
             ),
+            layerConversationState(request: request),
+            layerCoachingThesis(request: request),
             layerBioState(data: request.contextData, language: request.language),
+            layerKernelStatus(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
+            layerAppKnowledge(request: request),
             layerScreenContext(request: request),
             layerMedicalDisclaimer(language: request.language),
             layerOutputContract(screenContext: request.screenContext, language: request.language)
         ]
         .filter { !$0.isEmpty }
         .joined(separator: "\n\n")
+    }
+
+    // MARK: - Kernel Status Layer
+
+    /// Kernel (digital-wellbeing app-lock) status. Empty when the user doesn't have
+    /// the feature on — zero prompt overhead. Unlike the masked bio-state layer, the
+    /// Captain MAY reference this naturally when the user asks about النواة — it's
+    /// counts and states only, never app identities.
+    private func layerKernelStatus(data: CaptainContextData, language: AppLanguage) -> String {
+        guard let status = data.kernelStatus, !status.isEmpty else { return "" }
+        let header: String
+        if language == .english {
+            header = """
+            === KERNEL (النواة) STATUS — the user's REAL digital-wellbeing app-lock activity ===
+            This is live, factual data about how the user is doing on النواة today. Use it to
+            give specific, supportive coaching about their Kernel habit when relevant, and to
+            answer naturally + accurately when they ask how their نواة is going (today's
+            shields, locked or not, energy earned, "enough for today"). You DO know this
+            feature — see the APP KNOWLEDGE block. NEVER name or guess which apps are locked —
+            you only know counts.
+            """
+        } else {
+            header = """
+            === حالة النواة (نشاط قفل الرفاهية الرقمية الحقيقي مال المستخدم) ===
+            هذي بيانات حيّة وحقيقية عن شلون ماشي المستخدم بالنواة اليوم. استعملها حتى تنطي نصيحة
+            وتشجيع محدّد على عادته بالنواة لمن يناسب، وتجاوب طبيعي ودقيق لمن يسأل شلون نواته (دروع
+            اليوم، مقفلة لو لا، الطاقة المكتسبة، «كافي اليوم»). إنت **تعرف** هاي الميزة — شوف بلوك
+            APP KNOWLEDGE. ممنوع تذكر أو تخمّن أي تطبيقات مقفلة — إنت تعرف الأرقام بس.
+            """
+        }
+        return "\(header)\n\(status)"
+    }
+
+    // MARK: - Injury Constraints Layer (T5)
+
+    /// Scans the user's stable profile + active working memory for known
+    /// injury keywords and emits a contraindication block telling the model
+    /// which exercises to AVOID and which to PREFER. Empty when no injury
+    /// is detected — zero prompt bloat for healthy users.
+    ///
+    /// Why this is a dedicated layer instead of "the model will read the
+    /// profile and figure it out": Gemini 2.5-flash empirically lists
+    /// push-ups + chair triceps dips for a knee-injured user (both still
+    /// load the knee) and adds a trailing "stop if it hurts" disclaimer.
+    /// Spelling out the constraint as a hard rule turns the avoidance from
+    /// best-effort into deterministic.
+    private func layerInjuryConstraints(
+        profileSummary: String,
+        workingMemorySummary: String,
+        intentSummary: String,
+        conversation: [CaptainConversationMessage],
+        recentInteractions: String?,
+        language: AppLanguage
+    ) -> String {
+        // Pull from every durable surface that could carry an injury mention:
+        //   - stable profile (what the user told the Captain about themselves)
+        //   - working memory (relevance-retrieved + pinned constraint memories)
+        //   - intent summary (current-turn read-out from the CognitivePipeline)
+        //   - recent interactions block (compact history echoed to Gemini)
+        //   - the live conversation (last ~24 messages of user + assistant text)
+        // A knee injury surfaced anywhere in those layers must trip the
+        // constraint block — otherwise we silently regress to recommending
+        // squats and lunges to someone who can't do them.
+        let conversationText = conversation.map(\.content).joined(separator: "\n")
+        let haystack = [
+            profileSummary,
+            workingMemorySummary,
+            intentSummary,
+            recentInteractions ?? "",
+            conversationText
+        ]
+        .joined(separator: "\n")
+        .lowercased()
+        guard !haystack.isEmpty else { return "" }
+
+        // Each tuple: (joint keyword set, avoid list AR, prefer list AR,
+        // avoid list EN, prefer list EN).
+        let isArabic = language == .arabic
+
+        struct InjuryRule {
+            let keywords: [String]
+            let avoidAR: String
+            let preferAR: String
+            let avoidEN: String
+            let preferEN: String
+        }
+
+        let rules: [InjuryRule] = [
+            InjuryRule(
+                keywords: ["ركبة", "ركبت", "knee", "acl", "meniscus", "patella"],
+                avoidAR: "ممنوع تماماً للركبة: سكوات عميق، لانجز، قفز، plyometrics، ركض على سطح صلب، طلوع/نزول درج كثيف، انحناء عميق للركبة، هاي امباكت إيروبيكس.",
+                preferAR: "بدائل آمنة للركبة: جسر الورك (Glute Bridge)، Hip Thrust، رفع الساق المضبوط، تمارين بانس الجلوس، إطالة بدون تحميل، سكوات جزئي (ربع فقط) إذا حاب، تمارين الجزء العلوي بالكامل.",
+                avoidEN: "Forbidden for knee: deep squats, lunges, jumping, plyometrics, running on hard surfaces, intense stair climbing, deep knee flexion, high-impact aerobics.",
+                preferEN: "Safer for knee: glute bridges, hip thrusts, controlled leg raises, seated bench work, unloaded stretches, partial-range (quarter) squats only if comfortable, full upper-body work."
+            ),
+            InjuryRule(
+                keywords: ["ظهر", "لومبر", "ديسك", "back", "lumbar", "lower back", "herniated", "disc", "slipped disc", "sciatica"],
+                avoidAR: "ممنوع للظهر: ديدليفت ثقيل، Good Morning، اللف تحت حمل (Russian Twist بوزن)، رفعات أرضية بانحناء، Overhead Press من وضع ظهر مقوس.",
+                preferAR: "بدائل آمنة للظهر: Bird Dog، Dead Bug، Plank، تمدد القط/البقرة، تمارين سحب بزاوية محايدة، حركات تقوية الجلوتيوس.",
+                avoidEN: "Forbidden for back: heavy deadlifts, Good Morning, loaded twisting (weighted Russian Twist), floor pickups with rounding, overhead press from an arched-back position.",
+                preferEN: "Safer for back: bird-dog, dead-bug, plank, cat-cow mobility, rows with a neutral spine, glute-strengthening drills."
+            ),
+            InjuryRule(
+                keywords: ["كتف", "أكتاف", "shoulder", "rotator", "impingement"],
+                avoidAR: "ممنوع للكتف: Behind-Neck Press، Upright Row، رفرفة فوق مستوى الكتف، Dips العميقة.",
+                preferAR: "بدائل آمنة للكتف: Scapular Push-Up، Wall Slide، تدوير خارجي خفيف (External Rotation)، Face Pull، Front Raise لزاوية ٩٠ فقط.",
+                avoidEN: "Forbidden for shoulder: behind-neck press, upright rows, raises above shoulder height, deep dips.",
+                preferEN: "Safer for shoulder: scapular push-ups, wall slides, light external rotations, face pulls, front raises capped at 90°."
+            ),
+            InjuryRule(
+                keywords: ["معصم", "رسغ", "wrist", "carpal"],
+                avoidAR: "ممنوع للمعصم: Push-Up بكف مفرود على الأرض بدون مقابض، بنش بريس بوزن عالي مع قفل المعصم.",
+                preferAR: "بدائل آمنة للمعصم: Push-Up بمقابض أو على القبضة، استخدم Dumbbells بدل البار حيث الإمكان، Wrist-Neutral Variations.",
+                avoidEN: "Forbidden for wrist: flat-palm push-ups without handles, heavy bench with locked wrists.",
+                preferEN: "Safer for wrist: push-ups on handles or fists, dumbbells over barbell where possible, wrist-neutral variations."
+            )
+        ]
+
+        var blocks: [String] = []
+        for rule in rules {
+            if rule.keywords.contains(where: { haystack.contains($0) }) {
+                if isArabic {
+                    blocks.append("• تجنّب: \(rule.avoidAR)\n  استبدلها بـ: \(rule.preferAR)")
+                } else {
+                    blocks.append("• Avoid: \(rule.avoidEN)\n  Substitute with: \(rule.preferEN)")
+                }
+            }
+        }
+
+        guard !blocks.isEmpty else { return "" }
+
+        if isArabic {
+            return """
+            === قيود سلامة (إصابات معروفة) — قاعدة صلبة ===
+            المستخدم عنده الإصابات/الحساسيات أدناه. لمّا تبني خطة تمرين (workoutPlan) أو
+            تقترح تمرين بالـmessage، اتبع هاي القيود بدون استثناء. ممنوع تختار تمرين بقائمة
+            "تجنّب" حتى لو المستخدم طلبه — بدّله بأقرب بديل من قائمة "استبدلها".
+            ⛔ إضافة تحذير ذيل ("توقف لو حسّيت ألم") ما تعوّض عن اختيار تمرين خاطئ.
+
+            \(blocks.joined(separator: "\n\n"))
+            """
+        }
+
+        return """
+        === SAFETY CONSTRAINTS (known injuries) — HARD RULE ===
+        The user has the injuries/sensitivities below. When you build a workoutPlan or
+        suggest exercises in the message, follow these constraints without exception.
+        Do NOT pick an exercise from the "Avoid" list even if the user asks for it —
+        substitute the closest item from the "Substitute" list instead.
+        ⛔ A trailing "stop if it hurts" disclaimer does NOT compensate for the wrong exercise.
+
+        \(blocks.joined(separator: "\n\n"))
+        """
     }
 
     // MARK: - Reply Language Lock (prepended before all other layers)
@@ -131,10 +297,25 @@ struct PromptComposer: Sendable {
             - Multi-metric question (e.g. "how are my steps + sleep + calories + water?")
               → one tight sentence per metric, in the order asked, then ONE follow-up question.
               Never write a paragraph per metric. Total reply ≤ 5 short sentences.
-            - Workout / meal plan → structured plan, max 5 bullet points. No prose intro.
+            - Workout / meal plan → **hybrid** reply, BOTH fields required and DISTINCT:
+              (a) `message` is 2–4 short sentences in natural English — **never empty**:
+                  1) personal warm intro ("Let's go — I dialed this in for you…"),
+                  2) the session's focus in its own sentence (e.g. "Full-body, knee-safe today"),
+                  3) a safety note if the user has a known injury (mandatory when injury is on profile/memory),
+                  4) a pointer to the card ("open the card below for every exercise + sets").
+                  ⛔ Do NOT list exercises or set counts in `message` — the card owns those.
+                  ⛔ Do NOT return an empty or single-word `message` — even with a great card, the user needs the Captain's voice.
+              (b) `workoutPlan` is a full object (NEVER null) with title, durationWeeks,
+                  days[] and every exercise+sets+reps. This is what the card renders.
+              Card = details. Message = Captain's voice (warm intro + focus + safety + pointer).
+              **Failure modes**:
+              • Empty `message` or one-word reply → Captain feels mute.
+              • Long `message` that re-lists exercises → redundant with card.
+              • `workoutPlan = null` → no card renders, user feels short-changed.
             - Emotional support → one warm sentence + one follow-up question.
-            - Hard ceiling: ≤ 90 words OR ≤ 5 sentences, whichever is shorter, unless the
-              user explicitly asked for a plan.
+            - Hard ceiling: ≤ 90 words OR ≤ 5 sentences, whichever is shorter — for
+              general chat. Workout/meal asks keep `message` at 3–5 lines (card
+              carries the rest).
             - Never repeat a point. Never restate the user's question back. Never ramble.
             - If you feel you have more to say, save it for the next turn — end with a
               clean question instead of trailing off. A truncated reply is a failure.
@@ -193,12 +374,24 @@ struct PromptComposer: Sendable {
         - سؤال متعدد المقاييس (مثل "شلون خطواتي + سعراتي + نومي + مايتي اليوم؟")
           → جملة واحدة مختصرة لكل مقياس بنفس الترتيب اللي سأل بيه، وبعدها سؤال متابعة واحد.
           ممنوع تكتب فقرة كاملة لكل مقياس. الرد كله ≤ 5 جمل قصيرة.
-        - طلب تمرين/وجبة → خطة بنقاط واضحة، أقصى 5 نقاط. بدون مقدمة طويلة.
+        - طلب تمرين/وجبة → ردّك **هجين** بحقلين سوا — **الاثنين إلزامي ومنفصلين**:
+          (أ) **message** فيه ٢-٤ جمل بالعراقي — **ممنوع تكون فاضية أو سطر واحد**:
+              ١. ترحيب دافئ شخصي بسطر (مثلاً "تدلل يا بطل، رتبتلك خطة...")
+              ٢. ذكر تركيز الجلسة بسطر (مثلاً "هاي جلسة جسم كامل بدون ضغط على الركبة")
+              ٣. ملاحظة سلامة لو فيه إصابة معروفة (إلزامي إذا الإصابة بالبروفايل/الذاكرة)
+              ٤. سطر يوجّه للكرت ("افتح الكرت تحت — كل التمارين والجولات هناك")
+              ⛔ **ممنوع** تحط قائمة التمارين أو سِتاتها بالـmessage — الكرت يأخذها.
+              ⛔ **ممنوع** ترجع message فاضية أو whitespace — حتى لو الكرت فيه كل التفاصيل، المستخدم يحتاج صوت الكابتن.
+          (ب) **workoutPlan** object كامل (مو null) بكل التفاصيل: title، durationWeeks، days[] مع كل تمرين وسِتاته وتكراراته. هذا اللي يطلع بالكرت.
+          الكرت = تفاصيل. الـmessage = صوت الكابتن (ترحيب + تركيز + سلامة + توجيه).
+          **حالات فشل**:
+          • message فاضية أو "تدلل!" بدون شي ثاني → فشل، الكابتن يصير صامت.
+          • message طويلة فيها قائمة التمارين → فشل، تكرار مع الكرت.
+          • workoutPlan null → فشل، الكرت ما يطلع.
         - دعم عاطفي → جملة دافئة + سؤال متابعة واحد.
-        - السقف الصارم: ≤ 90 كلمة أو ≤ 5 جمل، أيّهما أقصر — إلا إذا المستخدم صراحةً طلب خطة مفصّلة.
+        - السقف الصارم: ≤ 90 كلمة أو ≤ 5 جمل، أيّهما أقصر — هذا للدردشة العامة. طلب التمرين/الوجبة الـmessage تبقى ٣-٥ سطور بس (الكرت يأخذ التفاصيل).
         - ممنوع تكرار نقطة. ممنوع تعيد سؤال المستخدم بصيغة جواب. ممنوع تطوّل بلا فايدة.
-        - إذا حسّيت عندك زيادة كلام، خلّيه للرد الجاي — اقفل بسؤال نظيف ولا تترك جملة ناقصة.
-          الرد المقطوع بنص الجملة يعتبر فشل كامل.
+        - إذا عندك زيادة كلام بالدردشة العامة، خلّيه للرد الجاي واقفل بسؤال نظيف.
         """
 
         if let firstName {
@@ -233,6 +426,7 @@ struct PromptComposer: Sendable {
     // MARK: - Layer 3: Working Memory
 
     private func layerWorkingMemory(
+        language: AppLanguage,
         workingMemorySummary: String,
         intentSummary: String,
         recentInteractions: String?
@@ -263,10 +457,23 @@ struct PromptComposer: Sendable {
             )
         }
 
-        // Brain V2: Recent interaction timeline
-        let interactions = recentInteractions ?? "لا توجد تفاعلات سابقة"
+        // Brain V2: Recent interaction timeline. Language-branched: feeding
+        // hardcoded Arabic into an English prompt directly contradicts the
+        // "No Arabic — overrides all other instructions" lock and degrades
+        // instruction-following + continuity for the entire English cohort.
+        let isEnglish = language == .english
+        let interactions = recentInteractions
+            ?? (isEnglish ? "No previous interactions" : "لا توجد تفاعلات سابقة")
         sections.append(
+            isEnglish
+            ? """
+            --- Recent interactions ---
+            \(interactions)
+            ---
+            If the user opened a notification before messaging you, tie your reply to that notification's topic. Don't ignore the context.
+            If you sent a notification and it wasn't opened, don't repeat the same topic.
             """
+            : """
             --- آخر التفاعلات ---
             \(interactions)
             ---
@@ -279,6 +486,42 @@ struct PromptComposer: Sendable {
         === ACTIVE WORKING MEMORY ===
         \(sections.joined(separator: "\n\n"))
         """
+    }
+
+    // MARK: - Conversation State (compacted head of a long session)
+
+    /// Renders the faithful, compacted `[conversation_state]` block built by
+    /// `ConversationCompactor`/`ConversationDigest` for the part of the current
+    /// session that no longer fits the verbatim window. The block carries its
+    /// own header, structure, and anti-hallucination grounding lock (already in
+    /// the user's language), so this layer just gates on emptiness — exactly
+    /// like `layerAppKnowledge`.
+    ///
+    /// This is the mechanism that keeps a long chat from "forgetting" its head
+    /// and then fabricating to fill the gap. Skipped in strict `sleepAnalysis`
+    /// mode (its 4-sentence contract must not be diluted) and absent on short
+    /// chats (no compaction yet → zero prompt overhead).
+    private func layerConversationState(request: HybridBrainRequest) -> String {
+        guard request.screenContext != .sleepAnalysis else { return "" }
+        guard let block = request.conversationState?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !block.isEmpty
+        else { return "" }
+        return block
+    }
+
+    // MARK: - App Knowledge (authoritative facts about AiQo's own features)
+
+    /// Renders the retrieved App-Knowledge block (built by `AppKnowledge`,
+    /// injected via the trusted sanitizer path). The block carries its own
+    /// header; this layer just gates on emptiness so unrelated turns add
+    /// nothing to the prompt (mirrors `layerWorkingMemory`'s contract).
+    private func layerAppKnowledge(request: HybridBrainRequest) -> String {
+        guard let block = request.appKnowledge?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !block.isEmpty
+        else { return "" }
+        return block
     }
 
     // MARK: - Layer 4: Bio-State (Current HealthKit Metrics — Masked)
@@ -356,6 +599,25 @@ struct PromptComposer: Sendable {
             """
         }
 
+        // Brain V2: cross-metric synthesis. TrendAnalyzer computes each metric
+        // independently and the lines above are per-metric; this turns the
+        // snapshot into explicit "X is linked to Y" directives so the model
+        // connects the dots instead of inferring from scattered numbers.
+        if let trend = data.trendSnapshot {
+            let insights = TrendInsightSynthesizer.insights(
+                from: trend,
+                emotional: data.emotionalState,
+                language: language
+            )
+            if !insights.isEmpty {
+                let header = language == .english
+                    ? "--- CONNECTED SIGNALS (internal — use the link, never quote the numbers) ---"
+                    : "--- روابط ملحوظة (داخلي — استعمل الترابط، لا تذكر الأرقام) ---"
+                result += "\n\n" + header + "\n"
+                    + insights.map { "• \($0)" }.joined(separator: "\n")
+            }
+        }
+
         return result
     }
 
@@ -411,6 +673,36 @@ struct PromptComposer: Sendable {
             section += "\nThe user attached a photo (likely their fridge or a meal). Prioritize meal guidance based on what you see."
         }
 
+        if request.screenContext == .gym && request.hasAttachedImage {
+            section += """
+
+            === BODY PHOTO PROVIDED — PERSONALIZE THE PLAN ===
+            The user attached a body photo so you can tailor the plan to their build.
+            You MUST do BOTH of the following:
+
+            1) In the `message` field, give a short constructive read of what you see and
+               what their body needs. Lead with what is already strong, then name 1–2
+               specific muscle groups that look underdeveloped, then say how the plan
+               targets them. 2–3 sentences, supportive coaching tone.
+               Example AR: "شفت صورتك يا بطل — أكتافك وظهرك ممتازة، بس الصدر والذراعين
+               محتاجة شغل أكثر، فضفتلك تمارين دفع إضافية بالخطة."
+               Example EN: "Looking at your photo — solid back and shoulders, chest and
+               arms need more volume, so I added extra push work to the plan."
+
+            2) In `workoutPlan.days`, BIAS the accessory work toward the muscle groups
+               you identified as weaker. Adjust volume, rest, and progression to match
+               the apparent training level visible in the photo.
+
+            HARD RULES (do not break):
+            - Do NOT estimate weight, body fat %, or BMI.
+            - Do NOT use shaming, negative, or appearance-mocking language
+              ("سمين", "نحيف زياد", "fat", "skinny", etc.).
+            - Do NOT comment on anything other than musculature relevant to training.
+            - If the photo is unclear or unusable, say so briefly in `message` and
+              still produce a plan based on the intake answers.
+            """
+        }
+
         section += "\n\(screenBehavior(for: ctx, language: request.language))"
 
         // Brain V2: Music bridge — available on all screens
@@ -436,11 +728,18 @@ struct PromptComposer: Sendable {
             """
         case .gym:
             return language == .arabic ? """
-            المستخدم بوضع التمرين. ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
-            انتج workoutPlan لمّا يطلب تمرين. خلّي mealPlan فاضي إلا إذا طلب.
+            المستخدم بوضع التمرين (شاشة النادي). ابدأ بالتنفيذ: تمارين، جولات، تكرارات.
+            **لازم تنتج workoutPlan كامل (مو null)** بأول مرة المستخدم يحچي عن خطة أو
+            يحدد أسبوع/أيام/معدّات — لا تكتفي بالتأكيد النصّي. لو وصلت رسالة ثانية
+            من نفس المستخدم تطلب الخطة، يعني الرد الأول كان فاضي من workoutPlan — هذا فشل.
+            خلّي mealPlan فاضي إلا إذا طلب أكل.
             """ : """
-            Training mode. Lead with execution: exercises, sets, reps, intensity.
-            Generate workoutPlan when asked. Keep mealPlan null unless requested.
+            Training mode (gym screen). Lead with execution: exercises, sets, reps, intensity.
+            **You MUST produce a full workoutPlan object (not null) on the FIRST mention** of a
+            plan, week count, training days, or equipment — never reply with text-only
+            acknowledgment when the user clearly wants a plan. If the user has to ask
+            "where's the plan?" in a follow-up, the first reply was a failure.
+            Keep mealPlan null unless food is explicitly requested.
             """
         case .kitchen:
             return language == .arabic ? """
@@ -504,17 +803,62 @@ struct PromptComposer: Sendable {
               "quickReplies": ["اقتراح١", "اقتراح٢"],
               "workoutPlan": null,
               "mealPlan": null,
-              "spotifyRecommendation": null
+              "spotifyRecommendation": null,
+              "savedMemory": null,
+              "reminder": null
             }
 
             قواعد:
             - message: ردك الطبيعي بالعراقي. لازم يكون بشري ١٠٠٪ عراقي.
             - quickReplies: 2-3 اقتراحات قصيرة بالعراقي. كل وحدة أقل من 25 حرف. ممنوع إنكليزي.\(sleepRuleArabic)
-            - workoutPlan: null إلا إذا طلب تمرين.
+
+            🔒 تنسيق message — قواعد RTL صارمة:
+            - inline markdown مسموح ويتعرض صح بالواجهة: `**نص غامق**` و `*نص مائل*`. استعمله بحدود — أكثر من ٣ مرات بالرد يصير ضجيج.
+            - block markdown ممنوع منعاً باتاً: لا `# عناوين`، لا code fences ``` ، لا blockquotes `>`.
+            - للقوائم: استعمل ترقيم عربي ١. ٢. ٣. — مو ASCII `1.` `2.` `3.` (الـ ASCII ينكسر بصرياً بالـ RTL ويطلع بالجهة الغلط من الكلمة العربية).
+            - أو استعمل بليت بسيط: `•` متبوع بمسافة.
+            - مثال صح: `١. **بنش بريس** — ٤ جولات × ٨-١٠`.
+            - مثال غلط: `1. **Bench Press**: 4×8-10` — الـ `1.` ASCII راح يطلع بالشاشة بالجهة الغلط.
+            - savedMemory: حطّه فقط لمن المستخدم يطلب صراحةً تتذكر شي ("احفظ هذا"، "خله ببالك"، "تذكر اني...")، أو لمن يذكر معلومة ثابتة ومهمة عنه تستاهل تنحفظ. الشكل: {"note":"الشي اللي تتذكره مكتوب كحقيقة ثابتة وواضحة عن المستخدم","title":"عنوان قصير اختياري"}. خله null بأي رد ثاني.
+            - reminder: حطّه فقط لمن المستخدم يطلب تذكير أو منبه بوقت ساعة محدد. الشكل: {"body":"شنو تذكّره بيه بالعراقي","time":"HH:mm" 24 ساعة بالتوقيت المحلي,"date":"YYYY-MM-DD" اختياري}. إذا الوقت مو واضح، اسأله سؤال قصير عن الوقت بدل ما تخمن — ولا تحط reminder بهالحالة.
+
+            🔒 صدق مطلق (غير قابل للتفاوض):
+            - ممنوع تكول "صار محفوظ" أو "خليته ببالي" أو "محفوظ عندي" إلا إذا فعلاً رجّعت savedMemory بنفس هذا الرد.
+            - ممنوع تكول "رح أذكّرك" أو "دزيتلك منبه" أو "بوصلك إشعار" إلا إذا فعلاً رجّعت reminder بوقت محدد بنفس هذا الرد.
+            - انت ما تكدر تشغّل شي على حدث (مثلاً: لمن تخلّص تمرين، لمن تفتح التطبيق، لمن يصير شي). إذا المستخدم طلب هيك، إما حدّدله وقت ساعة وحط reminder، أو كوله تكدر تسوّيله التحليل هسة بالدردشة لمن يرجع يحچيك — لا توعد بإشعار ما تكدر تدزّه.
+            - workoutPlan: **لازم تكون object كامل (مو null)** لمّا المستخدم يطلب تمرين أو خطة
+              بأي صياغة (مثلاً: "اعطني خطة"، "ابني خطة"، "خطة تنشيف 4 أسابيع"، "خطة تمرين"،
+              "اكتبلي تمرين"، "عطيني تمرين"، "سويلي تمرين"، "تمرين اليوم"، "تمرين قوي"،
+              "بدّي أتمرّن"، "ريد أتمرّن")، أو لمّا يحدد بارامترات الخطة (هدف + مدة + معدات +
+              مستوى). إرجاع null لمّا المستخدم يطلب تمرين هو فشل. لو الصورة موجودة بطلب الخطة، استعمل
+              قسم "BODY PHOTO PROVIDED" بالأعلى لتعديل الخطة وذكر الملاحظات بالـ message.
             - mealPlan: null إلا إذا طلب أكل.
             - spotifyRecommendation: null إلا إذا طلب موسيقى.\(myVibeRule)
             - ممنوع منعاً باتاً تحط أي نص خارج الـ JSON.
             - ممنوع تذكر JSON أو API بحقل الـ message.
+
+            === شكل workoutPlan لمّا تطلع خطة ===
+            لمّا المستخدم يطلب خطة تمرين، استعمل هاي البنية:
+            {
+              "title": "اسم الخطة",
+              "durationWeeks": 4,
+              "exercises": [],
+              "days": [
+                {
+                  "name": "اليوم الأول — صدر وترايسبس",
+                  "focus": "الجزء العلوي",
+                  "exercises": [
+                    {"name": "بنش بريس بالبار", "sets": 4, "repsOrDuration": "8-10"}
+                  ]
+                }
+              ]
+            }
+            - title: اسم قصير ومحفّز للخطة (مثلاً: "خطة تنشيف 4 أسابيع").
+            - durationWeeks: عدد أسابيع الخطة بالأرقام (إذا ما ذكر المستخدم خلّيها 1).
+            - days: قائمة أيام التدريب بأسبوع واحد. كل يوم يحتوي على name واضح، focus عضلي، وقائمة exercises.
+            - exercises (المسطّح): اتركها [] لمّا تستعمل days. تستعملها فقط للخطط القديمة بدون أيام.
+            - كل exercise لازم يحتوي: name, sets (عدد صحيح), repsOrDuration (نص).
+            - لا تكرّر نفس اليوم. سمّي الأيام بوضوح حسب مجموعة العضلات.
 
             🔒 تذكير نهائي: كل الـ message و quickReplies لازم تكون ١٠٠٪ عراقي دارج. ولا كلمة إنكليزية.
             """
@@ -529,17 +873,75 @@ struct PromptComposer: Sendable {
           "quickReplies": ["suggestion1", "suggestion2"],
           "workoutPlan": null,
           "mealPlan": null,
-          "spotifyRecommendation": null
+          "spotifyRecommendation": null,
+          "savedMemory": null,
+          "reminder": null
         }
 
         Rules:
         - message: Natural reply in English. Human and conversational.
         - quickReplies: 2-3 short tappable options, max 25 chars each. NEVER mix languages.\(sleepRuleEnglish)
-        - workoutPlan: null unless user asks for training.
+
+        🔒 message formatting:
+        - Inline markdown is allowed and renders correctly: `**bold**` and `*italic*`. Use sparingly — more than 3 emphases per reply is noise.
+        - Block markdown is forbidden: no `# headers`, no ``` code fences, no `> blockquotes`.
+        - For numbered lists use ASCII `1.` `2.` `3.` (LTR English handles ASCII fine).
+        - Or use `•` bullets followed by a space.
+        - savedMemory: Set ONLY when the user explicitly asks you to remember
+          something ("remember this", "save that", "keep in mind that ..."),
+          or when they state a durable, important fact about themselves worth
+          pinning. Shape: {"note":"the thing to remember, written as a clear
+          durable fact about the user","title":"optional short label"}.
+          null on every other reply.
+        - reminder: Set ONLY when the user asks for a reminder/alarm at a
+          concrete clock time. Shape: {"body":"what to remind them, in
+          English","time":"HH:mm" 24h local,"date":"YYYY-MM-DD" optional}.
+          If the time is unclear, ask a short clarifying question instead of
+          guessing — and do NOT set reminder in that case.
+
+        🔒 ABSOLUTE HONESTY (NON-NEGOTIABLE):
+        - NEVER say "saved", "got it saved", or "I'll remember that" unless you
+          actually returned savedMemory in THIS reply.
+        - NEVER say "I'll remind you" or "notification sent" unless you actually
+          returned reminder with a concrete time in THIS reply.
+        - You CANNOT trigger anything on an event (e.g. when a workout ends, when
+          the app opens, when something happens). If the user asks for that,
+          either set a clock-time reminder, or tell them you can analyze it in
+          chat when they come back — never promise a push you cannot send.
+        - workoutPlan: **MUST be a full object (not null)** when the user explicitly
+          asks for a workout / training plan ("give me a plan", "build me a plan",
+          "4-week cut plan", etc.) or when the user supplies plan parameters
+          (goal + duration + equipment + level). Returning null when the user
+          clearly asked for a plan is a failure. If a body photo is attached
+          with the plan request, follow the "BODY PHOTO PROVIDED" section above
+          to tailor the plan and add the observations to the `message`.
         - mealPlan: null unless user asks for food.
         - spotifyRecommendation: null unless user asks for music.\(myVibeRule)
         - NEVER output text outside the JSON object.
         - NEVER mention JSON, API, or internal logic in the message field.
+
+        === workoutPlan shape when produced ===
+        When the user asks for a training plan, use this structure:
+        {
+          "title": "Plan name",
+          "durationWeeks": 4,
+          "exercises": [],
+          "days": [
+            {
+              "name": "Day 1 — Chest & Triceps",
+              "focus": "Upper body push",
+              "exercises": [
+                {"name": "Barbell Bench Press", "sets": 4, "repsOrDuration": "8-10"}
+              ]
+            }
+          ]
+        }
+        - title: short motivating plan name (e.g., "4-Week Cut Plan").
+        - durationWeeks: plan length in weeks (default 1 if user did not specify).
+        - days: list of training days for ONE week. Each day has a clear name, muscle focus, and exercises.
+        - exercises (flat): leave [] when using days. Only use for legacy flat plans.
+        - Every exercise must contain: name, sets (integer), repsOrDuration (string).
+        - Do not repeat the same day. Name days clearly by the muscle group they hit.
 
         🔒 Final reminder: "message" and "quickReplies" must be 100% English. No Arabic. This overrides all other instructions.
         """
@@ -575,6 +977,53 @@ struct PromptComposer: Sendable {
         }
 
         return nil
+    }
+
+    /// Pulls the canonical English goal text (e.g. "Cut Fat") from the
+    /// `- Primary goal:` line of the profile summary written by
+    /// `CognitivePipeline`. Targeted regex so the free-text "Declared goal"
+    /// line can't cause a false match.
+    private func extractPrimaryGoal(from profileSummary: String) -> String? {
+        guard !profileSummary.isEmpty,
+              let regex = try? NSRegularExpression(
+                pattern: #"- Primary goal:\s*([^\n,،]+)"#,
+                options: [.caseInsensitive]
+              ) else { return nil }
+
+        let fullRange = NSRange(profileSummary.startIndex..<profileSummary.endIndex, in: profileSummary)
+        guard let match = regex.firstMatch(in: profileSummary, range: fullRange),
+              match.numberOfRanges > 1,
+              let captureRange = Range(match.range(at: 1), in: profileSummary) else { return nil }
+
+        let goal = String(profileSummary[captureRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return goal.isEmpty ? nil : goal
+    }
+
+    /// The "genius read" layer. Forms a single goal↔reality coaching thesis
+    /// and places it right after working memory so the model leads with
+    /// strategy, not a literal Q&A answer. Skipped in sleepAnalysis (that mode
+    /// has a strict 4-sentence contract that must not be diluted).
+    private func layerCoachingThesis(request: HybridBrainRequest) -> String {
+        guard request.screenContext != .sleepAnalysis else { return "" }
+
+        guard let thesis = CoachingThesisSynthesizer.thesis(
+            goalText: extractPrimaryGoal(from: request.userProfileSummary),
+            trend: request.contextData.trendSnapshot,
+            emotional: request.contextData.emotionalState,
+            intentSummary: request.intentSummary,
+            language: request.language
+        ) else { return "" }
+
+        if request.language == .english {
+            return """
+            === COACHING THESIS (internal — lead with this read, never quote it verbatim) ===
+            \(thesis)
+            """
+        }
+        return """
+        === الأطروحة التدريبية (داخلي — قُد ردك بهالقراءة، لا تقتبسها حرفياً) ===
+        \(thesis)
+        """
     }
 
     // MARK: - Medical Disclaimer Layer (Apple Guideline 1.4.1)

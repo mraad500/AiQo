@@ -19,6 +19,11 @@ public actor GlobalBudget {
             return .rejected(.expired)
         }
 
+        // Trial lane: TrialJourneyOrchestrator governs cadence itself, so skip
+        // the generic daily-cap + cooldown (steps 4 & 6). Quiet hours and the
+        // iOS pending limit still apply.
+        let isTrialLane = intent.kind == .trialDay
+
         // 2. Reset daily counter if midnight crossed
         rolloverIfNeeded(now: now)
 
@@ -33,7 +38,7 @@ public actor GlobalBudget {
             let t = TierGate.shared.currentTier
             return (t, t.dailyNotificationBudget)
         }
-        if sentToday >= cap {
+        if !isTrialLane && sentToday >= cap {
             // Critical priority can override ONE above the cap
             if intent.priority == .critical && sentToday < cap + 1 {
                 return .allowedWithOverride(reason: "critical_override_daily_cap")
@@ -47,10 +52,12 @@ public actor GlobalBudget {
             return .deferredToMorning
         }
 
-        // 6. Cooldown — both global and per-kind
-        let onCooldown = await CooldownManager.shared.isOnCooldown(intent.kind, now: now)
-        if onCooldown && intent.priority != .critical {
-            return .rejected(.cooldown)
+        // 6. Cooldown — both global and per-kind (skipped for the trial lane)
+        if !isTrialLane {
+            let onCooldown = await CooldownManager.shared.isOnCooldown(intent.kind, now: now)
+            if onCooldown && intent.priority != .critical {
+                return .rejected(.cooldown)
+            }
         }
 
         // 7. Tier disables specific kinds (monthlyReflection is Pro-only)

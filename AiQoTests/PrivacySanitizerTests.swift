@@ -1,140 +1,129 @@
 import XCTest
 @testable import AiQo
 
-/// Covers the text-bucketing layer added in P0.3.
-/// Semantics: integer buckets floor, float buckets round-half-to-nearest.
-/// PII redaction is exercised inline to ensure vitals + PII pipelines compose correctly.
+/// Health vitals are now forwarded to the cloud **exactly** — the Captain must
+/// report the user's real numbers (matching the app dashboard), never rounded.
+/// These tests lock in that exact pass-through while proving the PII-redaction
+/// pipeline still runs unchanged alongside the untouched numbers.
 final class PrivacySanitizerTests: XCTestCase {
 
     private let sanitizer = PrivacySanitizer()
 
-    // MARK: - Heart Rate
+    // MARK: - Heart Rate (exact)
 
-    func testHeartRateBucketing_English() {
+    func testHeartRate_PreservedExactly_English() {
         let out = sanitizer.sanitizePromptForCloud("My heart rate was 187 bpm during peak", knownUserName: nil)
-        XCTAssertTrue(out.contains("185 bpm"))
-        XCTAssertFalse(out.contains("187 bpm"))
+        XCTAssertTrue(out.contains("187 bpm"))
     }
 
-    func testHeartRateBucketing_ArabicUnit() {
+    func testHeartRate_PreservedExactly_ArabicUnit() {
         let out = sanitizer.sanitizePromptForCloud("نبضي كان 187 نبضة", knownUserName: nil)
-        XCTAssertTrue(out.contains("185"))
-        XCTAssertFalse(out.contains("187"))
+        XCTAssertTrue(out.contains("187"))
     }
 
-    func testHeartRateBucketing_ArabicIndicDigits() {
+    func testHeartRate_ArabicIndicDigits_PreservedVerbatim() {
+        // Arabic-Indic digits are no longer normalized or bucketed — kept as typed.
         let out = sanitizer.sanitizePromptForCloud("نبضي ١٨٧ نبضة", knownUserName: nil)
-        XCTAssertFalse(out.contains("١٨٧"))
-        XCTAssertTrue(out.contains("185"))
+        XCTAssertTrue(out.contains("١٨٧"))
     }
 
-    func testHeartRateBucketing_ExtendedArabicIndicDigits() {
-        // Persian/Urdu digit range ۰-۹ should also normalize.
+    func testHeartRate_ExtendedArabicIndicDigits_PreservedVerbatim() {
         let out = sanitizer.sanitizePromptForCloud("HR ۱۴۲ bpm", knownUserName: nil)
-        XCTAssertTrue(out.contains("140 bpm"))
+        XCTAssertTrue(out.contains("۱۴۲"))
     }
 
-    // MARK: - Steps
+    // MARK: - Steps (exact)
 
-    func testStepsBucketing() {
+    func testSteps_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("I walked 7823 steps today", knownUserName: nil)
-        XCTAssertTrue(out.contains("7500 steps"))
+        XCTAssertTrue(out.contains("7823 steps"))
     }
 
-    func testStepsBucketing_Arabic() {
+    func testSteps_PreservedExactly_Arabic() {
         let out = sanitizer.sanitizePromptForCloud("مشيت 8453 خطوة", knownUserName: nil)
-        XCTAssertTrue(out.contains("8000"))
+        XCTAssertTrue(out.contains("8453"))
     }
 
-    func testStepsBucketing_FloorDirection() {
-        // 7999/500 = 15.998, floor = 15, *500 = 7500 — floor must not round up.
+    func testSteps_NoRounding_OddValue() {
+        // The exact value must survive — previously 7999 floor-bucketed to 7500.
         let out = sanitizer.sanitizePromptForCloud("hit 7999 steps", knownUserName: nil)
-        XCTAssertTrue(out.contains("7500 steps"))
+        XCTAssertTrue(out.contains("7999 steps"))
     }
 
-    // MARK: - Distance
+    // MARK: - Distance (exact)
 
-    func testDistanceBucketing_Round() {
-        // 5.27/0.1 = 52.7, round → 53, *0.1 → 5.3
+    func testDistance_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("ran 5.27 km", knownUserName: nil)
-        XCTAssertTrue(out.contains("5.3 km"))
+        XCTAssertTrue(out.contains("5.27 km"))
     }
 
-    func testDistanceBucketing_Arabic() {
-        let out = sanitizer.sanitizePromptForCloud("ركضت 5.3 كيلو", knownUserName: nil)
-        XCTAssertTrue(out.contains("5.3"))
-    }
+    // MARK: - Calories (exact)
 
-    // MARK: - Calories
-
-    func testCaloriesBucketing() {
+    func testCalories_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("burned 487 kcal", knownUserName: nil)
-        XCTAssertTrue(out.contains("480 kcal"))
+        XCTAssertTrue(out.contains("487 kcal"))
     }
 
-    func testCaloriesBucketing_ShortUnit() {
+    func testCalories_PreservedExactly_ShortUnit() {
         let out = sanitizer.sanitizePromptForCloud("burned 487 cal", knownUserName: nil)
-        XCTAssertTrue(out.contains("480 cal"))
+        XCTAssertTrue(out.contains("487 cal"))
     }
 
-    // MARK: - Duration
+    // MARK: - Duration (exact)
 
-    func testDurationBucketing() {
+    func testDuration_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("worked out for 47 minutes", knownUserName: nil)
-        XCTAssertTrue(out.contains("45 minutes"))
+        XCTAssertTrue(out.contains("47 minutes"))
     }
 
-    func testDurationBucketing_ShortForm() {
+    func testDuration_PreservedExactly_ShortForm() {
         let out = sanitizer.sanitizePromptForCloud("rested 12 min", knownUserName: nil)
-        XCTAssertTrue(out.contains("10 min"))
+        XCTAssertTrue(out.contains("12 min"))
     }
 
-    func testDurationBucketing_NoFalsePositiveOnMints() {
-        // "mints" must not match "min" — prior regex lacked word boundary.
-        let out = sanitizer.sanitizePromptForCloud("I ate 3 mints", knownUserName: nil)
-        XCTAssertTrue(out.contains("3 mints"))
-    }
+    // MARK: - Sleep (exact)
 
-    // MARK: - Sleep
-
-    func testSleepBucketing_RoundUp() {
-        // 6.3/0.5 = 12.6, round → 13, *0.5 → 6.5
+    func testSleep_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("slept 6.3 hours", knownUserName: nil)
-        XCTAssertTrue(out.contains("6.5 hours"))
+        XCTAssertTrue(out.contains("6.3 hours"))
     }
 
-    func testSleepBucketing_RoundDown() {
-        // 6.2/0.5 = 12.4, round → 12, *0.5 → 6.0
-        let out = sanitizer.sanitizePromptForCloud("slept 6.2 hours", knownUserName: nil)
-        XCTAssertTrue(out.contains("6.0 hours"))
-    }
-
-    func testSleepBucketing_ShortUnit() {
+    func testSleep_PreservedExactly_ShortUnit() {
         let out = sanitizer.sanitizePromptForCloud("slept 7.2 hrs", knownUserName: nil)
-        XCTAssertTrue(out.contains("7.0 hrs"))
+        XCTAssertTrue(out.contains("7.2 hrs"))
     }
 
-    // MARK: - Zone %
+    // MARK: - Zone % (exact)
 
-    func testZonePercentBucketing() {
+    func testZonePercent_PreservedExactly() {
         let out = sanitizer.sanitizePromptForCloud("workout: 47% peak and 23% below", knownUserName: nil)
-        XCTAssertTrue(out.contains("45% peak"))
-        XCTAssertTrue(out.contains("20% below"))
+        XCTAssertTrue(out.contains("47% peak"))
+        XCTAssertTrue(out.contains("23% below"))
     }
 
-    // MARK: - Multi-vital Composition
+    // MARK: - Multi-vital Composition (all exact, PII still redacted)
 
-    func testMultipleVitalsInOnePrompt() {
+    func testMultipleVitals_AllPreservedExactly() {
         let input = "Today: 8453 steps, 6.2 hours sleep, 142 bpm max, burned 623 kcal over 47 minutes"
         let out = sanitizer.sanitizePromptForCloud(input, knownUserName: nil)
-        XCTAssertTrue(out.contains("8000 steps"))
-        XCTAssertTrue(out.contains("6.0 hours"))
-        XCTAssertTrue(out.contains("140 bpm"))
-        XCTAssertTrue(out.contains("620 kcal"))
-        XCTAssertTrue(out.contains("45 minutes"))
+        XCTAssertTrue(out.contains("8453 steps"))
+        XCTAssertTrue(out.contains("6.2 hours"))
+        XCTAssertTrue(out.contains("142 bpm"))
+        XCTAssertTrue(out.contains("623 kcal"))
+        XCTAssertTrue(out.contains("47 minutes"))
     }
 
-    // MARK: - PII Redaction
+    func testVitalsPreserved_WhilePIIStillRedacted() {
+        // The exact numbers survive, but an email in the same sentence is gone.
+        let out = sanitizer.sanitizePromptForCloud(
+            "I walked 9614 steps — email me at coach@example.com",
+            knownUserName: nil
+        )
+        XCTAssertTrue(out.contains("9614 steps"), "exact vitals must be preserved")
+        XCTAssertFalse(out.contains("coach@example.com"), "PII must still be redacted")
+    }
+
+    // MARK: - PII Redaction (unchanged)
 
     func testPIIRedaction_Email() {
         let out = sanitizer.sanitizePromptForCloud("Contact me at john@example.com please", knownUserName: nil)
@@ -146,10 +135,18 @@ final class PrivacySanitizerTests: XCTestCase {
         XCTAssertFalse(out.contains("501234567"))
     }
 
-    func testKnownUserNameRedaction() {
-        let out = sanitizer.sanitizePromptForCloud("Hey Mohammed, how are you?", knownUserName: "Mohammed")
-        XCTAssertFalse(out.contains("Mohammed"))
-        XCTAssertTrue(out.contains("User"))
+    func testKnownUserName_PreservedInText_WhileEmailRedacted() {
+        // The user's first name is intentionally NOT redacted from conversation
+        // text: it is carried to the cloud via `CloudSafeProfile` under the
+        // cloud-AI consent gate, and stripping it here would contradict the
+        // system prompt's "Preferred name" line (Apple v1.1 rejection fix).
+        // PII like an email in the same sentence is still redacted.
+        let out = sanitizer.sanitizePromptForCloud(
+            "Hey Mohammed, email me at coach@example.com",
+            knownUserName: "Mohammed"
+        )
+        XCTAssertTrue(out.contains("Mohammed"), "first name is preserved for natural addressing")
+        XCTAssertFalse(out.contains("coach@example.com"), "email PII is still redacted")
     }
 
     // MARK: - False-Positive Guards
@@ -159,7 +156,6 @@ final class PrivacySanitizerTests: XCTestCase {
     }
 
     func testNonVitalNumbersUnchanged() {
-        // No units → no bucketing. "age" keyword IS in the profile-field list, so input avoids it.
         let out = sanitizer.sanitizePromptForCloud("I work in building 7 on floor 3", knownUserName: nil)
         XCTAssertTrue(out.contains("building 7"))
         XCTAssertTrue(out.contains("floor 3"))
@@ -171,9 +167,9 @@ final class PrivacySanitizerTests: XCTestCase {
         XCTAssertEqual(out, input)
     }
 
-    // MARK: - Structured Context Bucketing (via sanitizeForCloud)
+    // MARK: - Structured Context (exact, via sanitizeForCloud)
 
-    func testSanitizeForCloud_BucketsStructuredHeartRateAndSleep() {
+    func testSanitizeForCloud_ForwardsExactStructuredVitals() {
         let ctx = CaptainContextData(
             steps: 8453,
             calories: 623,
@@ -197,12 +193,15 @@ final class PrivacySanitizerTests: XCTestCase {
             attachedImageData: nil
         )
         let out = sanitizer.sanitizeForCloud(req, knownUserName: nil)
-        XCTAssertEqual(out.contextData.heartRate, 145)
-        XCTAssertEqual(out.contextData.sleepHours, 6.5, accuracy: 0.001)
+        // Vitals forwarded exactly — no bucketing.
+        XCTAssertEqual(out.contextData.steps, 8453)
+        XCTAssertEqual(out.contextData.calories, 623)
+        XCTAssertEqual(out.contextData.heartRate, 147)
+        XCTAssertEqual(out.contextData.sleepHours, 6.3, accuracy: 0.001)
+        // Non-vital privacy transforms still apply.
         XCTAssertEqual(out.contextData.vibe, "General")
         XCTAssertEqual(out.contextData.timeOfDay, "evening")
         XCTAssertEqual(out.contextData.stageTitle, "stage-5")
-        XCTAssertEqual(out.contextData.steps, 8000)  // floor-bucketed at 500
     }
 
     func testSanitizeForCloud_DropsEmotionalAndTrendSignals() {

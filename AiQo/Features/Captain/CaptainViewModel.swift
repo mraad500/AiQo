@@ -31,6 +31,10 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     var isRead: Bool
     var accessory: ChatMessageAccessory?
     var spotifyRecommendation: SpotifyRecommendation?
+    /// A non-conversational, UI-only marker (e.g. the "earlier chat folded into
+    /// memory" pill shown once when compaction kicks in). Never persisted and
+    /// never sent to the model — the window/digest builders skip it.
+    var isSystemNote: Bool
 
     init(
         id: UUID = UUID(),
@@ -41,7 +45,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         isEphemeral: Bool = false,
         isRead: Bool = true,
         accessory: ChatMessageAccessory? = nil,
-        spotifyRecommendation: SpotifyRecommendation? = nil
+        spotifyRecommendation: SpotifyRecommendation? = nil,
+        isSystemNote: Bool = false
     ) {
         self.id = id
         self.text = text
@@ -52,6 +57,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.isRead = isRead
         self.accessory = accessory
         self.spotifyRecommendation = spotifyRecommendation
+        self.isSystemNote = isSystemNote
     }
 
     init(
@@ -93,6 +99,13 @@ final class CaptainViewModel: ObservableObject {
     @Published var currentMealPlan: MealPlan?
     @Published var inputText: String = ""
     @Published var coachState: CoachCognitiveState = .idle
+    /// Live progressive-reveal state. While `streamingMessageID != nil` the
+    /// chat shows ONE live bubble bound to `streamingText` instead of the
+    /// finalized row — the `messages` array is published exactly once (on
+    /// completion), so a long conversation never re-diffs the whole list
+    /// per character. Kept tiny and isolated on purpose.
+    @Published private(set) var streamingMessageID: UUID?
+    @Published private(set) var streamingText: String = ""
     @Published var showCustomization: Bool = false
     @Published var showChatHistory: Bool = false
     @Published var showProfile: Bool = false
@@ -114,6 +127,10 @@ final class CaptainViewModel: ObservableObject {
     private let orchestrator: BrainOrchestrator
     private let contextBuilder: CaptainContextBuilder
     private let cognitivePipeline: CaptainCognitivePipeline
+    /// Bridges the embedding-RAG `MemoryRetriever` into the live chat prompt.
+    /// Stateless; runs off-MainActor and is parallelized with the HealthKit
+    /// context read, so it adds no perceptible latency.
+    private let chatMemoryEnricher = ChatMemoryEnricher()
     private let morningHabitOrchestrator: MorningHabitOrchestrator
     private let replyJSONParser = LLMJSONParser()
     private let minimumLoadingStateDuration: TimeInterval = 0.8
@@ -134,6 +151,20 @@ final class CaptainViewModel: ObservableObject {
     private var messageCount = 0
     /// كل فتحة تطبيق = جلسة جديدة
     private(set) var currentSessionID = UUID()
+
+    /// Rolling, faithful compaction of the part of the CURRENT session that has
+    /// already been EVICTED from `messages` (the 80-message in-RAM cap). The
+    /// per-turn prompt digest merges this with the in-RAM pre-window head, so the
+    /// Captain never loses the conversation's head — even past the RAM cap — and
+    /// therefore never fabricates to fill a forgotten gap. Reset per session.
+    /// See [[ConversationCompactor]] / `ConversationDigest`.
+    private var sessionDigest: ConversationDigest = .empty
+    /// True once we've crossed into compaction at least once this session — used
+    /// only for a one-time diagnostics breadcrumb, not behavior.
+    private var didLogCompaction = false
+    /// True once the subtle "earlier chat folded into memory" pill has been
+    /// shown this session — it appears exactly once, at the seam.
+    private var didInsertCompactionNote = false
 
     private enum Keys {
         static let name = "captain_user_name"
@@ -272,6 +303,11 @@ final class CaptainViewModel: ObservableObject {
         coachState = .readingMessage
         persistChatMessage(userMessage)
 
+        // Once the session grows past the verbatim window, drop a single soft
+        // marker at the seam so the continuity is visible (not a silent gap) —
+        // the Captain keeps the whole thread via the digest, this just shows it.
+        maybeInsertCompactionNote()
+
         let requestID = UUID()
         activeRequestID = requestID
         let attachedImageData = Self.preparedImageData(from: image)
@@ -289,6 +325,16 @@ final class CaptainViewModel: ObservableObject {
             await Task.yield()
 
             ConversationThreadManager.shared.logUserMessage(content: trimmedText)
+
+            // 11_Directives — if the user just taught a standing instruction
+            // ("after every workout, analyze it and compare it to the previous
+            // one and notify me"), save it durably + mirror it into recallable
+            // memory now, so the Captain confirms it in THIS reply and never
+            // forgets it. The post-workout execution runs independently via
+            // DirectiveEngine regardless of this chat.
+            if let directiveDraft = DirectiveLearner.detect(from: trimmedText) {
+                await DirectiveCoordinator.shared.learn(draft: directiveDraft)
+            }
 
             let conversation = self.buildConversationHistory()
             let userName = self.captainReplyUserName()
@@ -397,7 +443,7 @@ final class CaptainViewModel: ObservableObject {
         startNewChat()
     }
 
-    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية
+    /// يبدأ محادثة جديدة — sessionID جديد ورسالة ترحيبية متغيّرة كل فتحة
     func startNewChat() {
         currentSessionID = UUID()
         messages.removeAll()
@@ -405,16 +451,51 @@ final class CaptainViewModel: ObservableObject {
         currentWorkoutPlan = nil
         currentMealPlan = nil
         quickReplies = []
+        sessionDigest = .empty
+        didLogCompaction = false
+        didInsertCompactionNote = false
+
+        responseTask?.cancel()
+        activeRequestID = nil
 
         AnalyticsService.shared.track(.captainChatOpened)
 
-        let welcome = ChatMessage(
-            text: NSLocalizedString("captain.welcome", value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟", comment: "Captain first message"),
-            isUser: false
-        )
-        messages.append(welcome)
-        // Don't persist the welcome message — the session is only persisted once the user sends their first message.
-        // This prevents stale single-message sessions accumulating in SwiftData on every cold launch.
+        isLoading = true
+        coachState = .typing
+
+        let sessionID = currentSessionID
+        let capturedOrchestrator = orchestrator
+        responseTask = Task { [weak self] in
+            let dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+            self?.applyWelcomeMessage(dynamic, for: sessionID)
+        }
+    }
+
+    /// Inserts the welcome bubble after the dynamic generator settles, or
+    /// drops in the static fallback if generation returned nil. Bails out
+    /// silently if the user has already started another session in the
+    /// meantime (e.g., tapped a chat-history entry).
+    private func applyWelcomeMessage(_ dynamic: String?, for sessionID: UUID) {
+        guard currentSessionID == sessionID else { return }
+
+        let trimmed = dynamic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let text = trimmed.isEmpty
+            ? NSLocalizedString(
+                "captain.welcome",
+                value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
+                comment: "Captain first message"
+            )
+            : trimmed
+
+        let welcome = ChatMessage(text: text, isUser: false)
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+            messages.append(welcome)
+        }
+        isLoading = false
+        coachState = .idle
+        // Don't persist the welcome — the session is only persisted on first
+        // user reply, so we never leave stale single-message sessions in
+        // SwiftData on every cold launch.
     }
 
     /// يحمّل جلسة قديمة — يستبدل الرسائل الحالية برسائل الجلسة المختارة
@@ -425,6 +506,11 @@ final class CaptainViewModel: ObservableObject {
         messageCount = stored.count
         currentWorkoutPlan = nil
         currentMealPlan = nil
+        // Full transcript is back in RAM, so per-turn compaction rebuilds the
+        // digest from scratch — reset the evicted-head accumulator.
+        sessionDigest = .empty
+        didLogCompaction = false
+        didInsertCompactionNote = false
         showChatHistory = false
     }
 
@@ -454,13 +540,45 @@ final class CaptainViewModel: ObservableObject {
         await Task.yield()
 
         do {
-            // Build HealthKit context (async but lightweight — just reads cached values)
-            var contextData = await contextBuilder.buildContextData()
+            let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
+            // Continuity past the verbatim window: a FAITHFUL, structured digest
+            // of the earlier part of this session — opening goal, points the
+            // user made, the Captain's OWN commitments, corrections, and the
+            // last exchange. Built by `ConversationCompactor` from real messages
+            // only, so it can never invent a fact (an LLM summary could). It is
+            // carried as the request's dedicated `conversationState`, NOT folded
+            // into `workingMemorySummary` (which the cloud path rebuilds from
+            // durable memories and would silently drop), so the head of a long
+            // chat actually reaches the model and the Captain stops "forgetting"
+            // and then hallucinating to fill the gap. nil for short chats.
+            let conversationDigest = buildConversationDigest()
+            let conversationStateBlock = conversationDigest.renderedBlock(language: prebuiltLanguage)
+            if conversationStateBlock != nil, !didLogCompaction {
+                didLogCompaction = true
+                diag.info("CaptainViewModel: conversation compaction active (covered≈\(conversationDigest.coveredMessageCount) msgs)")
+            }
+
+            // Run the embedding-RAG semantic recall CONCURRENTLY with the
+            // HealthKit context read. `enrich` is off-MainActor and hops onto
+            // the MemoryRetriever actor while `buildContextData` awaits
+            // HealthKit, so the semantic lookup adds ~no wall-clock latency.
+            // On free tier `MemoryRetriever` returns an empty bundle and
+            // `enrich` returns the lexical base unchanged — no regression.
+            // Session continuity is no longer threaded here — it now flows
+            // through the reliable `conversationState` channel above.
+            async let contextDataTask = contextBuilder.buildContextData()
+            async let enrichedMemoryTask = chatMemoryEnricher.enrich(
+                baseSummary: prebuiltPromptContext.workingMemorySummary,
+                userMessage: latestUserText,
+                screenContext: screenContext
+            )
+
+            var contextData = await contextDataTask
+            let workingMemorySummary = await enrichedMemoryTask
 
             // Brain V2: Detect sentiment from user's message
-            if CaptainContextBuilder.isBrainV2Enabled,
-               let lastUserText = prebuiltConversation.last(where: { $0.role == .user })?.content {
-                contextData.messageSentiment = SentimentDetector.shared.detect(message: lastUserText)
+            if CaptainContextBuilder.isBrainV2Enabled, !latestUserText.isEmpty {
+                contextData.messageSentiment = SentimentDetector.shared.detect(message: latestUserText)
             }
 
             let promptRequest = HybridBrainRequest(
@@ -470,15 +588,15 @@ final class CaptainViewModel: ObservableObject {
                 contextData: contextData,
                 userProfileSummary: prebuiltPromptContext.profileSummary,
                 intentSummary: prebuiltPromptContext.intentSummary,
-                workingMemorySummary: prebuiltPromptContext.workingMemorySummary,
-                attachedImageData: attachedImageData
+                workingMemorySummary: workingMemorySummary,
+                attachedImageData: attachedImageData,
+                conversationState: conversationStateBlock
             )
 
             let startedAt = Date()
             let capturedOrchestrator = orchestrator
             // Sleep analysis runs entirely on-device (HealthKit + Foundation Models) — give it more time.
             // The orchestrator may reroute .mainChat → .sleepAnalysis internally if the message is sleep-related.
-            let latestUserText = prebuiltConversation.last(where: { $0.role == .user })?.content ?? ""
             let needsSleepTimeout = screenContext == .sleepAnalysis
                 || looksLikeSleepRequest(latestUserText)
             let orchestratorTimeout = needsSleepTimeout
@@ -491,7 +609,13 @@ final class CaptainViewModel: ObservableObject {
                 )
             }
 
-            try await runCognitiveTimeline(requestID: requestID)
+            // The reply is already computed. The old `runCognitiveTimeline`
+            // added ~0.64s of pure Task.sleep here, plus a 0.18s typing hold —
+            // ~0.82s of dead time the user feels as lag AFTER the AI already
+            // answered. Go straight to the reveal. The sub-`minimumLoadingState`
+            // floor is kept only so an instant cached/offline reply still shows
+            // a brief typing flash instead of flickering.
+            try ensureActiveRequest(requestID)
 
             let elapsed = Date().timeIntervalSince(startedAt)
             if elapsed < minimumLoadingStateDuration {
@@ -499,16 +623,52 @@ final class CaptainViewModel: ObservableObject {
                 try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
 
-            try await transitionCoachState(to: .typing, hold: 0.18, requestID: requestID)
             try ensureActiveRequest(requestID)
+            coachState = .typing
+
+            // Silent-Captain fallback. The model is asked (hybrid contract)
+            // to return BOTH a short warm message AND the structured plan.
+            // In practice Gemini sometimes (a) returns an empty `message`
+            // when it judges the card sufficient, (b) returns a one-word
+            // ack ("تدلل!") that collapses to a tiny bubble, or (c) emits
+            // the parser-fallback "connection error" string when the JSON
+            // round-trip glitches. In all three cases the Captain looks
+            // mute beside its own plan card.
+            //
+            // We hard-coerce a warm intro when the model gave us a card
+            // but failed to give us a real message. 60 grapheme clusters
+            // is the bar — that's roughly "a sentence + a pointer". Any
+            // shorter and the bubble doesn't carry the Captain's voice
+            // properly. We also reject the known parser-fallback strings
+            // even when they exceed the length threshold, because they
+            // are coaching-content-free.
+            let warmFallback: String? = {
+                guard reply.workoutPlan != nil || reply.mealPlan != nil else { return nil }
+                let trimmed = reply.message
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let isTooShort = trimmed.count < 60
+                let isParserFallback = trimmed.hasPrefix("عذراً، صار خلل")
+                    || trimmed.hasPrefix("Sorry, something went wrong")
+                    || trimmed.hasPrefix("صار خلل بسيط")
+                    || trimmed.hasPrefix("Captain hit a small issue")
+                guard isTooShort || isParserFallback else { return nil }
+                if reply.workoutPlan != nil {
+                    return AppSettingsStore.shared.appLanguage == .english
+                        ? "Locked in, champ — your plan is ready in the card below. Open it and let's go, knee-safe and dialed in."
+                        : "تدلل يا بطل، رتبتلك خطة قوية ومراعية لركبتك بالكرت تحت. افتحها وابدأ، صوّب على الأداء الصحيح ولا تشد على الركبة."
+                }
+                return AppSettingsStore.shared.appLanguage == .english
+                    ? "Done — your meal plan is in the card below. Tap it for the full breakdown and timing."
+                    : "جاهز — خطة الأكل بالكرت تحت. افتحها وشوف الوجبات والتوقيت كامل."
+            }()
 
             // Validate and clean the reply before displaying:
             // 1. Remove duplicate sentences
             // 2. Trigger fallback if English ratio is too high in Arabic mode
-            let cleanedReplyMessage = cleanAssistantReplyMessage(reply.message)
+            let baseMessage = warmFallback ?? cleanAssistantReplyMessage(reply.message)
             let validated = validateResponse(
                 CaptainStructuredResponse(
-                    message: cleanedReplyMessage,
+                    message: baseMessage,
                     quickReplies: reply.quickReplies,
                     workoutPlan: reply.workoutPlan,
                     mealPlan: reply.mealPlan,
@@ -522,6 +682,7 @@ final class CaptainViewModel: ObservableObject {
             quickReplies = screenContext == .sleepAnalysis ? [] : (validated.quickReplies ?? [])
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
+
             let assistantReply = Self.markIfTruncated(
                 assistantReply: validated.message,
                 truncatedAtMaxTokens: reply.truncatedAtMaxTokens
@@ -533,13 +694,23 @@ final class CaptainViewModel: ObservableObject {
                 spotifyRecommendation: validated.spotifyRecommendation
             )
 
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
-                messages.append(replyMessage)
-            }
+            await revealReply(replyMessage, requestID: requestID)
 
             persistChatMessage(replyMessage)
             ConversationThreadManager.shared.logCaptainResponse(content: assistantReply)
             trimInMemoryMessagesIfNeeded()
+
+            // Turn the model's explicit "remember this" / "remind me at X"
+            // intents into real, visible side effects (Saved Memories row +
+            // a scheduled local notification). Without this the Captain only
+            // *claims* it saved/scheduled — the bug behind this feature.
+            if reply.savedMemory != nil || reply.reminder != nil {
+                await CaptainMemoryActionHandler.apply(
+                    savedMemory: reply.savedMemory,
+                    reminder: reply.reminder,
+                    language: prebuiltLanguage
+                )
+            }
 
             let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
             AnalyticsService.shared.track(.captainResponseReceived(latencyMs: latencyMs))
@@ -626,16 +797,56 @@ final class CaptainViewModel: ObservableObject {
     private func trimInMemoryMessagesIfNeeded() {
         guard messages.count > Self.maxInMemoryMessages else { return }
         let excess = messages.count - Self.maxInMemoryMessages
+        // Fold the about-to-be-evicted head into the rolling digest FIRST, so
+        // nothing is lost when it leaves RAM — the Captain keeps the whole
+        // session's context (as faithful compacted state) even past the
+        // in-memory cap. SwiftData still holds the full verbatim transcript.
+        let evicted = Array(messages.prefix(excess))
+        sessionDigest = ConversationCompactor.compact(droppedMessages: evicted, priorDigest: sessionDigest)
         messages.removeFirst(excess)
     }
 
-    /// آخر 24 رسالة فقط — يجب أن تتجاوز سقف PrivacySanitizer بشكل مريح
-    /// (16 رسالة) عشان ما يجوع الـ sanitizer لما تطول الجلسة الحالية.
-    /// Window size > sanitizer cap of 16 by design — see PrivacySanitizer.maxConversationMessages.
+    /// Verbatim window: at most `maxConversationWindow` messages, AND bounded by
+    /// a character budget so a few very long turns can't blow past the model's
+    /// context. Stays comfortably above the PrivacySanitizer cloud cap of 16
+    /// messages by design — see PrivacySanitizer.maxConversationMessages.
+    /// Everything OLDER than this window is preserved by `ConversationDigest`.
     private static let maxConversationWindow = 24
+    /// Never compact below this many recent messages, even if they're long —
+    /// the immediate thread must always be verbatim.
+    private static let minLiveWindow = 8
+    /// Char budget for the verbatim window (~3–4k Arabic tokens). The digest
+    /// carries the rest losslessly, so trimming here costs no continuity.
+    private static let liveWindowCharBudget = 9000
+
+    /// Index in `messages` where the verbatim window begins. Walks newest →
+    /// oldest, keeping turns until the message-count cap or (past the floor) the
+    /// char budget would be exceeded. `messages[start...]` is the live window;
+    /// `messages[0..<start]` is the head that gets compacted into the digest.
+    private func liveWindowStartIndex() -> Int {
+        guard !messages.isEmpty else { return 0 }
+        var count = 0
+        var chars = 0
+        var startIndex = messages.count
+        for i in stride(from: messages.count - 1, through: 0, by: -1) {
+            // UI-only system notes are not turns — never count toward the window.
+            if messages[i].isSystemNote { continue }
+            let nextCount = count + 1
+            let nextChars = chars + messages[i].text.count
+            if nextCount > Self.maxConversationWindow { break }
+            if nextCount > Self.minLiveWindow && nextChars > Self.liveWindowCharBudget { break }
+            count = nextCount
+            chars = nextChars
+            startIndex = i
+        }
+        return startIndex
+    }
 
     private func buildConversationHistory() -> [CaptainConversationMessage] {
-        messages.suffix(Self.maxConversationWindow).compactMap { message in
+        let start = liveWindowStartIndex()
+        guard start < messages.count else { return [] }
+        return messages[start...].compactMap { message in
+            guard !message.isSystemNote else { return nil }
             let trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedText.isEmpty else { return nil }
 
@@ -646,33 +857,97 @@ final class CaptainViewModel: ObservableObject {
         }
     }
 
+    /// Faithful, structured digest of the conversation OUTSIDE the verbatim
+    /// window. Merges `sessionDigest` (the part already evicted from RAM by the
+    /// 80-message cap) with the in-RAM pre-window head, so coverage is complete
+    /// with zero loss no matter how long the session runs. Deterministic and
+    /// extractive — see [[ConversationCompactor]] — so it can't introduce a
+    /// fact the user/Captain never said. `.empty` (renders nil) for short chats.
+    private func buildConversationDigest() -> ConversationDigest {
+        let start = liveWindowStartIndex()
+        let head = start > 0 ? Array(messages[0..<start]) : []
+        guard !head.isEmpty || !sessionDigest.isEmpty else { return .empty }
+        return ConversationCompactor.compact(droppedMessages: head, priorDigest: sessionDigest)
+    }
+
+    /// Inserts a single, soft "earlier chat folded into memory" marker at the
+    /// seam the first time the session grows past the verbatim window. Purely
+    /// cosmetic continuity reassurance — never persisted, never sent to the
+    /// model (the window/digest builders skip `isSystemNote`). Placed right
+    /// before the message the user just sent so it reads as a gentle divider.
+    private func maybeInsertCompactionNote() {
+        guard !didInsertCompactionNote, liveWindowStartIndex() > 0 else { return }
+        didInsertCompactionNote = true
+
+        let text = AppSettingsStore.shared.appLanguage == .english
+            ? "Earlier chat folded into memory"
+            : "طويت بداية محادثتنا بذاكرتي حتى أبقى متذكّر كل شي"
+        let note = ChatMessage(text: text, isUser: false, isSystemNote: true)
+
+        let insertAt = max(0, messages.count - 1)
+        withAnimation(.easeOut(duration: 0.35)) {
+            messages.insert(note, at: insertAt)
+        }
+    }
+
+    /// Progressively reveals the reply (WhatsApp/ChatGPT-style) instead of
+    /// dumping a wall of text after a long blank wait. Only `streamingText`
+    /// publishes per tick — `messages` is appended exactly once at the end so
+    /// the list never re-diffs mid-reveal. Bounded so even a very long reply
+    /// finishes within ~0.65s (snappy, not a slow crawl). Honors Reduce Motion.
+    private func revealReply(_ message: ChatMessage, requestID: UUID) async {
+        let full = message.text
+        guard !UIAccessibility.isReduceMotionEnabled, full.count > 12 else {
+            appendFinal(message, requestID: requestID)
+            return
+        }
+
+        streamingMessageID = message.id
+        streamingText = ""
+
+        let total = full.count
+        let steps = min(max(total, 1), 40)
+        let chunk = max(1, Int((Double(total) / Double(steps)).rounded(.up)))
+
+        var idx = full.startIndex
+        while idx < full.endIndex {
+            do {
+                try ensureActiveRequest(requestID)
+            } catch {
+                // A newer request now owns the screen — drop the half-revealed
+                // bubble and bail without committing it to `messages`.
+                streamingMessageID = nil
+                streamingText = ""
+                return
+            }
+            let end = full.index(idx, offsetBy: chunk, limitedBy: full.endIndex) ?? full.endIndex
+            streamingText.append(contentsOf: full[idx..<end])
+            idx = end
+            try? await Task.sleep(nanoseconds: 16_000_000)
+        }
+
+        appendFinal(message, requestID: requestID)
+    }
+
+    /// Commits the finalized row and clears the live bubble in ONE synchronous
+    /// mutation so SwiftUI coalesces them into a single render — the real row
+    /// appears exactly as the streaming bubble is removed (same text, same
+    /// position) → seamless, no flicker.
+    private func appendFinal(_ message: ChatMessage, requestID: UUID) {
+        guard activeRequestID == requestID else {
+            streamingMessageID = nil
+            streamingText = ""
+            return
+        }
+        messages.append(message)
+        streamingMessageID = nil
+        streamingText = ""
+        HapticEngine.light()
+    }
+
     private func persistChatMessage(_ message: ChatMessage) {
         let sessionID = currentSessionID
         MemoryStore.shared.persistMessageAsync(message, sessionID: sessionID)
-    }
-
-    private func runCognitiveTimeline(requestID: UUID) async throws {
-        try await transitionCoachState(to: .readingMessage, hold: 0.18, requestID: requestID)
-        try await transitionCoachState(to: .thinkingOnDevice, hold: 0.24, requestID: requestID)
-        try await transitionCoachState(to: .shapingReply, hold: 0.22, requestID: requestID)
-        try ensureActiveRequest(requestID)
-        coachState = .typing
-    }
-
-    private func transitionCoachState(
-        to state: CoachCognitiveState,
-        hold: TimeInterval,
-        requestID: UUID
-    ) async throws {
-        try ensureActiveRequest(requestID)
-        coachState = state
-
-        let nanoseconds = UInt64(max(0, hold) * 1_000_000_000)
-        if nanoseconds > 0 {
-            try await Task.sleep(nanoseconds: nanoseconds)
-        }
-
-        try ensureActiveRequest(requestID)
     }
 
     private func ensureActiveRequest(_ requestID: UUID) throws {

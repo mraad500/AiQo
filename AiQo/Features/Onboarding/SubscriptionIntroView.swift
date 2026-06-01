@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// Onboarding wrapper around `PaywallView`. Shows the full paywall as part of
-/// the first-run flow, plus a prominent "Skip" button at the top so users who
-/// don't want to subscribe can still finish onboarding.
+/// Onboarding wrapper around `PaywallView`. The paywall is SKIPPABLE: a
+/// prominent "Skip" chip lets anyone enter the app without subscribing. The
+/// premium surfaces are instead locked in-app behind their own paywall —
+/// Captain / Kitchen / My Vibe / Battle require Max, Peaks requires Pro —
+/// exactly like the Captain gate. Subscribing (or starting Apple's StoreKit
+/// free trial) unlocks everything immediately.
 struct SubscriptionIntroView: View {
     let onContinue: () -> Void
 
@@ -16,6 +19,8 @@ struct SubscriptionIntroView: View {
         ZStack(alignment: .topTrailing) {
             PaywallView(source: .manual, onPurchaseSuccess: onContinue)
 
+            // Always skippable: users enter the app free; premium surfaces are
+            // gated in-app (Captain/Kitchen/My Vibe/Battle → Max, Peaks → Pro).
             PaywallDismissChip(
                 label: NSLocalizedString(
                     "subscriptionIntro.skip",

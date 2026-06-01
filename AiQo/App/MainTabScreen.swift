@@ -5,8 +5,14 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
+    /// Drives a `body` re-evaluation when a purchase/restore lands so the
+    /// Captain gate below re-reads `tierGate.canAccess(.captainChat)`.
+    /// `TierGate` is a plain non-observable class that reads UserDefaults
+    /// live, so without observing the entitlement source the gate would stay
+    /// on `CaptainLockedView` until the next cold launch.
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
     private let tierGate = TierGate.shared
-    private let appTint = Color.aiqoAccent
+    private let appTint = Color(hex: "FFDF63")
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
@@ -49,6 +55,18 @@ struct MainTabScreen: View {
                 )
             }
             .accessibilityHint(L10n.t("tab.gym.hint"))
+
+            NavigationStack {
+                HomeKitchenRootView()
+            }
+            .tag(MainTabRouter.Tab.kitchen)
+            .tabItem {
+                Label(
+                    L10n.t("tab.kitchen"),
+                    systemImage: "fork.knife"
+                )
+            }
+            .accessibilityHint(L10n.t("tab.kitchen.hint"))
 
             NavigationStack {
                 Group {
@@ -111,12 +129,13 @@ struct MainTabScreen: View {
         appearance.shadowColor = .clear
         appearance.shadowImage = UIImage()
 
-        let selectedColor = Colors.accent
+        let selectedColor = UIColor(Color(hex: "FFDF63"))
         let unselectedColor = UIColor.systemGray
 
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: selectedColor
+            .foregroundColor: selectedColor,
+            .font: UIFont.boldSystemFont(ofSize: 10)
         ]
 
         appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor

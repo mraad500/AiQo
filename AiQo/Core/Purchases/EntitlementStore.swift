@@ -8,13 +8,14 @@ final class EntitlementStore: ObservableObject {
     @Published var activeProductId: String? {
         didSet {
             persist(activeProductId, key: Keys.activeProductId)
-            updateCurrentTier()
+            if !isApplyingEntitlement { updateCurrentTier() }
         }
     }
 
     @Published var expiresAt: Date? {
         didSet {
             persist(expiresAt, key: Keys.expiresAt)
+            if !isApplyingEntitlement { updateCurrentTier() }
         }
     }
 
@@ -36,6 +37,15 @@ final class EntitlementStore: ObservableObject {
     private let defaults: UserDefaults
     private let nowProvider: () -> Date
 
+    /// True only while `setEntitlement` is mutating both `activeProductId` and
+    /// `expiresAt`. Without this, the first property's `didSet` would run
+    /// `updateCurrentTier()` while the second value is still stale — for a
+    /// first-time subscriber `expiresAt` is still `nil`, so `isActive` reads
+    /// false and the tier wrongly stays `.none` until the next cold launch
+    /// (where `init` recomputes with both values present). We suppress the
+    /// interim recompute and run a single correct one after both land.
+    private var isApplyingEntitlement = false
+
     init(
         defaults: UserDefaults = .standard,
         nowProvider: @escaping () -> Date = Date.init
@@ -54,9 +64,12 @@ final class EntitlementStore: ObservableObject {
     }
 
     func setEntitlement(productId: String?, expiresAt: Date?) {
+        isApplyingEntitlement = true
         activeProductId = productId
         self.expiresAt = expiresAt
-        print("🛒 Saved entitlement. productId=\(productId ?? "nil"), expiresAt=\(expiresAt?.description ?? "nil")")
+        isApplyingEntitlement = false
+        updateCurrentTier()
+        diag.info("Entitlement saved productId=\(productId ?? "nil") expiresAt=\(expiresAt?.description ?? "nil")")
     }
 
     func clear() {
@@ -73,10 +86,14 @@ final class EntitlementStore: ObservableObject {
             newTier = .none
         }
 
-        if currentTier != newTier {
-            currentTier = newTier
-            defaults.set(newTier.rawValue, forKey: Keys.currentTier)
-        }
+        guard currentTier != newTier else { return }
+
+        // Persist before publishing: `TierGate.currentTier` reads this
+        // UserDefaults key directly, and SwiftUI views (e.g. the Captain gate
+        // in MainTabScreen) re-query it the moment the `@Published` change
+        // invalidates them. Writing the key first keeps both in lockstep.
+        defaults.set(newTier.rawValue, forKey: Keys.currentTier)
+        currentTier = newTier
     }
 
     private func persist(_ value: Any?, key: String) {

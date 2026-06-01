@@ -119,7 +119,11 @@ public final class SupabaseService {
         print("💾 Device token saved locally.")
 
         Task {
-            try? await syncStoredDeviceToken()
+            do {
+                try await syncStoredDeviceToken()
+            } catch {
+                diag.warning("Device token sync failed: \(error.localizedDescription)")
+            }
         }
     }
 

@@ -74,31 +74,21 @@ actor BioStateEngine {
             )
         }
 
+        // Vitals are stored EXACT. The field names keep their `Bucketed` suffix
+        // only to preserve BioSnapshot's Codable on-disk contract (episodic /
+        // procedural memory persisted on device); no coarsening is applied, so
+        // the Captain reasons on — and reports — the user's real numbers.
         return BioSnapshot(
             timestamp: clock(),
-            stepsBucketed: BioStateEngine.bucketed(metrics.stepCount, bucket: 500),
-            heartRateBucketed: metrics.averageOrCurrentHeartRateBPM.map {
-                BioStateEngine.bucketed($0, bucket: 5)
-            },
+            stepsBucketed: max(0, metrics.stepCount),
+            heartRateBucketed: metrics.averageOrCurrentHeartRateBPM.map { max(0, $0) },
             hrvBucketed: nil,
-            sleepHoursBucketed: metrics.sleepHours > 0
-                ? BioStateEngine.bucketed(metrics.sleepHours, bucket: 0.5)
-                : nil,
-            caloriesBucketed: BioStateEngine.bucketed(metrics.activeEnergyKilocalories, bucket: 10),
+            sleepHoursBucketed: metrics.sleepHours > 0 ? max(0, metrics.sleepHours) : nil,
+            caloriesBucketed: max(0, metrics.activeEnergyKilocalories),
             timeOfDay: BioSnapshot.TimeOfDay.current(clock: clock),
             dayOfWeek: Calendar.current.component(.weekday, from: clock()),
             isFasting: false
         )
-    }
-
-    private static func bucketed(_ value: Int, bucket: Int) -> Int {
-        guard bucket > 0 else { return value }
-        return (value / bucket) * bucket
-    }
-
-    private static func bucketed(_ value: Double, bucket: Double) -> Double {
-        guard bucket > 0 else { return value }
-        return (value / bucket).rounded() * bucket
     }
 }
 

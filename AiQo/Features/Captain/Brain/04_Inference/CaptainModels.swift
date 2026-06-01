@@ -87,6 +87,13 @@ struct CaptainStructuredResponse: Codable, Sendable {
     let workoutPlan: WorkoutPlan?
     let mealPlan: MealPlan?
     let spotifyRecommendation: SpotifyRecommendation?
+    /// Set ONLY when the user explicitly asked the Captain to remember/save
+    /// something, or stated a durable fact worth pinning. Persisted to the
+    /// "Saved Memories" section so the promise is actually kept.
+    let savedMemory: CaptainSavedMemory?
+    /// Set ONLY when the user asked for a reminder at a concrete clock time.
+    /// Schedules a real local notification — never claim a reminder without it.
+    let reminder: CaptainReminder?
 
     private enum CodingKeys: String, CodingKey {
         case message
@@ -94,6 +101,8 @@ struct CaptainStructuredResponse: Codable, Sendable {
         case workoutPlan
         case mealPlan
         case spotifyRecommendation
+        case savedMemory
+        case reminder
     }
 
     init(
@@ -101,13 +110,17 @@ struct CaptainStructuredResponse: Codable, Sendable {
         quickReplies: [String]? = nil,
         workoutPlan: WorkoutPlan? = nil,
         mealPlan: MealPlan? = nil,
-        spotifyRecommendation: SpotifyRecommendation? = nil
+        spotifyRecommendation: SpotifyRecommendation? = nil,
+        savedMemory: CaptainSavedMemory? = nil,
+        reminder: CaptainReminder? = nil
     ) {
         self.message = message.trimmingCharacters(in: .whitespacesAndNewlines)
         self.quickReplies = quickReplies?.prefix(3).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         self.workoutPlan = workoutPlan?.isMeaningful == true ? workoutPlan : nil
         self.mealPlan = mealPlan?.isMeaningful == true ? mealPlan : nil
         self.spotifyRecommendation = spotifyRecommendation?.isMeaningful == true ? spotifyRecommendation : nil
+        self.savedMemory = savedMemory?.isMeaningful == true ? savedMemory : nil
+        self.reminder = reminder?.isMeaningful == true ? reminder : nil
     }
 
     init(from decoder: Decoder) throws {
@@ -134,6 +147,143 @@ struct CaptainStructuredResponse: Codable, Sendable {
             forKey: .spotifyRecommendation
         )
         spotifyRecommendation = decodedSpotifyRecommendation?.isMeaningful == true ? decodedSpotifyRecommendation : nil
+        let decodedSavedMemory = try container.decodeIfPresent(CaptainSavedMemory.self, forKey: .savedMemory)
+        savedMemory = decodedSavedMemory?.isMeaningful == true ? decodedSavedMemory : nil
+        let decodedReminder = try container.decodeIfPresent(CaptainReminder.self, forKey: .reminder)
+        reminder = decodedReminder?.isMeaningful == true ? decodedReminder : nil
+    }
+}
+
+// MARK: - Saved Memory (explicit "remember this")
+
+/// Emitted when the user explicitly asks the Captain to remember/save something
+/// ("احفظ هذا", "تذكر اني...", "remember that ..."), or when the user states a
+/// durable fact the Captain decides is worth pinning. Persisted into the
+/// "Saved Memories" section so the Captain never lies about having saved it.
+nonisolated struct CaptainSavedMemory: Codable, Equatable, Sendable {
+    /// The thing to remember, phrased as a durable fact in the user's language.
+    let note: String
+    /// Optional short label (≤ 40 chars) used as the row title in the UI.
+    let title: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case note
+        case title
+    }
+
+    init(note: String, title: String? = nil) {
+        self.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.title = (trimmedTitle?.isEmpty == false) ? trimmedTitle : nil
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let rawNote = try container.decode(String.self, forKey: .note)
+        let normalizedNote = rawNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedNote.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .note,
+                in: container,
+                debugDescription: "CaptainSavedMemory.note must not be empty."
+            )
+        }
+
+        note = normalizedNote
+        let rawTitle = try container.decodeIfPresent(String.self, forKey: .title)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        title = (rawTitle?.isEmpty == false) ? rawTitle : nil
+    }
+
+    var isMeaningful: Bool { !note.isEmpty }
+}
+
+// MARK: - Reminder (one-off, clock-time)
+
+/// Emitted ONLY when the user asks for a reminder at a concrete clock time.
+/// `time` is local 24h "HH:mm". `date` is an optional local "yyyy-MM-dd";
+/// when omitted the scheduler uses today (or tomorrow if the time already
+/// passed). The Captain must never promise a reminder without emitting this.
+nonisolated struct CaptainReminder: Codable, Equatable, Sendable {
+    /// What to remind the user about, in the user's language (spoken-style).
+    let body: String
+    /// Local 24h clock time "HH:mm" (e.g. "07:30", "21:00").
+    let time: String
+    /// Optional local date "yyyy-MM-dd". nil → next occurrence of `time`.
+    let date: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case body
+        case time
+        case date
+    }
+
+    init(body: String, time: String, date: String? = nil) {
+        self.body = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.time = Self.normalizedTime(time)
+        let trimmedDate = date?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.date = (trimmedDate?.isEmpty == false) ? trimmedDate : nil
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let rawBody = try container.decode(String.self, forKey: .body)
+        let normalizedBody = rawBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedBody.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .body,
+                in: container,
+                debugDescription: "CaptainReminder.body must not be empty."
+            )
+        }
+
+        let rawTime = try container.decode(String.self, forKey: .time)
+        let normalizedTime = Self.normalizedTime(rawTime)
+        guard Self.isValidTime(normalizedTime) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .time,
+                in: container,
+                debugDescription: "CaptainReminder.time must be 24h HH:mm."
+            )
+        }
+
+        body = normalizedBody
+        time = normalizedTime
+        let rawDate = try container.decodeIfPresent(String.self, forKey: .date)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        date = (rawDate?.isEmpty == false) ? rawDate : nil
+    }
+
+    var isMeaningful: Bool { !body.isEmpty && Self.isValidTime(time) }
+
+    /// Hour/minute parsed from `time`, or nil if malformed.
+    var clock: (hour: Int, minute: Int)? {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]), let minute = Int(parts[1]),
+              (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return (hour, minute)
+    }
+
+    /// Normalizes "7:5" → "07:05", strips stray spaces, keeps only HH:mm.
+    static func normalizedTime(_ raw: String) -> String {
+        let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = cleaned.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0].trimmingCharacters(in: .whitespaces)),
+              let minute = Int(parts[1].trimmingCharacters(in: .whitespaces)) else {
+            return cleaned
+        }
+        return String(format: "%02d:%02d", hour, minute)
+    }
+
+    static func isValidTime(_ value: String) -> Bool {
+        let parts = value.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]), let minute = Int(parts[1]) else { return false }
+        return (0...23).contains(hour) && (0...59).contains(minute)
     }
 }
 
@@ -381,15 +531,26 @@ struct MealPlan: Codable, Equatable, Sendable {
 struct WorkoutPlan: Codable, Equatable, Sendable {
     let title: String
     let exercises: [Exercise]
+    let days: [WorkoutDay]?
+    let durationWeeks: Int?
 
     private enum CodingKeys: String, CodingKey {
         case title
         case exercises
+        case days
+        case durationWeeks
     }
 
-    init(title: String, exercises: [Exercise]) {
+    init(
+        title: String,
+        exercises: [Exercise],
+        days: [WorkoutDay]? = nil,
+        durationWeeks: Int? = nil
+    ) {
         self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         self.exercises = exercises
+        self.days = days?.isEmpty == false ? days : nil
+        self.durationWeeks = durationWeeks.flatMap { $0 > 0 ? $0 : nil }
     }
 
     init(from decoder: Decoder) throws {
@@ -405,22 +566,90 @@ struct WorkoutPlan: Codable, Equatable, Sendable {
             )
         }
 
-        let decodedExercises = try container.decode([Exercise].self, forKey: .exercises)
-        guard !decodedExercises.isEmpty else {
+        let decodedDays = try container.decodeIfPresent([WorkoutDay].self, forKey: .days)
+        let decodedExercises = try container.decodeIfPresent([Exercise].self, forKey: .exercises)
+        let decodedDurationWeeks = try container.decodeIfPresent(Int.self, forKey: .durationWeeks)
+
+        let resolvedDays: [WorkoutDay]? = (decodedDays?.isEmpty == false) ? decodedDays : nil
+        let resolvedExercises: [Exercise]
+        if let flat = decodedExercises, !flat.isEmpty {
+            resolvedExercises = flat
+        } else if let days = resolvedDays {
+            resolvedExercises = days.flatMap { $0.exercises }
+        } else {
+            resolvedExercises = []
+        }
+
+        guard !resolvedExercises.isEmpty else {
             throw DecodingError.dataCorruptedError(
                 forKey: .exercises,
                 in: container,
-                debugDescription: "WorkoutPlan.exercises must contain at least one exercise."
+                debugDescription: "WorkoutPlan must contain at least one exercise (flat or via days)."
             )
         }
 
         title = normalizedTitle
-        exercises = decodedExercises
+        exercises = resolvedExercises
+        days = resolvedDays
+        durationWeeks = decodedDurationWeeks.flatMap { $0 > 0 ? $0 : nil }
     }
 
     var isMeaningful: Bool {
         !title.isEmpty && !exercises.isEmpty
     }
+}
+
+struct WorkoutDay: Codable, Equatable, Identifiable, Sendable {
+    var id = UUID()
+    let name: String
+    let focus: String?
+    let exercises: [Exercise]
+
+    private enum CodingKeys: String, CodingKey {
+        case name
+        case focus
+        case exercises
+    }
+
+    init(id: UUID = UUID(), name: String, focus: String?, exercises: [Exercise]) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.focus = focus?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmptyOrNil
+        self.exercises = exercises
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let rawName = try container.decode(String.self, forKey: .name)
+        let normalizedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .name,
+                in: container,
+                debugDescription: "WorkoutDay.name must not be empty."
+            )
+        }
+
+        let rawFocus = try container.decodeIfPresent(String.self, forKey: .focus)
+        let decodedExercises = try container.decode([Exercise].self, forKey: .exercises)
+        guard !decodedExercises.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .exercises,
+                in: container,
+                debugDescription: "WorkoutDay.exercises must contain at least one exercise."
+            )
+        }
+
+        id = UUID()
+        name = normalizedName
+        focus = rawFocus?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmptyOrNil
+        exercises = decodedExercises
+    }
+}
+
+private extension String {
+    var nonEmptyOrNil: String? { isEmpty ? nil : self }
 }
 
 struct Exercise: Codable, Equatable, Identifiable, Sendable {

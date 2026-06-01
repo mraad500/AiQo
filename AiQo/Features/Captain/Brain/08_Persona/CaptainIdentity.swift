@@ -33,10 +33,20 @@ enum CaptainIdentity {
         "just be positive"
     ]
 
+    /// Kinds whose product copy intentionally uses emoji. Celebration kinds
+    /// plus the trial-journey + streak + hydration + workout-summary surfaces,
+    /// whose Iraqi-dialect copy is deliberately warm and emoji-rich. Kept OUT:
+    /// `.inactivityNudge` / `.sleepDebtAcknowledgment` (must stay calm/plain).
     nonisolated static let emojiAllowedKinds: Set<NotificationKind> = [
         .personalRecord,
         .eidCelebration,
-        .achievementUnlocked
+        .achievementUnlocked,
+        .trialDay,
+        .streakSave,
+        .streakRisk,
+        .hydrationReminder,
+        .workoutSummary,
+        .weeklyInsight
     ]
 
     nonisolated static func canUseEmoji(for kind: NotificationKind) -> Bool {

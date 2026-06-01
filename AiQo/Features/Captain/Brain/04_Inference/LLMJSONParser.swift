@@ -241,6 +241,8 @@ private extension LLMJSONParser {
         let workoutPlan = decodePlan(WorkoutPlan.self, from: object["workoutPlan"])
         let mealPlan = decodePlan(MealPlan.self, from: object["mealPlan"])
         let spotifyRecommendation = decodePlan(SpotifyRecommendation.self, from: object["spotifyRecommendation"])
+        let savedMemory = decodePlan(CaptainSavedMemory.self, from: object["savedMemory"])
+        let reminder = decodePlan(CaptainReminder.self, from: object["reminder"])
         let quickReplies = decodeQuickReplies(from: object["quickReplies"])
 
         return CaptainStructuredResponse(
@@ -248,7 +250,9 @@ private extension LLMJSONParser {
             quickReplies: quickReplies,
             workoutPlan: workoutPlan,
             mealPlan: mealPlan,
-            spotifyRecommendation: spotifyRecommendation
+            spotifyRecommendation: spotifyRecommendation,
+            savedMemory: savedMemory,
+            reminder: reminder
         )
     }
 

@@ -20,30 +20,30 @@ actor HealthKitBridge {
         HKHealthStore.isHealthDataAvailable()
     }
 
-    /// Latest average heart rate (BPM), bucketed to 5 BPM. Returns nil when unavailable.
+    /// Latest exact average heart rate (BPM). Returns nil when unavailable.
     func latestHeartRate() async -> Int? {
         guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics(),
               let heartRate = metrics.averageOrCurrentHeartRateBPM else {
             return nil
         }
-        return (heartRate / 5) * 5
+        return max(0, heartRate)
     }
 
-    /// Today's step count, bucketed to 500.
-    func todayStepsBucketed() async -> Int {
+    /// Today's exact step count.
+    func todaySteps() async -> Int {
         guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics() else {
             return 0
         }
-        return (metrics.stepCount / 500) * 500
+        return max(0, metrics.stepCount)
     }
 
-    /// Last-night sleep hours, bucketed to 0.5h. Returns nil when no data.
+    /// Last-night exact sleep hours. Returns nil when no data.
     func lastNightSleepHours() async -> Double? {
         guard let metrics = try? await snapshotService.fetchTodayEssentialMetrics(),
               metrics.sleepHours > 0 else {
             return nil
         }
-        return (metrics.sleepHours / 0.5).rounded() * 0.5
+        return max(0, metrics.sleepHours)
     }
 }
 

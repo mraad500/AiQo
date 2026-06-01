@@ -126,8 +126,11 @@ struct ClubNativeSegmentedControl<Item: Hashable>: UIViewRepresentable {
             .font: normalFont
         ], for: .normal)
 
+        // Selected pill is a fixed light yellow in both appearances, so the
+        // selected title must be dark — UIColor.label would flip to white in
+        // dark mode and wash out on the yellow.
         control.setTitleTextAttributes([
-            .foregroundColor: UIColor.label,
+            .foregroundColor: UIColor(Color(hex: "1A1A1A")),
             .font: selectedFont
         ], for: .selected)
 

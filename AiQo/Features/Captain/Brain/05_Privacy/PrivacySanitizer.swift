@@ -8,12 +8,11 @@ import UniformTypeIdentifiers
 ///
 /// Only data the user explicitly entered for personal-coaching purposes:
 /// first name (to be addressed naturally), age (for max-HR zones), gender
-/// (for caloric-baseline hints), and bucketed height/weight (for training-load
+/// (for caloric-baseline hints), and exact height/weight (for training-load
 /// adjustments). No handles, emails, phones, precise location, or last names.
 ///
-/// Numeric body stats are bucketed to 5-unit precision at serialization time
-/// to reduce identifiability while keeping coaching utility (e.g. 95kg → ~95kg,
-/// 177cm → ~175cm).
+/// Body stats are passed through at full precision: the user expects the
+/// Captain to know their exact numbers (e.g. 177cm, 95kg), not approximations.
 struct CloudSafeProfile: Sendable {
     let firstName: String?
     let age: Int?
@@ -35,12 +34,10 @@ struct CloudSafeProfile: Sendable {
             lines.append("- Gender: \(gender)")
         }
         if let heightCm, heightCm > 0 {
-            let bucket = (heightCm / 5) * 5
-            lines.append("- Height: ~\(bucket)cm")
+            lines.append("- Height: \(heightCm)cm")
         }
         if let weightKg, weightKg > 0 {
-            let bucket = (weightKg / 5) * 5
-            lines.append("- Weight: ~\(bucket)kg")
+            lines.append("- Weight: \(weightKg)kg")
         }
         return lines.joined(separator: "\n")
     }
@@ -54,14 +51,17 @@ struct CloudSafeProfile: Sendable {
 ///
 /// Guarantees:
 /// - PII (emails, phones, UUIDs, IPs) redacted to "[REDACTED]"
-/// - Coaching profile (first name, age, bucketed body stats) passed through
+/// - Coaching profile (first name, age, exact body stats) passed through
 ///   via `CloudSafeProfile` so the Captain can personalize replies. This is
 ///   data the user explicitly entered for coaching; it requires cloud-AI
 ///   consent (enforced upstream in `CloudBrainService`).
 /// - Conversation kept to the last 16 messages OR ~6000 chars (whichever is smaller),
 ///   then PII-redacted per message. The cap exists for token-budget predictability,
 ///   NOT for privacy — privacy comes from the per-message redaction below.
-/// - Health data bucketed: steps by 500, calories by 10, HR by 5, sleep by 0.5h
+/// - Health data (steps, calories, HR, sleep) passed through at full precision:
+///   the user expects the Captain to report their exact numbers, matching what
+///   the app's own dashboard already shows them. Identifiability is governed by
+///   the cloud-AI consent gate, not by coarsening the user's own metrics.
 /// - Kitchen images stripped of EXIF/GPS metadata
 struct PrivacySanitizer: Sendable {
 
@@ -77,8 +77,6 @@ struct PrivacySanitizer: Sendable {
     private let maxConversationCharBudget = 6000
     private let maximumKitchenImageDimension = 1280
     private let kitchenImageCompressionQuality: CGFloat = 0.78
-    private let stepsBucketSize = 500
-    private let caloriesBucketSize = 10
     private let maximumSteps = 100_000
     private let maximumCalories = 10_000
     private let maximumLevel = 100
@@ -169,20 +167,46 @@ struct PrivacySanitizer: Sendable {
         _ request: HybridBrainRequest,
         knownUserName: String?,
         cloudSafeProfile: CloudSafeProfile? = nil,
-        cloudSafeMemories: String = ""
+        cloudSafeMemories: String = "",
+        cloudSafeAppKnowledge: String = ""
     ) -> HybridBrainRequest {
         let sanitizedConversation = sanitizeConversation(
             request.conversation,
             knownUserName: knownUserName
         )
         let sanitizedContext = sanitizeHealthContext(request.contextData)
-        let sanitizedImageData = request.screenContext == .kitchen
-            ? sanitizeKitchenImageData(request.attachedImageData)
-            : nil
+        // Image is allowed for kitchen vision and gym body-photo tailoring.
+        // Both go through the same EXIF/GPS-strip + downsize pipeline; the
+        // body-photo consent gate is enforced separately by the caller.
+        let sanitizedImageData: Data?
+        switch request.screenContext {
+        case .kitchen, .gym:
+            sanitizedImageData = sanitizeKitchenImageData(request.attachedImageData)
+        default:
+            sanitizedImageData = nil
+        }
 
         let safeIntent = sanitizePromptForCloud(request.intentSummary, knownUserName: knownUserName)
         let safeWorkingMemory = cloudSafeMemories.trimmingCharacters(in: .whitespacesAndNewlines)
         let profileSummary = cloudSafeProfile?.asSummaryLines() ?? ""
+        // App knowledge is static, app-authored, PII-free constant text — like
+        // cloudSafeMemories it is trusted: trimmed but NOT run through
+        // sanitizeText (which would mangle the Arabic feature copy).
+        let safeAppKnowledge = cloudSafeAppKnowledge.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Compacted session state is derived from the user's own + Captain's own
+        // turns (which already flow to the cloud as the `contents` array), so it
+        // gets the same PII redaction + numeric bucketing as any prompt text.
+        // Preserved as a dedicated field — unlike `workingMemorySummary` it is
+        // NOT overwritten, so long-session continuity actually reaches Gemini.
+        let safeConversationState: String? = {
+            guard let raw = request.conversationState?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
+            else { return nil }
+            let cleaned = sanitizePromptForCloud(raw, knownUserName: knownUserName)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleaned.isEmpty ? nil : cleaned
+        }()
 
         return HybridBrainRequest(
             conversation: sanitizedConversation,
@@ -193,26 +217,23 @@ struct PrivacySanitizer: Sendable {
             intentSummary: safeIntent,
             workingMemorySummary: safeWorkingMemory,
             attachedImageData: sanitizedImageData,
-            purpose: request.purpose
+            purpose: request.purpose,
+            appKnowledge: safeAppKnowledge.isEmpty ? nil : safeAppKnowledge,
+            conversationState: safeConversationState
         )
     }
 
     // MARK: - Text Sanitization
 
     /// Sanitizes a free-text prompt before it leaves the device.
-    /// Pipeline: PII redaction (via `sanitizeText`) + numeric bucketing for HealthKit vitals.
-    /// Input may contain Arabic, English, or mixed numerics; Arabic digits are normalized first.
+    /// Pipeline: PII redaction (via `sanitizeText`) only.
+    ///
+    /// Numeric vitals (steps, calories, HR, distance, sleep, etc.) are passed
+    /// through verbatim — the user expects the Captain to echo their exact
+    /// numbers, and the digits are normalized at render time, not coarsened.
+    /// PII (emails, phones, names) is still fully redacted below.
     func sanitizePromptForCloud(_ prompt: String, knownUserName: String?) -> String {
-        var result = sanitizeText(prompt, knownUserName: knownUserName)
-        result = convertArabicDigits(in: result)
-        result = bucketHeartRateMentions(in: result)
-        result = bucketStepMentions(in: result)
-        result = bucketDistanceMentions(in: result)
-        result = bucketCalorieMentions(in: result)
-        result = bucketDurationMentions(in: result)
-        result = bucketSleepMentions(in: result)
-        result = bucketZonePercentMentions(in: result)
-        return result
+        sanitizeText(prompt, knownUserName: knownUserName)
     }
 
     func sanitizeText(_ text: String, knownUserName: String?) -> String {
@@ -493,37 +514,28 @@ private extension PrivacySanitizer {
         return [CaptainConversationMessage(role: .user, content: "User request.")]
     }
 
-    // MARK: - Health Data Bucketing
+    // MARK: - Health Context Pass-Through
 
-    /// Preserves Brain V2 signals at coarse granularity so Gemini can reason about
-    /// energy/recovery state without ever receiving raw HealthKit values.
-    /// - Keeps: steps/calories/HR/sleep (bucketed), timeOfDay, toneHint, stageTitle, bioPhase
+    /// Forwards the live HealthKit vitals to Gemini at full precision so the
+    /// Captain reports the user's exact numbers (matching the app dashboard),
+    /// while still stripping the derived emotional/behavioural signals.
+    /// - Keeps: exact steps/calories/HR/sleep, timeOfDay, toneHint, stageTitle, bioPhase
     /// - Drops: emotionalState, trendSnapshot, messageSentiment, recentInteractions
+    /// Values are only clamped to non-negative, physiologically-sane bounds as a
+    /// defensive guard against malformed input — never rounded.
     func sanitizeHealthContext(_ context: CaptainContextData) -> CaptainContextData {
         CaptainContextData(
-            steps: bucketedNonNegativeInt(context.steps, bucketSize: stepsBucketSize, maximum: maximumSteps),
-            calories: bucketedNonNegativeInt(context.calories, bucketSize: caloriesBucketSize, maximum: maximumCalories),
+            steps: clamp(context.steps, minimum: 0, maximum: maximumSteps),
+            calories: clamp(context.calories, minimum: 0, maximum: maximumCalories),
             vibe: "General",
             level: clamp(context.level, minimum: 1, maximum: maximumLevel),
-            sleepHours: bucketedSleep(context.sleepHours),
-            heartRate: bucketedHeartRate(context.heartRate),
+            sleepHours: min(max(context.sleepHours, 0), 24),
+            heartRate: context.heartRate.map { min(max($0, 0), 260) },
             timeOfDay: context.timeOfDay,
             toneHint: context.toneHint,
             stageTitle: context.stageTitle,
             bioPhase: context.bioPhase
         )
-    }
-
-    func bucketedHeartRate(_ hr: Int?) -> Int? {
-        guard let hr, hr > 0 else { return nil }
-        let clamped = min(max(hr, 0), 260)
-        return (clamped / 5) * 5
-    }
-
-    func bucketedSleep(_ hours: Double) -> Double {
-        guard hours > 0 else { return 0 }
-        let clamped = min(max(hours, 0), 24)
-        return ((clamped * 2).rounded() / 2)
     }
 
     // MARK: - Self-Identifying Phrase Replacement
@@ -608,14 +620,6 @@ private extension PrivacySanitizer {
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 
-    /// Floor-bucketing: matches the free-text int-bucketing direction so structured
-    /// and free-text vitals have identical privacy granularity.
-    func bucketedNonNegativeInt(_ value: Int, bucketSize: Int, maximum: Int) -> Int {
-        let clamped = clamp(value, minimum: 0, maximum: maximum)
-        guard bucketSize > 1 else { return clamped }
-        return (clamped / bucketSize) * bucketSize
-    }
-
     func clamp(_ value: Int, minimum: Int, maximum: Int) -> Int {
         min(max(value, minimum), maximum)
     }
@@ -644,138 +648,6 @@ private extension PrivacySanitizer {
         }
     }
 
-    // MARK: - Numeric Bucketing for Free-Text Vitals
-
-    /// Arabic-Indic digits (٠-٩) and Extended Arabic-Indic digits (۰-۹) → ASCII 0-9.
-    /// Must run before any numeric regex so bucketing catches Arabic numbers too.
-    func convertArabicDigits(in text: String) -> String {
-        var result = ""
-        result.reserveCapacity(text.count)
-        for scalar in text.unicodeScalars {
-            switch scalar.value {
-            case 0x0660...0x0669:
-                result.append(Character(Unicode.Scalar(scalar.value - 0x0660 + 0x30)!))
-            case 0x06F0...0x06F9:
-                result.append(Character(Unicode.Scalar(scalar.value - 0x06F0 + 0x30)!))
-            default:
-                result.unicodeScalars.append(scalar)
-            }
-        }
-        return result
-    }
-
-    func bucketHeartRateMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+)\s*(bpm|نبضة/دقيقة|نبضة|ن/د)"#,
-            bucket: 5,
-            isDouble: false
-        )
-    }
-
-    func bucketStepMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+)\s*(steps?|خطوات|خطوة|خطوه)"#,
-            bucket: 500,
-            isDouble: false
-        )
-    }
-
-    func bucketDistanceMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+(?:\.\d+)?)\s*(km|كيلومتر|كم|كيلو)"#,
-            bucket: 0.1,
-            isDouble: true
-        )
-    }
-
-    func bucketCalorieMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+)\s*(kcal|cal|سعرة\s*حرارية|سعر\s*حراري|سعرات|سعرة)"#,
-            bucket: 10,
-            isDouble: false
-        )
-    }
-
-    func bucketDurationMentions(in text: String) -> String {
-        // English units anchored with \b to avoid matching "mints", "minor", etc.
-        // Arabic alternatives can't use \b reliably (NSRegularExpression's word-boundary
-        // semantics require ASCII word chars on at least one side).
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+)\s*(?:(?:minutes?|mins?|min)\b|دقيقة|دقائق)"#,
-            bucket: 5,
-            isDouble: false
-        )
-    }
-
-    func bucketSleepMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|ساعة|ساعات)\b"#,
-            bucket: 0.5,
-            isDouble: true
-        )
-    }
-
-    func bucketZonePercentMentions(in text: String) -> String {
-        bucketNumericMatches(
-            in: text,
-            pattern: #"(\d+)\s*%\s*(zone\s*\d|زون|peak|below|منطقة)"#,
-            bucket: 5,
-            isDouble: false
-        )
-    }
-
-    /// Walks matches right-to-left so replacements don't invalidate NSRange offsets of earlier matches.
-    ///
-    /// Bucketing semantics:
-    /// - Integer buckets (e.g. 5, 10, 500) use **floor** — privacy-friendly: "487 kcal" → "480",
-    ///   never rounds UP to reveal a higher bound.
-    /// - Float buckets (e.g. 0.1, 0.5) use **round-half-to-nearest-or-even** — preserves
-    ///   signal for small numbers like distance/sleep where floor would lose too much precision.
-    func bucketNumericMatches(
-        in text: String,
-        pattern: String,
-        bucket: Double,
-        isDouble: Bool
-    ) -> String {
-        guard bucket > 0,
-              let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return text
-        }
-        let nsText = text as NSString
-        let fullRange = NSRange(location: 0, length: nsText.length)
-        let matches = regex.matches(in: text, options: [], range: fullRange)
-        guard !matches.isEmpty else { return text }
-
-        var result = text
-        for match in matches.reversed() {
-            guard match.numberOfRanges >= 2 else { continue }
-            let digitRange = match.range(at: 1)
-            guard digitRange.location != NSNotFound,
-                  let digitSwiftRange = Range(digitRange, in: result) else { continue }
-
-            let raw = String(result[digitSwiftRange])
-            guard let rawValue = Double(raw) else { continue }
-
-            let scaled = rawValue / bucket
-            let bucketed: Double
-            let replacement: String
-            if isDouble {
-                bucketed = scaled.rounded() * bucket
-                replacement = String(format: "%.1f", bucketed)
-            } else {
-                bucketed = scaled.rounded(.down) * bucket
-                replacement = String(Int(bucketed))
-            }
-            result.replaceSubrange(digitSwiftRange, with: replacement)
-        }
-        return result
-    }
 }
 
 // MARK: - Sanitized Logging

@@ -54,84 +54,78 @@ struct NutritionSummaryCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
-            // العنوان
+        VStack(spacing: 10) {
+            // العنوان + السعرات
             HStack {
                 Label(NSLocalizedString("nutrition.daily", value: "التغذية اليومية", comment: "Daily nutrition"), systemImage: "chart.pie.fill")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textPrimary)
 
                 Spacer()
 
                 Text(String(format: NSLocalizedString("nutrition.calories.progress", value: "%d / %d سعرة", comment: "Calories progress"), totalCalories, calorieGoal))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textSecondary)
             }
 
             // شريط السعرات الكلي
             calorieProgressBar
 
-            // الـ Macros الأربعة
-            HStack(spacing: 14) {
-                macroRing(
+            // الماكروز الأربعة بصف واحد
+            HStack(spacing: 0) {
+                macroChip(
                     label: NSLocalizedString("nutrition.protein", value: "بروتين", comment: "Protein"),
                     value: totalProtein,
-                    goal: proteinGoal,
-                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.proteinColor
                 )
-
-                macroRing(
+                macroDivider
+                macroChip(
                     label: NSLocalizedString("nutrition.carbs", value: "كارب", comment: "Carbs"),
                     value: totalCarbs,
-                    goal: carbGoal,
-                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.carbColor
                 )
-
-                macroRing(
+                macroDivider
+                macroChip(
                     label: NSLocalizedString("nutrition.fat", value: "دهون", comment: "Fat"),
                     value: totalFat,
-                    goal: fatGoal,
-                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.fatColor
                 )
-
-                macroRing(
+                macroDivider
+                macroChip(
                     label: NSLocalizedString("nutrition.fiber", value: "ألياف", comment: "Fiber"),
                     value: totalFiber,
-                    goal: fiberGoal,
-                    unit: NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"),
                     color: NutritionPalette.fiberColor
                 )
             }
-
-            // تفصيل الوجبات
-            if !meals.isEmpty {
-                mealBreakdown
-            }
         }
-        .padding(18)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(NutritionPalette.glassCard)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(NutritionPalette.glassBorder, lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
+                .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(nutritionAccessibilityLabel)
     }
 
     private var nutritionAccessibilityLabel: String {
-        var parts = ["\(totalCalories) من \(calorieGoal) سعرة"]
-        parts.append("بروتين \(String(format: "%.0f", totalProtein)) غرام")
-        parts.append("كارب \(String(format: "%.0f", totalCarbs)) غرام")
-        parts.append("دهون \(String(format: "%.0f", totalFat)) غرام")
-        parts.append("ألياف \(String(format: "%.0f", totalFiber)) غرام")
-        return "ملخص التغذية اليومية، " + parts.joined(separator: "، ")
+        let gram = NSLocalizedString("nutrition.gram", value: "غ", comment: "")
+        let summary = NSLocalizedString("nutrition.dailySummary", value: "ملخص التغذية اليومية", comment: "Daily nutrition summary (accessibility)")
+        let separator = NSLocalizedString("nutrition.listSeparator", value: "، ", comment: "Spoken list separator")
+        let calories = String(
+            format: NSLocalizedString("nutrition.calories.accessibility", value: "%d من %d سعرة", comment: "Calories progress (accessibility)"),
+            totalCalories, calorieGoal
+        )
+        var parts = [calories]
+        parts.append("\(NSLocalizedString("nutrition.protein", value: "بروتين", comment: "")) \(String(format: "%.0f", totalProtein)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.carbs", value: "كارب", comment: "")) \(String(format: "%.0f", totalCarbs)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.fat", value: "دهون", comment: "")) \(String(format: "%.0f", totalFat)) \(gram)")
+        parts.append("\(NSLocalizedString("nutrition.fiber", value: "ألياف", comment: "")) \(String(format: "%.0f", totalFiber)) \(gram)")
+        return summary + separator + parts.joined(separator: separator)
     }
 
     // MARK: - Calorie Progress Bar
@@ -155,92 +149,33 @@ struct NutritionSummaryCard: View {
                     .animation(.spring(response: 0.8), value: totalCalories)
             }
         }
-        .frame(height: 10)
+        .frame(height: 6)
     }
 
-    // MARK: - Macro Ring
+    // MARK: - Macro Chip
 
-    private func macroRing(label: String, value: Double, goal: Double, unit: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.15), lineWidth: 5)
-                    .frame(width: 52, height: 52)
-
-                let progress = min(value / max(goal, 1), 1.0)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                    .frame(width: 52, height: 52)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 0.8), value: value)
-
+    private func macroChip(label: String, value: Double, color: Color) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 3) {
                 Text(String(format: "%.0f", value))
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(NutritionPalette.textPrimary)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(color.opacity(0.7))
             }
 
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(NutritionPalette.textSecondary)
-
-            Text("\(String(format: "%.0f", goal))\(unit)")
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(color.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Meal Breakdown
-
-    private var mealBreakdown: some View {
-        VStack(spacing: 8) {
-            Divider()
-                .padding(.vertical, 4)
-
-            ForEach(meals) { meal in
-                HStack(spacing: 10) {
-                    Image(systemName: meal.type.defaultSymbolName)
-                        .font(.system(size: 14))
-                        .foregroundStyle(NutritionPalette.sand)
-                        .frame(width: 22)
-
-                    Text(meal.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(NutritionPalette.textPrimary)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    // Macros مختصرة
-                    HStack(spacing: 8) {
-                        if let cal = meal.calories {
-                            macroTag(value: "\(cal)", label: "cal", color: NutritionPalette.sand)
-                        }
-                        if let p = meal.protein {
-                            macroTag(value: String(format: "%.0f", p), label: "P", color: NutritionPalette.proteinColor)
-                        }
-                        if let c = meal.carbs {
-                            macroTag(value: String(format: "%.0f", c), label: "C", color: NutritionPalette.carbColor)
-                        }
-                        if let f = meal.fat {
-                            macroTag(value: String(format: "%.0f", f), label: "F", color: NutritionPalette.fatColor)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func macroTag(value: String, label: String, color: Color) -> some View {
-        HStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-            Text(label)
-                .font(.system(size: 8, weight: .medium))
-                .foregroundStyle(color.opacity(0.7))
-        }
-        .foregroundStyle(color)
+    private var macroDivider: some View {
+        Rectangle()
+            .fill(Color.black.opacity(0.06))
+            .frame(width: 1, height: 20)
     }
 }
 

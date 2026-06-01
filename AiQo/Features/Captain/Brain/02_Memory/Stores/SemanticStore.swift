@@ -22,6 +22,9 @@ nonisolated struct SemanticFactSnapshot: Identifiable, Sendable {
     let userHidden: Bool
     let effectiveConfidence: Double
     let isCloudSafe: Bool
+    /// Persisted embedding of `content` (JSON `[Double]`), computed once at
+    /// write time so retrieval never re-embeds every candidate per query.
+    let embeddingJSON: Data?
 
     init(fact: SemanticFact) {
         id = fact.id
@@ -44,6 +47,7 @@ nonisolated struct SemanticFactSnapshot: Identifiable, Sendable {
         userHidden = fact.userHidden
         effectiveConfidence = fact.effectiveConfidence
         isCloudSafe = fact.isCloudSafe
+        embeddingJSON = fact.embeddingJSON
     }
 }
 
@@ -115,6 +119,15 @@ actor SemanticStore {
                     isPII: isPII,
                     isSensitive: isSensitive
                 )
+
+                // Backfill the embedding for facts written before embeddings
+                // were persisted; content is unchanged on reinforce so the
+                // stored vector stays valid.
+                if existing.embeddingJSON == nil,
+                   let vector = await EmbeddingIndex.shared.embed(existing.content) {
+                    existing.embeddingJSON = try? JSONEncoder().encode(vector)
+                }
+
                 try context.save()
                 return existing.id
             }
@@ -136,6 +149,12 @@ actor SemanticStore {
                 isPII: isPII,
                 isSensitive: isSensitive
             )
+
+            // Compute the embedding once, here at write time, instead of
+            // re-embedding every candidate on every retrieval query.
+            if let vector = await EmbeddingIndex.shared.embed(normalizedContent) {
+                fact.embeddingJSON = try? JSONEncoder().encode(vector)
+            }
 
             if !relatedEntryIDs.isEmpty {
                 fact.setRelatedEntryIDs(Array(Set(relatedEntryIDs)).sorted { $0.uuidString < $1.uuidString })

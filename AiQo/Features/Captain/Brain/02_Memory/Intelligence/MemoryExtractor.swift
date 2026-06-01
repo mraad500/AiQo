@@ -136,6 +136,34 @@ struct MemoryExtractor: Sendable {
             }
         }
 
+        // تفضيل / كره — رول-بيسد حتى الكابتن يتذكّر "ما أحب الجري" فوراً
+        // ولكل تير (قبل هذا كان يعتمد على استخراج LLM كل 3 رسائل + بوابة تير).
+        // category "preference" أصلاً موزون قوي بالاسترجاع (workout=3.8 إلخ).
+        if let match = text.range(
+            of: #"(ما\s*أحب|ما\s*احب|ماحب|ما\s*يعجبني|ما\s*اطيق|ما\s*ودي|أكره|اكره|أمل\s*من|مالي\s*خلق)\s*.{0,25}"#,
+            options: .regularExpression
+        ) {
+            store.set("dislike", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(?:i\s*hate|i\s*don'?t\s*like|i\s*dislike|i\s*can'?t\s*stand)\s+\w+(?:\s+\w+){0,3}"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            store.set("dislike", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(أحب|احب|يعجبني|أفضّل|افضّل|افضل|أفضل)\s*.{0,25}(تمرين|تمارين|رياضة|جري|مشي|سباحة|حديد|يوغا|كارديو|دراجة|أكل|طعام|وجبات|دجاج|سمك|رز)"#,
+            options: .regularExpression
+        ) {
+            store.set("preference_like", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+        if let match = text.range(
+            of: #"(?:i\s*love|i\s*really\s*like|i\s*prefer|i\s*enjoy)\s+\w+(?:\s+\w+){0,3}"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            store.set("preference_like", value: String(text[match]).trimmingCharacters(in: .whitespaces), category: "preference", source: "extracted")
+        }
+
         // نوم
         if let match = text.range(of: #"(\d{1,2})\s*(ساعة|ساعات)\s*(نوم)?"#, options: .regularExpression) {
             let numberRange = text[match].range(of: #"\d{1,2}"#, options: .regularExpression)
@@ -298,12 +326,13 @@ struct MemoryExtractor: Sendable {
     /// Builds the Gemini POST request for memory extraction. Routes through
     /// the Supabase `captain-chat` Edge Function when `USE_CLOUD_PROXY` is
     /// on; otherwise hits Gemini directly with the client-embedded key.
-    /// Uses the preview reasoning model (`gemini-3-flash-preview`) because
-    /// extraction quality matters more than latency here.
+    /// Uses the reasoning model (`gemini-3-flash-preview` when
+    /// `GEMINI_3_PREVIEW_ENABLED` is on, otherwise the stable `gemini-2.5-flash`)
+    /// because extraction quality matters more than latency here.
     ///
     /// Must be `static` — the only caller, `extractWithLLM`, is also static.
     private static func makeExtractorRequest(body: [String: Any]) async throws -> URLRequest {
-        let model = "gemini-3-flash-preview"
+        let model = GeminiModelPolicy.reasoning
 
         if CaptainProxyConfig.isChatEnabled {
             guard let endpoint = CaptainProxyConfig.endpointURL(for: .chat) else {
@@ -330,7 +359,7 @@ struct MemoryExtractor: Sendable {
             return request
         }
 
-        let config = try Self.resolveLLMConfig()
+        let config = try Self.resolveLLMConfig(model: model)
         var request = URLRequest(url: config.endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 15
@@ -344,7 +373,7 @@ struct MemoryExtractor: Sendable {
         let apiKey: String
     }
 
-    private static func resolveLLMConfig() throws -> LLMConfig {
+    private static func resolveLLMConfig(model: String) throws -> LLMConfig {
         let info = Bundle.main.infoDictionary ?? [:]
         let env = ProcessInfo.processInfo.environment
 
@@ -356,7 +385,7 @@ struct MemoryExtractor: Sendable {
         guard let apiKey else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)") else {
             throw URLError(.badURL)
         }
 

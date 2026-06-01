@@ -22,14 +22,16 @@ final class BioStateEngineTests: XCTestCase {
         )
     }
 
-    func testCurrentReturnsSnapshotWithBucketedFields() async {
+    func testCurrentReturnsSnapshotWithExactFields() async {
         let engine = makeEngine()
         let snap = await engine.current()
 
-        XCTAssertEqual(snap.stepsBucketed, 6000, "6247 should floor-bucket to 6000")
-        XCTAssertEqual(snap.heartRateBucketed, 70, "73 should floor-bucket to 70")
-        XCTAssertEqual(snap.sleepHoursBucketed, 7.0, "6.8 rounds to nearest 0.5 = 7.0")
-        XCTAssertEqual(snap.caloriesBucketed, 340, "342 should floor-bucket to 340")
+        // Vitals are stored EXACT (field names keep the `Bucketed` suffix only
+        // for the Codable on-disk contract — no coarsening is applied).
+        XCTAssertEqual(snap.stepsBucketed, 6247, "steps must be exact, not bucketed")
+        XCTAssertEqual(snap.heartRateBucketed, 73, "heart rate must be exact, not bucketed")
+        XCTAssertEqual(snap.sleepHoursBucketed, 6.8, "sleep hours must be exact, not bucketed")
+        XCTAssertEqual(snap.caloriesBucketed, 342, "calories must be exact, not bucketed")
         XCTAssertTrue((1...7).contains(snap.dayOfWeek))
     }
 

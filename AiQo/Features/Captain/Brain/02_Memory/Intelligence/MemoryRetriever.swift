@@ -31,8 +31,8 @@ actor MemoryRetriever {
         let emotionBudget = max(1, Int(Double(totalBudget) * 0.10))
         let relationshipBudget = max(1, Int(Double(totalBudget) * 0.10))
 
-        async let factsTask = fetchFacts(queryEmbedding: queryEmbedding, limit: factBudget)
-        async let episodesTask = fetchEpisodes(queryEmbedding: queryEmbedding, limit: episodeBudget)
+        async let factsTask = fetchFacts(query: query, queryEmbedding: queryEmbedding, limit: factBudget)
+        async let episodesTask = fetchEpisodes(query: query, queryEmbedding: queryEmbedding, limit: episodeBudget)
         async let patternsTask = fetchPatterns(limit: patternBudget)
         async let emotionsTask = fetchEmotions(limit: emotionBudget)
         async let relationshipsTask = fetchRelationships(in: query, limit: relationshipBudget)
@@ -63,49 +63,84 @@ actor MemoryRetriever {
     // MARK: - Private fetch helpers
 
     private func fetchFacts(
+        query: String,
         queryEmbedding: [Double]?,
         limit: Int
     ) async -> [SemanticFactSnapshot] {
         let candidates = await SemanticStore.shared.all(limit: limit * 4)
+        guard !candidates.isEmpty else { return [] }
 
-        guard let qEmb = queryEmbedding else {
-            return candidates
-                .sorted { $0.lastConfirmedAt > $1.lastConfirmedAt }
-                .prefix(limit)
-                .map { $0 }
-        }
+        let queryTokens = CaptainCognitiveTextAnalyzer.tokens(from: query)
 
         var scored: [(snapshot: SemanticFactSnapshot, score: Double)] = []
         for fact in candidates {
             var similarity = 0.0
-            if let factEmb = await EmbeddingIndex.shared.embed(fact.content) {
-                similarity = EmbeddingIndex.cosine(qEmb, factEmb)
+            if let qEmb = queryEmbedding {
+                // Prefer the embedding persisted at write time; only compute
+                // on the fly for legacy facts stored before persistence (the
+                // EmbeddingIndex text cache still covers those).
+                let factEmb: [Double]?
+                if let data = fact.embeddingJSON,
+                   let stored = try? JSONDecoder().decode([Double].self, from: data) {
+                    factEmb = stored
+                } else {
+                    factEmb = await EmbeddingIndex.shared.embed(fact.content)
+                }
+                if let factEmb {
+                    similarity = EmbeddingIndex.cosine(qEmb, factEmb)
+                }
             }
+            // Lexical overlap is the robustness floor. Apple ships no Arabic
+            // word vectors on many devices (embedding nil), and an Arabic
+            // query vs an English-stored fact lives in a different vector
+            // space (cosine ≈ 0). Without this term, retrieval silently
+            // collapsed to confidence+recency — semantic recall in name only.
+            let lexical = Self.lexicalOverlap(queryTokens: queryTokens, content: fact.content)
             let recencyBoost = Self.recencyScore(for: fact.lastConfirmedAt)
-            let score = similarity * 0.6 + fact.confidence * 0.3 + recencyBoost * 0.1
+            let score = similarity * 0.5
+                + lexical * 0.30
+                + fact.confidence * 0.15
+                + recencyBoost * 0.05
             scored.append((fact, score))
         }
-        return scored.sorted { $0.score > $1.score }.prefix(limit).map { $0.snapshot }
+        let selected = scored.sorted { $0.score > $1.score }.prefix(limit).map { $0.snapshot }
+
+        // Mark the chosen facts referenced so `lastReferencedAt` reflects
+        // real use. Previously `markReferenced` had NO production caller, so a
+        // fact recalled every day looked identically "never used" to one
+        // never recalled — breaking re-surfacing / stale-pruning logic.
+        // Fire-and-forget so this bookkeeping never adds latency to the reply.
+        let chosenIDs = selected.map(\.id)
+        Task { for id in chosenIDs { await SemanticStore.shared.markReferenced(id) } }
+
+        return selected
     }
 
     private func fetchEpisodes(
+        query: String,
         queryEmbedding: [Double]?,
         limit: Int
     ) async -> [EpisodicEntrySnapshot] {
         let candidates = await EpisodicStore.shared.recentEntries(limit: limit * 4)
+        guard !candidates.isEmpty else { return [] }
 
-        guard let qEmb = queryEmbedding else {
-            return Array(candidates.prefix(limit))
-        }
+        let queryTokens = CaptainCognitiveTextAnalyzer.tokens(from: query)
 
         var scored: [(snapshot: EpisodicEntrySnapshot, score: Double)] = []
         for ep in candidates {
             var similarity = 0.0
-            if let epEmb = await EmbeddingIndex.shared.embed(ep.userMessage) {
+            if let qEmb = queryEmbedding,
+               let epEmb = await EmbeddingIndex.shared.embed(ep.userMessage) {
                 similarity = EmbeddingIndex.cosine(qEmb, epEmb)
             }
+            // Lexical floor — see fetchFacts. Keeps episode recall alive when
+            // on-device embeddings are unavailable or cross-lingual.
+            let lexical = Self.lexicalOverlap(queryTokens: queryTokens, content: ep.userMessage)
             let recencyBoost = Self.recencyScore(for: ep.timestamp)
-            let score = similarity * 0.5 + recencyBoost * 0.3 + ep.salienceScore * 0.2
+            let score = similarity * 0.4
+                + lexical * 0.25
+                + recencyBoost * 0.2
+                + ep.salienceScore * 0.15
             scored.append((ep, score))
         }
         return scored.sorted { $0.score > $1.score }.prefix(limit).map { $0.snapshot }
@@ -131,6 +166,20 @@ actor MemoryRetriever {
     ) async -> [RelationshipSnapshot] {
         let mentioned = await RelationshipStore.shared.recentlyMentioned(in: query, within: 90)
         return Array(mentioned.prefix(limit))
+    }
+
+    /// Fraction of query tokens that also appear in the candidate content
+    /// (0...1). Uses the same tokenizer/stopwords as the lexical ranker so
+    /// Arabic↔Arabic recall stays consistent app-wide.
+    private nonisolated static func lexicalOverlap(
+        queryTokens: Set<String>,
+        content: String
+    ) -> Double {
+        guard !queryTokens.isEmpty else { return 0 }
+        let contentTokens = CaptainCognitiveTextAnalyzer.tokens(from: content)
+        guard !contentTokens.isEmpty else { return 0 }
+        let overlap = queryTokens.intersection(contentTokens).count
+        return Double(overlap) / Double(queryTokens.count)
     }
 
     /// Exponential decay with 30-day half-life. Today = 1.0, six months ~ 0.
