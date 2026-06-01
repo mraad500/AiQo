@@ -76,6 +76,14 @@ struct KernelDisableConfirmView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AiQoSpacing.md)
 
+            Text(isArabic
+                 ? "نبض الهدوء عادةً 60–80 نبضة بالدقيقة — لمن يوصل نبضك لهالمدى، AiQo يتأكد إنك مرتاح ومسترخي."
+                 : "A calm pulse is usually 60–80 bpm — when yours settles into that range, AiQo confirms you're relaxed.")
+                .font(AiQoTheme.Typography.caption)
+                .foregroundStyle(AiQoTheme.Colors.accent)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, AiQoSpacing.md)
+
             if let status = statusLine {
                 Text(status).font(AiQoTheme.Typography.caption)
                     .foregroundStyle(statusColor).multilineTextAlignment(.center)
@@ -86,7 +94,18 @@ struct KernelDisableConfirmView: View {
 
             Spacer(minLength: 0)
             commitAndDisableButtons
+            disclaimerFootnote
         }
+    }
+
+    /// Non-medical disclaimer — this is a wellbeing calm-check, never a diagnosis.
+    private var disclaimerFootnote: some View {
+        Text(isArabic
+             ? "فحص هدوء للرفاهية فقط — مو جهاز أو قياس طبي."
+             : "A wellbeing calm-check only — not a medical device or measurement.")
+            .font(.system(.caption2, design: .rounded))
+            .foregroundStyle(AiQoTheme.Colors.textSecondary.opacity(0.8))
+            .multilineTextAlignment(.center)
     }
 
     @ViewBuilder
@@ -159,6 +178,7 @@ struct KernelDisableConfirmView: View {
                 .font(AiQoTheme.Typography.screenTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
 
             VStack(alignment: .leading, spacing: AiQoSpacing.sm) {
+                instructionRow("target", isArabic ? "الهدف: نبض هادي 60–80 نبضة — عشان AiQo يتأكد إنك مرتاح ومسترخي." : "Goal: a calm pulse of 60–80 bpm — so AiQo can confirm you're relaxed.")
                 instructionRow("flashlight.on.fill", isArabic ? "الفلاش راح يشتغل — هذا طبيعي وضروري للقياس." : "The flash turns on — that's normal and needed.")
                 instructionRow("hand.point.up.left.fill", isArabic ? "حُط طرف إصبعك يغطّي الكاميرا الخلفية والفلاش تماماً." : "Cover the back camera and flash fully with a fingertip.")
                 instructionRow("hand.raised.fill", isArabic ? "ثبّت بدون حركة \(Int(pulse.windowSeconds)) ثانية." : "Hold still for \(Int(pulse.windowSeconds)) seconds.")
@@ -167,6 +187,8 @@ struct KernelDisableConfirmView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(AiQoSpacing.md)
             .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.card))
+
+            disclaimerFootnote
 
             Spacer(minLength: 0)
 
