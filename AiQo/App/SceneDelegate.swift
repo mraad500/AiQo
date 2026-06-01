@@ -391,6 +391,14 @@ struct AppRootView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             globalBrain.handleScenePhaseTransition(newPhase)
+            // Kernel re-shield layer (a): on every foreground, re-apply the shield
+            // if an earned access window has expired (decode-safe, gated). Also
+            // verify the bio challenge so opening AiQo completes a met one instantly.
+            if newPhase == .active, FeatureFlags.kernelEnabled {
+                KernelShieldController.shared.reshieldIfNeeded()
+                KernelBioEngine.shared.startIfEnabled()
+                Task { await KernelBioEngine.shared.refresh() }
+            }
         }
         .sheet(isPresented: $aiConsentManager.isPresentingConsentSheet) {
             AIDataConsentView()

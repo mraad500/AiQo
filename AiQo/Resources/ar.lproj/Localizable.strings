@@ -1361,10 +1361,20 @@
 /* Progress Photos */
 "screen.profile.progressPhotos.title" = "صور التقدم";
 "screen.profile.progressPhotos.subtitle" = "تابع تحولك الجسدي";
+"screen.profile.kernel.title" = "النواة";
+"screen.profile.kernel.subtitle" = "اقفل التطبيقات، وافتحها بالحركة";
+"kernel.consent.title" = "النواة";
+"kernel.consent.subtitle" = "اقفل تطبيقاتك، وافتحها بحركتك.";
+"kernel.consent.point.familyControls" = "تستخدم Family Controls لحجب التطبيقات التي تختارها أنت فقط.";
+"kernel.consent.point.health" = "تقرأ خطواتك ونبضك من Health لتفتح بالحركة — تبقى على جهازك.";
+"kernel.consent.point.control" = "أنت تتحكم: فعّل أو أوقف في أي وقت.";
+"kernel.consent.agree" = "موافق، فعّل";
+"kernel.consent.later" = "ليس الآن";
 
 /* Accessibility */
 "tab.home.hint" = "عرض ملخص الصحة اليومي";
 "tab.gym.hint" = "التمارين والتحديات الرياضية";
+"tab.kitchen.hint" = "مسح الثلاجة وخطط الأكل على هدفك";
 "tab.captain.hint" = "تكلم مع كابتن حمّودي";
 "accessibility.steps" = "الخطوات";
 "accessibility.calories" = "السعرات الحرارية";

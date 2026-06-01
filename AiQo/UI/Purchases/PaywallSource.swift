@@ -12,4 +12,5 @@ enum PaywallSource: String {
     case myVibeGate
     case battleGate
     case peaksGate
+    case kernelGate
 }

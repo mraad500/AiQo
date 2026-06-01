@@ -9,7 +9,8 @@ final class MainTabRouter: ObservableObject {
     enum Tab: Int {
         case home = 0
         case gym = 1
-        case captain = 2
+        case kitchen = 2
+        case captain = 3
     }
 
     @Published var selectedTab: Tab = .home
@@ -24,13 +25,9 @@ final class MainTabRouter: ObservableObject {
 
     func openKitchen() {
         AnalyticsService.shared.track(.kitchenOpened)
-
-        if selectedTab != .home {
-            selectedTab = .home
-        }
-
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .openKitchenFromHome, object: nil)
+        // Kitchen is now a top-level tab — switch to it.
+        if selectedTab != .kitchen {
+            selectedTab = .kitchen
         }
     }
 }
@@ -40,6 +37,7 @@ extension MainTabRouter.Tab {
         switch self {
         case .home: return "home"
         case .gym: return "gym"
+        case .kitchen: return "kitchen"
         case .captain: return "captain"
         }
     }

@@ -36,6 +36,7 @@ struct PromptComposer: Sendable {
             layerConversationState(request: request),
             layerCoachingThesis(request: request),
             layerBioState(data: request.contextData, language: request.language),
+            layerKernelStatus(data: request.contextData, language: request.language),
             layerCircadianTone(data: request.contextData, language: request.language),
             layerAppKnowledge(request: request),
             layerScreenContext(request: request),
@@ -44,6 +45,32 @@ struct PromptComposer: Sendable {
         ]
         .filter { !$0.isEmpty }
         .joined(separator: "\n\n")
+    }
+
+    // MARK: - Kernel Status Layer
+
+    /// Kernel (digital-wellbeing app-lock) status. Empty when the user doesn't have
+    /// the feature on — zero prompt overhead. Unlike the masked bio-state layer, the
+    /// Captain MAY reference this naturally when the user asks about النواة — it's
+    /// counts and states only, never app identities.
+    private func layerKernelStatus(data: CaptainContextData, language: AppLanguage) -> String {
+        guard let status = data.kernelStatus, !status.isEmpty else { return "" }
+        let header: String
+        if language == .english {
+            header = """
+            === KERNEL (النواة) STATUS — the user's digital-wellbeing app-lock ===
+            You MAY reference this naturally if the user asks how their Kernel/النواة is
+            going (today's shields, whether it's locked, energy earned). NEVER name or
+            guess which apps are locked — you only know counts.
+            """
+        } else {
+            header = """
+            === حالة النواة (قفل الرفاهية الرقمية مال المستخدم) ===
+            تكدر تشير إلها بشكل طبيعي إذا سأل المستخدم شلون نواته (دروع اليوم، مقفلة لو لا،
+            الطاقة المكتسبة). ممنوع تذكر أو تخمّن أي تطبيقات مقفلة — إنت تعرف الأرقام بس.
+            """
+        }
+        return "\(header)\n\(status)"
     }
 
     // MARK: - Injury Constraints Layer (T5)

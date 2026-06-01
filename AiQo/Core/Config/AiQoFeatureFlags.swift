@@ -103,6 +103,13 @@ enum FeatureFlags {
     @FeatureFlag("TRIBE_SUBSCRIPTION_GATE_ENABLED", default: false)
     static var tribeSubscriptionGateEnabled: Bool
 
+    /// Master switch for the Kernel (النواة) — a digital-wellbeing app lock built
+    /// on Family Controls + DeviceActivity. OFF by default: v1.0.7 ships
+    /// structure + extension wiring only (no shielding/blocking behavior yet).
+    /// When ON, the Max-gated Kernel entry (Profile → AiQo) becomes reachable.
+    @FeatureFlag("KERNEL_ENABLED", default: false)
+    static var kernelEnabled: Bool
+
     // MARK: - Learning Spark (Stage 1) — flag group added 2026-04-19
     //
     // NOTE: The same documentation exists as XML comments in `AiQo/Info.plist`.

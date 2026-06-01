@@ -412,7 +412,7 @@ struct CaptainScreen: View {
 
                 Spacer(minLength: 0)
 
-                VStack(alignment: .trailing, spacing: 1) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.text)

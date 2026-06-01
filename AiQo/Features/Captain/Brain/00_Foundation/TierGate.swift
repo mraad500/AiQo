@@ -29,6 +29,10 @@ final class TierGate: @unchecked Sendable {
         // A "smart Captain" intelligence feature, gated like captainMemory.
         case captainDirectives
 
+        // Kernel (digital-wellbeing app lock via Family Controls). Max+,
+        // mirrored on captainChat. Structure-only in v1.0.7 — no shielding yet.
+        case kernel
+
         // Intelligence Pro exclusives
         case multiWeekPlan(weeks: Int)
         case weeklyInsightsNarrative
@@ -44,6 +48,7 @@ final class TierGate: @unchecked Sendable {
             case .captainMemory:             return "captainMemory"
             case .captainNotifications:      return "captainNotifications"
             case .captainDirectives:         return "captainDirectives"
+            case .kernel:                    return "kernel"
             case .multiWeekPlan(let w):      return "multiWeekPlan(\(w)w)"
             case .weeklyInsightsNarrative:   return "weeklyInsightsNarrative"
             case .monthlyReflection:         return "monthlyReflection"
@@ -100,6 +105,8 @@ final class TierGate: @unchecked Sendable {
         case .basicLifeNotifications:
             return .none
         case .captainChat, .captainMemory, .captainNotifications, .captainDirectives:
+            return .max
+        case .kernel:
             return .max
         case .multiWeekPlan(let weeks):
             return weeks > 1 ? .pro : .max

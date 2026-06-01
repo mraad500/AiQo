@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		20C7D75FCC260353F018F0F0 /* KernelShieldController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74782C402C6E700A25479D3 /* KernelShieldController.swift */; };
+		2D4B68EC8C458BF17F94E15B /* KernelShieldController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74782C402C6E700A25479D3 /* KernelShieldController.swift */; };
+		439902AFE42A293E51303D39 /* KernelSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7EB7462119B8FB3F0D10E17 /* KernelSharedStore.swift */; };
+		6566CD47E7948A8348D5F1CC /* KernelSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7EB7462119B8FB3F0D10E17 /* KernelSharedStore.swift */; };
+		69BD1B6D763A12314999BD82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D49442852613D80B60B1370A /* Foundation.framework */; };
+		6FC4C43BF3702FB99ED27B12 /* AppGroupKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3301B4F0CC60C8FA99110D0D /* AppGroupKeys.swift */; };
 		8025C5282EC26585004DECAA /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8025C5272EC26585004DECAA /* Supabase */; };
 		806715D02F37337700D6EAB4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		806715D12F37337700D6EAB4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
@@ -16,13 +22,39 @@
 		80D9BE9B2F1B936500CDF8DC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		80D9BE9D2F1B936500CDF8DC /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
 		80E88B702F3BE7BC00EA7B74 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 80E88B6F2F3BE7BC00EA7B74 /* SDWebImageSwiftUI */; };
+		8704E549F55FA358252AAFBF /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8266AFEF257EC8CDA51CDFD7 /* ShieldConfigurationExtension.swift */; };
+		A12577C42A7E4D9C04323383 /* KernelShieldConfiguration.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E1F1BDA22BCF922FADB57E25 /* KernelShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A1F000010000000000000001 /* AiQoWatchWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A1F000010000000000000002 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */; };
 		A1F000010000000000000003 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */; };
 		A1F0000A0000000000000002 /* SpotifyiOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A1F0000A0000000000000003 /* SpotifyiOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A69284DD538A67FA2C31DA22 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E941FEA98228C2379C37F9 /* DeviceActivityMonitorExtension.swift */; };
+		AD76B24715D515026B5D8A99 /* KernelShieldController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74782C402C6E700A25479D3 /* KernelShieldController.swift */; };
+		B61FAC384DC7F8BF37E1AABB /* KernelSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7EB7462119B8FB3F0D10E17 /* KernelSharedStore.swift */; };
+		BF353DAFAB6A67A3ABA83AFD /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13EB492D9003E1715DD4E94 /* ShieldActionExtension.swift */; };
+		C0198B7AF373274AF4CBB799 /* AppGroupKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3301B4F0CC60C8FA99110D0D /* AppGroupKeys.swift */; };
+		D575939FEACE87CB19D5D9D6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D49442852613D80B60B1370A /* Foundation.framework */; };
+		E3DA66DAB2EB55FFF338C0A2 /* KernelShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 754D4AB878F123E7168C9941 /* KernelShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EE1CFBAD747A5BE20C60FDE2 /* AppGroupKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3301B4F0CC60C8FA99110D0D /* AppGroupKeys.swift */; };
+		F7B197B3A53573DCC4796427 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D49442852613D80B60B1370A /* Foundation.framework */; };
+		FEBAF1FF35BB3CE73EBAFEB0 /* KernelDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4B71E52302D34A40DD3A7314 /* KernelDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		5453AB1AD6C7019A15992DDB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C14A08C0433E9002B82F3947;
+			remoteInfo = KernelDeviceActivityMonitor;
+		};
+		5B9381BA495AAE389BB0FC36 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E230CAF9AEFA5F9B3EEBA0D6;
+			remoteInfo = KernelShieldConfiguration;
+		};
 		8025C4BF2EC25EB8004DECAA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
@@ -72,6 +104,13 @@
 			remoteGlobalIDString = A1F000010000000000000070;
 			remoteInfo = AiQoWatchWidgetExtension;
 		};
+		BBCF767492753527DCAC0816 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8025C4A92EC25EB7004DECAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0BE5D824CDB33C1487E5EBF2;
+			remoteInfo = KernelShieldAction;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -91,6 +130,9 @@
 			dstSubfolderSpec = 13;
 			files = (
 				806715E22F37337800D6EAB4 /* AiQoWidgetExtension.appex in Embed Foundation Extensions */,
+				FEBAF1FF35BB3CE73EBAFEB0 /* KernelDeviceActivityMonitor.appex in Embed Foundation Extensions */,
+				A12577C42A7E4D9C04323383 /* KernelShieldConfiguration.appex in Embed Foundation Extensions */,
+				E3DA66DAB2EB55FFF338C0A2 /* KernelShieldAction.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -131,6 +173,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0B43EAB9E7E50E18C051597C /* KernelShieldAction.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = KernelShieldAction.entitlements; sourceTree = "<group>"; };
+		20F160D364B19F0A3AD34E16 /* KernelDeviceActivityMonitor.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = KernelDeviceActivityMonitor.entitlements; sourceTree = "<group>"; };
+		2F53504F0BA2A93DCFBC9227 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3301B4F0CC60C8FA99110D0D /* AppGroupKeys.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppGroupKeys.swift; path = AiQo/AppGroupKeys.swift; sourceTree = "<group>"; };
+		4B71E52302D34A40DD3A7314 /* KernelDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KernelDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4F1F454C840403ADE57723C1 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		754D4AB878F123E7168C9941 /* KernelShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KernelShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		77EB9C45E44E23CD5AB5B784 /* KernelShieldConfiguration.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = KernelShieldConfiguration.entitlements; sourceTree = "<group>"; };
 		80235CB42F1A19E200A4983B /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		80235CEC2F1A297A00A4983B /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.2.sdk/System/Library/Frameworks/HealthKit.framework; sourceTree = DEVELOPER_DIR; };
 		80235CEE2F1A2D4800A4983B /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS8.0.sdk/System/Library/Frameworks/HealthKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -147,9 +197,17 @@
 		80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = "Watch Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8266AFEF257EC8CDA51CDFD7 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
+		86E941FEA98228C2379C37F9 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
 		A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiQoWatchWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1F0000A0000000000000003 /* SpotifyiOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpotifyiOS.framework; path = AiQo/Frameworks/SpotifyiOS.framework; sourceTree = SOURCE_ROOT; };
 		A1F0000B0000000000000001 /* Configuration/AiQo.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/AiQo.xcconfig; sourceTree = SOURCE_ROOT; };
+		A5AB5791DFECFE62A1BBB19A /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A7EB7462119B8FB3F0D10E17 /* KernelSharedStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KernelSharedStore.swift; path = AiQo/Features/Kernel/Store/KernelSharedStore.swift; sourceTree = "<group>"; };
+		D49442852613D80B60B1370A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		D74782C402C6E700A25479D3 /* KernelShieldController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KernelShieldController.swift; path = AiQo/Features/Kernel/Store/KernelShieldController.swift; sourceTree = "<group>"; };
+		E1F1BDA22BCF922FADB57E25 /* KernelShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KernelShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F13EB492D9003E1715DD4E94 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -236,6 +294,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7DE3E4F349D1E5F107663021 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D575939FEACE87CB19D5D9D6 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8025C4AE2EC25EB7004DECAA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -308,9 +374,55 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BC248A550D665DA41687057B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F7B197B3A53573DCC4796427 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BED1C05875AF2C8D6D36E5CE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69BD1B6D763A12314999BD82 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		336AE51789C404D5766A3ECB /* KernelShieldAction */ = {
+			isa = PBXGroup;
+			children = (
+				F13EB492D9003E1715DD4E94 /* ShieldActionExtension.swift */,
+				4F1F454C840403ADE57723C1 /* Info.plist */,
+				0B43EAB9E7E50E18C051597C /* KernelShieldAction.entitlements */,
+			);
+			path = KernelShieldAction;
+			sourceTree = "<group>";
+		};
+		3BDA359B9E59696AD0493BBA /* KernelDeviceActivityMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				86E941FEA98228C2379C37F9 /* DeviceActivityMonitorExtension.swift */,
+				2F53504F0BA2A93DCFBC9227 /* Info.plist */,
+				20F160D364B19F0A3AD34E16 /* KernelDeviceActivityMonitor.entitlements */,
+			);
+			path = KernelDeviceActivityMonitor;
+			sourceTree = "<group>";
+		};
+		79794FC4049509D4D2B0041A /* KernelShieldConfiguration */ = {
+			isa = PBXGroup;
+			children = (
+				8266AFEF257EC8CDA51CDFD7 /* ShieldConfigurationExtension.swift */,
+				A5AB5791DFECFE62A1BBB19A /* Info.plist */,
+				77EB9C45E44E23CD5AB5B784 /* KernelShieldConfiguration.entitlements */,
+			);
+			path = KernelShieldConfiguration;
+			sourceTree = "<group>";
+		};
 		80235CB52F1A19E200A4983B /* LICENSE */ = {
 			isa = PBXGroup;
 			children = (
@@ -336,6 +448,12 @@
 				80B1F64D2EEFDB41009A810C /* Frameworks */,
 				8025C4B22EC25EB7004DECAA /* Products */,
 				80D459992F1A381A00273328 /* Recovered References */,
+				3301B4F0CC60C8FA99110D0D /* AppGroupKeys.swift */,
+				A7EB7462119B8FB3F0D10E17 /* KernelSharedStore.swift */,
+				3BDA359B9E59696AD0493BBA /* KernelDeviceActivityMonitor */,
+				79794FC4049509D4D2B0041A /* KernelShieldConfiguration */,
+				336AE51789C404D5766A3ECB /* KernelShieldAction */,
+				D74782C402C6E700A25479D3 /* KernelShieldController.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -351,6 +469,9 @@
 				806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */,
 				A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */,
 				80E886E82F39140900EA7B74 /* Watch Widget Extension.appex */,
+				4B71E52302D34A40DD3A7314 /* KernelDeviceActivityMonitor.appex */,
+				E1F1BDA22BCF922FADB57E25 /* KernelShieldConfiguration.appex */,
+				754D4AB878F123E7168C9941 /* KernelShieldAction.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -365,6 +486,7 @@
 				80D9BE9A2F1B936500CDF8DC /* WidgetKit.framework */,
 				80D9BE9C2F1B936500CDF8DC /* SwiftUI.framework */,
 				806715D22F37337700D6EAB4 /* AiQoWidget */,
+				ACEECA1DAC690EF57944FA6A /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -377,9 +499,34 @@
 			name = "Recovered References";
 			sourceTree = "<group>";
 		};
+		ACEECA1DAC690EF57944FA6A /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D49442852613D80B60B1370A /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0BE5D824CDB33C1487E5EBF2 /* KernelShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5285B101B658D82D2A6BD684 /* Build configuration list for PBXNativeTarget "KernelShieldAction" */;
+			buildPhases = (
+				4E67996DBCF3C787056B66F9 /* Sources */,
+				BED1C05875AF2C8D6D36E5CE /* Frameworks */,
+				3A51FAD8BA261E803B40051E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KernelShieldAction;
+			productName = KernelShieldAction;
+			productReference = 754D4AB878F123E7168C9941 /* KernelShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		8025C4B02EC25EB7004DECAA /* AiQo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8025C4D22EC25EB8004DECAA /* Build configuration list for PBXNativeTarget "AiQo" */;
@@ -398,6 +545,9 @@
 			dependencies = (
 				80D9BD9D2F1A7E0400CDF8DC /* PBXTargetDependency */,
 				806715E12F37337800D6EAB4 /* PBXTargetDependency */,
+				FCF20A89C68DFD23728B4A12 /* PBXTargetDependency */,
+				F0F91CEB2FC8B8C88F46F216 /* PBXTargetDependency */,
+				732CB78E791134FFBB12EFF5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8025C4B32EC25EB7004DECAA /* AiQo */,
@@ -428,8 +578,6 @@
 				8025C4C12EC25EB8004DECAA /* AiQoTests */,
 			);
 			name = AiQoTests;
-			packageProductDependencies = (
-			);
 			productName = AiQoTests;
 			productReference = 8025C4BE2EC25EB8004DECAA /* AiQoTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -451,8 +599,6 @@
 				8025C4CB2EC25EB8004DECAA /* AiQoUITests */,
 			);
 			name = AiQoUITests;
-			packageProductDependencies = (
-			);
 			productName = AiQoUITests;
 			productReference = 8025C4C82EC25EB8004DECAA /* AiQoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -473,8 +619,6 @@
 				806715D22F37337700D6EAB4 /* AiQoWidget */,
 			);
 			name = AiQoWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = AiQoWidgetExtension;
 			productReference = 806715CF2F37337700D6EAB4 /* AiQoWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -497,8 +641,6 @@
 				80D9BD7F2F1A7E0300CDF8DC /* AiQoWatch Watch App */,
 			);
 			name = "AiQoWatch Watch App";
-			packageProductDependencies = (
-			);
 			productName = "AiQoWatch Watch App";
 			productReference = 80D9BD7E2F1A7E0300CDF8DC /* AiQoWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
@@ -520,8 +662,6 @@
 				80D9BD8D2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests */,
 			);
 			name = "AiQoWatch Watch AppTests";
-			packageProductDependencies = (
-			);
 			productName = "AiQoWatch Watch AppTests";
 			productReference = 80D9BD8A2F1A7E0400CDF8DC /* AiQoWatch Watch AppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -543,8 +683,6 @@
 				80D9BD972F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests */,
 			);
 			name = "AiQoWatch Watch AppUITests";
-			packageProductDependencies = (
-			);
 			productName = "AiQoWatch Watch AppUITests";
 			productReference = 80D9BD942F1A7E0400CDF8DC /* AiQoWatch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -562,8 +700,6 @@
 			dependencies = (
 			);
 			name = AiQoWorkoutLiveAttributesExtension;
-			packageProductDependencies = (
-			);
 			productName = AiQoWorkoutLiveAttributesExtension;
 			productReference = 80D9BE992F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -603,10 +739,42 @@
 				A1F000010000000000000050 /* AiQoWatchWidget */,
 			);
 			name = AiQoWatchWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = AiQoWatchWidgetExtension;
 			productReference = A1F000010000000000000030 /* AiQoWatchWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C14A08C0433E9002B82F3947 /* KernelDeviceActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5BD2102C1FFF6B042020B1DE /* Build configuration list for PBXNativeTarget "KernelDeviceActivityMonitor" */;
+			buildPhases = (
+				08365AB099B6BE5B252760D0 /* Sources */,
+				BC248A550D665DA41687057B /* Frameworks */,
+				D0B3B5AB11CC50360B89D013 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KernelDeviceActivityMonitor;
+			productName = KernelDeviceActivityMonitor;
+			productReference = 4B71E52302D34A40DD3A7314 /* KernelDeviceActivityMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E230CAF9AEFA5F9B3EEBA0D6 /* KernelShieldConfiguration */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 05FD797EF389E56FA1D33AE7 /* Build configuration list for PBXNativeTarget "KernelShieldConfiguration" */;
+			buildPhases = (
+				83CC71DE225D9B38492A7AA7 /* Sources */,
+				7DE3E4F349D1E5F107663021 /* Frameworks */,
+				94E7704F9C4E6F0F034FA279 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KernelShieldConfiguration;
+			productName = KernelShieldConfiguration;
+			productReference = E1F1BDA22BCF922FADB57E25 /* KernelShieldConfiguration.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -684,11 +852,21 @@
 				80D9BE982F1B936500CDF8DC /* AiQoWorkoutLiveAttributesExtension */,
 				806715CE2F37337700D6EAB4 /* AiQoWidgetExtension */,
 				80E886E72F39140900EA7B74 /* Watch Widget Extension */,
+				C14A08C0433E9002B82F3947 /* KernelDeviceActivityMonitor */,
+				E230CAF9AEFA5F9B3EEBA0D6 /* KernelShieldConfiguration */,
+				0BE5D824CDB33C1487E5EBF2 /* KernelShieldAction */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		3A51FAD8BA261E803B40051E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8025C4AF2EC25EB7004DECAA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -752,7 +930,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		94E7704F9C4E6F0F034FA279 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A1F000010000000000000061 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0B3B5AB11CC50360B89D013 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -786,6 +978,28 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		08365AB099B6BE5B252760D0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A69284DD538A67FA2C31DA22 /* DeviceActivityMonitorExtension.swift in Sources */,
+				C0198B7AF373274AF4CBB799 /* AppGroupKeys.swift in Sources */,
+				B61FAC384DC7F8BF37E1AABB /* KernelSharedStore.swift in Sources */,
+				AD76B24715D515026B5D8A99 /* KernelShieldController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4E67996DBCF3C787056B66F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF353DAFAB6A67A3ABA83AFD /* ShieldActionExtension.swift in Sources */,
+				EE1CFBAD747A5BE20C60FDE2 /* AppGroupKeys.swift in Sources */,
+				439902AFE42A293E51303D39 /* KernelSharedStore.swift in Sources */,
+				20C7D75FCC260353F018F0F0 /* KernelShieldController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		80234F602EEF4F7B00F21DCF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -849,6 +1063,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		83CC71DE225D9B38492A7AA7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8704E549F55FA358252AAFBF /* ShieldConfigurationExtension.swift in Sources */,
+				6FC4C43BF3702FB99ED27B12 /* AppGroupKeys.swift in Sources */,
+				6566CD47E7948A8348D5F1CC /* KernelSharedStore.swift in Sources */,
+				2D4B68EC8C458BF17F94E15B /* KernelShieldController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A1F000010000000000000062 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -859,6 +1084,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		732CB78E791134FFBB12EFF5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = KernelShieldAction;
+			target = 0BE5D824CDB33C1487E5EBF2 /* KernelShieldAction */;
+			targetProxy = BBCF767492753527DCAC0816 /* PBXContainerItemProxy */;
+		};
 		8025C4C02EC25EB8004DECAA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8025C4B02EC25EB7004DECAA /* AiQo */;
@@ -894,9 +1125,151 @@
 			target = A1F000010000000000000070 /* AiQoWatchWidgetExtension */;
 			targetProxy = A1F000010000000000000010 /* PBXContainerItemProxy */;
 		};
+		F0F91CEB2FC8B8C88F46F216 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = KernelShieldConfiguration;
+			target = E230CAF9AEFA5F9B3EEBA0D6 /* KernelShieldConfiguration */;
+			targetProxy = 5B9381BA495AAE389BB0FC36 /* PBXContainerItemProxy */;
+		};
+		FCF20A89C68DFD23728B4A12 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = KernelDeviceActivityMonitor;
+			target = C14A08C0433E9002B82F3947 /* KernelDeviceActivityMonitor */;
+			targetProxy = 5453AB1AD6C7019A15992DDB /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		38BDD915DCDA890FD990F54F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelShieldConfiguration/KernelShieldConfiguration.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Shield";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.ShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5172061199650B0B34CB4618 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelDeviceActivityMonitor/KernelDeviceActivityMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Monitor";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.DeviceActivityMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5D86C247E9853B1F286F0402 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelShieldAction/KernelShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelShieldAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Shield Action";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		78F2E7800E80AFD77D208E3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelShieldAction/KernelShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelShieldAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Shield Action";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		8025C4D02EC25EB8004DECAA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1039,7 +1412,7 @@
 				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1068,7 +1441,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				OTHER_LDFLAGS = "$(inherited)";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -1102,7 +1475,7 @@
 				"CAPTAIN_ARABIC_API_URL[sdk=iphonesimulator*]" = "http://localhost:3000/captain-ar";
 				CODE_SIGN_ENTITLEMENTS = AiQo/AiQo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1131,7 +1504,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				OTHER_LDFLAGS = "$(inherited)";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -1159,11 +1532,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1181,11 +1554,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1202,11 +1575,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1223,11 +1596,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = AiQo.AiQoUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1247,7 +1620,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWidget/Info.plist;
@@ -1259,7 +1632,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1279,7 +1652,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = AiQoWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWidget/Info.plist;
@@ -1291,7 +1664,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.AiQoWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1311,7 +1684,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AiQoWatch Watch App/AiQoWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1325,7 +1698,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1348,7 +1721,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AiQoWatch Watch App/AiQoWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1362,7 +1735,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1383,10 +1756,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1406,10 +1779,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1428,10 +1801,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1450,10 +1823,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mohammed.AiQoWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1474,7 +1847,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -1487,7 +1860,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1507,7 +1880,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -1520,7 +1893,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWorkoutLiveAttributes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1539,7 +1912,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
@@ -1551,7 +1924,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1571,7 +1944,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = AiQoWatchWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 65NCBC2455;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiQoWatchWidget/Info.plist;
@@ -1583,7 +1956,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.6;
+				MARKETING_VERSION = 1.0.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.watchkitapp.AiQoWatchWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1598,9 +1971,101 @@
 			};
 			name = Release;
 		};
+		C254A99BFBF65D9893B6F254 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelDeviceActivityMonitor/KernelDeviceActivityMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Monitor";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.DeviceActivityMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C7D46241DD0A7A53569E95B0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = KernelShieldConfiguration/KernelShieldConfiguration.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = 65NCBC2455;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KernelShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kernel Shield";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mraad500.aiqo.ShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		05FD797EF389E56FA1D33AE7 /* Build configuration list for PBXNativeTarget "KernelShieldConfiguration" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38BDD915DCDA890FD990F54F /* Release */,
+				C7D46241DD0A7A53569E95B0 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5285B101B658D82D2A6BD684 /* Build configuration list for PBXNativeTarget "KernelShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				78F2E7800E80AFD77D208E3A /* Release */,
+				5D86C247E9853B1F286F0402 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5BD2102C1FFF6B042020B1DE /* Build configuration list for PBXNativeTarget "KernelDeviceActivityMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C254A99BFBF65D9893B6F254 /* Release */,
+				5172061199650B0B34CB4618 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8025C4AC2EC25EB7004DECAA /* Build configuration list for PBXProject "AiQo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

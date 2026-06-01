@@ -60,8 +60,9 @@ struct HomeView: View {
                     // Metrics Grid
                     metricsGrid
 
-                    // Kitchen Section
-                    kitchenSection
+                    // Kernel — sits in the Kitchen's former Home slot
+                    // (Kitchen now lives in the bottom tab bar).
+                    kernelEntrySection
 
                 }
                 .padding(.top, 6)
@@ -155,6 +156,16 @@ struct HomeView: View {
             .padding(.top, -19)
             .padding(.bottom, 16)
     }
+
+    @ViewBuilder
+    private var kernelEntrySection: some View {
+        if FeatureFlags.kernelEnabled {
+            KernelHomeCard()
+                // Drop it down from the metric cards; ~matches the 36pt row rhythm.
+                .padding(.top, 30)
+                .padding(.bottom, 8)
+        }
+    }
     
     private var metricsGrid: some View {
         let allRows = Array(viewModel.gridRows.enumerated())
@@ -208,20 +219,8 @@ struct HomeView: View {
         .onAppear { appeared = true }
     }
     
-    // MARK: - Kitchen Section
-    
-    private var kitchenSection: some View {
-        VStack(spacing: 0) {
-            KitchenShortcutButton {
-                viewModel.openKitchen()
-            }
-            .offset(y: 9)
-
-            Text(NSLocalizedString("tab.kitchen", comment: "Kitchen title under icon"))
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
-                .padding(.top, -4)
-        }
-    }
+    // Kitchen's Home shortcut moved to the bottom tab bar (see MainTabScreen).
+    // `KitchenShortcutButton` is kept below for reuse.
 
     // MARK: - Destination Views
     
@@ -263,7 +262,7 @@ struct HomeView: View {
 
 // MARK: - Profile Button View (Unified)
 
-private struct HomeKitchenRootView: View {
+struct HomeKitchenRootView: View {
     @State private var viewModel = KitchenViewModel(repository: LocalMealsRepository())
     @StateObject private var kitchenStore = KitchenPersistenceStore()
     @ObservedObject private var entitlementStore = EntitlementStore.shared

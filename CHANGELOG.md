@@ -1,5 +1,46 @@
 # Changelog
 
+## v1.0.7 — 2026-05-31
+
+A full part-by-part quality pass over the whole app: nothing new to learn, just a
+more polished, trustworthy, and consistent AiQo — especially in English.
+
+### Improved
+
+- **English, done right.** Several screens were leaking Arabic text (or, in a few
+  places, raw placeholder labels) when the app was set to English. The **Weekly
+  Report** (title, share menu, score reactions, motivation line), **Progress Photos**
+  (empty state, summary, delete dialog), the **music / "ذوقي" sheet** (~two dozen
+  controls), the **post-workout summary**, the **daily-nutrition VoiceOver label**,
+  and the **language picker** all now read correctly in whichever language you choose.
+- **Notifications speak your language.** Captain Hamoudi's proactive nudges and the
+  daily reminders (water, workout, sleep, streak, weekly report) were always sent in
+  Iraqi Arabic; English users now receive them in English.
+- **Quests you can actually finish.** The camera-form quests required a literally
+  unreachable 100% accuracy at their top tier, which quietly blocked progression
+  through Stages 3–10. The bar is now a demanding-but-attainable 95%.
+- **Honest coaching.** When you teach the Captain a standing instruction it can't yet
+  run automatically in the background, it now says it'll keep it in mind and bring it
+  up in chat — instead of claiming an automatic reminder that never fired.
+- **A richer kitchen.** The built-in meal library grew from 6 to 18 varied meals (no
+  more repeats), and meal names now show proper English.
+- **Fewer dead ends.** Removed three tappable-but-inert "Clarity" cards and a
+  decorative plan filter that did nothing; relabeled a Captain plan button that said
+  "Start Workout" but opened a chat.
+
+### Privacy & compliance
+
+- **Deleting your account is now honest.** If the server can't complete the deletion,
+  the app tells you and keeps you signed in to retry — instead of signing you out and
+  implying your data was erased when it wasn't.
+- **Age screening up front.** The quick health/age setup (which blocks under-18) is now
+  a required step in onboarding rather than something reachable only from Profile.
+
+### Behind the scenes
+
+- Refreshed the test baseline (it had drifted from intentional product changes) and
+  verified the full suite green; clean build verified for submission.
+
 ## v1.0.6 — 2026-05-30
 
 ### New

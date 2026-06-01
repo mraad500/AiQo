@@ -189,6 +189,8 @@
 	<false/>
 	<key>TRIBE_SUBSCRIPTION_GATE_ENABLED</key>
 	<false/>
+	<key>KERNEL_ENABLED</key>
+	<true/>
 	<key>USE_CLOUD_PROXY</key>
 	<string>$(USE_CLOUD_PROXY)</string>
 	<key>USE_CHAT_CLOUD_PROXY</key>

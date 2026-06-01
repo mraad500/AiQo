@@ -54,17 +54,17 @@ struct NutritionSummaryCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             // العنوان + السعرات
             HStack {
                 Label(NSLocalizedString("nutrition.daily", value: "التغذية اليومية", comment: "Daily nutrition"), systemImage: "chart.pie.fill")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textPrimary)
 
                 Spacer()
 
                 Text(String(format: NSLocalizedString("nutrition.calories.progress", value: "%d / %d سعرة", comment: "Calories progress"), totalCalories, calorieGoal))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(NutritionPalette.textSecondary)
             }
 
@@ -98,12 +98,12 @@ struct NutritionSummaryCard: View {
                 )
             }
         }
-        .padding(14)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(NutritionPalette.glassCard)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(NutritionPalette.glassBorder, lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
@@ -149,7 +149,7 @@ struct NutritionSummaryCard: View {
                     .animation(.spring(response: 0.8), value: totalCalories)
             }
         }
-        .frame(height: 8)
+        .frame(height: 6)
     }
 
     // MARK: - Macro Chip
@@ -158,7 +158,7 @@ struct NutritionSummaryCard: View {
         VStack(spacing: 3) {
             HStack(spacing: 3) {
                 Text(String(format: "%.0f", value))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(color)
                 Text(NSLocalizedString("nutrition.gram", value: "غ", comment: "Gram unit"))
                     .font(.system(size: 10, weight: .medium))
@@ -175,7 +175,7 @@ struct NutritionSummaryCard: View {
     private var macroDivider: some View {
         Rectangle()
             .fill(Color.black.opacity(0.06))
-            .frame(width: 1, height: 24)
+            .frame(width: 1, height: 20)
     }
 }
 

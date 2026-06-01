@@ -173,7 +173,7 @@ private extension CaptainChatView {
 
             Spacer()
 
-            VStack(spacing: 2) {
+            VStack(spacing: 5) {
                 Text(isArabicUI ? "كابتن حمودي" : "Captain Hamoudi")
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)

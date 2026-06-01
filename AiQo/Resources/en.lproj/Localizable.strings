@@ -1362,10 +1362,20 @@
 /* Progress Photos */
 "screen.profile.progressPhotos.title" = "Progress Photos";
 "screen.profile.progressPhotos.subtitle" = "Track your body transformation";
+"screen.profile.kernel.title" = "Kernel";
+"screen.profile.kernel.subtitle" = "Lock apps, unlock with movement";
+"kernel.consent.title" = "Kernel";
+"kernel.consent.subtitle" = "Lock your apps, unlock them with movement.";
+"kernel.consent.point.familyControls" = "Uses Family Controls to block only the apps you choose.";
+"kernel.consent.point.health" = "Reads your steps and heart rate from Health to unlock with movement — it stays on your device.";
+"kernel.consent.point.control" = "You're in control: turn it on or off anytime.";
+"kernel.consent.agree" = "Agree & enable";
+"kernel.consent.later" = "Not now";
 
 /* Accessibility */
 "tab.home.hint" = "View daily health summary";
 "tab.gym.hint" = "Workouts and fitness challenges";
+"tab.kitchen.hint" = "Scan your fridge and plan meals for your goal";
 "tab.captain.hint" = "Talk to Captain Hamoudi";
 "accessibility.steps" = "Steps";
 "accessibility.calories" = "Calories burned";

@@ -57,6 +57,18 @@ struct MainTabScreen: View {
             .accessibilityHint(L10n.t("tab.gym.hint"))
 
             NavigationStack {
+                HomeKitchenRootView()
+            }
+            .tag(MainTabRouter.Tab.kitchen)
+            .tabItem {
+                Label(
+                    L10n.t("tab.kitchen"),
+                    systemImage: "fork.knife"
+                )
+            }
+            .accessibilityHint(L10n.t("tab.kitchen.hint"))
+
+            NavigationStack {
                 Group {
                     if DevOverride.unlockAllFeatures || tierGate.canAccess(.captainChat) {
                         CaptainScreen()

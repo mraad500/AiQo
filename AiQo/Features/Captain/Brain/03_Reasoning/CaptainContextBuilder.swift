@@ -97,6 +97,10 @@ struct CaptainContextData: Sendable {
     var messageSentiment: SentimentResult?
     var recentInteractions: String?
 
+    // Kernel (digital-wellbeing app-lock) awareness — a compact, privacy-safe status
+    // line the Captain MAY reference when asked about النواة. Nil when off.
+    var kernelStatus: String?
+
     init(
         steps: Int,
         calories: Int,
@@ -225,6 +229,11 @@ final class CaptainContextBuilder {
             stageTitle: snapshot.stageTitle,
             bioPhase: bioPhase
         )
+
+        // Kernel awareness (independent of Brain V2): a compact, privacy-safe status
+        // line so the Captain can answer "شلون نواتي؟" with real numbers. Nil when
+        // the Kernel feature is off — zero prompt overhead.
+        contextData.kernelStatus = KernelCaptainBridge.contextLine()
 
         // Brain V2: Gate behind feature flag
         if Self.isBrainV2Enabled {

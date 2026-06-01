@@ -2,7 +2,7 @@ import SwiftUI
 
 struct KitchenScreen: View {
     @State private var selectedMeal: Meal?
-    @State private var regenerateFeedbackTrigger = 0
+    @State private var showProfile = false
 
     let viewModel: KitchenViewModel
     @ObservedObject var kitchenStore: KitchenPersistenceStore
@@ -11,30 +11,37 @@ struct KitchenScreen: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                header
-                    .padding(.top, 8)
-                    .padding(.bottom, 16)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .trailing, spacing: 24) {
+                    // كروت الدخول السريع (أعلى الشاشة): الثلاجة + النظام الغذائي
+                    topEntryCards
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .trailing, spacing: 24) {
-                        // ملخص التغذية اليومي
-                        DailyFoodLogView(kitchenStore: kitchenStore)
+                    mealSection(titleKey: "screen.kitchen.breakfast", type: .breakfast)
+                    mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
+                    mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
 
-                        mealSection(titleKey: "screen.kitchen.breakfast", type: .breakfast)
-                        mealSection(titleKey: "screen.kitchen.lunch", type: .lunch)
-                        mealSection(titleKey: "screen.kitchen.dinner", type: .dinner)
-
-                        buttonsSection
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
+                    // ملخص التغذية اليومي — مصغّر وفي أسفل الشاشة
+                    DailyFoodLogView(kitchenStore: kitchenStore)
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topChrome
+                .background {
+                    // Opaque layer so scrolled content can't bleed through the
+                    // header; extends past the safe-area top to cover the
+                    // status-bar gutter, mirroring the Captain screen.
+                    Color(.systemBackground)
+                        .ignoresSafeArea(edges: .top)
+                }
         }
         .task {
             await viewModel.loadMeals()
         }
+        .aiqoProfileSheet(isPresented: $showProfile)
         .sheet(item: $selectedMeal) { meal in
             if #available(iOS 17.0, *) {
                 MealDetailSheet(
@@ -59,25 +66,37 @@ struct KitchenScreen: View {
 }
 
 private extension KitchenScreen {
-    var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("screen.kitchen.title".localized)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundStyle(.primary)
+    // Shared top chrome: title + date on the trailing side and the profile
+    // avatar on the leading side, matching the Captain screen exactly (same
+    // title font size, same profile button size and placement).
+    var topChrome: some View {
+        AiQoScreenTopChrome(
+            horizontalInset: 10,
+            profileVerticalOffset: -2,
+            onProfileTap: { showProfile = true }
+        ) {
+            HStack(alignment: .center, spacing: 8) {
+                Spacer(minLength: 0)
 
-            HStack(spacing: 6) {
-                Text(formattedDate())
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .trailing, spacing: 5) {
+                    Text("screen.kitchen.title".localized)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
 
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(formattedDate())
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+
+                        Image(systemName: "calendar")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .lineLimit(1)
             }
+            .environment(\.layoutDirection, .rightToLeft)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 74)
-        .padding(.horizontal, 24)
     }
 
     func mealSection(titleKey: String, type: MealType) -> some View {
@@ -151,67 +170,68 @@ private extension KitchenScreen {
         }
     }
 
-    var buttonsSection: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 10) {
-                smallEntryLink(
-                    title: "kitchen.mealplan.title".localized,
-                    icon: "fork.knife.circle.fill"
-                ) {
-                    MealPlanView()
-                        .environmentObject(kitchenStore)
-                }
+    // كرتان أعلى المطبخ بلون البيج (نفس بطاقات الشاشة الرئيسية): الثلاجة + النظام الغذائي.
+    // كل كرت يفتح شاشته: الثلاجة ← الثلاجة التفاعلية، النظام الغذائي ← إنشاء خطة وية الكابتن.
+    var topEntryCards: some View {
+        HStack(spacing: 14) {
+            kitchenEntryCard(
+                titleKey: "kitchen.fridge.title",
+                systemImage: "refrigerator.fill"
+            ) {
+                InteractiveFridgeView()
+                    .environmentObject(kitchenStore)
             }
 
-            NavigationLink {
-                KitchenSceneView()
+            kitchenEntryCard(
+                titleKey: "kitchen.mealplan.title",
+                systemImage: "fork.knife.circle.fill"
+            ) {
+                MealPlanView()
                     .environmentObject(kitchenStore)
-            } label: {
-                Text("screen.kitchen.regenerate".localized)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 48)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color.kitchenMint)
-                    )
             }
-            .frame(maxWidth: 320)
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    regenerateFeedbackTrigger += 1
-                }
-            )
-            .sensoryFeedback(.selection, trigger: regenerateFeedbackTrigger)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 16)
     }
 
-    func smallEntryLink<Destination: View>(
-        title: String,
-        icon: String,
+    func kitchenEntryCard<Destination: View>(
+        titleKey: String,
+        systemImage: String,
         @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
         NavigationLink(destination: destination) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+            VStack(alignment: .leading, spacing: 0) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.45))
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color.white.opacity(0.5)))
+
+                Spacer(minLength: 12)
+
+                Text(titleKey.localized)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.black.opacity(0.85))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(.black)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.aiqoSand)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.aiqoSand, Color.aiqoSand.opacity(0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(
+                        color: Color(red: 0.85, green: 0.70, blue: 0.45).opacity(0.35),
+                        radius: 12, x: 0, y: 6
+                    )
             )
         }
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private static let headerDateFormatter: DateFormatter = {
