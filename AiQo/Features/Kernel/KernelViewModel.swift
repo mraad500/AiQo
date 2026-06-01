@@ -48,6 +48,13 @@ final class KernelViewModel: ObservableObject {
     /// Kernel charge level (0...1) — grows when the user completes a challenge.
     var chargeLevel: Double { store.load().chargeLevel }
 
+    /// Step target for the active shield — shown on the big unlock card. Falls back
+    /// to the escalation base for the current shield if the challenge isn't resolved yet.
+    var lockedStepTarget: Int {
+        if let challenge = store.load().activeChallenge { return challenge.stepTarget }
+        return KernelEscalation.baseSteps(forShield: max(1, store.triggeredTodayCount()))
+    }
+
     /// Minutes remaining in the current earned access session, if any.
     var activeSessionRemainingMinutes: Int? {
         let s = store.load()

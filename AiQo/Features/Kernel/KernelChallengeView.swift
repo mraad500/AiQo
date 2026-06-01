@@ -37,6 +37,7 @@ struct KernelChallengeView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .environment(\.layoutDirection, .rightToLeft)
+        .kernelNeonFrame(active: model.isLocked)
         .onAppear { model.refreshChallenge() }
         .onChange(of: model.isLocked) { wasLocked, isLocked in
             if wasLocked && !isLocked { celebrateUnlock() }

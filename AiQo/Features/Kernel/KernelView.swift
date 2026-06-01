@@ -13,6 +13,8 @@ struct KernelView: View {
     @State private var showChallenge = false
     @State private var showDisableConfirm = false
 
+    private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -29,6 +31,8 @@ struct KernelView: View {
                     .padding(AiQoSpacing.lg)
                 }
             }
+            // "Shield is down" mode — the whole screen takes on the neon identity.
+            .kernelNeonFrame(active: model.isLocked && model.gateState == .ready)
             .navigationTitle("النواة")
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.layoutDirection, .rightToLeft)
@@ -47,15 +51,7 @@ struct KernelView: View {
             .sheet(isPresented: $showConsent) {
                 KernelConsentView(onAgree: { Task { await model.requestAuthorization() } })
             }
-            .onAppear {
-                model.onAppear()
-                showChallenge = (model.gateState == .ready && model.isLocked)
-            }
-            // Auto-present on a new lock; auto-dismiss when unlocked. The user can
-            // also close it manually (it won't snap back — `showChallenge` is real state).
-            .onChange(of: model.isLocked) { _, locked in
-                showChallenge = (locked && model.gateState == .ready)
-            }
+            .onAppear { model.onAppear() }
         }
     }
 
@@ -63,6 +59,14 @@ struct KernelView: View {
 
     private var hubContent: some View {
         VStack(spacing: AiQoSpacing.lg) {
+            // Shield active → the big shield card leads; tapping it opens the
+            // challenge. This is the reliable, always-present way in (no auto-pop).
+            if model.isLocked {
+                KernelUnlockShieldCard(stepTarget: model.lockedStepTarget, isArabic: isAr) {
+                    showChallenge = true
+                }
+                .padding(.top, AiQoSpacing.sm)
+            }
             heroChargeRing
             protectionControls
             editAppsButton
