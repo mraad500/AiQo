@@ -37,6 +37,10 @@ enum KernelCaptainBridge {
         let energy = UserDefaults.standard.integer(forKey: "aiqo.mining.lastAwardedCoins")
 
         guard state.isProtectionEnabled else {
+            // Only surface an "off" line if the user has actually engaged with the
+            // Kernel (chosen apps) — otherwise stay silent so the vast majority who
+            // never touch it pay zero prompt overhead on every chat turn.
+            guard state.selectionData != nil else { return nil }
             return "state: off (the lock isn't enabled today); energy_today: \(energy)"
         }
 
