@@ -28,6 +28,8 @@ final class CameraPulseMeasurer: NSObject, ObservableObject {
     private var samples: [(t: Double, v: Double)] = []      // touched only on `queue`
     private var startTime: CFTimeInterval = 0
     private var lastEstimate: CFTimeInterval = 0
+    private var started = false          // the window starts only once a finger is detected
+    private var fingerFrames = 0
 
     // MARK: - Control
 
@@ -59,8 +61,9 @@ final class CameraPulseMeasurer: NSObject, ObservableObject {
         queue.async { [weak self] in
             guard let self else { return }
             self.samples.removeAll()
-            self.startTime = CACurrentMediaTime()
-            self.lastEstimate = self.startTime
+            self.started = false
+            self.fingerFrames = 0
+            self.lastEstimate = CACurrentMediaTime()
             guard self.configureIfNeeded() else {
                 self.publish { self.permissionDenied = true }
                 return
@@ -116,10 +119,23 @@ extension CameraPulseMeasurer: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         guard let red = averageRed(pb) else { return }
         let now = CACurrentMediaTime()
-        samples.append((t: now, v: red))
+        let finger = red > 0.5             // finger + flash saturates the red channel high
 
+        // The countdown does NOT run on an empty camera — it starts only once a finger
+        // is steadily covering the lens (a real pulse signal is present).
+        if !started {
+            publish { self.fingerDetected = finger; self.progress = 0 }
+            fingerFrames = finger ? fingerFrames + 1 : 0
+            if fingerFrames >= 5 {         // ~0.15s of steady coverage → begin the window
+                started = true
+                startTime = now
+                samples.removeAll()
+            }
+            return
+        }
+
+        samples.append((t: now, v: red))
         let elapsed = now - startTime
-        let finger = red > 0.45            // finger + flash saturates the red channel high
         var running: Int?
         if elapsed > 5, now - lastEstimate > 0.7 {
             lastEstimate = now
