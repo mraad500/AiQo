@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import CoreMotion
 import Combine
 import os
 
@@ -48,6 +49,13 @@ final class KernelBioEngine: ObservableObject {
     private var observerQuery: HKObserverQuery?
     private var sedentarySince: Date?
     private var isStarted = false
+
+    // Real-time live step counting for the in-app trainer. HealthKit step writes lag
+    // by tens of seconds, so the ring would sit at 0 while the user walks — CMPedometer
+    // is instant. Active only while the trainer is on screen; the background path keeps
+    // using HealthKit (Core Motion needs the app foregrounded).
+    private let pedometer = CMPedometer()
+    private(set) var liveStepsActive = false
 
     private init() {}
 
@@ -115,6 +123,7 @@ final class KernelBioEngine: ObservableObject {
         guard let challenge = current.activeChallenge,
               let baseline = current.unlockBaselineAt else { return }
         if case let .steps(target) = challenge.kind {
+            guard !liveStepsActive else { return }   // CMPedometer owns the live count during a trainer session
             let walked = await stepsSince(baseline)
             stepsSinceBlock = walked
             if walked >= target {
@@ -124,6 +133,35 @@ final class KernelBioEngine: ObservableObject {
     }
 
     // MARK: - Live trainer session (in-app, tight polling)
+
+    /// Begin REAL-TIME live step counting via Core Motion for the in-app trainer.
+    /// Counts from now (the moment the user presses "ابدأ التحدي"), updates
+    /// `stepsSinceBlock` instantly as they walk, and auto-unlocks at the target —
+    /// fixing the HealthKit lag that left the ring at 0. No fabricated data: these are
+    /// real device pedometer steps.
+    func startLiveSteps() {
+        guard CMPedometer.isStepCountingAvailable() else { return }
+        liveStepsActive = true
+        stepsSinceBlock = 0
+        pedometer.startUpdates(from: Date()) { [weak self] data, _ in
+            guard let data else { return }
+            let steps = data.numberOfSteps.intValue
+            Task { @MainActor in
+                guard let self, self.liveStepsActive else { return }
+                let state = self.store.load()
+                guard state.isLocked, let challenge = state.activeChallenge,
+                      case let .steps(target) = challenge.kind else { return }
+                self.stepsSinceBlock = steps
+                if steps >= target { self.completeChallengeUnlock(challenge) }
+            }
+        }
+    }
+
+    func stopLiveSteps() {
+        guard liveStepsActive else { return }
+        liveStepsActive = false
+        pedometer.stopUpdates()
+    }
 
     /// Lightweight live refresh for the in-app Captain trainer: reads ONLY real
     /// steps-since-block (no full doomscroll recompute) and auto-completes when the

@@ -148,9 +148,8 @@ struct KernelChallengeView: View {
         VStack(spacing: AiQoSpacing.lg) {
             // The CAPTAIN himself leads the "enough for today" moment — big photo.
             VStack(spacing: AiQoSpacing.sm) {
-                Image("Hammoudi5").resizable().scaledToFill()
-                    .frame(width: 116, height: 116).clipShape(Circle())
-                    .overlay(Circle().stroke(AiQoColors.mintSoft, lineWidth: 3))
+                Image("Hammoudi5").resizable().scaledToFit()
+                    .frame(height: 150)
                 Text(KernelCaptainBridge.enoughForTodayLead(language: language))
                     .font(AiQoTheme.Typography.sectionTitle)
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -192,9 +191,8 @@ struct KernelChallengeView: View {
 
     private var celebrationOverlay: some View {
         VStack(spacing: AiQoSpacing.md) {
-            Image("Hammoudi5").resizable().scaledToFill()
-                .frame(width: 116, height: 116).clipShape(Circle())
-                .overlay(Circle().stroke(AiQoTheme.Colors.accent, lineWidth: 3))
+            Image("Hammoudi5").resizable().scaledToFit()
+                .frame(height: 150)
             Text(celebrationLine.isEmpty ? (isAr ? "انفتح! نواتك اتشحنت 🔋" : "Open! kernel charged 🔋") : celebrationLine)
                 .font(AiQoTheme.Typography.cardTitle)
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -260,7 +258,10 @@ private struct CaptainTrainerSession: View {
             guard started else { return }
             Task { await onTick() }
         }
-        .onDisappear { endWorkoutIfNeeded() }
+        .onDisappear {
+            bio.stopLiveSteps()
+            endWorkoutIfNeeded()
+        }
     }
 
     /// BIG Captain photo (the trainer is "in the room" with you) + his current
@@ -269,10 +270,9 @@ private struct CaptainTrainerSession: View {
     private var captainHeader: some View {
         VStack(spacing: AiQoSpacing.sm) {
             if showHeader {
-                Image("Hammoudi5").resizable().scaledToFill()
-                    .frame(width: 150, height: 150).clipShape(Circle())
-                    .overlay(Circle().stroke(AiQoTheme.Colors.accent.opacity(0.5), lineWidth: 3))
-                    .shadow(color: AiQoTheme.Colors.accent.opacity(0.22), radius: 14, y: 5)
+                // Full figure — NOT clipped to a circle (which cut off his head).
+                Image("Hammoudi5").resizable().scaledToFit()
+                    .frame(height: 220).frame(maxWidth: .infinity)
             }
             Text(bubble)
                 .font(showHeader ? AiQoTheme.Typography.cardTitle : AiQoTheme.Typography.caption)
@@ -333,21 +333,23 @@ private struct CaptainTrainerSession: View {
         elapsed = 0
         lastMilestone = KernelCaptainBridge.Milestone.start.rawValue
         bubble = KernelCaptainBridge.encouragement(.start, language: language)   // text only — no voice
-        // Start a REAL workout session on the paired Apple Watch (live HR streamed
-        // back + logged to Health). No watch → the challenge still runs phone-only
-        // (real steps + periodic sample), so the unlock path is unaffected.
+        bio.startLiveSteps()   // real-time CMPedometer steps + auto-unlock at target
+        // Also start a REAL workout session on the paired Apple Watch (live HR streamed
+        // back + logged to Health). No watch → the challenge still runs phone-only, so
+        // the step/unlock path is unaffected.
         if connectivity.canStartWorkoutFromPhone {
             connectivity.launchWatchAppForWorkout(activityType: .walking, locationType: .unknown)
             startedWorkout = true
         }
-        Task { await model.liveTick(); await bio.refreshLiveHeartRate() }
+        Task { await bio.refreshLiveHeartRate() }
     }
 
     @MainActor
     private func onTick() async {
         elapsed += 1
-        if elapsed % 2 == 0 { await model.liveTick() }                              // real steps + state sync
-        if elapsed % 4 == 0, !hrFromWatch { await bio.refreshLiveHeartRate() }      // phone HR only when no Watch stream
+        // Steps stream in real time from CMPedometer (startLiveSteps) — here we only
+        // advance the clock, refresh phone HR when there's no Watch stream, and the bubble.
+        if elapsed % 4 == 0, !hrFromWatch { await bio.refreshLiveHeartRate() }
         updateMilestoneBubble()
     }
 

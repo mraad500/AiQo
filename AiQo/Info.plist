@@ -129,6 +129,8 @@
 	<string>AiQo uses alarm access to save your smart wake time as an alarm on your device.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>During an Outdoor Running workout, AiQo uses your location to map your route and measure distance, pace and elevation. Tracking continues in the background with the screen locked until you end the run. Your location stays on your device.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>AiQo uses motion and fitness data to count your steps live as you move — for example, during a Kernel unlock challenge and your workouts. This stays on your device.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
