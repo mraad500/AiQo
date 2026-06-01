@@ -1,9 +1,19 @@
 # Changelog
 
-## v1.0.7 — 2026-05-31
+## v1.0.7 — 2026-06-01
 
-A full part-by-part quality pass over the whole app: nothing new to learn, just a
-more polished, trustworthy, and consistent AiQo — especially in English.
+A polished, more trustworthy AiQo — and one big new thing: **النواة (Kernel)**, a
+digital-wellbeing app-lock you open with your body.
+
+### New
+
+- **النواة (Kernel) — guard your focus with movement.** Pick the apps that pull you
+  in and AiQo shields them; to open one, you move — real steps (from Health) lift the
+  shield. Each shield gets a little harder so the doomscroll loop breaks instead of
+  feeds, but it always stays physically possible. Captain Hamoudi coaches you live
+  through every challenge. It's all on your terms: turn protection off whenever you
+  want (after a short, deliberate pause to keep it meaningful), and your blocked-app
+  choices never leave your device. Part of AiQo Max.
 
 ### Improved
 
