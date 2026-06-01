@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import UIKit
+import HealthKit
 
 /// The in-app challenge / unlock screen. Live HealthKit-derived data is allowed
 /// HERE (never inside the shield). Presented by the Kernel hub (`KernelView`)
@@ -145,15 +146,15 @@ struct KernelChallengeView: View {
     /// daily-limit / once-a-day 500-step emergency card.
     private func enoughForTodayCard(_ challenge: UnlockChallenge) -> some View {
         VStack(spacing: AiQoSpacing.lg) {
-            // The CAPTAIN himself leads the "enough for today" moment.
-            HStack(alignment: .top, spacing: AiQoSpacing.sm) {
+            // The CAPTAIN himself leads the "enough for today" moment — big photo.
+            VStack(spacing: AiQoSpacing.sm) {
                 Image("Hammoudi5").resizable().scaledToFill()
-                    .frame(width: 60, height: 60).clipShape(Circle())
-                    .overlay(Circle().stroke(AiQoColors.mintSoft, lineWidth: 2))
+                    .frame(width: 116, height: 116).clipShape(Circle())
+                    .overlay(Circle().stroke(AiQoColors.mintSoft, lineWidth: 3))
                 Text(KernelCaptainBridge.enoughForTodayLead(language: language))
                     .font(AiQoTheme.Typography.sectionTitle)
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
 
@@ -174,10 +175,9 @@ struct KernelChallengeView: View {
         .kernelCard()
     }
 
-    /// The one-moment celebration: the Captain congratulates (photo + line), gives an
-    /// honest "next is harder" heads-up read live from `KernelEscalation`, speaks ONE
-    /// local line, then the screen auto-dismisses. (This single moment is allowed to
-    /// use voice — it's outside the tight encouragement loop.)
+    /// The one-moment celebration: the Captain congratulates (big photo + line) and
+    /// gives an honest "next is harder" heads-up read live from `KernelEscalation`,
+    /// then the screen auto-dismisses. Silent — no voice (text + haptic only).
     private func celebrateUnlock() {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         celebrationLine = KernelCaptainBridge.celebrationLine(language: language)
@@ -187,15 +187,14 @@ struct KernelChallengeView: View {
             : KernelCaptainBridge.nextShieldHint(
                 nextSteps: KernelEscalation.baseSteps(forShield: nextShield), language: language)
         withAnimation { showCelebration = true }
-        Task { await CaptainVoiceRouter.shared.speak(text: celebrationLine, tier: .realtime) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { dismiss() }
     }
 
     private var celebrationOverlay: some View {
         VStack(spacing: AiQoSpacing.md) {
             Image("Hammoudi5").resizable().scaledToFill()
-                .frame(width: 66, height: 66).clipShape(Circle())
-                .overlay(Circle().stroke(AiQoTheme.Colors.accent, lineWidth: 2))
+                .frame(width: 116, height: 116).clipShape(Circle())
+                .overlay(Circle().stroke(AiQoTheme.Colors.accent, lineWidth: 3))
             Text(celebrationLine.isEmpty ? (isAr ? "انفتح! نواتك اتشحنت 🔋" : "Open! kernel charged 🔋") : celebrationLine)
                 .font(AiQoTheme.Typography.cardTitle)
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -224,10 +223,14 @@ struct KernelChallengeView: View {
 private struct CaptainTrainerSession: View {
     @ObservedObject var model: KernelViewModel
     @ObservedObject var bio: KernelBioEngine
+    /// Live phone↔watch link — used to start a REAL mirrored workout session and
+    /// read the watch's live heart rate. Carries no voice/coaching of its own.
+    @ObservedObject private var connectivity = PhoneConnectivityManager.shared
     let challenge: UnlockChallenge
     var showHeader: Bool = true
 
     @State private var started = false
+    @State private var startedWorkout = false
     @State private var elapsed = 0
     @State private var lastMilestone = -1
     @State private var bubble = ""
@@ -236,6 +239,14 @@ private struct CaptainTrainerSession: View {
     private var language: AppLanguage { AppSettingsStore.shared.appLanguage }
     private var isAr: Bool { language == .arabic }
     private var target: Int { challenge.stepTarget }
+
+    /// Live heart rate — preferring the real watch-workout stream, then a recent
+    /// phone sample, else nil (honest "unavailable" — never a fabricated number).
+    private var liveBPM: Int? {
+        if connectivity.currentHeartRate > 0 { return Int(connectivity.currentHeartRate.rounded()) }
+        return bio.latestBPM
+    }
+    private var hrFromWatch: Bool { connectivity.currentHeartRate > 0 }
 
     var body: some View {
         VStack(spacing: AiQoSpacing.md) {
@@ -249,23 +260,27 @@ private struct CaptainTrainerSession: View {
             guard started else { return }
             Task { await onTick() }
         }
+        .onDisappear { endWorkoutIfNeeded() }
     }
 
-    /// Captain photo (omitted when `showHeader == false`, e.g. embedded under the
-    /// "enough for today" lead) + his current speech bubble.
+    /// BIG Captain photo (the trainer is "in the room" with you) + his current
+    /// message bubble. Photo omitted when `showHeader == false` (embedded under the
+    /// "enough for today" lead, which shows its own big photo).
     private var captainHeader: some View {
-        HStack(alignment: .top, spacing: AiQoSpacing.sm) {
+        VStack(spacing: AiQoSpacing.sm) {
             if showHeader {
                 Image("Hammoudi5").resizable().scaledToFill()
-                    .frame(width: 54, height: 54).clipShape(Circle())
-                    .overlay(Circle().stroke(AiQoTheme.Colors.accent.opacity(0.4), lineWidth: 2))
+                    .frame(width: 150, height: 150).clipShape(Circle())
+                    .overlay(Circle().stroke(AiQoTheme.Colors.accent.opacity(0.5), lineWidth: 3))
+                    .shadow(color: AiQoTheme.Colors.accent.opacity(0.22), radius: 14, y: 5)
             }
             Text(bubble)
-                .font(showHeader ? AiQoTheme.Typography.body : AiQoTheme.Typography.caption)
+                .font(showHeader ? AiQoTheme.Typography.cardTitle : AiQoTheme.Typography.caption)
                 .foregroundStyle(showHeader ? AiQoTheme.Colors.textPrimary : AiQoTheme.Colors.textSecondary)
-                .padding(.horizontal, AiQoSpacing.sm).padding(.vertical, AiQoSpacing.xs)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, AiQoSpacing.md).padding(.vertical, AiQoSpacing.sm)
+                .frame(maxWidth: .infinity)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-                .frame(maxWidth: .infinity, alignment: showHeader ? .leading : .center)
         }
     }
 
@@ -292,14 +307,18 @@ private struct CaptainTrainerSession: View {
         }
     }
 
-    /// Honest heart-rate row — real sample or a truthful "unavailable" line. Never a
-    /// fabricated number.
+    /// Honest heart-rate row — live from the Watch workout when present, else a
+    /// recent phone sample, else a truthful "unavailable". Never a fabricated number.
     private var heartRateRow: some View {
         HStack(spacing: AiQoSpacing.sm) {
             Image(systemName: "heart.fill").foregroundStyle(.pink)
-            if let bpm = bio.latestBPM {
+            if let bpm = liveBPM {
                 Text(isAr ? "\(bpm) نبضة" : "\(bpm) bpm")
                     .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textPrimary)
+                if hrFromWatch {
+                    Text(isAr ? "· مباشر من الساعة" : "· live from Watch")
+                        .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
+                }
             } else {
                 Text(isAr ? "النبض غير متوفر — الخطوات تكفي" : "Heart rate unavailable — steps are enough")
                     .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.textSecondary)
@@ -313,34 +332,43 @@ private struct CaptainTrainerSession: View {
         started = true
         elapsed = 0
         lastMilestone = KernelCaptainBridge.Milestone.start.rawValue
-        announce(.start)
+        bubble = KernelCaptainBridge.encouragement(.start, language: language)   // text only — no voice
+        // Start a REAL workout session on the paired Apple Watch (live HR streamed
+        // back + logged to Health). No watch → the challenge still runs phone-only
+        // (real steps + periodic sample), so the unlock path is unaffected.
+        if connectivity.canStartWorkoutFromPhone {
+            connectivity.launchWatchAppForWorkout(activityType: .walking, locationType: .unknown)
+            startedWorkout = true
+        }
         Task { await model.liveTick(); await bio.refreshLiveHeartRate() }
     }
 
     @MainActor
     private func onTick() async {
         elapsed += 1
-        if elapsed % 2 == 0 { await model.liveTick() }          // real steps + state sync
-        if elapsed % 4 == 0 { await bio.refreshLiveHeartRate() } // real HR if a sample exists
-        announceMilestoneIfNeeded()
+        if elapsed % 2 == 0 { await model.liveTick() }                              // real steps + state sync
+        if elapsed % 4 == 0, !hrFromWatch { await bio.refreshLiveHeartRate() }      // phone HR only when no Watch stream
+        updateMilestoneBubble()
     }
 
-    private func announceMilestoneIfNeeded() {
+    /// Advance the Captain's message at step milestones. TEXT ONLY — no TTS (voice
+    /// is removed from the challenge/workout per design).
+    private func updateMilestoneBubble() {
         guard target > 0 else { return }
         let pct = Double(bio.stepsSinceBlock) / Double(target)
         let milestone: KernelCaptainBridge.Milestone =
             pct >= 0.9 ? .almost : pct >= 0.75 ? .threeQuarter : pct >= 0.5 ? .half : pct >= 0.25 ? .quarter : .start
         guard milestone.rawValue > lastMilestone else { return }
         lastMilestone = milestone.rawValue
-        announce(milestone)
+        bubble = KernelCaptainBridge.encouragement(milestone, language: language)
     }
 
-    /// Set the bubble + speak the line via on-device Apple TTS (`.realtime`). No
-    /// network, ever — the phrases are ready-made.
-    private func announce(_ milestone: KernelCaptainBridge.Milestone) {
-        let line = KernelCaptainBridge.encouragement(milestone, language: language)
-        bubble = line
-        Task { await CaptainVoiceRouter.shared.speak(text: line, tier: .realtime) }
+    /// End the mirrored Watch workout when leaving the trainer (challenge completed
+    /// or the user stepped away) so it never runs orphaned.
+    private func endWorkoutIfNeeded() {
+        guard startedWorkout else { return }
+        startedWorkout = false
+        connectivity.endWorkoutOnWatch()
     }
 }
 
