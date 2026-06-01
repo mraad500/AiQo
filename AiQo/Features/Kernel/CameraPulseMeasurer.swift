@@ -168,40 +168,58 @@ extension CameraPulseMeasurer: AVCaptureVideoDataOutputSampleBufferDelegate {
         return sum / Double(count) / 255.0
     }
 
-    /// Detrend (subtract a moving average) → peak-detect → BPM from the median
-    /// inter-peak interval. Returns nil when the signal is too weak/short.
+    /// Detrend + smooth (≈ bandpass) then take the heart-rate period from the
+    /// signal's AUTOCORRELATION peak — far more robust to motion/noise than counting
+    /// peaks. A confidence gate (normalized autocorrelation ≥ `minConfidence`) means a
+    /// noisy or finger-off signal returns NO number rather than a wrong one, so the UI
+    /// asks the user to hold steadier instead of showing a bogus reading.
     private func computeBPM(_ s: [(t: Double, v: Double)]) -> Int? {
-        guard s.count > 40 else { return nil }
-        let times = s.map(\.t), values = s.map(\.v)
+        guard s.count > 60 else { return nil }
+        let times = s.map(\.t), raw = s.map(\.v)
         let span = times.last! - times.first!
-        guard span > 4 else { return nil }
-        let dt = span / Double(times.count - 1)
-        let maWin = max(3, Int(0.75 / dt))
+        guard span > 5 else { return nil }
+        let fs = Double(raw.count - 1) / span               // samples per second
 
-        var ac = [Double](repeating: 0, count: values.count)
-        for i in values.indices {
-            let lo = max(0, i - maWin), hi = min(values.count - 1, i + maWin)
+        // Detrend (remove DC + slow drift) then lightly smooth (remove high-freq noise).
+        let detrendWin = max(3, Int(fs * 1.0))
+        let smoothWin = max(1, Int(fs * 0.08))
+        var x = [Double](repeating: 0, count: raw.count)
+        for i in raw.indices {
+            let lo = max(0, i - detrendWin), hi = min(raw.count - 1, i + detrendWin)
             var m = 0.0
-            for j in lo...hi { m += values[j] }
-            ac[i] = values[i] - m / Double(hi - lo + 1)
+            for j in lo...hi { m += raw[j] }
+            x[i] = raw[i] - m / Double(hi - lo + 1)
         }
-        let mean = ac.reduce(0, +) / Double(ac.count)
-        let std = (ac.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(ac.count)).squareRoot()
-        guard std > 1e-5 else { return nil }
-        let thr = 0.35 * std
-
-        var peaks: [Double] = []
-        var last = -1.0
-        for i in 1..<(ac.count - 1) where ac[i] > thr && ac[i] >= ac[i - 1] && ac[i] > ac[i + 1] {
-            if last < 0 || times[i] - last > 0.33 {   // refractory: max ~180 bpm
-                peaks.append(times[i]); last = times[i]
+        if smoothWin > 1 {
+            var sm = x
+            for i in x.indices {
+                let lo = max(0, i - smoothWin), hi = min(x.count - 1, i + smoothWin)
+                var m = 0.0
+                for j in lo...hi { m += x[j] }
+                sm[i] = m / Double(hi - lo + 1)
             }
+            x = sm
         }
-        guard peaks.count >= 5 else { return nil }
-        let intervals = zip(peaks.dropFirst(), peaks).map { $0 - $1 }.sorted()
-        let median = intervals[intervals.count / 2]
-        guard median > 0 else { return nil }
-        let bpm = Int((60.0 / median).rounded())
+        let mean = x.reduce(0, +) / Double(x.count)
+        for i in x.indices { x[i] -= mean }
+        let energy = x.reduce(0) { $0 + $1 * $1 }
+        guard energy > 1e-6 else { return nil }
+
+        // Autocorrelation across heart-rate lags (40…180 bpm); pick the strongest.
+        let minLag = max(1, Int(fs * 60.0 / 180.0))
+        let maxLag = Int(fs * 60.0 / 40.0)
+        guard minLag < maxLag, maxLag < x.count - 2 else { return nil }
+        var bestLag = -1
+        var bestR = 0.0
+        for lag in minLag...maxLag {
+            var acc = 0.0
+            for i in 0..<(x.count - lag) { acc += x[i] * x[i + lag] }
+            let r = acc / energy
+            if r > bestR { bestR = r; bestLag = lag }
+        }
+        let minConfidence = 0.5
+        guard bestLag > 0, bestR >= minConfidence else { return nil }
+        let bpm = Int((60.0 * fs / Double(bestLag)).rounded())
         return (40...180).contains(bpm) ? bpm : nil
     }
 }

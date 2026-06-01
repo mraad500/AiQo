@@ -299,6 +299,11 @@ struct KernelDisableConfirmView: View {
                 ? (isArabic ? "نبضك هادي ✓ تگدر تطفّي" : "Calm ✓ you can turn off")
                 : (isArabic ? "نبضك مرتفع (\(bpm)) — هدّي وأعد القياس" : "Pulse high (\(bpm)) — calm down and re-measure")
         }
+        if method == .camera, !pulse.isMeasuring, pulse.progress >= 1 {
+            return isArabic
+                ? "ما طلع قياس واضح — اضغط إصبعك أكثر على الكاميرا وثبّت، وأعد. أو استخدم الساعة (أدق)."
+                : "No clear reading — press your finger more firmly, hold still, and re-measure. Or use the Watch (more accurate)."
+        }
         return isArabic ? "اختر طريقة القياس عشان تتأكد إنك هادي." : "Choose how to measure that you're calm."
     }
 
