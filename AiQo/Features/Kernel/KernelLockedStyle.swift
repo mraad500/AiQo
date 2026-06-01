@@ -1,11 +1,9 @@
 import SwiftUI
 
-// MARK: - Kernel "shield is down" styling — on the AiQo identity
+// MARK: - Kernel "shield is down" card — iOS 26 Liquid Glass on the AiQo identity
 //
-// Soft, premium treatment for the Kernel's locked state, built ENTIRELY from the
-// app's pastel mint/sand DesignSystem — frosted glass, mint→sand gradients, gentle
-// accent shadows, rounded corners. Calm and brand-consistent (no neon). Local to
-// the Kernel feature.
+// Native iOS 26 Liquid Glass (`.glassEffect`) tinted with the app's accent — depth
+// and translucency, not flat fills. Local to the Kernel feature.
 
 /// A clean heraldic shield/badge silhouette — a gently curved top crest, straight
 /// upper sides, curving down to a centered point. Used for the big unlock card.
@@ -29,39 +27,8 @@ struct ShieldShape: Shape {
     }
 }
 
-/// A soft, on-brand frame marking the locked state — a thin mint→sand gradient
-/// border with a gentle accent shadow. Calm, never neon. Non-interactive overlay.
-struct KernelLockedFrame: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 44, style: .continuous)
-            .strokeBorder(
-                LinearGradient(
-                    colors: [AiQoTheme.Colors.accent.opacity(0.85), AiQoColors.sandSoft.opacity(0.85)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ),
-                lineWidth: 2.5
-            )
-            .shadow(color: AiQoTheme.Colors.accent.opacity(0.16), radius: 8)
-            .padding(7)
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-    }
-}
-
-extension View {
-    /// Overlay the soft on-brand "shield is down" frame when `active`.
-    @ViewBuilder
-    func kernelLockedFrame(active: Bool) -> some View {
-        overlay { if active { KernelLockedFrame() } }
-    }
-}
-
-// MARK: - Big shield-shaped unlock card
-
-/// The hero of the locked state: a big shield-shaped card a tap opens the unlock
-/// challenge. Frosted glass + a soft mint→sand gradient + a gentle accent glow +
-/// the real step target — matching the hub's charge-ring aesthetic. Fully on the
-/// AiQo identity.
+/// The hero of the locked state: a big shield-shaped **Liquid Glass** card (iOS 26),
+/// tinted with the AiQo accent. A tap opens the unlock challenge.
 struct KernelUnlockShieldCard: View {
     let stepTarget: Int
     let isArabic: Bool
@@ -74,37 +41,26 @@ struct KernelUnlockShieldCard: View {
                 .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
             Button(action: onTap) {
-                ZStack {
-                    ShieldShape().fill(.ultraThinMaterial)
-                    ShieldShape().fill(
-                        LinearGradient(
-                            colors: [AiQoColors.mint.opacity(0.55), AiQoColors.beige.opacity(0.40)],
-                            startPoint: .top, endPoint: .bottom
+                ZStack(alignment: .top) {
+                    Color.clear
+                        .glassEffect(
+                            .regular.tint(AiQoTheme.Colors.accent.opacity(0.28)).interactive(),
+                            in: ShieldShape()
                         )
-                    )
-                    ShieldShape().stroke(
-                        LinearGradient(
-                            colors: [AiQoTheme.Colors.accent, AiQoColors.sandSoft],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 2.5
-                    )
-
                     VStack(spacing: AiQoSpacing.sm) {
                         Image(systemName: "bolt.shield.fill")
-                            .font(.system(size: 50))
+                            .font(.system(size: 52))
                             .foregroundStyle(AiQoTheme.Colors.accent)
                         Text(isArabic ? "\(stepTarget) خطوة" : "\(stepTarget) steps")
-                            .font(.system(size: 28, design: .rounded).weight(.bold))
+                            .font(.system(size: 30, design: .rounded).weight(.bold))
                             .foregroundStyle(AiQoTheme.Colors.textPrimary)
                         Text(isArabic ? "اضغط لبدء التحدي" : "Tap to start the challenge")
                             .font(AiQoTheme.Typography.caption)
                             .foregroundStyle(AiQoTheme.Colors.textSecondary)
                     }
-                    .padding(.top, AiQoSpacing.lg)
+                    .padding(.top, 56)
                 }
-                .frame(width: 240, height: 282)
-                .shadow(color: AiQoTheme.Colors.accent.opacity(0.20), radius: 16, y: 6)
+                .frame(width: 250, height: 292)
             }
             .buttonStyle(.plain)
         }

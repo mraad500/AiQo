@@ -31,8 +31,6 @@ struct KernelView: View {
                     .padding(AiQoSpacing.lg)
                 }
             }
-            // "Shield is down" mode — a soft, on-brand frame marks the locked state.
-            .kernelLockedFrame(active: model.isLocked && model.gateState == .ready)
             .navigationTitle("النواة")
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.layoutDirection, .rightToLeft)
@@ -156,10 +154,10 @@ struct KernelView: View {
         } label: {
             Label("تعديل التطبيقات المحجوبة", systemImage: "square.grid.2x2")
                 .font(AiQoTheme.Typography.cta)
-                .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.md)
+                .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
         }
-        .background(AiQoTheme.Colors.accent, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-        .foregroundStyle(.white)
+        .buttonStyle(.glassProminent)
+        .tint(AiQoTheme.Colors.accent)
     }
 
     private var energyCard: some View {
@@ -206,10 +204,10 @@ struct KernelView: View {
             } label: {
                 Label("فعّل صلاحية الوصول", systemImage: "checkmark.shield")
                     .font(AiQoTheme.Typography.cta)
-                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.md)
+                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
             }
-            .background(AiQoTheme.Colors.accent, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-            .foregroundStyle(.white)
+            .buttonStyle(.glassProminent)
+            .tint(AiQoTheme.Colors.accent)
         }
         .kernelCard()
     }
@@ -242,6 +240,6 @@ private extension View {
     func kernelCard() -> some View {
         self.padding(AiQoSpacing.lg)
             .frame(maxWidth: .infinity)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.card, style: .continuous))
+            .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.card))
     }
 }

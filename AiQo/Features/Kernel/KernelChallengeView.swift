@@ -37,7 +37,6 @@ struct KernelChallengeView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .environment(\.layoutDirection, .rightToLeft)
-        .kernelLockedFrame(active: model.isLocked)
         .onAppear { model.refreshChallenge() }
         .onChange(of: model.isLocked) { wasLocked, isLocked in
             if wasLocked && !isLocked { celebrateUnlock() }
@@ -51,8 +50,8 @@ struct KernelChallengeView: View {
             Image(systemName: "xmark")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AiQoTheme.Colors.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(.ultraThinMaterial, in: Circle())
+                .frame(width: 38, height: 38)
+                .glassEffect(.regular.interactive(), in: .circle)
         }
         .padding(AiQoSpacing.md)
         .accessibilityLabel("رجوع")
@@ -125,12 +124,11 @@ struct KernelChallengeView: View {
             } label: {
                 Label("افتح بـ \(price) طاقة", systemImage: "bolt.circle")
                     .font(AiQoTheme.Typography.cta)
-                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.md)
+                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
             }
+            .buttonStyle(.glass)
+            .tint(AiQoColors.sandSoft)
             .disabled(!canAfford)
-            .opacity(canAfford ? 1 : 0.45)
-            .background(AiQoColors.sandSoft, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-            .foregroundStyle(AiQoTheme.Colors.textPrimary)
 
             if !canAfford {
                 Text("ما عندك طاقة كافية — تحرّك تكسبها.")
@@ -207,7 +205,7 @@ struct KernelChallengeView: View {
         }
         .padding(AiQoSpacing.lg)
         .frame(maxWidth: 320)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.ctaContainer, style: .continuous))
+        .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.ctaContainer))
         .transition(.scale.combined(with: .opacity))
     }
 }
@@ -281,7 +279,7 @@ private struct CaptainTrainerSession: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AiQoSpacing.md).padding(.vertical, AiQoSpacing.sm)
                 .frame(maxWidth: .infinity)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
+                .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.control))
         }
     }
 
@@ -291,10 +289,10 @@ private struct CaptainTrainerSession: View {
             Button { startSession() } label: {
                 Label(isAr ? "ابدأ التحدي" : "Start the challenge", systemImage: "figure.walk")
                     .font(AiQoTheme.Typography.cta)
-                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.md)
+                    .frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
             }
-            .background(AiQoTheme.Colors.accent, in: RoundedRectangle(cornerRadius: AiQoRadius.control, style: .continuous))
-            .foregroundStyle(.white)
+            .buttonStyle(.glassProminent)
+            .tint(AiQoTheme.Colors.accent)
         }
     }
 
@@ -508,6 +506,6 @@ private extension View {
     func kernelCard() -> some View {
         self.padding(AiQoSpacing.lg)
             .frame(maxWidth: .infinity)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AiQoRadius.card, style: .continuous))
+            .glassEffect(.regular, in: .rect(cornerRadius: AiQoRadius.card))
     }
 }
