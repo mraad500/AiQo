@@ -31,8 +31,8 @@ struct KernelView: View {
                     .padding(AiQoSpacing.lg)
                 }
             }
-            // "Shield is down" mode — the whole screen takes on the neon identity.
-            .kernelNeonFrame(active: model.isLocked && model.gateState == .ready)
+            // "Shield is down" mode — a soft, on-brand frame marks the locked state.
+            .kernelLockedFrame(active: model.isLocked && model.gateState == .ready)
             .navigationTitle("النواة")
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.layoutDirection, .rightToLeft)

@@ -1,20 +1,11 @@
 import SwiftUI
 
-// MARK: - Kernel "shield is down" neon identity
+// MARK: - Kernel "shield is down" styling — on the AiQo identity
 //
-// A deliberate visual MODE for when a Kernel shield is active: the app's pastel
-// green + beige pushed to a glowing neon, framing the screen edge, plus a big
-// shield-shaped "unlock" card. These are LOCAL to the Kernel locked state (the
-// user explicitly asked for this neon look) — NOT global DesignSystem tokens.
-
-enum KernelNeon {
-    /// Neon take on the app's pastel mint.
-    static let green = Color(red: 0.20, green: 1.00, blue: 0.56)
-    /// Neon take on the app's beige/sand.
-    static let beige = Color(red: 1.00, green: 0.85, blue: 0.42)
-}
-
-// MARK: - Shield silhouette
+// Soft, premium treatment for the Kernel's locked state, built ENTIRELY from the
+// app's pastel mint/sand DesignSystem — frosted glass, mint→sand gradients, gentle
+// accent shadows, rounded corners. Calm and brand-consistent (no neon). Local to
+// the Kernel feature.
 
 /// A clean heraldic shield/badge silhouette — a gently curved top crest, straight
 /// upper sides, curving down to a centered point. Used for the big unlock card.
@@ -38,51 +29,43 @@ struct ShieldShape: Shape {
     }
 }
 
-// MARK: - Neon screen frame
-
-/// Glowing neon frame around the whole screen edge — an outer beige strip + an
-/// inner green frame, both with a soft neon glow + a gentle breathing pulse
-/// (opacity-only, so it stays cheap). Non-interactive overlay.
-struct KernelNeonFrame: View {
-    @State private var pulse = false
-
+/// A soft, on-brand frame marking the locked state — a thin mint→sand gradient
+/// border with a gentle accent shadow. Calm, never neon. Non-interactive overlay.
+struct KernelLockedFrame: View {
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 54, style: .continuous)
-                .strokeBorder(KernelNeon.beige, lineWidth: 9)
-                .shadow(color: KernelNeon.beige.opacity(0.6), radius: 10)
-            RoundedRectangle(cornerRadius: 47, style: .continuous)
-                .strokeBorder(KernelNeon.green, lineWidth: 5)
-                .shadow(color: KernelNeon.green.opacity(0.85), radius: 14)
-                .padding(8)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .opacity(pulse ? 1.0 : 0.68)
-        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: pulse)
-        .onAppear { pulse = true }
+        RoundedRectangle(cornerRadius: 44, style: .continuous)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [AiQoTheme.Colors.accent.opacity(0.85), AiQoColors.sandSoft.opacity(0.85)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                lineWidth: 2.5
+            )
+            .shadow(color: AiQoTheme.Colors.accent.opacity(0.16), radius: 8)
+            .padding(7)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
     }
 }
 
 extension View {
-    /// Overlay the neon "shield is down" frame when `active`.
+    /// Overlay the soft on-brand "shield is down" frame when `active`.
     @ViewBuilder
-    func kernelNeonFrame(active: Bool) -> some View {
-        overlay { if active { KernelNeonFrame() } }
+    func kernelLockedFrame(active: Bool) -> some View {
+        overlay { if active { KernelLockedFrame() } }
     }
 }
 
 // MARK: - Big shield-shaped unlock card
 
-/// The hero of the locked state: a BIG shield-shaped card a tap opens the unlock
-/// challenge. World-class treatment — frosted glass, neon edge + glow, a soft
-/// breathing pulse, and the real step target inside.
+/// The hero of the locked state: a big shield-shaped card a tap opens the unlock
+/// challenge. Frosted glass + a soft mint→sand gradient + a gentle accent glow +
+/// the real step target — matching the hub's charge-ring aesthetic. Fully on the
+/// AiQo identity.
 struct KernelUnlockShieldCard: View {
     let stepTarget: Int
     let isArabic: Bool
     let onTap: () -> Void
-
-    @State private var glow = false
 
     var body: some View {
         VStack(spacing: AiQoSpacing.md) {
@@ -95,17 +78,22 @@ struct KernelUnlockShieldCard: View {
                     ShieldShape().fill(.ultraThinMaterial)
                     ShieldShape().fill(
                         LinearGradient(
-                            colors: [KernelNeon.green.opacity(0.28), KernelNeon.beige.opacity(0.20)],
+                            colors: [AiQoColors.mint.opacity(0.55), AiQoColors.beige.opacity(0.40)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
-                    ShieldShape().stroke(KernelNeon.green, lineWidth: 3)
+                    ShieldShape().stroke(
+                        LinearGradient(
+                            colors: [AiQoTheme.Colors.accent, AiQoColors.sandSoft],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2.5
+                    )
 
                     VStack(spacing: AiQoSpacing.sm) {
                         Image(systemName: "bolt.shield.fill")
-                            .font(.system(size: 54))
-                            .foregroundStyle(KernelNeon.green)
-                            .shadow(color: KernelNeon.green.opacity(0.7), radius: 10)
+                            .font(.system(size: 50))
+                            .foregroundStyle(AiQoTheme.Colors.accent)
                         Text(isArabic ? "\(stepTarget) خطوة" : "\(stepTarget) steps")
                             .font(.system(size: 28, design: .rounded).weight(.bold))
                             .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -115,13 +103,10 @@ struct KernelUnlockShieldCard: View {
                     }
                     .padding(.top, AiQoSpacing.lg)
                 }
-                .frame(width: 244, height: 286)
-                .shadow(color: KernelNeon.green.opacity(glow ? 0.85 : 0.45), radius: glow ? 26 : 15)
+                .frame(width: 240, height: 282)
+                .shadow(color: AiQoTheme.Colors.accent.opacity(0.20), radius: 16, y: 6)
             }
             .buttonStyle(.plain)
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { glow = true }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(isArabic ? "فكّ الدرع — \(stepTarget) خطوة" : "Unlock the shield — \(stepTarget) steps")
