@@ -32,6 +32,15 @@ struct KernelDisableConfirmView: View {
     @State private var watchCountdown: Int?
     @State private var watchBPM: Int?
     @State private var elapsedTotal = 0
+    // Guaranteed-exit fallback: after two failed attempts (or the "I can't right now"
+    // button), a breathing timer arms the off switch — friction stays, the door always opens.
+    @State private var failedAttempts = 0
+    @State private var countedThisMeasurement = false
+    @State private var fallbackActive = false
+    @State private var fallbackRemaining = 0
+    @State private var fallbackComplete = false
+    @State private var breatheIn = false
+    private let fallbackSeconds = 75
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
@@ -40,11 +49,15 @@ struct KernelDisableConfirmView: View {
         (method == .camera && pulse.isMeasuring) || (method == .watch && watchActive)
     }
     private var isCalm: Bool { (measuredBPM ?? 999) <= calmCeilingBPM }
-    private var canDisable: Bool { (measuredBPM != nil && !isMeasuring && isCalm) || elapsedTotal >= absoluteCapSeconds }
+    private var canDisable: Bool {
+        (measuredBPM != nil && !isMeasuring && isCalm) || fallbackComplete || elapsedTotal >= absoluteCapSeconds
+    }
 
     var body: some View {
         Group {
-            if showCameraIntro { cameraIntro } else { mainFlow }
+            if fallbackActive { breathingFallback }
+            else if showCameraIntro { cameraIntro }
+            else { mainFlow }
         }
         .padding(AiQoSpacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -53,6 +66,13 @@ struct KernelDisableConfirmView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onReceive(timer) { _ in tick() }
+        .onChange(of: pulse.isMeasuring) { wasMeasuring, nowMeasuring in
+            // Count a finished CAMERA measurement as failed if it wasn't a clear, calm reading.
+            if wasMeasuring, !nowMeasuring, method == .camera, pulse.progress >= 1, !countedThisMeasurement {
+                countedThisMeasurement = true
+                if !(pulse.bpm.map { $0 <= calmCeilingBPM } ?? false) { failedAttempts += 1 }
+            }
+        }
         .onDisappear { endEverything() }
     }
 
@@ -92,10 +112,52 @@ struct KernelDisableConfirmView: View {
 
             methodControls
 
+            Button { startFallback() } label: {
+                Text(isArabic ? "ما أكدر أهدّي هسة — خذ تهدئة بالتنفّس وتفتح بعدها" : "Can't calm down right now — take a breathing break, then it opens")
+                    .font(AiQoTheme.Typography.caption)
+                    .foregroundStyle(failedAttempts >= 2 ? AiQoTheme.Colors.accent : AiQoTheme.Colors.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, AiQoSpacing.xs)
+
             Spacer(minLength: 0)
             commitAndDisableButtons
             disclaimerFootnote
         }
+    }
+
+    // MARK: - Breathing fallback (guaranteed door)
+
+    /// A calm-down breathing timer reached via two failed attempts or the "I can't
+    /// right now" button. When it finishes, the off switch is armed for sure — the
+    /// friction stays, but the exit is always there (Apple: restrictions stay removable).
+    private var breathingFallback: some View {
+        VStack(spacing: AiQoSpacing.lg) {
+            Spacer(minLength: 0)
+            Text(isArabic ? "خذ تهدئة" : "Take a breath")
+                .font(AiQoTheme.Typography.screenTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
+            Circle()
+                .fill(AiQoColors.mintSoft.opacity(0.6))
+                .frame(width: breatheIn ? 200 : 120, height: breatheIn ? 200 : 120)
+                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: breatheIn)
+                .overlay(
+                    Text(breatheIn ? (isArabic ? "شهيق" : "in") : (isArabic ? "زفير" : "out"))
+                        .font(AiQoTheme.Typography.cardTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
+                )
+            Text(isArabic ? "تنفّس بهدوء — \(fallbackRemaining) ثانية" : "Breathe slowly — \(fallbackRemaining)s")
+                .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary)
+            Text(isArabic ? "بعدها يفتح الإطفاء مضموناً." : "The off switch unlocks right after.")
+                .font(AiQoTheme.Typography.caption).foregroundStyle(AiQoTheme.Colors.accent)
+            Spacer(minLength: 0)
+            Button { dismiss() } label: {
+                Label(isArabic ? "لا، أكمّل التزامي 💪" : "No, keep my commitment 💪", systemImage: "shield.lefthalf.filled")
+                    .font(AiQoTheme.Typography.cta).frame(maxWidth: .infinity).padding(.vertical, AiQoSpacing.sm)
+            }
+            .buttonStyle(.glassProminent).tint(AiQoTheme.Colors.accent)
+            disclaimerFootnote
+        }
+        .onAppear { breatheIn = true }
     }
 
     /// Non-medical disclaimer — this is a wellbeing calm-check, never a diagnosis.
@@ -195,6 +257,7 @@ struct KernelDisableConfirmView: View {
             Button {
                 showCameraIntro = false
                 method = .camera
+                countedThisMeasurement = false
                 pulse.start()
             } label: {
                 Label(isArabic ? "موافق، ابدأ القياس" : "I agree — start measuring", systemImage: "camera.fill")
@@ -236,6 +299,7 @@ struct KernelDisableConfirmView: View {
     }
 
     private var ringProgress: Double {
+        if fallbackComplete { return 1 }
         if let _ = measuredBPM, !isMeasuring { return 1 }
         if method == .camera { return pulse.progress }
         if method == .watch, let c = watchCountdown { return Double(watchHoldSeconds - c) / Double(watchHoldSeconds) }
@@ -249,7 +313,9 @@ struct KernelDisableConfirmView: View {
 
     @ViewBuilder
     private var ringCenter: some View {
-        if let bpm = measuredBPM, !isMeasuring {
+        if fallbackComplete, measuredBPM == nil {
+            Image(systemName: "checkmark.circle.fill").font(.system(size: 46)).foregroundStyle(AiQoTheme.Colors.accent)
+        } else if let bpm = measuredBPM, !isMeasuring {
             bpmLabel(bpm, color: bpm <= calmCeilingBPM ? AiQoTheme.Colors.textPrimary : .orange)
         } else if method == .watch, watchActive {
             if let c = watchCountdown {
@@ -281,6 +347,9 @@ struct KernelDisableConfirmView: View {
     // MARK: - Status + labels
 
     private var statusLine: String? {
+        if fallbackComplete, measuredBPM == nil {
+            return isArabic ? "ارتحت ✓ تگدر تطفّي" : "Calmer ✓ you can turn off"
+        }
         if pulse.permissionDenied {
             return isArabic ? "تحتاج إذن الكاميرا — أو جرّب القياس بالساعة، أو انتظر العدّاد." : "Camera access needed — try the Watch, or wait it out."
         }
@@ -327,6 +396,7 @@ struct KernelDisableConfirmView: View {
         watchActive = true
         watchCountdown = nil
         watchBPM = nil
+        countedThisMeasurement = false
         connectivity.launchWatchAppForWorkout(activityType: .mindAndBody, locationType: .unknown)
     }
 
@@ -337,6 +407,7 @@ struct KernelDisableConfirmView: View {
         watchActive = false
         watchCountdown = nil
         watchBPM = nil
+        countedThisMeasurement = false
     }
 
     private func endEverything() {
@@ -346,6 +417,11 @@ struct KernelDisableConfirmView: View {
 
     private func tick() {
         elapsedTotal += 1
+        if fallbackActive {
+            if fallbackRemaining > 0 { fallbackRemaining -= 1 }
+            if fallbackRemaining <= 0 { fallbackActive = false; fallbackComplete = true }
+            return
+        }
         guard method == .watch, watchActive else { return }
         let hr = Int(connectivity.currentHeartRate.rounded())
         guard hr > 0 else { return }            // wait for the Watch to report HR
@@ -357,7 +433,21 @@ struct KernelDisableConfirmView: View {
             if watchCountdown! <= 0 {
                 connectivity.endWorkoutOnWatch()   // auto-end the Watch workout
                 watchActive = false
+                if !countedThisMeasurement {
+                    countedThisMeasurement = true
+                    if !(watchBPM.map { $0 <= calmCeilingBPM } ?? false) { failedAttempts += 1 }
+                }
             }
         }
+    }
+
+    private func startFallback() {
+        pulse.stop()
+        if watchActive { connectivity.endWorkoutOnWatch() }
+        method = nil
+        watchActive = false
+        watchCountdown = nil
+        fallbackActive = true
+        fallbackRemaining = fallbackSeconds
     }
 }
