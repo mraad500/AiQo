@@ -58,16 +58,21 @@ struct PromptComposer: Sendable {
         let header: String
         if language == .english {
             header = """
-            === KERNEL (النواة) STATUS — the user's digital-wellbeing app-lock ===
-            You MAY reference this naturally if the user asks how their Kernel/النواة is
-            going (today's shields, whether it's locked, energy earned). NEVER name or
-            guess which apps are locked — you only know counts.
+            === KERNEL (النواة) STATUS — the user's REAL digital-wellbeing app-lock activity ===
+            This is live, factual data about how the user is doing on النواة today. Use it to
+            give specific, supportive coaching about their Kernel habit when relevant, and to
+            answer naturally + accurately when they ask how their نواة is going (today's
+            shields, locked or not, energy earned, "enough for today"). You DO know this
+            feature — see the APP KNOWLEDGE block. NEVER name or guess which apps are locked —
+            you only know counts.
             """
         } else {
             header = """
-            === حالة النواة (قفل الرفاهية الرقمية مال المستخدم) ===
-            تكدر تشير إلها بشكل طبيعي إذا سأل المستخدم شلون نواته (دروع اليوم، مقفلة لو لا،
-            الطاقة المكتسبة). ممنوع تذكر أو تخمّن أي تطبيقات مقفلة — إنت تعرف الأرقام بس.
+            === حالة النواة (نشاط قفل الرفاهية الرقمية الحقيقي مال المستخدم) ===
+            هذي بيانات حيّة وحقيقية عن شلون ماشي المستخدم بالنواة اليوم. استعملها حتى تنطي نصيحة
+            وتشجيع محدّد على عادته بالنواة لمن يناسب، وتجاوب طبيعي ودقيق لمن يسأل شلون نواته (دروع
+            اليوم، مقفلة لو لا، الطاقة المكتسبة، «كافي اليوم»). إنت **تعرف** هاي الميزة — شوف بلوك
+            APP KNOWLEDGE. ممنوع تذكر أو تخمّن أي تطبيقات مقفلة — إنت تعرف الأرقام بس.
             """
         }
         return "\(header)\n\(status)"

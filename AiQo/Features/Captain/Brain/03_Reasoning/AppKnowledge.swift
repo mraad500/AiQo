@@ -115,15 +115,21 @@ enum AppKnowledge {
             keywords: ["privacy", "خصوصية", "بياناتي", "بيانات", "أمان", "consent", "موافقة", "تصدير", "حذف", "data"],
             summary: "AiQo privacy-first: أغلب المعالجة على الجهاز، وأي إرسال للسحابة يمرّ بمعقّم يشيل المعلومات الحسّاسة قبل الإرسال، وتحتاج موافقتك الصريحة لميزات الذكاء السحابي. تقدر تصدّر بياناتك أو تحذفها من الإعدادات."
         ),
+        AppKnowledgeEntry(
+            id: "kernel",
+            order: 11,
+            keywords: ["نواة", "النواة", "نواتي", "kernel", "قفل", "قفل التطبيقات", "احجب", "حجب", "تطبيقات محجوبة", "ادمان", "إدمان", "سكرول", "دومسكرول", "تركيز", "شاشة", "وقت الشاشة", "screen time", "سكرين تايم", "درع", "دروع", "رفاهية رقمية", "رفاهية", "digital wellbeing", "app lock", "block apps", "focus", "افتح بالمشي", "تشتيت"],
+            summary: "النواة ميزة رفاهية رقمية (ضمن Max): تختار تطبيقاتك اللي تريد تحدّها (مثلاً السوشال ميديا) وتنحجب عبر Screen Time، وتنفتح بمجهود جسدي حقيقي — تمشي خطوات فعلية (من Health) حتى ينفك القفل (الدرع). كل مرة تنفتح وترجع تستخدم، الدرع الجاي يصير أصعب (خطوات أكثر وجلسة أقصر) حتى يكسر حلقة السكرول، بس دايماً ممكن جسدياً (أكو سقف خطوات)، ومن الدرع الخامس الكابتن يتصدّر بـ«كافي اليوم — تعال باچر». بدل المشي تكدر تصرف طاقة مكتسبة، وبعد حد معيّن يصير مجهود جسدي فقط (صفر فلوس). والكابتن نفسه يصير مدرّبك الحي جوّا التحدي بصورته وصوته. تطفّي الحماية أي وقت (بتأكيد)، وحذف التطبيق أو سحب صلاحية Screen Time يفك كل الدروع تلقائياً."
+        ),
         // Overview: catches BROAD "what is this app / what can it do" asks that
         // name no specific feature, so the lexical retriever would otherwise
         // return nil and leave the Captain ungrounded on exactly the question
-        // most prone to hallucination. order=14 (highest) so any specific-
+        // most prone to hallucination. order=15 (highest) so any specific-
         // feature entry always wins a score tie — this only surfaces when
         // nothing more specific matched.
         AppKnowledgeEntry(
             id: "overview",
-            order: 14,
+            order: 15,
             keywords: [
                 "aiqo", "ايكو", "ايكيو", "التطبيق", "تطبيق", "تطبيقكم", "البرنامج",
                 "شنو يسوي", "شيسوي", "شنو يكدر", "شيكدر", "وش يسوي", "ايش يسوي",
