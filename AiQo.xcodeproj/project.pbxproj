@@ -1425,7 +1425,7 @@
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, Smart Fridge meal scanning, and on-device pulse (heart-rate) measurement for the Kernel calm-hold. Camera frames for pulse and form analysis are processed on your device and are never recorded or uploaded; Fridge photos are sent to the AI service only with your separate AI-data consent.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1488,7 +1488,7 @@
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=*]" = AiQo;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, and Smart Fridge meal scanning. Fridge photos are sent to the AI service only with your separate AI-data consent.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiQo uses the camera for Vision Coach exercise form analysis, learning-proof verification that runs on-device, Smart Fridge meal scanning, and on-device pulse (heart-rate) measurement for the Kernel calm-hold. Camera frames for pulse and form analysis are processed on your device and are never recorded or uploaded; Fridge photos are sent to the AI service only with your separate AI-data consent.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AiQo reads selected Health data like steps, sleep, and hydration to power your daily and weekly summaries.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "AiQo writes the Health entries you choose, such as hydration logs and workouts, back to the Health app.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

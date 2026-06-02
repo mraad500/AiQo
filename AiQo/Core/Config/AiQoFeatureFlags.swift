@@ -104,9 +104,13 @@ enum FeatureFlags {
     static var tribeSubscriptionGateEnabled: Bool
 
     /// Master switch for the Kernel (النواة) — a digital-wellbeing app lock built
-    /// on Family Controls + DeviceActivity. OFF by default: v1.0.7 ships
-    /// structure + extension wiring only (no shielding/blocking behavior yet).
-    /// When ON, the Max-gated Kernel entry (Profile → AiQo) becomes reachable.
+    /// on Family Controls + DeviceActivity. The code-level default is OFF, but
+    /// `AiQo/Info.plist` ships it ON, so the Kernel is LIVE + Max-gated as of
+    /// v1.0.7 (build 30): real shielding (ManagedSettings/DeviceActivity),
+    /// steps→unlock escalation, a live on-device Captain trainer, and the
+    /// calm-hold + guided-breathing friction to disable. When ON, the Max-gated
+    /// Kernel entry (Profile → AiQo) becomes reachable. Flip the Info.plist value
+    /// to NO to dark-launch a rollback without a code change.
     @FeatureFlag("KERNEL_ENABLED", default: false)
     static var kernelEnabled: Bool
 
