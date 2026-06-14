@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 import HealthKit
-import WatchConnectivity
 
 /// Thin bridge over `WorkoutManager.shared` that exposes the same API
 /// used by the new AiQo Watch views while preserving the full iPhone ↔ Watch
@@ -20,7 +19,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var distance: Double = 0
     @Published var showingSummary = false
 
-    private(set) var currentType: WatchWorkoutType?
+    /// The active workout's type. Set directly when the workout is started from
+    /// the watch (exact, preserves indoor/outdoor); otherwise derived from the
+    /// core engine when the iPhone launches the workout. Published so the root
+    /// view re-renders with the correct type once it resolves.
+    @Published private(set) var currentType: WatchWorkoutType?
 
     var formattedTime: String {
         let m = Int(elapsedSeconds) / 60
@@ -81,35 +84,48 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             .receive(on: RunLoop.main)
             .assign(to: &$elapsedSeconds)
 
+        // Keep `currentType` in sync with the engine. This matters when the
+        // iPhone launches the workout — the companion only hands the core an
+        // HKWorkoutActivityType + location, so we recover the watch-facing type
+        // from the authoritative pair. Deriving from (activity, exact location)
+        // round-trips losslessly, so it also reaffirms a watch-initiated type
+        // without clobbering its indoor/outdoor choice. The nil that
+        // `resetWorkout` publishes is ignored so the type survives into the
+        // summary and the completion message.
+        core.$selectedWorkout
+            .receive(on: RunLoop.main)
+            .sink { [weak self] activity in
+                guard let self, let activity else { return }
+                self.currentType = WatchWorkoutType(
+                    hkType: activity,
+                    locationType: self.core.currentLocationType
+                )
+            }
+            .store(in: &cancellables)
+
         // Watch for summary view trigger
         core.$showingSummaryView
             .receive(on: RunLoop.main)
             .sink { [weak self] showing in
                 guard let self else { return }
                 if showing {
-                    // Capture summary data before resetting
+                    // Capture the authoritative end-of-workout values (the core
+                    // froze these before finishing the builder).
                     self.summaryCalories = Int(self.core.activeEnergy)
-                    self.summaryDuration = self.core.displayElapsedTime
+                    self.summaryDuration = self.core.elapsedSeconds
                     self.summaryAvgHeartRate = Int(self.core.averageHeartRate)
                     self.summaryDistance = self.core.distance / 1000.0
 
-                    // Send workout completion to iPhone for XP processing
-                    if WCSession.isSupported() {
-                        let data: [String: Any] = [
-                            "event": "workout_completed",
-                            "calories": Double(self.summaryCalories),
-                            "duration_minutes": self.summaryDuration / 60.0,
-                            "workout_type": self.currentType?.rawValue ?? "other",
-                            "distance_km": self.summaryDistance,
-                            "timestamp": Date().timeIntervalSince1970
-                        ]
-                        let wcSession = WCSession.default
-                        if wcSession.isReachable {
-                            wcSession.sendMessage(data, replyHandler: nil, errorHandler: nil)
-                        } else {
-                            wcSession.transferUserInfo(data)
-                        }
-                    }
+                    // Report completion to the iPhone for XP. Keyed by the active
+                    // session id so the phone awards XP exactly once even when the
+                    // message arrives over both WatchConnectivity transports.
+                    WatchConnectivityManager.shared.sendWorkoutCompleted(
+                        workoutId: self.core.activeSessionID ?? UUID().uuidString,
+                        calories: self.summaryCalories,
+                        durationMinutes: self.summaryDuration / 60.0,
+                        workoutType: self.currentType?.rawValue ?? "other",
+                        distanceKm: self.summaryDistance
+                    )
                 }
                 self.showingSummary = showing
             }

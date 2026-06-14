@@ -4,7 +4,6 @@ struct WatchHomeView: View {
     @EnvironmentObject var health: WatchHealthKitManager
     @Environment(\.locale) private var locale
 
-    @State private var centerBreath = false
     @State private var displayedStepsProgress = 0.0
     @State private var displayedCaloriesProgress = 0.0
 
@@ -64,11 +63,6 @@ struct WatchHomeView: View {
         .environment(\.layoutDirection, WatchText.layoutDirection(for: locale))
         .onAppear {
             health.refresh()
-            if !centerBreath {
-                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
-                    centerBreath = true
-                }
-            }
             animateProgress()
         }
         .onChange(of: health.todaySteps) { _, _ in
@@ -97,59 +91,58 @@ struct WatchHomeView: View {
         let mint = Color(red: 0.64, green: 0.86, blue: 0.81)
 
         return ZStack {
-            ForEach(WatchDailyAuraVector.segments) { segment in
-                WatchAuraArcShape(
-                    radiusRatio: segment.radiusRatio,
-                    startAngle: segment.startAngle,
-                    endAngle: segment.endAngle
-                )
-                .stroke(
-                    segment.isGreenGroup ? mint.opacity(0.30) : beige.opacity(0.35),
-                    style: StrokeStyle(
-                        lineWidth: segment.lineWidth,
-                        lineCap: .round,
-                        lineJoin: .round
+            // All 38 vector strokes are flattened into one Metal-backed layer.
+            // They interpolate once while the rings reveal (driven by the
+            // `withAnimation` in `animateProgress`) and are otherwise static, so
+            // the screen costs nothing to keep on — no per-frame re-stroking.
+            ZStack {
+                ForEach(WatchDailyAuraVector.segments) { segment in
+                    WatchAuraArcShape(
+                        radiusRatio: segment.radiusRatio,
+                        startAngle: segment.startAngle,
+                        endAngle: segment.endAngle
                     )
-                )
-            }
+                    .stroke(
+                        segment.isGreenGroup ? mint.opacity(0.30) : beige.opacity(0.35),
+                        style: StrokeStyle(
+                            lineWidth: segment.lineWidth,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                }
 
-            ForEach(WatchDailyAuraVector.segments) { segment in
-                WatchAuraArcShape(
-                    radiusRatio: segment.radiusRatio,
-                    startAngle: segment.startAngle,
-                    endAngle: segment.endAngle
-                )
-                .trim(from: 0, to: segmentReveal(for: segment, progress: progressForSegment(segment)))
-                .stroke(
-                    segment.isGreenGroup ? mint : beige,
-                    style: StrokeStyle(
-                        lineWidth: segment.lineWidth,
-                        lineCap: .round,
-                        lineJoin: .round
+                ForEach(WatchDailyAuraVector.segments) { segment in
+                    WatchAuraArcShape(
+                        radiusRatio: segment.radiusRatio,
+                        startAngle: segment.startAngle,
+                        endAngle: segment.endAngle
                     )
-                )
-                .animation(
-                    .easeInOut(duration: 1.2)
-                        .delay(segmentActivationDelay(for: segment)),
-                    value: progressForSegment(segment)
-                )
+                    .trim(from: 0, to: segmentReveal(for: segment, progress: progressForSegment(segment)))
+                    .stroke(
+                        segment.isGreenGroup ? mint : beige,
+                        style: StrokeStyle(
+                            lineWidth: segment.lineWidth,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                }
             }
+            .drawingGroup()
 
             Circle()
                 .fill(Color(red: 0.72, green: 0.90, blue: 0.86).opacity(0.26))
                 .frame(width: size * 0.07, height: size * 0.07)
-                .scaleEffect(centerBreath ? 1.006 : 0.994)
 
             Circle()
                 .stroke(Color(red: 0.62, green: 0.87, blue: 0.81).opacity(0.58), lineWidth: 3)
                 .frame(width: size * 0.12, height: size * 0.12)
-                .scaleEffect(centerBreath ? 1.006 : 0.994)
 
             if goalProgress >= 1 {
                 Circle()
-                    .stroke(Color.orange.opacity(0.24), lineWidth: 10)
+                    .stroke(Color.orange.opacity(0.45), lineWidth: 5)
                     .frame(width: size * 1.04, height: size * 1.04)
-                    .blur(radius: 3)
                     .transition(.opacity)
             }
         }
@@ -166,12 +159,6 @@ struct WatchHomeView: View {
         let smoothedStage = stageProgress * stageProgress * (3 - 2 * stageProgress)
         let orderedProgress = (smoothedStage * Double(segment.bucketSize)) - Double(segment.bucketOrder)
         return CGFloat(min(max(orderedProgress, 0), 1))
-    }
-
-    private func segmentActivationDelay(for segment: WatchAuraVectorSegment) -> Double {
-        let bucketDelay = Double(segment.bucketIndex) * 0.04
-        let orderDelay = Double(segment.bucketOrder) * 0.007
-        return min(bucketDelay + orderDelay, 0.24)
     }
 }
 

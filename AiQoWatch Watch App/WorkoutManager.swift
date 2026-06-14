@@ -33,8 +33,8 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     private let defaults = UserDefaults.standard
 
-    private var activeSessionID: String?
-    private var currentLocationType: HKWorkoutSessionLocationType = .indoor
+    private(set) var activeSessionID: String?
+    private(set) var currentLocationType: HKWorkoutSessionLocationType = .indoor
     private var lastRecordedKm = 0
     private var livePushTimer: Timer?
     private var lastWeeklySyncAt: Date?
@@ -365,6 +365,13 @@ final class WorkoutManager: NSObject, ObservableObject {
                     self.workoutPhase = .ended
                     self.connectionState = .ended
                     self.lastEventLabel = "workout_ended"
+                    // Freeze the metrics at their authoritative end-of-workout
+                    // values so the summary (and the XP it drives) reads exactly
+                    // what was captured before `endCollection`, instead of a
+                    // finished builder's elapsed time.
+                    self.elapsedSeconds = TimeInterval(finalDuration)
+                    self.distance = finalDistance
+                    self.activeEnergy = Double(finalCalories)
                     self.showingSummaryView = true
 
                     WorkoutNotificationCenter.scheduleSummary(

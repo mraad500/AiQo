@@ -21,6 +21,8 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private enum Constants {
         static let snapshotStoreKey = "aiqo.workout.snapshot"
         static let sessionIDStoreKey = "aiqo.workout.session-id"
+        static let awardedWatchWorkoutsKey = "aiqo.watch.awarded-workouts"
+        static let awardedWatchWorkoutsLimit = 30
         static let logLimit = 40
     }
 
@@ -653,6 +655,22 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         defaults.removeObject(forKey: Constants.sessionIDStoreKey)
     }
 
+    private func hasAwardedWatchWorkout(_ id: String) -> Bool {
+        (defaults.stringArray(forKey: Constants.awardedWatchWorkoutsKey) ?? []).contains(id)
+    }
+
+    /// Records that XP was credited for a watch workout. Persisted (so a relaunch
+    /// can't double-credit a queued duplicate) and capped to the most recent ids.
+    private func markWatchWorkoutAwarded(_ id: String) {
+        var awarded = defaults.stringArray(forKey: Constants.awardedWatchWorkoutsKey) ?? []
+        guard !awarded.contains(id) else { return }
+        awarded.append(id)
+        if awarded.count > Constants.awardedWatchWorkoutsLimit {
+            awarded.removeFirst(awarded.count - Constants.awardedWatchWorkoutsLimit)
+        }
+        defaults.set(awarded, forKey: Constants.awardedWatchWorkoutsKey)
+    }
+
     private func applyApplicationContextIfAvailable(_ applicationContext: [String: Any], source: String) {
         guard let snapshotDictionary = applicationContext[WorkoutSyncDictionaryKey.snapshotContext] as? [String: Any],
               let snapshot = WorkoutSyncSnapshot(dictionary: snapshotDictionary) else {
@@ -784,17 +802,27 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     }
 
     private func handleIncomingWCData(_ message: [String: Any]) {
-        // Handle standalone Watch workout completion (from WatchConnectivityService)
+        // Standalone Watch workout completion (sent by WatchConnectivityManager
+        // when a watch session ends) — drives XP on the phone.
         if let event = message["event"] as? String, event == "workout_completed" {
             let cal = message["calories"] as? Double ?? 0
             let dur = message["duration_minutes"] as? Double ?? 0
             let type = message["workout_type"] as? String ?? ""
             let dist = message["distance_km"] as? Double ?? 0
+            let workoutID = (message["workout_id"] as? String).flatMap { $0.isEmpty ? nil : $0 }
 
-            Task { @MainActor in
-                // Award XP: same formula as Watch summary
-                let xp = Int(cal * 0.8 + dur * 2)
-                guard xp > 0 else { return }
+            // Exactly-once XP: the watch reports completion over both
+            // `sendMessage` and a `transferUserInfo` fallback, so the same
+            // workout can arrive twice. Credit each workout id only once.
+            if let workoutID, hasAwardedWatchWorkout(workoutID) {
+                logEvent("watch workout XP already awarded, ignored: \(workoutID)")
+                return
+            }
+            if let workoutID { markWatchWorkoutAwarded(workoutID) }
+
+            // Award XP: same formula as Watch summary
+            let xp = Int(cal * 0.8 + dur * 2)
+            if xp > 0 {
                 os_log("Watch XP received: %d", xp)
                 LevelStore.shared.addXP(xp)
             }
