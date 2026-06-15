@@ -538,12 +538,13 @@ final class CaptainViewModel: ObservableObject {
         let capturedOrchestrator = orchestrator
         let isFreeCaptain = !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
         let engine = onDeviceEngine
-        let opener = AppSettingsStore.shared.appLanguage == .english ? "hi" : "هلاو"
+        let welcomeName = captainReplyUserName()
         responseTask = Task { [weak self] in
             let dynamic: String?
             if isFreeCaptain {
-                // Free welcome is generated on-device too — never a canned line.
-                dynamic = try? await engine.respond(to: opener)
+                // Free welcome is generated on-device too — live + data-aware
+                // (name + today's steps + time of day), never a canned line.
+                dynamic = try? await engine.welcome(userName: welcomeName)
             } else {
                 dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
             }

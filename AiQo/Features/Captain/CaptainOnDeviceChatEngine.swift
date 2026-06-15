@@ -98,6 +98,56 @@ actor CaptainOnDeviceChatEngine {
         throw CaptainOnDeviceChatError.foundationModelsUnavailable
     }
 
+    /// A live, on-device session-opening greeting for the FREE Captain — warm,
+    /// time-aware, names the user, and weaves in today's REAL metrics (steps)
+    /// like the cloud welcome, but generated fully on-device. Pure dynamic
+    /// generation: no templates, no canned lines.
+    func welcome(userName: String?) async throws -> String {
+#if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            guard SystemLanguageModel.default.availability == .available else {
+                throw CaptainOnDeviceChatError.modelUnavailable
+            }
+
+            let liveContext = await fetchLiveHealthContext()
+            let healthScreening = await MainActor.run { HealthScreeningStore.load() }
+            let instructions = buildDynamicSystemPrompt(with: liveContext, healthScreening: healthScreening)
+
+            let name = (userName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let nameClause = name.isEmpty ? "" : "ناده باسمه (\(name)). "
+            let openerPrompt = """
+            [بداية جلسة جديدة] افتح الجلسة بترحيب قصير وحار بالعراقي يناسب الوقت (\(Self.timeOfDayHint())). \(nameClause)\
+            اربط الترحيب ببياناته الحقيقية لليوم — خطواته اليوم \(liveContext.currentSteps) — \
+            وإذا إله معنى اذكر إشارة وحدة ثانية (الماء أو النوم). حفّزه بصدق بدون مبالغة، \
+            بسطرين لثلاثة، واختم بسؤال واحد يفتح الحجي. لا تخترع أي رقم.
+            """
+
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(to: openerPrompt)
+            let cleanText = response.content
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: "*", with: "")
+            let finalText = enforceStrictIraqiDialect(in: cleanText)
+            guard !finalText.isEmpty else {
+                throw CaptainOnDeviceChatError.emptyResponse
+            }
+            return finalText
+        }
+#endif
+        throw CaptainOnDeviceChatError.foundationModelsUnavailable
+    }
+
+    /// Coarse Arabic time-of-day label so the greeting matches the clock.
+    private static func timeOfDayHint() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  return "صباح"
+        case 12..<17: return "ظهر/عصر"
+        case 17..<22: return "مساء"
+        default:      return "ليل متأخر"
+        }
+    }
+
     private func buildDynamicSystemPrompt(
         with context: LiveHealthContext,
         healthScreening: HealthScreeningAnswers?
