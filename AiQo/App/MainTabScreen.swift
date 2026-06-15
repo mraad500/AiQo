@@ -5,18 +5,10 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
-    /// Drives a `body` re-evaluation when a purchase/restore lands so the
-    /// Captain gate below re-reads `tierGate.canAccess(.captainChat)`.
-    /// `TierGate` is a plain non-observable class that reads UserDefaults
-    /// live, so without observing the entitlement source the gate would stay
-    /// on `CaptainLockedView` until the next cold launch.
-    @ObservedObject private var entitlementStore = EntitlementStore.shared
-    private let tierGate = TierGate.shared
     private let appTint = Color(hex: "FFDF63")
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
-    @State private var showCaptainPaywall = false
 
     var body: some View {
         Group {
@@ -70,23 +62,14 @@ struct MainTabScreen: View {
 
             NavigationStack {
                 Group {
-                    if DevOverride.unlockAllFeatures || tierGate.canAccess(.captainChat) {
-                        CaptainScreen()
-                            .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
-                                CaptainChatView()
-                            }
-                    } else {
-                        CaptainLockedView(config: .init(
-                            title: "محادثة حمودي",
-                            subtitle: "افتح الكابتن حمودي كامل مع اشتراك AiQo. كل الميزات، بلهجتك، في أي وقت.",
-                            iconSystemName: "message.badge.waveform.fill",
-                            tier: tierGate.requiredTier(for: .captainChat),
-                            onUpgradeTap: { showCaptainPaywall = true }
-                        ))
-                        .sheet(isPresented: $showCaptainPaywall) {
-                            PaywallView(source: .captainGate)
+                    // Captain is open to EVERY tier: free runs fully on-device
+                    // (Apple Intelligence — dynamic, private, uncapped); Max+ adds
+                    // the cloud brain + durable memory. The tier split lives in
+                    // CaptainViewModel, not here.
+                    CaptainScreen()
+                        .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
+                            CaptainChatView()
                         }
-                    }
                 }
             }
             .tag(MainTabRouter.Tab.captain)

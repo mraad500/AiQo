@@ -293,13 +293,17 @@ private extension CaptainChatView {
                         // back to Apple TTS — the user pressed the speaker
                         // because they want voice, hiding the gate behind
                         // Settings makes that intent unreachable.
-                        if FeatureFlags.captainVoiceCloudEnabled,
-                           !voiceConsent.isGranted {
+                        // Free → Apple voice (no cloud consent needed). Paid → MiniMax API voice.
+                        let isPaid = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat)
+                        if isPaid, FeatureFlags.captainVoiceCloudEnabled, !voiceConsent.isGranted {
                             showVoiceConsent = true
                             return
                         }
                         Task {
-                            await CaptainVoiceRouter.shared.speak(text: message.text, tier: .premium)
+                            await CaptainVoiceRouter.shared.speak(
+                                text: message.text,
+                                tier: isPaid ? .premium : .realtime
+                            )
                         }
                     },
                     onAccessoryTap: message.accessory == .morningGratitude ? {
@@ -792,7 +796,7 @@ private struct CaptainChatAvatarView: View {
     let size: CGFloat
 
     private var captainImage: UIImage? {
-        UIImage(named: "Hammoudi5")
+        UIImage(named: CaptainAvatarAsset.current)
     }
 
     var body: some View {

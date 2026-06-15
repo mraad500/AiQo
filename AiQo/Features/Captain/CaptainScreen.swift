@@ -750,7 +750,9 @@ struct ChatBubbleView: View {
                 if canSpeakReply {
                     Button {
                         Task {
-                            await CaptainVoiceRouter.shared.speak(text: text, tier: .premium)
+                            // Free → Apple voice (Siri-like, on-device). Paid → MiniMax API voice.
+                            let isPaid = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat)
+                            await CaptainVoiceRouter.shared.speak(text: text, tier: isPaid ? .premium : .realtime)
                         }
                     } label: {
                         ZStack(alignment: .bottomTrailing) {
@@ -1291,13 +1293,28 @@ struct BreathingRingIndicatorView: View {
 
 // MARK: - Avatar View
 
+/// The Captain's portrait scales with tier — a visual cue that subscribing
+/// "grows" the Captain. Free sees the young Captain (`Hammoudi4`); Max+ sees
+/// the grown, wiser Captain (`Hammoudi5`). `DevOverride` unlocks the grown one.
+enum CaptainAvatarAsset {
+    static var current: String {
+        (DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat))
+            ? "Hammoudi5"
+            : "Hammoudi4"
+    }
+}
+
 struct CaptainAvatarView: View {
     var breathes: Bool = true
 
+    /// Re-render the moment entitlement changes so the Captain visibly "grows"
+    /// right when the user subscribes (free `Hammoudi4` → paid `Hammoudi5`).
+    @ObservedObject private var entitlements = EntitlementStore.shared
     @State private var breathingOffset: CGFloat = 0
 
     var body: some View {
-        Image("Hammoudi5")
+        let _ = entitlements
+        Image(CaptainAvatarAsset.current)
             .resizable()
             .aspectRatio(contentMode: .fit)
             .offset(y: breathes ? breathingOffset : 0)

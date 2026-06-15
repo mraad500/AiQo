@@ -90,6 +90,9 @@ final class TierGate: @unchecked Sendable {
     nonisolated var currentTier: SubscriptionTier {
         #if DEBUG
         if let testOverride { return testOverride }
+        // Developer-panel "force free tier" switch (persisted, read live so the
+        // whole app — chat routing, avatar, voice — flips without a relaunch).
+        if defaults.bool(forKey: "debug.forceFreeTier") { return .none }
         #endif
 
         if trialProvider() { return .trial }

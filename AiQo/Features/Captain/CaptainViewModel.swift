@@ -125,6 +125,9 @@ final class CaptainViewModel: ObservableObject {
 
     private let userDefaults = UserDefaults.standard
     private let orchestrator: BrainOrchestrator
+    /// Free-tier Captain runs fully on-device via Apple Intelligence — pure
+    /// dynamic generation, no cloud, no memory, no templates.
+    private let onDeviceEngine = CaptainOnDeviceChatEngine()
     private let contextBuilder: CaptainContextBuilder
     private let cognitivePipeline: CaptainCognitivePipeline
     /// Bridges the embedding-RAG `MemoryRetriever` into the live chat prompt.
@@ -269,12 +272,13 @@ final class CaptainViewModel: ObservableObject {
         guard !trimmedText.isEmpty else { return }
         guard !isLoading else { return }
 
-        if !DevOverride.unlockAllFeatures && !isEmergencyBypass {
-            guard TierGate.shared.canAccess(.captainChat) else {
-                diag.info("CaptainViewModel.sendMessage blocked by TierGate(.captainChat)")
-                showPaywall = true
-                return
-            }
+        // Free tier → Captain runs ON-DEVICE (Apple Intelligence): dynamic,
+        // private, uncapped, zero templates. Paid (Max+) continues to the cloud
+        // brain + durable-memory path below. Crisis messages always use the
+        // full pipeline regardless of tier.
+        if !DevOverride.unlockAllFeatures && !isEmergencyBypass && !TierGate.shared.canAccess(.captainChat) {
+            sendOnDeviceReply(text: trimmedText)
+            return
         }
 
         let requiresCloudConsent = context != .sleepAnalysis && !isEmergencyBypass
@@ -355,6 +359,73 @@ final class CaptainViewModel: ObservableObject {
                 prebuiltPromptContext: promptContext
             )
         }
+    }
+
+    // MARK: - Free tier — on-device Captain
+
+    /// FREE-tier Captain: one fully dynamic reply generated ON-DEVICE via Apple
+    /// Intelligence (`CaptainOnDeviceChatEngine`). No cloud, no memory, no
+    /// templates — every reply is generated fresh so it never feels canned.
+    /// Paid tiers use the cloud brain + memory path in `processMessage`.
+    private func sendOnDeviceReply(text trimmedText: String) {
+        HapticEngine.light()
+        AnalyticsService.shared.track(.captainMessageSent(length: trimmedText.count))
+
+        responseTask?.cancel()
+        feedbackTrigger += 1
+        inputText = ""
+
+        let userMessage = ChatMessage(text: trimmedText, isUser: true)
+        messages.append(userMessage)
+        isLoading = true
+        coachState = .readingMessage
+
+        let requestID = UUID()
+        activeRequestID = requestID
+        let engine = onDeviceEngine
+
+        responseTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.activeRequestID == requestID {
+                    self.isLoading = false
+                    self.coachState = .idle
+                }
+            }
+
+            await Task.yield()
+            self.coachState = .thinkingOnDevice
+
+            do {
+                let reply = try await engine.respond(to: trimmedText)
+                try self.ensureActiveRequest(requestID)
+                let trimmedReply = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedReply.isEmpty else {
+                    self.appendOnDeviceFallback(requestID: requestID)
+                    return
+                }
+                self.coachState = .typing
+                await self.revealReply(
+                    ChatMessage(text: trimmedReply, isUser: false),
+                    requestID: requestID
+                )
+            } catch is CancellationError {
+                // Superseded by a newer message — drop silently.
+            } catch {
+                diag.info("CaptainViewModel.sendOnDeviceReply failed: \(error.localizedDescription)")
+                self.appendOnDeviceFallback(requestID: requestID)
+            }
+        }
+    }
+
+    /// Soft, warm retry line for the rare case the on-device model is busy or
+    /// unavailable. Shown only on hard failure — never as a routine reply.
+    private func appendOnDeviceFallback(requestID: UUID) {
+        guard activeRequestID == requestID else { return }
+        let text = AppSettingsStore.shared.appLanguage == .english
+            ? "Give me one sec and try that again."
+            : "عطني ثانية وجرّبها مرة لخ."
+        appendFinal(ChatMessage(text: text, isUser: false), requestID: requestID)
     }
 
     func saveCustomization() {
@@ -465,8 +536,17 @@ final class CaptainViewModel: ObservableObject {
 
         let sessionID = currentSessionID
         let capturedOrchestrator = orchestrator
+        let isFreeCaptain = !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
+        let engine = onDeviceEngine
+        let opener = AppSettingsStore.shared.appLanguage == .english ? "hi" : "هلاو"
         responseTask = Task { [weak self] in
-            let dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+            let dynamic: String?
+            if isFreeCaptain {
+                // Free welcome is generated on-device too — never a canned line.
+                dynamic = try? await engine.respond(to: opener)
+            } else {
+                dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+            }
             self?.applyWelcomeMessage(dynamic, for: sessionID)
         }
     }

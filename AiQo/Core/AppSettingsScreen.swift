@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UserNotifications
 import Supabase
 
@@ -20,6 +21,10 @@ struct AppSettingsScreen: View {
     @State private var showAcknowledgements = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
+    #if DEBUG
+    @State private var showOnDeviceLab = false
+    @AppStorage("debug.forceFreeTier") private var forceFreeTier = false
+    #endif
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
 
     var body: some View {
@@ -367,6 +372,31 @@ struct AppSettingsScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            #if DEBUG
+            Section("🧪 Developer") {
+                Toggle("فرض الوضع المجاني (Captain على الجهاز)", isOn: $forceFreeTier)
+                    .onChange(of: forceFreeTier) { _, _ in
+                        // The flag persists in UserDefaults and TierGate reads it
+                        // live; nudge the entitlement publisher so the Captain
+                        // avatar / tier-gated views re-render now, not next launch.
+                        EntitlementStore.shared.objectWillChange.send()
+                    }
+                Button {
+                    showOnDeviceLab = true
+                } label: {
+                    HStack {
+                        Text("مختبر حمودي على الجهاز")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "flask")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            }
+            #endif
         }
         .navigationTitle(
             NSLocalizedString(
@@ -472,6 +502,11 @@ struct AppSettingsScreen: View {
         .sheet(isPresented: $showTermsOfService) {
             LegalView(type: .termsOfService)
         }
+        #if DEBUG
+        .sheet(isPresented: $showOnDeviceLab) {
+            OnDeviceCaptainLabView()
+        }
+        #endif
     }
 
     private func deleteAccount() {

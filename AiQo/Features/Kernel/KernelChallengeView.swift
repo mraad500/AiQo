@@ -432,7 +432,7 @@ private struct BreathingChallengeView: View {
             Circle()
                 .fill(AiQoColors.mintSoft.opacity(0.6))
                 .frame(width: inhale ? 180 : 110, height: inhale ? 180 : 110)
-                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: inhale)
+                .animation(AiQoAccessibility.prefersReducedMotion ? nil : .easeInOut(duration: 4).repeatForever(autoreverses: true), value: inhale)
                 .overlay(Text(inhale ? (isAr ? "شهيق" : "in") : (isAr ? "زفير" : "out")).font(AiQoTheme.Typography.cardTitle))
             Text(isAr ? "تنفّس بهدوء — \(remaining) ثانية" : "Breathe slowly — \(remaining)s")
                 .font(AiQoTheme.Typography.body)
