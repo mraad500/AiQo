@@ -1339,15 +1339,11 @@ final class CaptainViewModel: ObservableObject {
         return !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
     }
 
-    /// Persona snapshot for the free on-device Captain — resolved name + the
-    /// user's chosen tone + age, so on-device replies address the user and match
-    /// the tone they picked (practical / caring / strict).
+    /// Persona snapshot for the free on-device Captain — name only. Free tier has
+    /// NO style customization (that's a Max/Pro feature); the Captain just
+    /// addresses the user warmly in one simple fixed voice.
     private func onDevicePersona() -> CaptainOnDeviceChatEngine.Persona {
-        CaptainOnDeviceChatEngine.Persona(
-            userName: captainReplyUserName(),
-            tone: customization.tone,
-            age: customization.age.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
+        CaptainOnDeviceChatEngine.Persona(userName: captainReplyUserName())
     }
 
     private func captainReplyUserName() -> String? {

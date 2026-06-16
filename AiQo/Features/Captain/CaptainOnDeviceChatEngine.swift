@@ -44,13 +44,13 @@ enum CaptainOnDeviceChatError: LocalizedError {
 ///   `CaptainFactGuard` rewrites any number that contradicts the device.
 actor CaptainOnDeviceChatEngine {
 
-    /// Who the Captain is talking to. Threaded in from the ViewModel.
+    /// Who the FREE Captain is talking to. Free tier = name only: it addresses
+    /// the user warmly but has NO style customization (that's a Max/Pro feature)
+    /// and speaks in one simple fixed voice.
     struct Persona: Sendable {
         let userName: String?
-        let tone: CaptainTone
-        let age: String?
 
-        static let neutral = Persona(userName: nil, tone: .practical, age: nil)
+        static let neutral = Persona(userName: nil)
     }
 
     private struct LiveHealthContext: Sendable {
@@ -260,17 +260,19 @@ actor CaptainOnDeviceChatEngine {
 
     // MARK: - Prompt (NO dialogue examples — see type doc)
 
-    /// Bounded, honest "what Max adds" awareness — injected ONLY into the live
-    /// chat (never notifications). The free Captain may, RARELY and only when the
-    /// user genuinely bumps its ceiling, note its limit + that Max goes deeper. It
-    /// is told never to nag, repeat, block, or mention prices — matching AiQo's
-    /// "depth not caps, no resentment" stance.
+    /// The "taste + honest invitation" behavior for the FREE chat (injected only
+    /// into chat, never notifications). On a BIG ask the free Captain gives one
+    /// genuine quick tip, then warmly notes the full tracked/remembered plan is a
+    /// Max thing — converting on value felt, not a refusal wall. Never naggy,
+    /// never a fixed line, never prices — matching AiQo's "depth not caps,
+    /// no resentment" stance.
     private static let upgradeAwarenessBlock = """
 
-        UPGRADE AWARENESS (use RARELY — only when genuinely relevant, never pushy):
-        - You are the FREE on-device Captain: you remember ONLY this chat and reset between sessions; you don't build multi-week tracked plans or use the premium voice.
-        - ONLY IF the user references something from an earlier session you clearly can't recall, OR asks for an ongoing tracked plan or deep long-term analysis: add ONE short, warm Iraqi line noting your limit and that AiQo Max remembers them across the days and coaches deeper. Then drop it.
-        - Otherwise NEVER mention subscriptions. NEVER repeat the offer, never nag, never block, never mention prices.
+        BIG ASKS (a full workout PROGRAM, a full meal/nutrition PLAN, or a deep long-term analysis):
+        - First give ONE short, genuine taste — a single useful tip in your own words. NEVER write out the full program/plan.
+        - Then, in ONE warm Iraqi line, say honestly that the COMPLETE personalized plan that you track with him and remember across the days is part of AiQo Max, and invite him to it.
+        - Say it ONCE, warmly, never pushy, never mention prices, and vary your wording (never a fixed sentence).
+        - For SIMPLE questions just answer normally and short — do NOT bring up Max.
         """
 
     private func buildSystemPrompt(
@@ -308,11 +310,10 @@ actor CaptainOnDeviceChatEngine {
         - Forbidden: أتم مستوى، نهاديك، عزيزي، إيه، زي، فصحى رسمية، مصري، شامي.
 
         HOW YOU REPLY (CRITICAL — READ CAREFULLY):
+        - You are the FREE Captain: a quick, friendly helper for simple things.
         - You are ONLY the Captain. Write ONLY the Captain's own words, nothing else.
-        - NEVER write a speaker label such as "Captain:", "User:", "المستخدم:" or "كابتن:".
-        - NEVER write the user's side of the conversation, and NEVER imagine their reply.
-        - NEVER repeat a letter, a word, or a sentence to fill space.
-        - Keep it to 2–4 short lines and end with ONE direct question.
+        - NEVER write a speaker label ("Captain:", "User:", "المستخدم:", "كابتن:"), NEVER write the user's side, and NEVER repeat a letter/word/sentence to fill space.
+        - Keep replies SHORT and SIMPLE: 1–2 lines, easy everyday words, like a quick text. A short question at the end only if it fits naturally.
         - Use ONLY the real numbers below; never invent a statistic.
         \(healthBlock)\(upgradeBlock)
         --- LIVE USER DATA (today, real) ---
@@ -328,33 +329,11 @@ actor CaptainOnDeviceChatEngine {
         """
     }
 
-    /// "Who you're talking to" block — empty-safe.
+    /// "Who you're talking to" block — just the name (free tier has no style).
     private func buildPersonaBlock(_ persona: Persona) -> String {
-        var lines: [String] = []
-
         let name = (persona.userName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !name.isEmpty {
-            lines.append("- اسم المستخدم: \(name) — ناديه باسمه بين فترة وفترة، بدون تكلّف.")
-        }
-        let age = (persona.age ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !age.isEmpty {
-            lines.append("- العمر: \(age).")
-        }
-        lines.append("- \(toneDirective(persona.tone))")
-
-        guard !lines.isEmpty else { return "" }
-        return "\n        WHO YOU'RE TALKING TO:\n        \(lines.joined(separator: "\n        "))\n"
-    }
-
-    private func toneDirective(_ tone: CaptainTone) -> String {
-        switch tone {
-        case .practical:
-            return "النبرة: عملية ومباشرة — حلول واضحة بدون لف ودوران."
-        case .caring:
-            return "النبرة: حنونة وداعمة — شجّعه وخفّف عليه، كن سند مو ضاغط."
-        case .strict:
-            return "النبرة: صارمة ومحفّزة — ادفعه وما تقبل الأعذار، بس بدون قسوة جارحة."
-        }
+        guard !name.isEmpty else { return "" }
+        return "\n        WHO YOU'RE TALKING TO:\n        - اسم المستخدم: \(name) — ناديه باسمه بين فترة وفترة، بدون تكلّف.\n"
     }
 
     private func currentTimeOfDayArabic() -> String {
