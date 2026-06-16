@@ -18,6 +18,9 @@ struct CaptainCustomization: Codable {
     var weight: String
     var calling: String
     var tone: CaptainTone
+    /// Pro-only free-text persona ("describe your Captain"). Empty = use the
+    /// selected preset `tone`.
+    var customStyle: String = ""
 
     static let `default` = CaptainCustomization(
         name: "",
@@ -25,23 +28,83 @@ struct CaptainCustomization: Codable {
         height: "",
         weight: "",
         calling: "",
-        tone: .practical
+        tone: .practical,
+        customStyle: ""
     )
+
+    /// The persona directive injected into the PAID (cloud) Captain prompt: the
+    /// user's free-text custom persona (Pro) when set, otherwise the selected
+    /// preset style's directive. Free users never reach the cloud path.
+    var captainStyleDirective: String {
+        let custom = customStyle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            return "شخصية الكابتن (حسب طلب المستخدم بالضبط): \(custom)"
+        }
+        return tone.styleDirectiveArabic
+    }
 }
 
+/// The Captain's selectable personality (a Max/Pro feature). Free uses one fixed
+/// simple voice and never picks a style.
 enum CaptainTone: String, Codable, CaseIterable {
     case practical = "عملي"
     case caring = "حنون"
     case strict = "صارم"
+    case analytical = "محلل"
+    case visionary = "واسع الأفق"
+    case mentor = "مرشد"
+
+    private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     var displayName: String {
         switch self {
+        case .practical:  return isArabic ? "عملي" : "Practical"
+        case .caring:     return isArabic ? "حنون" : "Caring"
+        case .strict:     return isArabic ? "صارم" : "Strict"
+        case .analytical: return isArabic ? "محلّل" : "Analytical"
+        case .visionary:  return isArabic ? "واسع الأفق" : "Visionary"
+        case .mentor:     return isArabic ? "مرشد" : "Mentor"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .practical:  return "🎯"
+        case .caring:     return "💚"
+        case .strict:     return "🔥"
+        case .analytical: return "🧠"
+        case .visionary:  return "🔭"
+        case .mentor:     return "🦉"
+        }
+    }
+
+    /// One-line description shown under the style name.
+    var blurb: String {
+        switch self {
+        case .practical:  return isArabic ? "مباشر وحلول سريعة" : "Direct, quick solutions"
+        case .caring:     return isArabic ? "دافئ وداعم" : "Warm and supportive"
+        case .strict:     return isArabic ? "يدفعك بقوة" : "Pushes you hard"
+        case .analytical: return isArabic ? "أرقام و\u{2018}ليش\u{2019}" : "Data and the why"
+        case .visionary:  return isArabic ? "صورة كبيرة بعيدة المدى" : "Big-picture, long-term"
+        case .mentor:     return isArabic ? "حكمة أخ كبير" : "Wise big-brother"
+        }
+    }
+
+    /// Rich Iraqi directive for the cloud Captain prompt.
+    var styleDirectiveArabic: String {
+        switch self {
         case .practical:
-            return NSLocalizedString("captain.tone.practical", value: "Practical", comment: "")
+            return "النبرة: عملية ومباشرة — حلول واضحة وخطوات قصيرة، بدون لف ودوران."
         case .caring:
-            return NSLocalizedString("captain.tone.caring", value: "Caring", comment: "")
+            return "النبرة: حنونة دافئة — شجّعه واحتويه وخفّف عليه، كن سند مو ضاغط."
         case .strict:
-            return NSLocalizedString("captain.tone.strict", value: "Strict", comment: "")
+            return "النبرة: صارمة ومحفّزة — ادفعه بقوة وما تقبل الأعذار، بس بدون قسوة جارحة."
+        case .analytical:
+            return "النبرة: تحليلية — اربط نصيحتك بالأرقام، فسّر 'ليش'، وأعطِ سبب واضح لكل خطوة."
+        case .visionary:
+            return "النبرة: واسعة الأفق — اربط فعل اليوم بهويته وأهدافه الكبيرة، وصوّرله الصورة الكاملة."
+        case .mentor:
+            return "النبرة: مرشد حكيم — هادئ، بحكمة وخبرة، مثل أخ كبير يوجّه بثقة وعمق."
         }
     }
 }
@@ -1541,18 +1604,21 @@ struct CustomizationSheetView: View {
                             CustomInputField(placeholder: NSLocalizedString("captain.customize.calling", value: "How should the captain call you?", comment: ""), text: $viewModel.customization.calling)
                         }
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(NSLocalizedString("captain.customize.tone", value: "Captain tone", comment: ""))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(theme.subtext)
-
-                            Picker("", selection: $viewModel.customization.tone) {
-                                ForEach(CaptainTone.allCases, id: \.self) { tone in
-                                    Text(tone.displayName).tag(tone)
+                        CaptainPersonalityPicker(
+                            tone: $viewModel.customization.tone,
+                            customStyle: $viewModel.customization.customStyle,
+                            isPaid: viewModel.isPaidCaptain,
+                            isPro: viewModel.isProCaptain,
+                            isArabic: AppSettingsStore.shared.appLanguage == .arabic,
+                            onUpgrade: {
+                                // Close this sheet, then present the paywall on the
+                                // next runloop (two sheets can't show at once).
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                    viewModel.showPaywall = true
                                 }
                             }
-                            .pickerStyle(.segmented)
-                        }
+                        )
 
                         Button(action: { viewModel.saveCustomization() }) {
                             Text(NSLocalizedString("action.save", value: "Save", comment: ""))

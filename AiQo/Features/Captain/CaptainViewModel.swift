@@ -176,6 +176,7 @@ final class CaptainViewModel: ObservableObject {
         static let weight = "captain_user_weight"
         static let calling = "captain_calling"
         static let tone = "captain_tone"
+        static let customStyle = "captain_custom_style"
     }
 
     init(
@@ -442,6 +443,7 @@ final class CaptainViewModel: ObservableObject {
         userDefaults.set(customization.weight, forKey: Keys.weight)
         userDefaults.set(customization.calling, forKey: Keys.calling)
         userDefaults.set(customization.tone.rawValue, forKey: Keys.tone)
+        userDefaults.set(customization.customStyle, forKey: Keys.customStyle)
         feedbackTrigger += 1
 
         let nickname = customization.calling.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -464,6 +466,7 @@ final class CaptainViewModel: ObservableObject {
            let tone = CaptainTone(rawValue: toneString) {
             customization.tone = tone
         }
+        customization.customStyle = userDefaults.string(forKey: Keys.customStyle) ?? ""
     }
 
     func consumePendingCaptainNotificationIfAny() {
@@ -1337,6 +1340,16 @@ final class CaptainViewModel: ObservableObject {
     var isFreeCaptain: Bool {
         _ = effectiveTier
         return !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
+    }
+
+    /// Paid Captain (Max or higher, or dev unlock) — may customize the
+    /// Captain's personality preset.
+    var isPaidCaptain: Bool { !isFreeCaptain }
+
+    /// Pro Captain — additionally unlocks the free-text custom persona.
+    var isProCaptain: Bool {
+        _ = effectiveTier
+        return DevOverride.unlockAllFeatures || effectiveTier == .pro
     }
 
     /// Persona snapshot for the free on-device Captain — name only. Free tier has

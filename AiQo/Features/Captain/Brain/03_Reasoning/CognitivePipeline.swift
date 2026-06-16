@@ -327,7 +327,7 @@ private extension CaptainCognitivePipeline {
             "- Age: \(summaryValue(customization.age))",
             "- Height cm: \(summaryValue(customization.height))",
             "- Weight kg: \(summaryValue(customization.weight))",
-            "- Preferred tone: \(customization.tone.rawValue)"
+            "- \(customization.captainStyleDirective)"
         ]
 
         if let personalization = personalizationStore.currentSnapshot() {
