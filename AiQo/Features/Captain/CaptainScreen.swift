@@ -199,6 +199,17 @@ struct CaptainScreen: View {
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     @State private var showHealthSources = false
     @Namespace private var avatarNamespace
+    @State private var showGrowsSheet = false
+    @AppStorage("captain.growsBanner.dismissedAtEpoch") private var growsBannerDismissedAtEpoch: Double = 0
+
+    /// Free-tier "Captain grows with Max" teaser — shown only on the pre-chat
+    /// meet-the-Captain screen (never interrupts an active chat), and snoozed for
+    /// a cooldown after dismissal.
+    private var shouldShowUpgradeBanner: Bool {
+        viewModel.isFreeCaptain
+            && !hasUserStartedChat
+            && CaptainUpgradeNudge.shouldShow(dismissedAtEpoch: growsBannerDismissedAtEpoch)
+    }
 
     /// Flips to true the moment the user sends their first message this session.
     /// Resets to false on `startNewChat()` and on cold launch (which calls `loadPersistedHistory()` → `startNewChat()`).
@@ -235,8 +246,23 @@ struct CaptainScreen: View {
                 topChrome
                 CaptainSafetyBanner()
                     .padding(.horizontal, 16)
+
+                if shouldShowUpgradeBanner {
+                    CaptainUpgradeBanner(
+                        isArabic: isArabicUI,
+                        onOpen: { showGrowsSheet = true },
+                        onDismiss: {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                growsBannerDismissedAtEpoch = Date().timeIntervalSince1970
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
             .padding(.bottom, 4)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: shouldShowUpgradeBanner)
             .background {
                 // Opaque layer behind the header + safety banner so the chat
                 // can't bleed through when the user scrolls messages up.
@@ -275,6 +301,19 @@ struct CaptainScreen: View {
         }
         .sheet(isPresented: $viewModel.showPaywall) {
             PaywallView(source: .captainGate)
+        }
+        .sheet(isPresented: $showGrowsSheet) {
+            CaptainGrowsSheet(isArabic: isArabicUI) {
+                // Hand off to the paywall: close this sheet, then present it on the
+                // next runloop (two sheets can't be presented simultaneously).
+                showGrowsSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.showPaywall = true
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
         }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()

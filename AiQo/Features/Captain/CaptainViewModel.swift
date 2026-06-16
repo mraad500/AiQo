@@ -1330,6 +1330,15 @@ final class CaptainViewModel: ObservableObject {
         return "\(userName)، \(reply)"
     }
 
+    /// True when the user is on the FREE, on-device Captain (no `captainChat`
+    /// entitlement). Drives the UI upgrade nudge. Reading `effectiveTier` ties
+    /// SwiftUI re-evaluation to entitlement changes (the nudge vanishes the
+    /// instant the user subscribes).
+    var isFreeCaptain: Bool {
+        _ = effectiveTier
+        return !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
+    }
+
     /// Persona snapshot for the free on-device Captain — resolved name + the
     /// user's chosen tone + age, so on-device replies address the user and match
     /// the tone they picked (practical / caring / strict).

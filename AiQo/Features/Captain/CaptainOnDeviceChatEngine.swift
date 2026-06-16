@@ -202,7 +202,12 @@ actor CaptainOnDeviceChatEngine {
             return existing
         }
         let session = LanguageModelSession(
-            instructions: buildSystemPrompt(with: context, healthScreening: screening, persona: persona)
+            instructions: buildSystemPrompt(
+                with: context,
+                healthScreening: screening,
+                persona: persona,
+                allowUpgradeHint: true
+            )
         )
         conversationSessionBox = session
         return session
@@ -255,10 +260,24 @@ actor CaptainOnDeviceChatEngine {
 
     // MARK: - Prompt (NO dialogue examples — see type doc)
 
+    /// Bounded, honest "what Max adds" awareness — injected ONLY into the live
+    /// chat (never notifications). The free Captain may, RARELY and only when the
+    /// user genuinely bumps its ceiling, note its limit + that Max goes deeper. It
+    /// is told never to nag, repeat, block, or mention prices — matching AiQo's
+    /// "depth not caps, no resentment" stance.
+    private static let upgradeAwarenessBlock = """
+
+        UPGRADE AWARENESS (use RARELY — only when genuinely relevant, never pushy):
+        - You are the FREE on-device Captain: you remember ONLY this chat and reset between sessions; you don't build multi-week tracked plans or use the premium voice.
+        - ONLY IF the user references something from an earlier session you clearly can't recall, OR asks for an ongoing tracked plan or deep long-term analysis: add ONE short, warm Iraqi line noting your limit and that AiQo Max remembers them across the days and coaches deeper. Then drop it.
+        - Otherwise NEVER mention subscriptions. NEVER repeat the offer, never nag, never block, never mention prices.
+        """
+
     private func buildSystemPrompt(
         with context: LiveHealthContext,
         healthScreening: HealthScreeningAnswers?,
-        persona: Persona
+        persona: Persona,
+        allowUpgradeHint: Bool = false
     ) -> String {
         let healthContextLine = healthScreening?.captainContextLine ?? ""
         let healthBlock = healthContextLine.isEmpty
@@ -266,6 +285,7 @@ actor CaptainOnDeviceChatEngine {
             : "\n        --- USER HEALTH CONTEXT (MANDATORY) ---\n        \(healthContextLine)\n"
 
         let personaBlock = buildPersonaBlock(persona)
+        let upgradeBlock = allowUpgradeHint ? Self.upgradeAwarenessBlock : ""
         let timeOfDay = currentTimeOfDayArabic()
 
         return """
@@ -294,7 +314,7 @@ actor CaptainOnDeviceChatEngine {
         - NEVER repeat a letter, a word, or a sentence to fill space.
         - Keep it to 2–4 short lines and end with ONE direct question.
         - Use ONLY the real numbers below; never invent a statistic.
-        \(healthBlock)
+        \(healthBlock)\(upgradeBlock)
         --- LIVE USER DATA (today, real) ---
         Time of day: \(timeOfDay)
         Steps: \(context.currentSteps)
