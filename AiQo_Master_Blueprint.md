@@ -4,9 +4,9 @@
 > The single source of truth for the AiQo product — its identity, founder/persona, architecture, every feature, backend, monetization, privacy, and growth strategy.
 >
 > **Owner:** Mohammed Raad (founder, solo) · **Persona:** Captain Hamoudi (كابتن حمودي)
-> **App version:** `1.0.7` (build `30`) — **rejected 2026-06-15 (Guideline 3.1.2(c)), metadata-only fix applied, resubmitted → "Waiting for Review"** · **Live on App Store:** `1.0.6` · **Bundle:** `com.mraad500.aiqo` · **Platform:** iOS 26.2+ (SwiftUI)
-> **Active branch:** `program/world-class-completion` (post-1.0.7 work — free on-device Captain, tier-differentiated avatar/voice, streaming/fact-guard — not yet a numbered release)
-> **Doc generated:** 2026-05-30 · **Last updated:** 2026-06-15 (free on-device Captain + streaming/fact-guard + rejection-fix pass) · **Repo:** `github.com/mraad500/AiQo`
+> **App version:** `1.0.8` (build `31`) — prepared on `program/world-class-completion`, **not yet submitted** · **Live on App Store:** `1.0.7` (approved + released 2026-06-16) · **Bundle:** `com.mraad500.aiqo` · **Platform:** iOS 26.2+ (SwiftUI)
+> **Active branch:** `program/world-class-completion` (v1.0.8 — deliberately simple free on-device Captain + paid personality customization + per-item memory delete + upgrade legibility; tier-differentiated avatar/voice; streaming dormant)
+> **Doc generated:** 2026-05-30 · **Last updated:** 2026-06-16 (v1.0.8: free Captain simplified + paid personality customization + memory delete + upgrade legibility) · **Repo:** `github.com/mraad500/AiQo`
 
 ---
 
@@ -99,7 +99,7 @@ The current go-to-market is **persona emergence, not a comeback**: a *new* chara
 - **Forbidden phrasings:** "you should/must," "I know how you feel," "everything happens for a reason," "just be positive."
 - **Dialect:** Iraqi (Mesopotamian) primary; MSA fallback; English for tech terms. **The Captain must never speak in MSA in primary content — the Iraqi dialect is the moat.**
 - **Emoji policy:** reserved for celebration kinds only (personal record, Eid, achievement unlocked, etc.); serious nudges (inactivity, sleep debt) stay plain text.
-- **Three tones** (user-selectable): `practical` (عملي), `caring` (حنون), `strict` (صارم).
+- **Personality customization (a Max/Pro feature, v1.0.8):** 6 selectable presets — `practical` (عملي), `caring` (حنون), `strict` (صارم), `analytical` (محلّل), `visionary` (واسع الأفق), `mentor` (مرشد) — each with a rich Iraqi `styleDirectiveArabic` injected into the cloud prompt; **Pro** adds a free-text custom persona (`customStyle`, overrides the preset). **Free has no style picker** — one fixed simple voice (§5.10, §8.3).
 
 ---
 
@@ -108,7 +108,7 @@ The current go-to-market is **persona emergence, not a comeback**: a *new* chara
 | Attribute | Value |
 |---|---|
 | **App name** | AiQo |
-| **Marketing version** | `1.0.7` (build `30`) — rejected 3.1.2(c) 2026-06-15, **metadata-only fix + resubmit** (no new build) · live on App Store: `1.0.6` |
+| **Marketing version** | `1.0.8` (build `31`) — prepared on `program/world-class-completion`, not yet submitted · live on App Store: `1.0.7` (approved 2026-06-16) |
 | **Bundle ID (app)** | `com.mraad500.aiqo` |
 | **Deployment target** | iOS **26.2** |
 | **Language** | Swift (project `SWIFT_VERSION = 5.0`; uses modern Swift concurrency — `actor`, `async/await`, `@MainActor`, `Sendable`) |
@@ -263,14 +263,17 @@ Teach the Captain a durable, executable rule in natural Iraqi/English (e.g. *"ب
 
 **Living avatar & speaking affordances (2026-06-15):** `CaptainScreen` renders the portrait through **`LivingCaptainAvatarView`** — a breathing idle, motion parallax (tilt → depth), and a tap reaction, with a brand-colored **aura that brightens while the Captain speaks** (aura/particles are **paid-only**; free gets breathing + parallax). The asset itself is tier-keyed via `CaptainAvatarAsset.current` (`Hammoudi4` free · `Hammoudi5` Max+) and re-renders the instant entitlement changes (observes `EntitlementStore`), so the Captain visibly levels up on subscribe. While a reply is being spoken, its bubble shows a live **`VoiceEqualizerBars`** audio meter (scoped to the one playing bubble via `CaptainVoiceRouter.speakingText`) + a `symbolEffect(.bounce)` on tap; Reduce Motion swaps in a static filled speaker.
 
-### 5.10 Free on-device Captain (2026-06-15, `program/world-class-completion`)
-The Captain tab is **open to every tier** — the `CaptainLockedView` paywall wall was removed; `MainTabScreen` just shows `CaptainScreen()`. The free experience is a *real* coach, not a teaser:
-- **Routing:** free (`!canAccess(.captainChat)`) routes to `CaptainViewModel.sendOnDeviceReply` → **`CaptainOnDeviceChatEngine`** (direct Apple Intelligence / Foundation Models generation), streamed to the UI via `revealReply`. **Uncapped — no message limits.** The paid cloud+memory path is untouched.
-- **Pure dynamic generation, zero templates:** an on-device **lab** (`OnDeviceCaptainLab`, DEBUG only) A/B-tested *direct* generation vs an *English-bridge + dialect-polish template* path on a real Apple-Intelligence device. **Result:** direct = excellent, coherent Iraqi (~5s/reply); the template/bridge path regurgitated stock dialect words = "dumb app." **Decision: free on-device is pure direct generation, no phrase banks** (this is the canonical case for the "no static/canned responses" rule — see §14).
-- **Dynamic welcome on-device:** `CaptainOnDeviceChatEngine.welcome(userName:)` opens with a warm Iraqi greeting that names the user + cites today's **real** steps + is time-of-day aware (on-device parity with the cloud `DynamicWelcomeComposer`). The paid path now also falls back to the on-device welcome if the cloud greeting fails (offline/timeout/consent) — never a flat canned line; the absolute last resort still personalizes with the user's name.
-- **What free does NOT get (by design — the paid depth):** durable memory / persistence, cross-session continuity, directives, conversation compaction, cloud reasoning (`gemini-3-flash-preview`), image attachments (free is text-only), and premium MiniMax voice. These remain Max+ and are the monetization surface.
-- **Tier-differentiated, instantly:** subscribing visibly + audibly levels the Captain up — avatar asset (`Hammoudi4`→`Hammoudi5`) + living aura + voice (`.realtime` Apple TTS → `.premium` MiniMax) all flip the moment `EntitlementStore` changes. A DEBUG-only `forceFreeTier` toggle (Settings → 🧪 Developer) lets a paid device exercise the free path; verified live via iPhone Mirroring.
-- **Strategy:** monetize on **depth, never on caps** — per-message limits were rejected as resentment-breeding and off-brand for «بياناتك ملكك». Known follow-up: the on-device engine always replies in Iraqi, so an English-language free user still gets Iraqi until language is parametrized. **Origination:** the "Captain levels up when you subscribe" concept is Mohammed Raad's original idea (2026-06-15).
+### 5.10 Free on-device Captain (2026-06-15→16, ships in **v1.0.8 / build 31**)
+The Captain tab is **open to every tier** — the `CaptainLockedView` wall was removed. The free experience is a deliberately **simple, private** coach; depth is the paid moat.
+- **Routing & engine:** free (`!canAccess(.captainChat)`) routes to `CaptainViewModel.respondInConversation` → **`CaptainOnDeviceChatEngine`** (Apple Intelligence / Foundation Models). **Uncapped — no message limits.** Replies are intentionally **short & simple** (1–2 lines, name only, **no style customization** — that's a paid feature). Paid cloud+memory path untouched.
+- **Within-session memory (native, not prompt-stuffed):** multi-turn is kept by reusing ONE `LanguageModelSession` per chat (`resetConversation()` on new chat); we do **not** inject a hand-built "User:/Captain:" transcript — the small model copies it (caused a live bug where it echoed the prompt scaffold + role labels). `respond(to:)` stays a stateless one-off for notifications/lab.
+- **Grounded + sanitized output:** today's real HealthKit metrics injected; **`CaptainFactGuard` runs on the free path too** (rewrites any number that contradicts the device). **`OnDeviceReplySanitizer`** (deterministic, unit-tested — `OnDeviceReplySanitizerTests`) strips leaked role labels, drops a hallucinated user turn, and collapses character/phrase repetition loops (the "هههه…×200" fix). GenerationOptions: temp 0.6, ≤200 tokens.
+- **Pure dynamic generation, zero templates:** the DEBUG `OnDeviceCaptainLab` proved direct generation writes excellent Iraqi while a template/bridge path = garbage → dropped (canonical "no static/canned responses", §14).
+- **Big asks → taste + invite (not a wall):** for a full workout program / meal-nutrition plan / deep analysis, the free Captain gives ONE genuine quick tip, then warmly invites to Max for the full plan it tracks + remembers — value-first, dynamic wording, never a fixed line, never prices. (Chosen over a hard "subscribe to answer" refusal, which would hit the anti-resentment + no-canned rules.)
+- **Dynamic welcome:** `welcome(persona:)` opens with a warm Iraqi greeting that names the user + cites today's real steps + is time-of-day aware; seeds the session as turn 1. Paid falls back to it if the cloud greeting fails.
+- **Upgrade legibility (free only, non-naggy):** a slim dismissible banner on the pre-chat screen → `CaptainGrowsSheet` (evolved avatar + aura + concrete unlocks) → paywall; snoozes 3 days after dismiss (`@AppStorage`); vanishes the instant the user subscribes (`viewModel.isFreeCaptain`). The free chat itself can also note its ceiling once, in-character, on a genuinely relevant turn.
+- **Tier-differentiated, instantly:** subscribing flips avatar (`Hammoudi4`→`Hammoudi5`) + living aura + voice (`.realtime`→`.premium`) **and** unlocks personality customization (§8.3) the moment `EntitlementStore` changes. DEBUG `forceFreeTier` (Settings → 🧪) exercises the free path.
+- **Strategy:** monetize on **depth, never message-count caps** (caps = resentment, off-brand for «بياناتك ملكك»). Capability tiering (plans / personality / durable memory = paid) IS in. **Origination:** "Captain levels up when you subscribe" is Mohammed Raad's idea (2026-06-15). Known follow-up: the engine always replies Iraqi (English-free-user → still Iraqi until parametrized).
 
 ---
 
@@ -295,7 +298,7 @@ The largest feature area. Subfolders:
 - Exercise catalog: `GymExercise` (25+ exercises mapped to `HKWorkoutActivityType` + indoor/outdoor location). `WorkoutHistoryStore` keeps a rolling 30 workouts (14 folded into Captain memory).
 
 ### Captain (`Features/Captain/`) — **Free (on-device) · Max+ (cloud depth)**
-See §5. The AI coach tab. **Free** gets a real, uncapped on-device Iraqi Captain (Apple Intelligence — §5.10); **Max+** unlocks the cloud brain: durable memory, directives, conversation continuity, image/photo input, and premium MiniMax voice. Avatar + voice level up on subscribe.
+See §5. The AI coach tab. **Free** = a real, uncapped but deliberately **simple** on-device Iraqi Captain (Apple Intelligence — §5.10); a big ask (full plan/nutrition/analysis) gets a quick taste + a Max invite. **Max+** unlocks the cloud brain (durable memory, directives, continuity, image input, premium MiniMax voice) **and Captain personality customization** (6 presets; Pro adds a free-text custom persona — §8.3). Avatar + voice + personality level up on subscribe.
 
 ### Kitchen (`Features/Kitchen/`) — **Max**
 Nutrition & meal planning: interactive fridge inventory, **camera "smart fridge" scan** → Gemini vision → meal plan, recipe/ingredient catalog, composite plate visualization, bundled `meals_data.json`. AI plan generation via the Captain pipeline. Key: `KitchenView`, `SmartFridgeScannerView`/`SmartFridgeCameraViewModel`, `KitchenPlanGenerationService`, `Meal`, `KitchenMealType`.
@@ -418,8 +421,8 @@ Ranking: `.none(0) < .max(1) ≤ .trial/.pro(2)`. `effectiveAccessTier`: `.trial
 ### 8.3 Feature gating (`TierGate`, `Brain/00_Foundation/TierGate.swift`)
 `TierGate.shared.canAccess(_ feature:)` is the single gate.
 - **All tiers (incl. free):** `basicLifeNotifications` (water/streak/sleep/workout/weekly reminders — no AI reasoning); **Captain chat itself** (the tab is open to all — free falls through `canAccess(.captainChat) == false` to the on-device engine, §5.10).
-- **Max+ (max, trial, pro):** `captainChat` (now gates the **cloud** brain — memory, continuity, image input — not chat *access*), `captainMemory`, `captainNotifications`, `captainDirectives`, premium MiniMax voice.
-- **Pro only:** `multiWeekPlan(weeks>1)`, `weeklyInsightsNarrative`, `monthlyReflection`, `photoAnalysis`, `premiumVoice` (MiniMax), `advancedCulturalAwareness`.
+- **Max+ (max, trial, pro):** `captainChat` (now gates the **cloud** brain — memory, continuity, image input — not chat *access*), `captainMemory`, `captainNotifications`, `captainDirectives`, premium MiniMax voice, **Captain personality presets** (6 styles via the gated `CaptainPersonalityPicker`; free sees a locked card → paywall).
+- **Pro only:** `multiWeekPlan(weeks>1)`, `weeklyInsightsNarrative`, `monthlyReflection`, `photoAnalysis`, `premiumVoice` (MiniMax), `advancedCulturalAwareness`, **custom Captain persona** (`CaptainCustomization.customStyle` free-text, overrides the preset; gated by `viewModel.isProCaptain`).
 - **Product→tier mapping** (marketing): **Captain chat = Free** (on-device); **Captain cloud depth (memory/directives/voice)**, Kitchen, MyVibe, Battle, Kernel = **Max**; Peaks (Legendary Challenges) = **Pro**; multi-week plans / photo analysis / premium voice = **Pro**.
 
 ### 8.4 Paywall
@@ -487,12 +490,16 @@ Privacy is a first-class product value ("بياناتك ملكك"):
 ---
 
 ## 13. Version history (`CHANGELOG.md`)
-- **Unreleased — branch `program/world-class-completion` (post-1.0.7, 2026-06-14 → 06-15)** — **world-class completion pass**, not yet a numbered release:
-  - **Free on-device Captain (uncapped)** — the Captain tab opened to all tiers; free routes to `CaptainOnDeviceChatEngine` (direct Apple Intelligence, no caps, text-only, no memory/cloud), with an on-device dynamic data-aware welcome. Validated on-device that pure-dynamic generation writes excellent Iraqi and the template path doesn't (dropped). Monetize on depth, not caps. (§5.10, commits `ee854be`, `496d13f`)
+- **v1.0.8 (build 31) — branch `program/world-class-completion`, prepared 2026-06-16, NOT yet submitted** — headline: the Captain gets genuinely smart + free, with paid personality customization:
+  - **Free on-device Captain (uncapped, deliberately simple)** — Captain tab opened to all tiers; free routes to `CaptainOnDeviceChatEngine` (Apple Intelligence). Short/simple replies, name only (no style); **native within-session memory** (reused `LanguageModelSession`, NOT a prompt-stuffed transcript); `CaptainFactGuard` + `OnDeviceReplySanitizer` on the free path (fixed a live "role-label echo + هههه-loop" bug); big asks → quick taste + Max invite (not a wall); `welcome(persona:)` data-aware greeting. (§5.10, commits `ee854be`→`16e9ce6`)
   - **Tier-differentiated Captain** — `LivingCaptainAvatarView` (breathing aura/parallax; aura paid-only), asset `Hammoudi4`→`Hammoudi5` + voice `.realtime`→`.premium`, all flipping instantly on subscribe. (§5.9)
   - **Health fact-guard (LIVE)** — `CaptainFactGuard` rewrites cloud replies whose step/calorie/HR numbers diverge >15% from the real snapshot. (§5.3)
   - **Real SSE streaming (DORMANT)** — `CAPTAIN_REAL_STREAMING` flag + `captain-chat` `stream` branch + `HybridBrainService.generateReplyStreaming`; first text ~1s. Needs edge-fn deploy + paid-device test before flip. (§5.3)
   - **Speaker equalizer animation (LIVE)** — live `VoiceEqualizerBars` on the playing bubble, scoped via `CaptainVoiceRouter.speakingText`. (§5.9)
+  - **Captain personality customization (paid)** — `CaptainTone` expanded to 6 presets + `styleDirectiveArabic`; `CaptainCustomization.customStyle` (Pro free-text); gated `CaptainPersonalityPicker` (free locked → paywall · Max presets · Pro custom); cloud prompt injects the resolved style directive. (§2.4, §8.3, commit `05654ea`)
+  - **Per-item Captain memory delete** — the memory screen gained a native Edit button + hint so a single memory (an injury, leftover test data) is removable instead of only "clear all". (commit `4ae7f28`)
+  - **Upgrade legibility (free→paid), non-naggy** — a dismissible "Captain grows with Max" banner + visual `CaptainGrowsSheet` + an in-chat ceiling-reveal, so free users discover the paid depth without a wall. (commit `5cc661b`)
+  - **Release prep** — `MARKETING_VERSION`→1.0.8 / `CURRENT_PROJECT_VERSION`→31 across all 24 target slots; `CAPTAIN_REAL_STREAMING=false` shipped (dormant); `docs/appstore/{WhatsNew,Description,SUBMISSION}_v1.0.8.md`. Debug + Release builds green; sanitizer + fact-guard test suites green.
   - **Watch↔iPhone sync fix (2026-06-14, `42e52b7`)** — phone-launched workouts now show the correct type on the watch (`WatchWorkoutManager.currentType` `@Published`); XP delivery made reliable (`sendMessage`→`transferUserInfo` fallback) **and exactly-once** (dedup by `workout_id`, persisted on phone); reachability via delegate (not a 2s timer); summary reads engine-frozen final metrics; faster home screen; 7 dead Apple-sample views deleted.
   - Also: deleted dead `WinsView`/`RewardsView` (~900 lines), Reduce-Motion gating on loaders + Kernel breathing. (Tribe deferred; broad Dynamic Type / VoiceOver a11y still pending.)
 - **v1.0.7 (2026-05-31, build 30)** — **rejected by App Review 2026-06-15 under Guideline 3.1.2(c)**; root cause was a **404 Privacy Policy URL** in App Store Connect (`/privacy-policy` vs the live `/privacy`) — **metadata-only fix** (corrected URL + registered custom EULA + Description/Review-notes polish), **resubmitted with no new build** → "Waiting for Review" (`docs/appstore/REJECTION_FIX_3.1.2c_v1.0.7.md`). **Headline: النواة (Kernel) ships LIVE** — a Family-Controls digital-wellbeing app-lock you open with movement (escalating shields → unlock by real steps, a live Captain trainer, and calm-hold/PPG + breathing friction to disable); full detail in §6 "النواة (Kernel)". Plus a **world-class completion pass** (whole-app audit → fix). Eliminated English-mode localization leaks (raw keys + Arabic bleed-through) in Weekly Report, Progress Photos, the `VibeControlSheet` music surface, Kitchen a11y, and the language picker's bilingual label; localized all proactive + recurring notifications for the English cohort (were Iraqi-only). **Compliance:** inserted the `.quickStart` age/health gate (blocks under-18, Guideline 1.4.1) into `AppFlowController.resolveCurrentScreen`/`nextScreenAfterLogin` — it was previously reachable only from Profile (existing users grandfathered); account deletion now surfaces RPC failures instead of claiming success + signing out (Guideline 5.1.1(v)). **UX:** removed dead-end controls (3 inert Body "Clarity" cards, the decorative Plan filter rail), relabeled the misleading Captain "Start Workout" CTA → "Discuss Plan", and gated directive-confirmation honesty on `trigger.isExecutable`. **Fixes:** camera-quest tier-3 accuracy 100→95% (100% was unreachable, locked Stages 3–10); expanded `meals_data.json` 6→18 and made `Meal` decode `name_en`. Refreshed 5 stale tests (TierGate ceilings + removed obsolete Food_photos asset tests) → full suite green. (see §14)
@@ -501,7 +508,7 @@ Privacy is a first-class product value ("بياناتك ملكك"):
 - **v1.0.2 (2026-04-20)** — Learning Spark Stage 2 (5-course picker, Edraak+Coursera), challenge XP (+1000 / +2000), on-device verification extended, celebration redesign.
 - **v1.0.1 (2026-04-19)** — Crisis detection, proactive brain, regional safety resources.
 
-> Build number has advanced over time (project currently `CURRENT_PROJECT_VERSION = 30` at marketing version `1.0.7`; App Store **live** is `1.0.6`). Release branches `brain-refactor/*` and `release/*` may lag `main` and the active `program/world-class-completion` branch — a "missing Captain feature" is usually an unmerged branch, not a regression.
+> Build number has advanced over time (project currently `CURRENT_PROJECT_VERSION = 31` at marketing version `1.0.8`; App Store **live** is `1.0.7`, approved + released 2026-06-16). Release branches `brain-refactor/*` and `release/*` may lag `main` and the active `program/world-class-completion` branch — a "missing Captain feature" is usually an unmerged branch, not a regression.
 
 ---
 
