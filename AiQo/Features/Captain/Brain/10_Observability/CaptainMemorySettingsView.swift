@@ -17,6 +17,16 @@ struct CaptainMemorySettingsView: View {
         return grouped.sorted { $0.key < $1.key }
     }
 
+    /// True when there is at least one individually-removable memory (saved note,
+    /// reminder, or any extracted fact that isn't read-only profile/workout data).
+    /// Gates the Edit button + the "swipe to delete" hint.
+    private var hasDeletableMemories: Bool {
+        if !savedMemories.isEmpty { return true }
+        return memories.contains {
+            $0.category != "identity" && $0.category != "workout_history" && $0.category != "saved"
+        }
+    }
+
     var body: some View {
         List {
             headerSection
@@ -55,6 +65,16 @@ struct CaptainMemorySettingsView: View {
         }
         .navigationTitle(NSLocalizedString("memory.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isEnabled && hasDeletableMemories {
+                ToolbarItem(placement: .topBarTrailing) {
+                    // Native Edit/Done — turns every memory row into a tap-to-delete
+                    // control, so the user can remove individual memories (and keep
+                    // the rest) instead of only "clear all". Localized by the system.
+                    EditButton()
+                }
+            }
+        }
         .environment(\.layoutDirection, .rightToLeft)
         .onAppear {
             loadMemories()
@@ -96,6 +116,16 @@ struct CaptainMemorySettingsView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(GymTheme.mint.opacity(0.12)))
+                }
+
+                if isEnabled && hasDeletableMemories {
+                    Text(isArabicUI
+                         ? "تكدر تحذف أي معلومة لحالها — اضغط \u{201C}تعديل\u{201D} فوق وامسح اللي تريد، أو اسحب المعلومة. الباقي يبقى."
+                         : "You can delete any single item — tap \u{201C}Edit\u{201D} above and remove what you want, or swipe a row. The rest stays.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.45))
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity)
