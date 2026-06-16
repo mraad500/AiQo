@@ -402,7 +402,11 @@ final class CaptainViewModel: ObservableObject {
             self.coachState = .thinkingOnDevice
 
             do {
-                let reply = try await engine.respond(to: trimmedText)
+                let reply = try await engine.respond(
+                    to: trimmedText,
+                    history: priorTurns,
+                    persona: persona
+                )
                 try self.ensureActiveRequest(requestID)
                 let trimmedReply = reply.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmedReply.isEmpty else {
