@@ -199,6 +199,14 @@ enum GeminiConfig {
         return url
     }
 
+    /// Direct (non-proxy) SSE streaming endpoint — `streamGenerateContent?alt=sse`.
+    static func streamEndpointURL(for model: String) throws -> URL {
+        guard let url = URL(string: "\(baseEndpoint)/\(model):streamGenerateContent?alt=sse") else {
+            throw HybridBrainServiceError.invalidEndpoint
+        }
+        return url
+    }
+
     /// Rejects empty strings and unexpanded Xcode placeholders like "$(CAPTAIN_API_KEY)".
     private static func isValid(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -243,6 +251,17 @@ struct GeminiResponse: Decodable {
             .compactMap(\.text)
             .joined()
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Like `outputText` but WITHOUT trimming — used to concatenate streaming
+    /// SSE chunks. Trimming each fragment would eat the spaces that fall on a
+    /// chunk boundary and corrupt the reassembled JSON.
+    var rawPartsText: String {
+        candidates?
+            .compactMap { $0.content }
+            .flatMap { $0.parts ?? [] }
+            .compactMap(\.text)
+            .joined() ?? ""
     }
 
     /// Gemini's reason for ending generation on the first candidate
@@ -301,6 +320,43 @@ struct HybridBrainService: Sendable {
         let cloudResult = try await requestCloudResponse(
             request: request,
             model: model
+        )
+        let rawText = try encodeStructuredResponse(cloudResult.response)
+
+        return HybridBrainServiceReply(
+            message: CaptainPersonaBuilder.sanitizeResponse(cloudResult.response.message),
+            quickReplies: cloudResult.response.quickReplies,
+            workoutPlan: cloudResult.response.workoutPlan,
+            mealPlan: cloudResult.response.mealPlan,
+            spotifyRecommendation: cloudResult.response.spotifyRecommendation,
+            savedMemory: cloudResult.response.savedMemory,
+            reminder: cloudResult.response.reminder,
+            rawText: rawText,
+            truncatedAtMaxTokens: cloudResult.truncatedAtMaxTokens
+        )
+    }
+
+    /// REAL token streaming. Opens an SSE connection to Gemini's
+    /// `streamGenerateContent`, reassembles the structured-JSON output as
+    /// chunks arrive, and invokes `onMessagePreview` with the growing `message`
+    /// field so the chat can render live text from the first token (~1s)
+    /// instead of waiting the full 12–22s for a complete reply.
+    ///
+    /// The FINAL return value is parsed from the fully-accumulated stream with
+    /// the same `LLMJSONParser` the blocking path uses — so the authoritative
+    /// reply (message + quickReplies + plans + memory) is identical to
+    /// `generateReply`. The live preview is best-effort cosmetic text only.
+    func generateReplyStreaming(
+        request: HybridBrainRequest,
+        model: String,
+        onMessagePreview: @escaping @Sendable (String) async -> Void
+    ) async throws -> HybridBrainServiceReply {
+        try validate(request)
+
+        let cloudResult = try await requestStreamingCloudResponse(
+            request: request,
+            model: model,
+            onMessagePreview: onMessagePreview
         )
         let rawText = try encodeStructuredResponse(cloudResult.response)
 
@@ -435,6 +491,84 @@ private extension HybridBrainService {
         )
     }
 
+    /// SSE variant of `requestCloudResponse`. Reads the `streamGenerateContent`
+    /// event stream line-by-line, reassembles the model output, and surfaces a
+    /// growing `message` preview per chunk. The final `CloudCallResult` is
+    /// parsed from the complete buffer — identical to the blocking path.
+    func requestStreamingCloudResponse(
+        request: HybridBrainRequest,
+        model: String,
+        onMessagePreview: @escaping @Sendable (String) async -> Void
+    ) async throws -> CloudCallResult {
+        let urlRequest = try await makeGeminiURLRequest(request: request, model: model, streaming: true)
+
+        logger.notice("gemini_stream_request model=\(model, privacy: .public) via=\(CaptainProxyConfig.isChatEnabled ? "proxy" : "direct", privacy: .public)")
+
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(for: urlRequest)
+        } catch {
+            logger.error("gemini_stream_network_error error=\(error.localizedDescription, privacy: .public)")
+            throw isNetworkUnavailable(error)
+                ? HybridBrainServiceError.networkUnavailable
+                : HybridBrainServiceError.requestFailed
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw HybridBrainServiceError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            logger.error("gemini_stream_bad_status status=\(httpResponse.statusCode)")
+            throw HybridBrainServiceError.badStatusCode(httpResponse.statusCode)
+        }
+
+        var rawOutput = ""
+        var lastPreview = ""
+        var finishReason: String?
+
+        for try await line in bytes.lines {
+            if Task.isCancelled { throw CancellationError() }
+            // SSE framing: only `data:` lines carry payload. Blank separators,
+            // `event:` lines, and `:` comments are skipped.
+            guard line.hasPrefix("data:") else { continue }
+            let payload = line.dropFirst("data:".count).trimmingCharacters(in: .whitespaces)
+            if payload.isEmpty || payload == "[DONE]" { continue }
+            guard let data = payload.data(using: .utf8),
+                  let chunk = try? JSONDecoder().decode(GeminiResponse.self, from: data) else {
+                continue
+            }
+
+            let fragment = chunk.rawPartsText
+            if !fragment.isEmpty {
+                rawOutput += fragment
+                let preview = jsonParser.currentMessagePreview(from: rawOutput)
+                if !preview.isEmpty, preview != lastPreview {
+                    lastPreview = preview
+                    await onMessagePreview(preview)
+                }
+            }
+            if let reason = chunk.finishReason { finishReason = reason }
+        }
+
+        logger.notice("gemini_stream_complete length=\(rawOutput.count) finish=\(finishReason ?? "unknown", privacy: .public)")
+
+        guard !rawOutput.isEmpty else {
+            throw HybridBrainServiceError.emptyResponse
+        }
+
+        let fallback = CaptainStructuredResponse(
+            message: parsingFallbackMessage(for: request.language)
+        )
+        let parsedResponse = jsonParser.decodeCompletedStream(rawOutput, fallback: fallback)
+        let truncatedAtMaxTokens = (finishReason == "MAX_TOKENS")
+
+        return CloudCallResult(
+            response: parsedResponse,
+            truncatedAtMaxTokens: truncatedAtMaxTokens
+        )
+    }
+
     // MARK: - URL Request Construction (proxy vs direct)
 
     /// Routes the Gemini request through the Supabase Edge Function proxy when
@@ -442,34 +576,41 @@ private extension HybridBrainService {
     /// client-embedded API key (legacy path).
     private func makeGeminiURLRequest(
         request: HybridBrainRequest,
-        model: String
+        model: String,
+        streaming: Bool = false
     ) async throws -> URLRequest {
         let geminiBody = makeRequestBody(request: request)
 
         if CaptainProxyConfig.isChatEnabled {
             return try await makeProxiedGeminiRequest(
                 model: model,
-                geminiBody: geminiBody
+                geminiBody: geminiBody,
+                streaming: streaming
             )
         }
 
         return try makeDirectGeminiRequest(
             model: model,
-            geminiBody: geminiBody
+            geminiBody: geminiBody,
+            streaming: streaming
         )
     }
 
     private func makeDirectGeminiRequest(
         model: String,
-        geminiBody: [String: Any]
+        geminiBody: [String: Any],
+        streaming: Bool = false
     ) throws -> URLRequest {
         let apiKey = try GeminiConfig.resolvedAPIKey()
-        var urlRequest = URLRequest(url: try GeminiConfig.endpointURL(for: model))
+        let endpoint = streaming
+            ? try GeminiConfig.streamEndpointURL(for: model)
+            : try GeminiConfig.endpointURL(for: model)
+        var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(streaming ? "text/event-stream" : "application/json", forHTTPHeaderField: "Accept")
         urlRequest.setValue(apiKey, forHTTPHeaderField: "X-goog-api-key")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: geminiBody)
         return urlRequest
@@ -482,7 +623,8 @@ private extension HybridBrainService {
     /// existing `GeminiResponse` decoder works unchanged.
     private func makeProxiedGeminiRequest(
         model: String,
-        geminiBody: [String: Any]
+        geminiBody: [String: Any],
+        streaming: Bool = false
     ) async throws -> URLRequest {
         guard let endpoint = CaptainProxyConfig.endpointURL(for: .chat) else {
             throw HybridBrainServiceError.invalidEndpoint
@@ -499,15 +641,18 @@ private extension HybridBrainService {
         urlRequest.timeoutInterval = GeminiConfig.requestTimeoutSeconds
         urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(streaming ? "text/event-stream" : "application/json", forHTTPHeaderField: "Accept")
         urlRequest.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
         if !anonKey.isEmpty {
             urlRequest.setValue(anonKey, forHTTPHeaderField: "apikey")
         }
 
+        // `stream: true` flips the Edge Function to `streamGenerateContent` (SSE).
+        // Absent on the blocking path → the function's default `generateContent`.
         let wrapped: [String: Any] = [
             "model": model,
             "payload": geminiBody,
+            "stream": streaming,
         ]
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: wrapped)
         return urlRequest

@@ -299,7 +299,7 @@ struct CaptainScreen: View {
                     VStack {
                         Spacer()
 
-                        CaptainAvatarView()
+                        LivingCaptainAvatarView()
                             .frame(height: layout.avatarHeight)
                             .offset(y: layout.avatarOffset)
                             .matchedGeometryEffect(id: "captain-avatar", in: avatarNamespace)
@@ -658,6 +658,41 @@ struct ChatContainerView: View {
 
 // MARK: - Chat Bubble
 
+/// A compact, continuously-animating "now playing" equalizer shown on a
+/// Captain bubble while its voice is being spoken — the premium affordance that
+/// replaces a flat speaker glyph. Desynced bar periods give the organic bob of
+/// a real audio meter. Reduce Motion is honored by the caller (it swaps in a
+/// static filled speaker instead of mounting this view).
+private struct VoiceEqualizerBars: View {
+    var color: Color
+    @State private var animating = false
+
+    // (restHeight, peakHeight, period) per bar.
+    private let bars: [(min: CGFloat, max: CGFloat, period: Double)] = [
+        (4, 12, 0.52),
+        (6, 15, 0.40),
+        (3, 11, 0.64),
+        (5, 13, 0.48)
+    ]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2.5) {
+            ForEach(bars.indices, id: \.self) { index in
+                Capsule(style: .continuous)
+                    .fill(color)
+                    .frame(width: 2.5, height: animating ? bars[index].max : bars[index].min)
+                    .animation(
+                        .easeInOut(duration: bars[index].period).repeatForever(autoreverses: true),
+                        value: animating
+                    )
+            }
+        }
+        .frame(height: 16)
+        .onAppear { animating = true }
+        .accessibilityHidden(true)
+    }
+}
+
 struct ChatBubbleView: View {
     let text: String
     let isUser: Bool
@@ -669,12 +704,20 @@ struct ChatBubbleView: View {
     /// MiniMax takes over when consent + feature flag + configuration allow.
     /// Observed for the mint-dot badge + accessibility label variant.
     @ObservedObject private var voiceRouter = CaptainVoiceRouter.shared
+    /// Bumped on each speaker tap to retrigger the SF Symbol bounce.
+    @State private var speakBounce = 0
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     private var enhancedVoiceActive: Bool {
         voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking
+    }
+    /// True only when THIS bubble's text is the one currently being spoken —
+    /// scopes the live equalizer to the right row (router state is global).
+    private var isThisBubbleSpeaking: Bool {
+        voiceRouter.isSpeaking
+            && voiceRouter.speakingText == text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private var speakerAccessibilityLabel: String {
         let arabic = AppSettingsStore.shared.appLanguage == .arabic
@@ -749,19 +792,30 @@ struct ChatBubbleView: View {
 
                 if canSpeakReply {
                     Button {
+                        // Free → Apple voice (Siri-like, on-device). Paid → MiniMax API voice.
+                        HapticEngine.light()
+                        speakBounce += 1
                         Task {
-                            // Free → Apple voice (Siri-like, on-device). Paid → MiniMax API voice.
                             let isPaid = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat)
                             await CaptainVoiceRouter.shared.speak(text: text, tier: isPaid ? .premium : .realtime)
                         }
                     } label: {
                         ZStack(alignment: .bottomTrailing) {
-                            Image(systemName: voiceRouter.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .contentShape(Rectangle())
+                            Group {
+                                if isThisBubbleSpeaking, !UIAccessibility.isReduceMotionEnabled {
+                                    // Live audio meter while this reply plays.
+                                    VoiceEqualizerBars(color: ink.opacity(0.7))
+                                } else {
+                                    Image(systemName: isThisBubbleSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
+                                        .symbolEffect(.bounce, value: speakBounce)
+                                }
+                            }
+                            .frame(minWidth: 22, minHeight: 16)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .contentShape(Rectangle())
                             if enhancedVoiceActive {
                                 Circle()
                                     .fill(AiQoColors.mintSoft)
@@ -1293,9 +1347,11 @@ struct BreathingRingIndicatorView: View {
 
 // MARK: - Avatar View
 
-/// The Captain's portrait scales with tier — a visual cue that subscribing
-/// "grows" the Captain. Free sees the young Captain (`Hammoudi4`); Max+ sees
-/// the grown, wiser Captain (`Hammoudi5`). `DevOverride` unlocks the grown one.
+/// The Captain's outfit reflects tier — the SAME grown Hamoudi for everyone,
+/// only the look changes: free wears the plain fit (`Hammoudi4`), paid (Max+)
+/// wears the premium fit (`Hammoudi5`) and gets the living aura treatment
+/// (`LivingCaptainAvatarView`). One fixed adult character protects the brand.
+/// `DevOverride` unlocks the paid look.
 enum CaptainAvatarAsset {
     static var current: String {
         (DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat))

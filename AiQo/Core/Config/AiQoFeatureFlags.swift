@@ -257,6 +257,28 @@ enum FeatureFlags {
     @FeatureFlag("USE_CLOUD_PROXY", default: false)
     static var useCloudProxy: Bool
 
+    // MARK: - Captain real token streaming (SSE) — 2026-06-15
+    //
+    // When ON, paid-tier cloud Captain replies stream LIVE token-by-token from
+    // Gemini's `streamGenerateContent` (SSE) — first text appears in ~1s
+    // instead of the user staring at a typing indicator for the full 12–22s
+    // generation, then seeing a client-side fake "reveal" of an
+    // already-complete reply.
+    //
+    // OFF by default (ship-safe): the proven blocking path + progressive-reveal
+    // animation stays the default. The streamed live text is best-effort
+    // cosmetic; the authoritative reply is always re-parsed from the complete
+    // stream by `LLMJSONParser`, so memory/plans/quick-replies are unchanged.
+    //
+    // Requirements before flipping ON:
+    //   1. Deploy the updated `captain-chat` Edge Function (adds the `stream`
+    //      branch → `streamGenerateContent?alt=sse`).
+    //   2. Verify on a physical device on the paid tier (simulator + Apple
+    //      Intelligence + live proxy can't exercise the full path).
+    // Falls back to the blocking path automatically on any streaming error.
+    @FeatureFlag("CAPTAIN_REAL_STREAMING", default: false)
+    static var captainRealStreaming: Bool
+
     // MARK: - Per-path proxy overrides — 2026-04-26
     //
     // The original `USE_CLOUD_PROXY` flag was a single switch — chat AND voice

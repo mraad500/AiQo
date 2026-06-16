@@ -375,6 +375,11 @@ final class CaptainViewModel: ObservableObject {
         feedbackTrigger += 1
         inputText = ""
 
+        // Capture the conversation BEFORE appending this message: the prior turns
+        // become the engine's memory, while the current message stays the prompt.
+        let priorTurns = buildConversationHistory()
+        let persona = onDevicePersona()
+
         let userMessage = ChatMessage(text: trimmedText, isUser: true)
         messages.append(userMessage)
         isLoading = true
@@ -538,15 +543,21 @@ final class CaptainViewModel: ObservableObject {
         let capturedOrchestrator = orchestrator
         let isFreeCaptain = !DevOverride.unlockAllFeatures && !TierGate.shared.canAccess(.captainChat)
         let engine = onDeviceEngine
-        let welcomeName = captainReplyUserName()
+        let persona = onDevicePersona()
         responseTask = Task { [weak self] in
-            let dynamic: String?
+            var dynamic: String?
             if isFreeCaptain {
-                // Free welcome is generated on-device too — live + data-aware
-                // (name + today's steps + time of day), never a canned line.
-                dynamic = try? await engine.welcome(userName: welcomeName)
+                // Free welcome is generated on-device — live + data-aware
+                // (name + today's steps + tone), never a canned line.
+                dynamic = try? await engine.welcome(persona: persona)
             } else {
                 dynamic = await DynamicWelcomeComposer.compose(orchestrator: capturedOrchestrator)
+                // Cloud welcome failed (offline / timeout / consent) — fall back to
+                // the on-device welcome so paid users still get a personalized
+                // greeting, never the flat canned line.
+                if dynamic == nil {
+                    dynamic = try? await engine.welcome(persona: persona)
+                }
             }
             self?.applyWelcomeMessage(dynamic, for: sessionID)
         }
@@ -560,13 +571,19 @@ final class CaptainViewModel: ObservableObject {
         guard currentSessionID == sessionID else { return }
 
         let trimmed = dynamic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let text = trimmed.isEmpty
-            ? NSLocalizedString(
-                "captain.welcome",
-                value: "هلا! أنا كابتن حمّودي. شنو هدفك اليوم؟",
-                comment: "Captain first message"
-            )
-            : trimmed
+        let text: String
+        if !trimmed.isEmpty {
+            text = trimmed
+        } else {
+            // Absolute last resort (both cloud + on-device unavailable) — keep it
+            // personalized with the user's name, not a flat canned line.
+            let name = captainReplyUserName()?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if AppSettingsStore.shared.appLanguage == .english {
+                text = name.isEmpty ? "Hey! What's your goal today?" : "Hey \(name)! What's your goal today?"
+            } else {
+                text = name.isEmpty ? "هلا بيك! شنو هدفك اليوم؟" : "هلا \(name)! شنو هدفك اليوم؟"
+            }
+        }
 
         let welcome = ChatMessage(text: text, isUser: false)
         withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
@@ -683,10 +700,30 @@ final class CaptainViewModel: ObservableObject {
             let orchestratorTimeout = needsSleepTimeout
                 ? sleepProcessingTimeout
                 : globalProcessingTimeout
+
+            // Real token streaming. When enabled, the orchestrator's CLOUD path
+            // streams live `message` previews through `onPreview` into a bound
+            // bubble — first text shows in ~1s instead of after the full
+            // generation. `streamID` lets us detect afterward whether streaming
+            // actually drove the UI (it only fires on the cloud route, never on
+            // the on-device sleep route or on error) so we can skip the
+            // client-side fake reveal in that case. OFF → unchanged behavior.
+            let useStreaming = FeatureFlags.captainRealStreaming
+            let streamID = UUID()
+            let onPreview: (@Sendable (String) async -> Void)?
+            if useStreaming {
+                onPreview = { [weak self] preview in
+                    await self?.applyStreamingPreview(preview, streamID: streamID, requestID: requestID)
+                }
+            } else {
+                onPreview = nil
+            }
+
             let reply = try await withGlobalTimeout(seconds: orchestratorTimeout) {
                 try await capturedOrchestrator.processMessage(
                     request: promptRequest,
-                    userName: prebuiltUserName
+                    userName: prebuiltUserName,
+                    onMessagePreview: onPreview
                 )
             }
 
@@ -764,8 +801,22 @@ final class CaptainViewModel: ObservableObject {
 
             let userText = messages.last(where: { $0.isUser })?.text ?? ""
 
+            // Fact-guard: never let the Captain state a health number that
+            // contradicts today's real HealthKit snapshot. Pure, deterministic,
+            // conservative — only grossly-wrong figures are rewritten; rounding
+            // and other-day references are left untouched. `contextData` carries
+            // the same live metrics injected into the prompt's bio-state layer.
+            let guardedReply = CaptainFactGuard().corrected(
+                validated.message,
+                facts: CaptainFactGuard.Facts(
+                    steps: contextData.steps,
+                    activeCalories: contextData.calories,
+                    heartRate: contextData.heartRate
+                )
+            ).message
+
             let assistantReply = Self.markIfTruncated(
-                assistantReply: validated.message,
+                assistantReply: guardedReply,
                 truncatedAtMaxTokens: reply.truncatedAtMaxTokens
             )
 
@@ -775,7 +826,15 @@ final class CaptainViewModel: ObservableObject {
                 spotifyRecommendation: validated.spotifyRecommendation
             )
 
-            await revealReply(replyMessage, requestID: requestID)
+            if useStreaming, streamingMessageID == streamID {
+                // Live tokens already revealed the reply in real time. Swap the
+                // raw streamed preview for the validated final text and commit
+                // in one mutation — no second client-side reveal.
+                streamingText = replyMessage.text
+                appendFinal(replyMessage, requestID: requestID)
+            } else {
+                await revealReply(replyMessage, requestID: requestID)
+            }
 
             persistChatMessage(replyMessage)
             ConversationThreadManager.shared.logCaptainResponse(content: assistantReply)
@@ -1026,6 +1085,20 @@ final class CaptainViewModel: ObservableObject {
         HapticEngine.light()
     }
 
+    /// Applies one live streaming-preview frame to the bound bubble. The cloud
+    /// streaming path calls this (via a `@Sendable` closure) for each token
+    /// batch; it hops onto the VM's MainActor isolation here. The first frame
+    /// binds the bubble identity and flips the coach to `.typing`; stale frames
+    /// from a superseded request are dropped.
+    private func applyStreamingPreview(_ preview: String, streamID: UUID, requestID: UUID) {
+        guard activeRequestID == requestID else { return }
+        if streamingMessageID != streamID {
+            streamingMessageID = streamID
+            coachState = .typing
+        }
+        streamingText = preview
+    }
+
     private func persistChatMessage(_ message: ChatMessage) {
         let sessionID = currentSessionID
         MemoryStore.shared.persistMessageAsync(message, sessionID: sessionID)
@@ -1253,6 +1326,17 @@ final class CaptainViewModel: ObservableObject {
         guard containsArabicCharacters(in: userName) else { return reply }
         guard !hasUserNamePrefix(reply, userName: userName) else { return reply }
         return "\(userName)، \(reply)"
+    }
+
+    /// Persona snapshot for the free on-device Captain — resolved name + the
+    /// user's chosen tone + age, so on-device replies address the user and match
+    /// the tone they picked (practical / caring / strict).
+    private func onDevicePersona() -> CaptainOnDeviceChatEngine.Persona {
+        CaptainOnDeviceChatEngine.Persona(
+            userName: captainReplyUserName(),
+            tone: customization.tone,
+            age: customization.age.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
     }
 
     private func captainReplyUserName() -> String? {

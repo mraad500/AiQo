@@ -193,6 +193,8 @@
 	<false/>
 	<key>KERNEL_ENABLED</key>
 	<true/>
+	<key>CAPTAIN_REAL_STREAMING</key>
+	<false/>
 	<key>USE_CLOUD_PROXY</key>
 	<string>$(USE_CLOUD_PROXY)</string>
 	<key>USE_CHAT_CLOUD_PROXY</key>

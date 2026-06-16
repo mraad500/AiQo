@@ -34,9 +34,15 @@ struct CloudBrainService: Sendable {
     ///
     /// The subsequent sanitization (`sanitizeForCloud`) runs on the caller's cooperative pool
     /// thread — never on MainActor — so regex processing cannot block the UI.
+    /// `onMessagePreview` (optional) opts this call into REAL SSE streaming:
+    /// when non-nil AND `CAPTAIN_REAL_STREAMING` is on, the primary Gemini call
+    /// streams live `message` previews through it. Defaulted nil so every
+    /// existing caller keeps the blocking path with zero change. The silent
+    /// workout-plan recovery + model fallback retries always stay blocking.
     func generateReply(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async throws -> HybridBrainServiceReply {
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainChat) else {
@@ -178,7 +184,16 @@ struct CloudBrainService: Sendable {
         }
 
         do {
-            let reply = try await transport.generateReply(request: sanitizedRequest, model: aiModel)
+            let reply: HybridBrainServiceReply
+            if let onMessagePreview, FeatureFlags.captainRealStreaming {
+                reply = try await transport.generateReplyStreaming(
+                    request: sanitizedRequest,
+                    model: aiModel,
+                    onMessagePreview: onMessagePreview
+                )
+            } else {
+                reply = try await transport.generateReply(request: sanitizedRequest, model: aiModel)
+            }
             return await finalize(reply, model: aiModel, callStartedAt: startedAt)
         } catch {
             await auditFailure(model: aiModel, callStartedAt: startedAt)

@@ -36,7 +36,8 @@ struct BrainOrchestrator: Sendable {
 
     func processMessage(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async throws -> HybridBrainServiceReply {
         let routedRequest = interceptSleepIntent(request)
         let safetyDecision = await wellbeingDecision(for: routedRequest)
@@ -64,7 +65,11 @@ struct BrainOrchestrator: Sendable {
             baseReply = await processLocalRoute(request: routedRequest, userName: userName)
 
         case .cloud:
-            baseReply = await processCloudRoute(request: routedRequest, userName: userName)
+            baseReply = await processCloudRoute(
+                request: routedRequest,
+                userName: userName,
+                onMessagePreview: onMessagePreview
+            )
         }
 
         let personalizedReply = personalizeReply(
@@ -224,11 +229,16 @@ private extension BrainOrchestrator {
 
     func processCloudRoute(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async -> HybridBrainServiceReply {
         do {
             logger.notice("cloud_request_started")
-            let reply = try await cloudService.generateReply(request: request, userName: userName)
+            let reply = try await cloudService.generateReply(
+                request: request,
+                userName: userName,
+                onMessagePreview: onMessagePreview
+            )
             logger.notice("cloud_request_succeeded")
             await persistIfMemoryEnabled(request: request, reply: reply)
             return reply
