@@ -37,8 +37,8 @@ The free Captain runs entirely on your device — your chat is never sent anywhe
 
 CHOOSE YOUR PLAN
 • Free — core tracking plus Captain Hamoudi on-device: private, in your dialect, with no message limits
-• AiQo Max — the deeper Captain (durable memory + faster replies), Gym, Kitchen, My Vibe, Kernel, challenges, and full lifestyle tracking
-• AiQo Intelligence Pro — everything in Max, plus Peaks, expanded Captain memory, and deeper analytical AI
+• AiQo Max — the deeper Captain (durable memory, faster replies, and 6 personalities to shape him), Gym, Kitchen, My Vibe, Kernel, challenges, and full lifestyle tracking
+• AiQo Intelligence Pro — everything in Max, plus a custom Captain personality you write yourself, Peaks, expanded memory, and deeper analytical AI
 
 SUBSCRIPTION INFORMATION
 
@@ -80,8 +80,8 @@ AiQo — نظام تشغيلك الحيوي الرقمي.
 
 اختر باقتك
 • مجاني — تتبّع أساسي مع كابتن حمودي على جهازك: خاص، بلهجتك، وبلا حدود رسائل
-• AiQo Max — الكابتن الأعمق (ذاكرة دائمة + ردود أسرع)، الجيم، المطبخ، My Vibe، النواة، التحديات، وتتبّع كامل لنمط الحياة
-• AiQo Intelligence Pro — كل ما في Max، مع القمم، ذاكرة ممتدة للكابتن، وذكاء تحليلي أعمق
+• AiQo Max — الكابتن الأعمق (ذاكرة دائمة، ردود أسرع، و٦ شخصيات تصمّمه على ذوقك)، الجيم، المطبخ، My Vibe، النواة، التحديات، وتتبّع كامل لنمط الحياة
+• AiQo Intelligence Pro — كل ما في Max، مع شخصية كابتن مخصّصة تكتبها بنفسك، القمم، ذاكرة ممتدة، وذكاء تحليلي أعمق
 
 معلومات الاشتراك
 
