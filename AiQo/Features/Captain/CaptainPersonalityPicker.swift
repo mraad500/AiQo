@@ -184,6 +184,6 @@ struct CaptainPersonalityPicker: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Capsule().fill(GymTheme.mint))
+            .background(Capsule().fill(Color(hex: "0E9E6E")))
     }
 }

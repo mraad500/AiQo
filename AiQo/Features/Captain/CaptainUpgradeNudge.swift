@@ -34,7 +34,7 @@ struct CaptainUpgradeBanner: View {
                 Circle()
                     .fill(GymTheme.mint.opacity(0.18))
                     .frame(width: 34, height: 34)
-                Image("Hammoudi5")
+                Image("captain_small_ picture")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 30, height: 30)
@@ -96,6 +96,10 @@ struct CaptainGrowsSheet: View {
     let onUpgrade: () -> Void
     @Environment(\.dismiss) private var dismiss
 
+    /// A deep, saturated mint for high contrast — the page's light `GymTheme.mint`
+    /// is for auras/tints only and washes out on text + the CTA.
+    private let deepMint = Color(hex: "0E9E6E")
+
     private struct Perk: Identifiable {
         let id = UUID()
         let icon: String
@@ -132,7 +136,7 @@ struct CaptainGrowsSheet: View {
                          ? "نفس حمودي — بس يتذكّرك دائماً، يخطّط أعمق، ويحجي بصوت بريميوم وية AiQo Max."
                          : "Same Hamoudi — he just remembers you for good, plans deeper, and speaks in a premium voice with AiQo Max.")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.primary.opacity(0.55))
+                        .foregroundStyle(Color.primary.opacity(0.62))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                 }
@@ -149,8 +153,8 @@ struct CaptainGrowsSheet: View {
                     .padding(.top, 4)
 
                 Text(isArabic ? "الكابتن المجاني يبقى وياك دائماً — هاي بس ترقية." : "The free Captain stays with you — this is just an upgrade.")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.55))
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 24)
             }
@@ -194,18 +198,18 @@ struct CaptainGrowsSheet: View {
     private func perkRow(_ perk: Perk) -> some View {
         HStack(spacing: 14) {
             Image(systemName: perk.icon)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(GymTheme.mint)
-                .frame(width: 38, height: 38)
-                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(GymTheme.mint.opacity(0.12)))
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(deepMint)
+                .frame(width: 40, height: 40)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(deepMint.opacity(0.14)))
 
             VStack(alignment: isArabic ? .trailing : .leading, spacing: 2) {
                 Text(isArabic ? perk.titleAr : perk.titleEn)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
                 Text(isArabic ? perk.descAr : perk.descEn)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.65))
                     .multilineTextAlignment(isArabic ? .trailing : .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -222,13 +226,14 @@ struct CaptainGrowsSheet: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
+            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(LinearGradient(
-                        colors: [GymTheme.mint, GymTheme.mint.opacity(0.82)],
+                        colors: [Color(hex: "13B187"), deepMint],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
+                    .shadow(color: deepMint.opacity(0.35), radius: 12, y: 6)
             )
         }
         .buttonStyle(.plain)
