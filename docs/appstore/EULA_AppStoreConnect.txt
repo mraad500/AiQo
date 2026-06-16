@@ -1,0 +1,44 @@
+AiQo — End User License Agreement (EULA) / Terms of Use
+
+Last updated: June 2026
+
+1. Acceptance
+By downloading or using AiQo, you agree to this End User License Agreement (EULA) and Terms of Use. If you do not agree, do not use the app.
+
+2. The Service
+AiQo provides smart health tracking via Apple HealthKit, AI-powered fitness and nutrition coaching through the Captain persona, water and sleep tracking, progress photos, weekly reports, the Kernel (النواة) digital-wellbeing app-shielding feature, and an internal level/XP system. Content is for general wellness only and is not a substitute for professional medical advice.
+
+3. Subscriptions and Payments
+AiQo offers the following auto-renewable subscriptions:
+- AiQo Max — USD 9.99 per month, with a 7-day free trial
+- AiQo Intelligence Pro — USD 19.99 per month
+
+- Payment is charged to your Apple ID account at confirmation of purchase.
+- Subscriptions automatically renew for the same period and price unless auto-renew is turned off at least 24 hours before the end of the current period.
+- Your account is charged for renewal within 24 hours prior to the end of the current period.
+- You can manage or cancel your subscription at any time in Settings > Apple ID > Subscriptions after purchase.
+- Any unused portion of a free trial is forfeited when you purchase a subscription.
+Prices may vary by region and are shown in the app before purchase.
+
+4. User Conduct
+You are responsible for your use of the app and the accuracy of data you enter manually (weight, height, age, water intake, etc.). You may not use AiQo for any unlawful purpose, or attempt to access other users' data or AiQo servers without authorization.
+
+5. Cloud AI Services
+With your explicit consent, AiQo sends sanitized and summarized text to Google Gemini for Captain coaching responses, and may send Captain reply text to MiniMax for premium voice playback. You can review or revoke either consent at any time under Settings > Privacy & AI Data and Settings > Captain Voice.
+
+6. Medical Disclaimer
+AiQo does not provide medical advice. The recommendations, plans, analyses, and water or sleep targets shown are general guidance only. Consult your physician before making health decisions or dietary or exercise changes based on app data.
+
+7. Intellectual Property
+All rights to the app and its content (interface, text, voice, branding, artwork) are reserved. You may not copy, resell, or use AiQo assets outside of personal use.
+
+8. Termination
+We reserve the right to suspend or terminate access to the app for violations of these terms. You can delete your account at any time from the app settings.
+
+9. Changes
+We reserve the right to modify these terms at any time. Continued use of the app after changes means you accept the updated terms.
+
+10. Contact
+For questions about these terms, contact: support@aiqo.app
+Full Terms of Use: https://aiqo.app/terms
+Privacy Policy: https://aiqo.app/privacy

@@ -25,20 +25,23 @@ Submission copy for App Store Connect. Arabic is the primary locale; English is 
 
 ## English (en) — "What's New"
 
-Our biggest addition yet: **Kernel** — an app lock you open with movement.
+**Introducing Kernel — the app lock you open with movement.**
 
-• Pick the apps that pull you in and Kernel shields them. Want to open one? Move — your real steps (from Health) lift the shield. Each shield gets a little harder so the doomscroll loop breaks, but it always stays physically possible.
-• Captain Hamoudi coaches you live through every challenge, cheering you on by voice as you move — entirely on your device, no internet in the loop.
-• It's all on your terms: turn protection off whenever you want (after a short, deliberate pause to keep it meaningful), and your blocked-app choices never leave your device. Part of AiQo Max.
+Choose the apps that pull you in, and Kernel shields them. To open one, you move: your real steps lift the shield, straight from Apple Health. Each unlock asks a little more, so the doomscroll loop finally breaks — but it always stays within reach.
 
-Plus a polish pass across the whole app:
+• **Captain Hamoudi coaches you, live.** He's beside you for every challenge, cheering you on by voice as you move, all on your device with no internet needed.
+• **Always on your terms.** Turn protection off whenever you like, after a brief, deliberate pause that keeps the choice meaningful. Your blocked-app list never leaves your device.
 
-• **English, done right.** Several screens leaked Arabic text (or raw labels) in English mode — Weekly Report, Progress Photos, the "My Vibe" music sheet, the post-workout summary, and the language picker all read correctly now.
-• **Notifications speak your language.** Captain's nudges and daily reminders (water, workout, sleep, streak, weekly report) now arrive in English for English users.
-• **Quests you can finish.** Camera-form quests demanded an unreachable 100% at their top tier; the bar is now a demanding-but-attainable 95%.
-• **Honest account deletion.** If the server can't complete the deletion, the app tells you and keeps you signed in to retry — instead of signing you out as if your data were already erased.
+Kernel is part of AiQo Max.
 
-Privacy first — sleep analysis and pulse measurement stay fully on your device.
+**Refined across the app**
+
+• Sharper English everywhere: the Weekly Report, Progress Photos, music picker, and post-workout summary now read perfectly in your chosen language.
+• Notifications and daily reminders now arrive in English for English speakers.
+• Camera-based form quests are challenging but fair, so every stage is completable.
+• Account deletion is clearer, more honest, and more reliable.
+
+Your privacy comes first — sleep analysis and pulse measurement stay entirely on your device.
 
 ---
 
