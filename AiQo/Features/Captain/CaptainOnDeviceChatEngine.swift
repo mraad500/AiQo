@@ -29,22 +29,22 @@ enum CaptainOnDeviceChatError: LocalizedError {
 /// The FREE-tier Captain. Every reply is generated fully ON-DEVICE via Apple
 /// Intelligence (Foundation Models) — no cloud, no server cost, uncapped.
 ///
-/// What makes the free Captain feel premium (not a stripped-down stub):
-/// - **Multi-turn memory** — the recent conversation is folded into the prompt
-///   so the Captain remembers what was just said (name, goal, the last answer)
-///   instead of resetting every message.
-/// - **Personalization** — it addresses the user by name and honors the tone
-///   they picked (practical / caring / strict).
-/// - **Grounded in REAL data** — today's live HealthKit metrics are injected,
-///   and `CaptainFactGuard` rewrites any number the model invents so it can
-///   never contradict the device's real readings.
-/// - **Pure dynamic generation** — no templates, no canned lines; the model
-///   writes fresh Iraqi Arabic each turn (proven on-device, see the Lab).
+/// Design notes (hard-won):
+/// - **Memory is native.** Multi-turn context is kept by reusing ONE
+///   `LanguageModelSession` per conversation and letting the framework own the
+///   transcript. We do NOT stuff a hand-built "User:/Captain:" transcript into
+///   the prompt — the small on-device model treats that as a script to *continue*
+///   and starts emitting role labels + the user's side of the turn.
+/// - **The prompt has no dialogue examples** for the same reason; dialect comes
+///   from explicit rules + isolated style phrases, never completable turns.
+/// - **Output is sanitized.** `OnDeviceReplySanitizer` deterministically strips
+///   any leaked role label and collapses repetition loops, so even a derailed
+///   generation can't reach the user as garbage.
+/// - **Grounded.** Today's live HealthKit metrics are injected and
+///   `CaptainFactGuard` rewrites any number that contradicts the device.
 actor CaptainOnDeviceChatEngine {
 
-    /// Who the Captain is talking to. Threaded in from the ViewModel's
-    /// `customization` + resolved user name so on-device replies are personal,
-    /// not generic.
+    /// Who the Captain is talking to. Threaded in from the ViewModel.
     struct Persona: Sendable {
         let userName: String?
         let tone: CaptainTone
@@ -61,16 +61,17 @@ actor CaptainOnDeviceChatEngine {
         let currentWaterLiters: Double
     }
 
-    /// Most recent turns we fold back into the prompt. Small enough to stay well
-    /// inside the on-device context window and keep latency low; large enough for
-    /// real conversational continuity (≈3 exchanges).
-    private static let historyTurnLimit = 6
-
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "AiQo",
         category: "CaptainOnDeviceChat"
     )
     private let healthService: HealthKitService
+    private let sanitizer = OnDeviceReplySanitizer()
+
+    /// The live chat's session, kept alive so the model remembers earlier turns
+    /// natively. Type-erased because `LanguageModelSession` is iOS 26+ only.
+    /// `nil` until the first turn of a conversation; cleared by `resetConversation`.
+    private var conversationSessionBox: AnyObject?
 
     init(
         healthService: HealthKitService = .shared
@@ -78,124 +79,101 @@ actor CaptainOnDeviceChatEngine {
         self.healthService = healthService
     }
 
+    // MARK: - Conversation lifecycle
+
+    /// Drop the live chat session so the next turn starts a fresh conversation
+    /// (call on "new chat"). Cheap and safe to call anytime.
+    func resetConversation() {
+        conversationSessionBox = nil
+    }
+
     // MARK: - Public API
 
-    /// One fully dynamic, on-device reply to `userInput`, continuing the prior
-    /// `history` and styled for `persona`. The reply is dialect-normalized and
-    /// fact-guarded before it returns.
-    func respond(
-        to userInput: String,
-        history: [CaptainConversationMessage] = [],
-        persona: Persona = .neutral
-    ) async throws -> String {
+    /// STATEFUL chat reply — reuses the conversation session so the Captain
+    /// remembers what was said earlier in this chat. Used by the chat ViewModel.
+    func respondInConversation(to userInput: String, persona: Persona = .neutral) async throws -> String {
         let trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedInput.isEmpty else { return "" }
 
 #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            guard SystemLanguageModel.default.availability == .available else {
-                throw CaptainOnDeviceChatError.modelUnavailable
-            }
+            try ensureModelAvailable()
+            let context = await fetchLiveHealthContext()
+            let screening = await MainActor.run { HealthScreeningStore.load() }
 
-            let liveContext = await fetchLiveHealthContext()
-            let healthScreening = await MainActor.run { HealthScreeningStore.load() }
-            let instructions = buildDynamicSystemPrompt(
-                with: liveContext,
-                healthScreening: healthScreening,
-                persona: persona,
-                history: history
-            )
-
-            logger.notice("captain_on_device_started history=\(history.count)")
+            let session = conversationSession(persona: persona, context: context, screening: screening)
+            logger.notice("captain_on_device_conversation_turn")
 
             do {
-                let finalText = try await generate(
-                    instructions: instructions,
-                    prompt: trimmedInput,
-                    context: liveContext
-                )
-                guard !finalText.isEmpty else {
-                    throw CaptainOnDeviceChatError.emptyResponse
-                }
-                logger.notice("captain_on_device_succeeded")
-                return finalText
+                let final = try await generate(on: session, prompt: trimmedInput, context: context)
+                guard !final.isEmpty else { throw CaptainOnDeviceChatError.emptyResponse }
+                return final
             } catch let generationError as LanguageModelSession.GenerationError {
                 if case .unsupportedLanguageOrLocale = generationError {
                     throw CaptainOnDeviceChatError.unsupportedLanguageOrLocale
                 }
-
-                // Resilience: a long history can overflow the small on-device
-                // context window. Rather than failing the whole reply, retry once
-                // with the history dropped (single-turn) before giving up.
-                if !history.isEmpty {
-                    let slimInstructions = buildDynamicSystemPrompt(
-                        with: liveContext,
-                        healthScreening: healthScreening,
-                        persona: persona,
-                        history: []
-                    )
-                    if let retry = try? await generate(
-                        instructions: slimInstructions,
-                        prompt: trimmedInput,
-                        context: liveContext
-                    ), !retry.isEmpty {
-                        logger.notice("captain_on_device_succeeded_history_free_retry")
-                        return retry
-                    }
+                // Busy session / context overflow / transient decode: reset the
+                // conversation and recover with a clean one-off generation rather
+                // than failing the reply. (Memory for this single turn is lost.)
+                logger.error("captain_on_device_conv_failed_recovering category=\(String(describing: generationError), privacy: .public)")
+                resetConversation()
+                if let recovered = try? await statelessReply(to: trimmedInput, persona: persona),
+                   !recovered.isEmpty {
+                    return recovered
                 }
-
-                logger.error(
-                    "captain_on_device_generation_failed category=\(String(describing: generationError), privacy: .public)"
-                )
                 throw generationError
-            } catch {
-                logger.error("captain_on_device_failed error=\(error.localizedDescription, privacy: .public)")
-                throw error
             }
         }
 #endif
-
         throw CaptainOnDeviceChatError.foundationModelsUnavailable
     }
 
-    /// A live, on-device session-opening greeting for the FREE Captain — warm,
-    /// time-aware, names the user, honors their tone, and weaves in today's REAL
-    /// metrics (steps) like the cloud welcome, but generated fully on-device.
-    /// Pure dynamic generation: no templates, no canned lines.
+    /// STATELESS one-off reply — a fresh session every call, no memory. Used by
+    /// notification generation and the on-device lab, where cross-turn context
+    /// would be wrong.
+    func respond(to userInput: String, persona: Persona = .neutral) async throws -> String {
+        let trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedInput.isEmpty else { return "" }
+
+#if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            try ensureModelAvailable()
+            let final = try await statelessReply(to: trimmedInput, persona: persona)
+            guard !final.isEmpty else { throw CaptainOnDeviceChatError.emptyResponse }
+            return final
+        }
+#endif
+        throw CaptainOnDeviceChatError.foundationModelsUnavailable
+    }
+
+    /// A live, on-device session-opening greeting — warm, time-aware, names the
+    /// user, honors their tone, weaves in today's REAL steps. Seeds the
+    /// conversation session so the chat continues naturally from the greeting.
     func welcome(persona: Persona = .neutral) async throws -> String {
 #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            guard SystemLanguageModel.default.availability == .available else {
-                throw CaptainOnDeviceChatError.modelUnavailable
-            }
+            try ensureModelAvailable()
+            resetConversation()
 
-            let liveContext = await fetchLiveHealthContext()
-            let healthScreening = await MainActor.run { HealthScreeningStore.load() }
-            let instructions = buildDynamicSystemPrompt(
-                with: liveContext,
-                healthScreening: healthScreening,
-                persona: persona,
-                history: []
-            )
+            let context = await fetchLiveHealthContext()
+            let screening = await MainActor.run { HealthScreeningStore.load() }
 
             let name = (persona.userName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            // Natural opening turns — NOT a bracketed meta-instruction, which the
-            // on-device model sometimes refuses or answers empty. "شخباري اليوم
-            // بالخطوات؟" reliably elicits a warm greeting that cites today's real
-            // steps (already injected in the system prompt). Bare "هلاو" is the
-            // safety net; whichever yields non-empty first wins.
+            // Natural opening turns (not a bracketed meta-instruction, which the
+            // on-device model sometimes refuses). Whichever yields non-empty first
+            // wins, and that opener becomes turn 1 of the live session.
             let openers = name.isEmpty
                 ? ["هلاو كابتن، شخباري اليوم بالخطوات؟", "هلاو"]
                 : ["هلاو كابتن، آني \(name). شخباري اليوم بالخطوات؟", "هلاو"]
 
             for opener in openers {
-                if let finalText = try? await generate(
-                    instructions: instructions,
-                    prompt: opener,
-                    context: liveContext
-                ), !finalText.isEmpty {
-                    return finalText
+                let session = conversationSession(persona: persona, context: context, screening: screening)
+                if let greeting = try? await generate(on: session, prompt: opener, context: context),
+                   !greeting.isEmpty {
+                    return greeting
                 }
+                // Empty/failed opener — clear the polluted session before retrying.
+                resetConversation()
             }
             throw CaptainOnDeviceChatError.emptyResponse
         }
@@ -206,37 +184,65 @@ actor CaptainOnDeviceChatEngine {
     // MARK: - Generation
 
 #if canImport(FoundationModels)
-    /// One on-device generation pass: tuned options → strip markdown → enforce
-    /// Iraqi dialect → fact-guard the numbers. Returns the finished, trimmed text.
+    @available(iOS 26.0, *)
+    private func ensureModelAvailable() throws {
+        guard SystemLanguageModel.default.availability == .available else {
+            throw CaptainOnDeviceChatError.modelUnavailable
+        }
+    }
+
+    /// Returns the live conversation session, creating + storing it on first use.
+    @available(iOS 26.0, *)
+    private func conversationSession(
+        persona: Persona,
+        context: LiveHealthContext,
+        screening: HealthScreeningAnswers?
+    ) -> LanguageModelSession {
+        if let existing = conversationSessionBox as? LanguageModelSession {
+            return existing
+        }
+        let session = LanguageModelSession(
+            instructions: buildSystemPrompt(with: context, healthScreening: screening, persona: persona)
+        )
+        conversationSessionBox = session
+        return session
+    }
+
+    /// One stateless generation pass on a brand-new throwaway session.
+    @available(iOS 26.0, *)
+    private func statelessReply(to prompt: String, persona: Persona) async throws -> String {
+        let context = await fetchLiveHealthContext()
+        let screening = await MainActor.run { HealthScreeningStore.load() }
+        let session = LanguageModelSession(
+            instructions: buildSystemPrompt(with: context, healthScreening: screening, persona: persona)
+        )
+        return try await generate(on: session, prompt: prompt, context: context)
+    }
+
+    /// Runs one turn on the given session with tuned options, then finalizes.
     @available(iOS 26.0, *)
     private func generate(
-        instructions: String,
+        on session: LanguageModelSession,
         prompt: String,
         context: LiveHealthContext
     ) async throws -> String {
-        let session = LanguageModelSession(instructions: instructions)
-        // Slightly below default temperature: keeps the Iraqi voice warm and
-        // varied while improving grounding (fewer invented facts) and dialect
-        // consistency. The token cap keeps replies to the 2–4 line contract and
-        // shaves latency on a phone.
+        // Lower temperature = steadier dialect + far less likely to derail into a
+        // repetition loop. A tight token cap bounds the 2–4 line contract and the
+        // damage if it ever does loop.
         let options = GenerationOptions(
             sampling: nil,
-            temperature: 0.7,
-            maximumResponseTokens: 320
+            temperature: 0.6,
+            maximumResponseTokens: 200
         )
         let response = try await session.respond(to: prompt, options: options)
         return finalize(response.content, context: context)
     }
 #endif
 
-    /// Cleanup pipeline applied to every raw model reply: drop markdown asterisks,
-    /// normalize stray non-Iraqi words, then run the deterministic fact-guard so a
-    /// hallucinated health number can never contradict the device's real reading.
+    /// Sanitize structure → enforce Iraqi dialect → fact-guard the numbers.
     private func finalize(_ raw: String, context: LiveHealthContext) -> String {
-        let stripped = raw
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "*", with: "")
-        let dialect = enforceStrictIraqiDialect(in: stripped)
+        let cleaned = sanitizer.clean(raw)
+        let dialect = enforceStrictIraqiDialect(in: cleaned)
 
         let facts = CaptainFactGuard.Facts(
             steps: context.currentSteps > 0 ? context.currentSteps : nil,
@@ -247,13 +253,12 @@ actor CaptainOnDeviceChatEngine {
         return guarded.message.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: - Prompt
+    // MARK: - Prompt (NO dialogue examples — see type doc)
 
-    private func buildDynamicSystemPrompt(
+    private func buildSystemPrompt(
         with context: LiveHealthContext,
         healthScreening: HealthScreeningAnswers?,
-        persona: Persona,
-        history: [CaptainConversationMessage]
+        persona: Persona
     ) -> String {
         let healthContextLine = healthScreening?.captainContextLine ?? ""
         let healthBlock = healthContextLine.isEmpty
@@ -261,7 +266,6 @@ actor CaptainOnDeviceChatEngine {
             : "\n        --- USER HEALTH CONTEXT (MANDATORY) ---\n        \(healthContextLine)\n"
 
         let personaBlock = buildPersonaBlock(persona)
-        let historyBlock = buildHistoryBlock(history)
         let timeOfDay = currentTimeOfDayArabic()
 
         return """
@@ -273,22 +277,23 @@ actor CaptainOnDeviceChatEngine {
         \(personaBlock)
         AiQo UNIVERSE (ACTUAL CAPABILITIES - ONLY CLAIM THESE):
         - General: AiQo is a Bio-Digital OS. Core philosophy is "Ego-Reset" and shifting from "I" to "We".
-        - The Gym (النادي): Focuses on Zone 2 cardio, live pacing, hands-free coaching, and structured training sessions.
-        - My Vibe (الصوتيات/الترددات): The audio state-management layer (Awakening, Ego-Death/Zen, Focus) using AiQo sounds or Spotify.
-        - The Kitchen (المطبخ): Meal planning, tracking fridge inventory locally, and organizing clean eating (Do NOT claim autonomous AI camera vision yet).
-        - The Tribe (القبيلة): Shared energy, sparks, and galaxy metaphors. No toxic leaderboards.
+        - The Gym (النادي): Zone 2 cardio, live pacing, hands-free coaching, structured training.
+        - My Vibe (الصوتيات/الترددات): audio state-management (Awakening, Ego-Death/Zen, Focus) using AiQo sounds or Spotify.
+        - The Kitchen (المطبخ): meal planning + local fridge inventory + clean eating (NOT autonomous camera vision yet).
+        - The Tribe (القبيلة): shared energy, sparks, galaxy metaphors. No toxic leaderboards.
 
         DIALECT RULES (CRITICAL):
         - Speak ONLY in pure, natural Iraqi Arabic (masculine).
         - Allowed words: شلونك، يا بطل، هسه، عوف، هيج، عاشت ايدك، يمعود.
         - Forbidden: أتم مستوى، نهاديك، عزيزي، إيه، زي، فصحى رسمية، مصري، شامي.
 
-        RESPONSE CONTRACT:
-        - Default: 2–4 short lines.
-        - End with ONE direct question to keep the flow.
-        - Continue the SAME conversation below — do NOT re-greet or restart every message.
-        - Do NOT repeat a sentence or a question you already said in a previous turn.
-        - NEVER invent stats. Use ONLY the live data provided.
+        HOW YOU REPLY (CRITICAL — READ CAREFULLY):
+        - You are ONLY the Captain. Write ONLY the Captain's own words, nothing else.
+        - NEVER write a speaker label such as "Captain:", "User:", "المستخدم:" or "كابتن:".
+        - NEVER write the user's side of the conversation, and NEVER imagine their reply.
+        - NEVER repeat a letter, a word, or a sentence to fill space.
+        - Keep it to 2–4 short lines and end with ONE direct question.
+        - Use ONLY the real numbers below; never invent a statistic.
         \(healthBlock)
         --- LIVE USER DATA (today, real) ---
         Time of day: \(timeOfDay)
@@ -298,25 +303,12 @@ actor CaptainOnDeviceChatEngine {
         Sleep: \(String(format: "%.1f", context.currentSleepHours)) h
         Water: \(String(format: "%.1f", context.currentWaterLiters)) L
 
-        FEW-SHOT STYLE EXAMPLES (imitate the VOICE only, never the content):
-        User: هلاو
-        Captain: هلا يا بطل. شلونك هسه؟ نريد اليوم Ego-Reset بـ My Vibe لو نمشي Zone 2 بهدوء؟ شنو هدفك؟
-
-        User: شنو هو تطبيق ايكو؟
-        Captain: ايكو مو تطبيق عادي، هذا Bio-Digital OS لجسمك وروحك. نسوي Ego-Reset، نمشي Zone 2 بالنادي، ونبني طاقة القبيلة. منين تحب نبدي؟
-
-        User: مطبخ
-        Captain: عاشت ايدك. المطبخ جاهز حتى نرتب خطة وجباتك ونتابع الثلاجة خطوة بخطوة. تحب نضيف وجبة جديدة هسه؟
-
-        User: خطواتي شكد؟
-        Captain: دا اشوفك واصل \(context.currentSteps) خطوة، ونبضك \(context.currentHeartRateBPM) — ممتاز جداً. تريد أطلعلك هدف خطوات لهاليوم لو نسوي تنفّس دقيقتين؟
-        \(historyBlock)
+        STYLE (inspiration only — write your OWN sentence, do NOT copy these):
+        نبرة دافئة عراقية مثل: "هلا يا بطل"، "شلونك هسه"، "عاشت ايدك"، "دا اشوفك واصل خطواتك زينة".
         """
     }
 
-    /// "Who you're talking to" block: name to address, optional age, and a tone
-    /// directive mapped from the user's chosen Captain tone. Empty-safe — fields
-    /// the user never filled in are simply omitted.
+    /// "Who you're talking to" block — empty-safe.
     private func buildPersonaBlock(_ persona: Persona) -> String {
         var lines: [String] = []
 
@@ -324,19 +316,16 @@ actor CaptainOnDeviceChatEngine {
         if !name.isEmpty {
             lines.append("- اسم المستخدم: \(name) — ناديه باسمه بين فترة وفترة، بدون تكلّف.")
         }
-
         let age = (persona.age ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !age.isEmpty {
             lines.append("- العمر: \(age).")
         }
-
         lines.append("- \(toneDirective(persona.tone))")
 
         guard !lines.isEmpty else { return "" }
         return "\n        WHO YOU'RE TALKING TO:\n        \(lines.joined(separator: "\n        "))\n"
     }
 
-    /// Iraqi tone directive for the user's chosen Captain personality.
     private func toneDirective(_ tone: CaptainTone) -> String {
         switch tone {
         case .practical:
@@ -348,40 +337,13 @@ actor CaptainOnDeviceChatEngine {
         }
     }
 
-    /// Renders the recent turns as a clearly-delimited "current conversation"
-    /// block the model is told to CONTINUE. This is what gives the free Captain
-    /// its within-session memory: a fresh session each call, but seeded with what
-    /// was just said. Capped at `historyTurnLimit` to protect latency + context.
-    private func buildHistoryBlock(_ history: [CaptainConversationMessage]) -> String {
-        let recent = history
-            .filter { $0.role == .user || $0.role == .assistant }
-            .suffix(Self.historyTurnLimit)
-        guard !recent.isEmpty else { return "" }
-
-        let rendered = recent.map { message -> String in
-            let speaker = message.role == .user ? "المستخدم" : "كابتن"
-            let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "\(speaker): \(text)"
-        }.joined(separator: "\n        ")
-
-        return """
-
-                --- المحادثة الجارية (كمّل عليها، لا تعيد التحية) ---
-                \(rendered)
-        """
-    }
-
     private func currentTimeOfDayArabic() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
-        case 5..<12:
-            return "صباح"
-        case 12..<17:
-            return "ظهر/عصر"
-        case 17..<22:
-            return "مساء"
-        default:
-            return "ليل متأخر"
+        case 5..<12: return "صباح"
+        case 12..<17: return "ظهر/عصر"
+        case 17..<22: return "مساء"
+        default: return "ليل متأخر"
         }
     }
 
@@ -438,7 +400,6 @@ actor CaptainOnDeviceChatEngine {
             guard let sample = try await healthService.fetchMostRecentQuantitySample(for: .heartRate) else {
                 return 0
             }
-
             let unit = HKUnit.count().unitDivided(by: .minute())
             let bpm = sample.quantity.doubleValue(for: unit)
             return max(0, Int(bpm.rounded()))
@@ -452,28 +413,14 @@ actor CaptainOnDeviceChatEngine {
 
     private func enforceStrictIraqiDialect(in text: String) -> String {
         // Conservative whole-word swaps: high-frequency Egyptian/Levantine words
-        // that leak into on-device output, mapped to their Iraqi equivalents. Each
-        // is matched on letter boundaries so it never corrupts a longer word.
+        // mapped to their Iraqi equivalents, matched on letter boundaries.
         let replacements = [
-            ("إيه", "اي"),
-            ("ايه", "اي"),
-            ("ايوه", "اي"),
-            ("ايوة", "اي"),
-            ("زي", "مثل"),
-            ("عشان", "حتى"),
-            ("علشان", "حتى"),
-            ("دي", "هاي"),
-            ("ده", "هذا"),
-            ("كده", "هيج"),
-            ("هلأ", "هسه"),
-            ("دلوقتي", "هسه"),
-            ("بدي", "أريد"),
-            ("عايز", "أريد"),
-            ("مش", "مو"),
-            ("ليه", "ليش"),
-            ("ازيك", "شلونك")
+            ("إيه", "اي"), ("ايه", "اي"), ("ايوه", "اي"), ("ايوة", "اي"),
+            ("زي", "مثل"), ("عشان", "حتى"), ("علشان", "حتى"),
+            ("دي", "هاي"), ("ده", "هذا"), ("كده", "هيج"),
+            ("هلأ", "هسه"), ("دلوقتي", "هسه"), ("بدي", "أريد"),
+            ("عايز", "أريد"), ("مش", "مو"), ("ليه", "ليش"), ("ازيك", "شلونك")
         ]
-
         return replacements.reduce(text) { partial, pair in
             replaceWholeWord(pair.0, with: pair.1, in: partial)
         }
@@ -481,11 +428,7 @@ actor CaptainOnDeviceChatEngine {
 
     private func replaceWholeWord(_ word: String, with replacement: String, in text: String) -> String {
         let pattern = "(?<!\\p{L})\(NSRegularExpression.escapedPattern(for: word))(?!\\p{L})"
-
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return text
-        }
-
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
         let range = NSRange(text.startIndex..., in: text)
         return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: replacement)
     }

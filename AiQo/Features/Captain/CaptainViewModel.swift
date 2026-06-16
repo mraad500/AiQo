@@ -375,9 +375,8 @@ final class CaptainViewModel: ObservableObject {
         feedbackTrigger += 1
         inputText = ""
 
-        // Capture the conversation BEFORE appending this message: the prior turns
-        // become the engine's memory, while the current message stays the prompt.
-        let priorTurns = buildConversationHistory()
+        // Persona (name + tone) for this turn. Conversation memory is kept
+        // natively inside the engine's live session — no transcript is passed.
         let persona = onDevicePersona()
 
         let userMessage = ChatMessage(text: trimmedText, isUser: true)
@@ -402,9 +401,8 @@ final class CaptainViewModel: ObservableObject {
             self.coachState = .thinkingOnDevice
 
             do {
-                let reply = try await engine.respond(
+                let reply = try await engine.respondInConversation(
                     to: trimmedText,
-                    history: priorTurns,
                     persona: persona
                 )
                 try self.ensureActiveRequest(requestID)
