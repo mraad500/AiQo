@@ -383,6 +383,12 @@ struct AppRootView: View {
         }
         .environment(\.layoutDirection, currentDirection)
         .environment(\.locale, Locale(identifier: AppSettingsStore.shared.appLanguage.rawValue))
+        // The launch / login / onboarding screens use a FIXED light palette
+        // (`AuthFlowBackground`) but their text is semantic `.primary`, which
+        // turns white in Dark Mode and vanishes on the light background. Force
+        // `.light` for the whole pre-main flow so they're always legible whatever
+        // the device appearance; the main app keeps the device's light/dark.
+        .preferredColorScheme(flow.currentScreen == .main ? nil : .light)
         .withOfflineBanner()
         .animation(.easeInOut(duration: 0.4), value: flow.currentScreen)
         .modelContainer(QuestPersistenceController.shared.container)
