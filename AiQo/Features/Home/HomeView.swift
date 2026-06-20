@@ -385,7 +385,33 @@ struct MetricDetailSheet: View {
 
         return "—"
     }
-    
+
+    /// Unit rendered as a smaller, secondary suffix after the value (e.g. "km" for distance).
+    /// Returns "" so the value stays unadorned for metrics without a trailing unit.
+    private var headerUnitSuffix: String {
+        guard resolvedHeaderValue != "—" else { return "" }
+        switch kind {
+        case .distance: return " km"
+        default:        return ""
+        }
+    }
+
+    /// The header value with its unit appended as a smaller, secondary run so the
+    /// number stays the focal point (e.g. a bold "94.29" trailed by a muted "km").
+    private var headerDisplay: AttributedString {
+        var value = AttributedString(resolvedHeaderValue)
+        value.font = .system(size: 32, weight: .bold, design: .rounded)
+
+        let suffix = headerUnitSuffix
+        guard !suffix.isEmpty else { return value }
+
+        var unit = AttributedString(suffix)
+        unit.font = .system(size: 18, weight: .semibold, design: .rounded)
+        unit.foregroundColor = .secondary
+        value.append(unit)
+        return value
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -406,8 +432,7 @@ struct MetricDetailSheet: View {
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary.opacity(0.7))
 
-                        Text(resolvedHeaderValue)
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                        Text(headerDisplay)
                             .contentTransition(.numericText())
 
                         Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {

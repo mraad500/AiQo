@@ -427,7 +427,7 @@ final class HomeViewModel: ObservableObject {
         case .stand:    return Int(summary.standPercent).arabicFormatted + "%"
         case .water:    return (summary.waterML / 1000.0).aiqoMetricString + " L"
         case .sleep:    return summary.sleepHours.aiqoMetricString + " h"
-        case .distance: return (summary.distanceMeters / 1000.0).aiqoMetricString + " km"
+        case .distance: return (summary.distanceMeters / 1000.0).aiqoMetricString
         }
     }
     
@@ -498,7 +498,7 @@ final class HomeViewModel: ObservableObject {
         switch kind {
         case .steps:
             await loadHealthServiceQuantitySeries(kind: .steps, .stepCount, unit: .count(), scope: scope) { values, total in
-                ChartSeriesData(values: values, headerText: String(format: "%.0f", total))
+                ChartSeriesData(values: values, headerText: Int(total).arabicFormatted)
             }
             
         case .calories:
@@ -554,7 +554,7 @@ final class HomeViewModel: ObservableObject {
         _ identifier: HKQuantityTypeIdentifier,
         unit: HKUnit,
         scope: TimeScope,
-        transform: @escaping @Sendable ([Double], Double) -> ChartSeriesData
+        transform: @escaping ([Double], Double) -> ChartSeriesData
     ) async {
         let series = await healthService.fetchQuantitySeries(identifier, unit: unit, scope: scope)
         guard shouldApplyChartResult(for: kind, scope: scope) else { return }
