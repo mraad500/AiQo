@@ -159,14 +159,12 @@ actor CaptainOnDeviceChatEngine {
             let screening = await MainActor.run { HealthScreeningStore.load() }
 
             let name = (persona.userName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            // Natural opening turns (not a bracketed meta-instruction, which the
-            // on-device model sometimes refuses). Whichever yields non-empty first
-            // wins, and that opener becomes turn 1 of the live session.
-            let openers = name.isEmpty
-                ? ["هلاو كابتن، شخباري اليوم بالخطوات؟", "هلاو"]
-                : ["هلاو كابتن، آني \(name). شخباري اليوم بالخطوات؟", "هلاو"]
-
-            for opener in openers {
+            // A fresh, data-aware opener each session — mirrors the paid welcome's
+            // intent (varied phrasing, real-time aware, weaves in ONE live metric)
+            // but delivered as a natural Iraqi turn the on-device model follows.
+            // "هلاو" is the safety net if the rich opener returns empty. Whichever
+            // yields non-empty first wins and becomes turn 1 of the live session.
+            for opener in buildWelcomeOpeners(name: name, context: context) {
                 let session = conversationSession(persona: persona, context: context, screening: screening)
                 if let greeting = try? await generate(on: session, prompt: opener, context: context),
                    !greeting.isEmpty {
@@ -179,6 +177,34 @@ actor CaptainOnDeviceChatEngine {
         }
 #endif
         throw CaptainOnDeviceChatError.foundationModelsUnavailable
+    }
+
+    /// Welcome opener(s): a rich, VARIED, data-aware request first (the focus
+    /// metric + the phrasing both change each session, so the greeting is fresh
+    /// every open), then a plain greeting as the safety net. The actual values +
+    /// exact clock live in the system prompt; the opener just nudges which live
+    /// metric to spotlight and that it must be time-aware and never repeat.
+    private func buildWelcomeOpeners(name: String, context: LiveHealthContext) -> [String] {
+        let namePart = name.isEmpty ? "" : " نادني باسمي \(name)،"
+
+        // Spotlight ONE *available* live metric, chosen at random so the focus
+        // changes each open (the real numbers are already in the system prompt).
+        var hooks: [String] = []
+        if context.currentSteps > 0 { hooks.append("خطواتي اليوم") }
+        if context.currentSleepHours > 0 { hooks.append("نومي") }
+        if context.currentWaterLiters > 0 { hooks.append("شربي للماي اليوم") }
+        if context.currentCalories > 0 { hooks.append("سعراتي المحروقة اليوم") }
+        let hookPart = hooks.randomElement().map { " واذكر بشكل طبيعي وخفيف \($0) من بياناتي الحقيقية،" } ?? ""
+
+        // A few request phrasings so the opener itself varies too.
+        let frames = [
+            "افتح المحادثة بترحيب عراقي قصير وطازج ومختلف عن أي مرة (سطر-سطرين بس).\(namePart) كون واعي بالوقت الحقيقي الحين،\(hookPart) واختم بسؤال ودود واحد عن هدفي اليوم.",
+            "رحّب بيّ ترحيب قصير وحلو يناسب الوقت الحين بالضبط.\(namePart)\(hookPart) خلّيه مختلف عن المرات السابقة، وانتهي بسؤال خفيف عن شنو أحب أسوي هسة.",
+            "ابدأ بجملة ترحيب عراقية دافئة وقصيرة تناسب الساعة الحين.\(namePart)\(hookPart) نوّع كلامك كل مرة ولا تكرر، واسألني سؤال ودود واحد."
+        ]
+        let rich = frames.randomElement() ?? frames[0]
+        let simple = name.isEmpty ? "هلاو" : "هلاو، آني \(name)."
+        return [rich, simple]
     }
 
     // MARK: - Generation
@@ -289,6 +315,7 @@ actor CaptainOnDeviceChatEngine {
         let personaBlock = buildPersonaBlock(persona)
         let upgradeBlock = allowUpgradeHint ? Self.upgradeAwarenessBlock : ""
         let timeOfDay = currentTimeOfDayArabic()
+        let clock = currentClockText()
 
         return """
         You are Captain Hammoudi, the elite Iraqi AI guide inside 'AiQo'.
@@ -317,13 +344,13 @@ actor CaptainOnDeviceChatEngine {
         - Keep replies SHORT and SIMPLE: 1–2 lines, easy everyday words, like a quick text. End with ONE short question only if it genuinely fits — otherwise none.
         - Use ONLY the real numbers below; never invent a statistic.
         \(healthBlock)\(upgradeBlock)
-        --- LIVE USER DATA (today, real) ---
-        Time of day: \(timeOfDay)
-        Steps: \(context.currentSteps)
-        Heart Rate: \(context.currentHeartRateBPM) bpm
-        Calories: \(context.currentCalories) kcal
-        Sleep: \(String(format: "%.1f", context.currentSleepHours)) h
-        Water: \(String(format: "%.1f", context.currentWaterLiters)) L
+        --- LIVE USER DATA (today, real — these are his ACTUAL numbers right now) ---
+        Current time: \(clock) — period: \(timeOfDay)
+        Steps today: \(context.currentSteps)
+        Heart rate: \(context.currentHeartRateBPM) bpm
+        Active calories: \(context.currentCalories) kcal
+        Sleep last night: \(String(format: "%.1f", context.currentSleepHours)) h
+        Water today: \(String(format: "%.1f", context.currentWaterLiters)) L
 
         TONE: warm and relaxed, like texting a buddy who's got your back — natural and friendly, never formal, never a recited word list.
         """
@@ -339,11 +366,22 @@ actor CaptainOnDeviceChatEngine {
     private func currentTimeOfDayArabic() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
-        case 5..<12: return "صباح"
-        case 12..<17: return "ظهر/عصر"
-        case 17..<22: return "مساء"
-        default: return "ليل متأخر"
+        case 3..<6:   return "فجر"
+        case 6..<12:  return "صباح"
+        case 12..<15: return "ظهر"
+        case 15..<18: return "عصر"
+        case 18..<22: return "مساء"
+        default:      return "ليل متأخر"
         }
+    }
+
+    /// The exact wall-clock now ("HH:mm") so the Captain is aware of the REAL
+    /// current time, not just the coarse period.
+    private func currentClockText() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: Date())
     }
 
     // MARK: - Live health
