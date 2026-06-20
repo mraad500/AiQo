@@ -141,14 +141,13 @@ enum KernelEscalation {
     }
 }
 
-/// High-level gate the Kernel screen renders. Resolved from the feature flag,
-/// the subscription tier, and Family Controls authorization.
+/// High-level gate the Kernel screen renders. Resolved from the feature flag and
+/// Family Controls authorization. (No tier gate: every tier may open the Kernel;
+/// the free tier is capped to one app via `TierGate.kernelAppLimit`.)
 enum KernelGateState: Equatable {
     /// `KERNEL_ENABLED` is off.
     case featureDisabled
-    /// User is below the Max tier required by `TierGate.Feature.kernel`.
-    case tierLocked
-    /// Authorized tier, but Family Controls is not approved yet.
+    /// Family Controls is not approved yet.
     case needsAuthorization
     /// Authorized and ready to choose apps.
     case ready

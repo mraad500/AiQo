@@ -127,6 +127,19 @@ final class TierGateTests: XCTestCase {
         XCTAssertEqual(TierGate.shared.maxWeeksInPlan, 4)
     }
 
+    func testKernelAppLimitPerTier() {
+        // Free protects exactly one app (the in-hub upgrade card sells the rest);
+        // every paid tier — and the trial at Pro-equivalent — is unlimited.
+        TierGate.shared._setTierForTesting(.none)
+        XCTAssertEqual(TierGate.shared.kernelAppLimit, 1)
+        TierGate.shared._setTierForTesting(.max)
+        XCTAssertEqual(TierGate.shared.kernelAppLimit, .max)
+        TierGate.shared._setTierForTesting(.pro)
+        XCTAssertEqual(TierGate.shared.kernelAppLimit, .max)
+        TierGate.shared._setTierForTesting(.trial)
+        XCTAssertEqual(TierGate.shared.kernelAppLimit, .max)
+    }
+
     // MARK: - Comparable + effectiveAccessTier
 
     func testTierOrdering() {

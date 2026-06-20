@@ -22,6 +22,11 @@ struct AppSettingsScreen: View {
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
     @AppStorage("notificationLanguage") private var notificationLanguage = CoachNotificationLanguage.arabic.rawValue
+    #if DEBUG
+    /// Hidden tester switch (DEBUG builds only) to flip the Captain between free
+    /// and paid. Never visible to real users — see `TierGate.currentTier`.
+    @AppStorage("debug.captainTierOverride") private var captainTierOverride = "auto"
+    #endif
 
     var body: some View {
         Form {
@@ -369,6 +374,28 @@ struct AppSettingsScreen: View {
                 .buttonStyle(.plain)
             }
 
+            #if DEBUG
+            Section {
+                Picker(selection: $captainTierOverride) {
+                    Text("تلقائي").tag("auto")
+                    Text("مجاني").tag("free")
+                    Text("Max").tag("max")
+                    Text("Pro").tag("pro")
+                } label: {
+                    Text("الكابتن")
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: captainTierOverride) { _, _ in
+                    // Flip the whole app's tier live so the Captain (chat routing,
+                    // avatar, voice, personality) updates without a relaunch.
+                    EntitlementStore.shared.objectWillChange.send()
+                }
+            } header: {
+                Text("🧪 اختبار الكابتن (DEBUG فقط)")
+            } footer: {
+                Text("مخفي تماماً عن المستخدم — يظهر فقط ببناء التطوير.")
+            }
+            #endif
         }
         .navigationTitle(
             NSLocalizedString(

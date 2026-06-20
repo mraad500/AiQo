@@ -12,6 +12,7 @@ struct KernelView: View {
     @State private var showConsent = false
     @State private var showChallenge = false
     @State private var showDisableConfirm = false
+    @State private var showPaywall = false
 
     private var isAr: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
@@ -25,7 +26,7 @@ struct KernelView: View {
                         switch model.gateState {
                         case .needsAuthorization: authorizeCard
                         case .ready: hubContent
-                        case .featureDisabled, .tierLocked: gateLockedCard
+                        case .featureDisabled: gateLockedCard
                         }
                     }
                     .padding(AiQoSpacing.lg)
@@ -43,11 +44,24 @@ struct KernelView: View {
                 isPresented: $model.isPresentingPicker,
                 selection: Binding(get: { model.selection }, set: { model.updateSelection($0) })
             )
+            // Enforce the free 1-app cap when the picker closes (not mid-pick, so the
+            // system picker stays responsive): commit persists, or reverts + flags.
+            .onChange(of: model.isPresentingPicker) { wasOpen, isOpen in
+                if wasOpen && !isOpen { model.commitSelection() }
+            }
             .fullScreenCover(isPresented: $showChallenge) {
                 KernelChallengeView(model: model)
             }
             .sheet(isPresented: $showConsent) {
                 KernelConsentView(onAgree: { Task { await model.requestAuthorization() } })
+            }
+            .sheet(isPresented: $showPaywall) { PaywallView(source: .kernelGate) }
+            // A free user just tried to shield more than their one allowed app — we
+            // kept their existing set and now offer the upgrade right at that moment.
+            .onChange(of: model.didHitAppLimit) { _, hit in
+                guard hit else { return }
+                model.didHitAppLimit = false
+                showPaywall = true
             }
             .onAppear { model.onAppear() }
         }
@@ -68,6 +82,7 @@ struct KernelView: View {
             heroChargeRing
             protectionControls
             editAppsButton
+            if model.isAppLimited { upgradeCard }
             energyCard
             sessionsCard
             footnote
@@ -160,6 +175,48 @@ struct KernelView: View {
         .tint(AiQoTheme.Colors.accent)
     }
 
+    /// Free-tier upsell. The full magic (walk-to-unlock, live Captain trainer) is
+    /// already unlocked on the one allowed app — only the *count* is capped, so we
+    /// sell scale (unlimited apps), never the feature itself. Tap opens the paywall.
+    private var upgradeCard: some View {
+        Button { showPaywall = true } label: {
+            HStack(spacing: AiQoSpacing.md) {
+                Image(systemName: "infinity")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(AiQoTheme.Colors.accent)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(isAr ? "تطبيقات بلا حدود" : "Unlimited apps")
+                            .font(AiQoTheme.Typography.cardTitle)
+                            .foregroundStyle(AiQoTheme.Colors.textPrimary)
+                        Text("Max")
+                            .font(AiQoTheme.Typography.caption.weight(.bold))
+                            .foregroundStyle(AiQoTheme.Colors.accent)
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(AiQoTheme.Colors.accent.opacity(0.16), in: Capsule())
+                    }
+                    Text(isAr ? "بالمجاني تحمي تطبيق واحد. اشترك بـ Max واحجب كل تطبيقاتك."
+                              : "Free protects one app. Subscribe to Max to lock every app you choose.")
+                        .font(AiQoTheme.Typography.caption)
+                        .foregroundStyle(AiQoTheme.Colors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AiQoTheme.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .kernelCard()
+        .overlay(
+            RoundedRectangle(cornerRadius: AiQoRadius.card)
+                .strokeBorder(AiQoTheme.Colors.accent.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     private var energyCard: some View {
         HStack {
             Image(systemName: "bolt.heart.fill").foregroundStyle(AiQoColors.sandSoft)
@@ -217,11 +274,10 @@ struct KernelView: View {
     private var gateLockedCard: some View {
         VStack(spacing: AiQoSpacing.md) {
             Image(systemName: "lock.fill").font(.system(size: 40)).foregroundStyle(AiQoColors.sandSoft)
-            Text(model.gateState == .tierLocked ? (isAr ? "النواة ضمن AiQo Max" : "Kernel is part of AiQo Max")
-                                                : (isAr ? "النواة غير مفعّلة" : "Kernel isn't enabled"))
+            Text(isAr ? "النواة غير مفعّلة" : "Kernel isn't enabled")
                 .font(AiQoTheme.Typography.sectionTitle).foregroundStyle(AiQoTheme.Colors.textPrimary)
-            Text(isAr ? "اشترك بـ Max حتى تحجب تطبيقاتك وتفتحها بالحركة."
-                      : "Subscribe to Max to block your apps and open them with movement.")
+            Text(isAr ? "هاي الميزة مو متوفرة بهذا الإصدار."
+                      : "This feature isn't available in this build.")
                 .font(AiQoTheme.Typography.body).foregroundStyle(AiQoTheme.Colors.textSecondary).multilineTextAlignment(.center)
         }
         .kernelCard()

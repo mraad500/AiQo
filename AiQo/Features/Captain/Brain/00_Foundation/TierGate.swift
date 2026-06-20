@@ -90,9 +90,15 @@ final class TierGate: @unchecked Sendable {
     nonisolated var currentTier: SubscriptionTier {
         #if DEBUG
         if let testOverride { return testOverride }
-        // Developer-panel "force free tier" switch (persisted, read live so the
-        // whole app — chat routing, avatar, voice — flips without a relaunch).
-        if defaults.bool(forKey: "debug.forceFreeTier") { return .none }
+        // Hidden DEBUG-only tier override (App Settings → testing). Lets the whole
+        // app — Captain chat routing, avatar, voice, personality — flip between
+        // free and paid live, without a relaunch. NEVER present in Release builds.
+        switch defaults.string(forKey: "debug.captainTierOverride") {
+        case "free": return .none
+        case "max":  return .max
+        case "pro":  return .pro
+        default:     break
+        }
         #endif
 
         if trialProvider() { return .trial }
@@ -208,6 +214,18 @@ final class TierGate: @unchecked Sendable {
         case .max: return 1
         default:   return 0
         }
+    }
+
+    /// Max distinct apps/categories/web-domains the Kernel may shield.
+    ///
+    /// Free (`.none`, incl. post-trial) gets exactly ONE — enough to feel the
+    /// walk-to-unlock loop on your single worst app; any paid tier (Max/Pro, and
+    /// the trial at Pro-equivalent) is unlimited (`Int.max`). Mirrors
+    /// `requiredTier(.kernel)` (`.max`): `effectiveAccessTier >= .max` ⇒ unlimited.
+    /// Monetization here is the *number* of apps, not access to the feature — every
+    /// tier may open the Kernel and protect at least one app.
+    nonisolated var kernelAppLimit: Int {
+        currentTier.effectiveAccessTier >= .max ? .max : 1
     }
 
     // MARK: - Back-compat async hooks (existing callers: EpisodicStore, SemanticStore)

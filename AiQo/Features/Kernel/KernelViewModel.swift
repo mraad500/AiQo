@@ -18,6 +18,11 @@ final class KernelViewModel: ObservableObject {
     @Published private(set) var isLocked = false
     @Published private(set) var isUnlocked = false
 
+    /// Set true for a moment when a capped (free) user picks more apps than
+    /// `appLimit` allows, so the View can surface the upgrade paywall. One-shot —
+    /// the View resets it after presenting.
+    @Published var didHitAppLimit = false
+
     private let auth = FamilyControlsAuthorizationService.shared
     private let store = KernelSharedStore.shared
     private let scheduler = KernelScheduler.shared
@@ -65,11 +70,13 @@ final class KernelViewModel: ObservableObject {
     }
 
     /// Total chosen tokens across apps, categories, and web domains.
-    var selectedCount: Int {
-        selection.applicationTokens.count
-            + selection.categoryTokens.count
-            + selection.webDomainTokens.count
-    }
+    var selectedCount: Int { Self.tokenCount(selection) }
+
+    /// How many apps this tier may shield. Free = 1, paid = unlimited (`Int.max`).
+    var appLimit: Int { TierGate.shared.kernelAppLimit }
+
+    /// True for the free tier — drives the in-hub "unlimited apps" upgrade card.
+    var isAppLimited: Bool { appLimit != .max }
 
     var isAuthorized: Bool { auth.isAuthorized }
 
@@ -108,13 +115,38 @@ final class KernelViewModel: ObservableObject {
         refreshGate()
     }
 
-    /// Update the in-memory selection and persist its encoded blob so the
-    /// DeviceActivityMonitor extension can decode the same tokens.
+    /// Accept the picker's live selection as-is so the system picker stays
+    /// responsive; the free-tier app cap is enforced when the picker closes, in
+    /// `commitSelection()`. (A `FamilyActivitySelection`'s app/token sets are all
+    /// read-only, so we can't subset one — the cap is all-or-nothing per change.)
     func updateSelection(_ newValue: FamilyActivitySelection) {
         selection = newValue
-        store.setSelectionData(try? JSONEncoder().encode(newValue))
+    }
+
+    /// Called when the app picker dismisses. Persists the chosen selection so the
+    /// DeviceActivityMonitor extension can decode the same tokens — unless a free
+    /// user picked more than `appLimit`, in which case we revert to their last
+    /// valid set (or none) and raise `didHitAppLimit` so the View offers Max.
+    func commitSelection() {
+        if Self.tokenCount(selection) > appLimit {
+            didHitAppLimit = true
+            selection = Self.decodeSelection(store.selectionData) ?? FamilyActivitySelection()
+            refreshFromStore()
+            return
+        }
+        store.setSelectionData(try? JSONEncoder().encode(selection))
         if isProtectionEnabled { scheduler.reapplyIfActive() }
         refreshFromStore()
+    }
+
+    /// Total chosen tokens across apps, categories, and web domains.
+    private static func tokenCount(_ s: FamilyActivitySelection) -> Int {
+        s.applicationTokens.count + s.categoryTokens.count + s.webDomainTokens.count
+    }
+
+    private static func decodeSelection(_ data: Data?) -> FamilyActivitySelection? {
+        guard let data else { return nil }
+        return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
     }
 
     // MARK: - Protection actions (Phase 2)
@@ -189,7 +221,9 @@ final class KernelViewModel: ObservableObject {
 
     private func refreshGate() {
         guard FeatureFlags.kernelEnabled else { gateState = .featureDisabled; return }
-        guard TierGate.shared.canAccess(.kernel) else { gateState = .tierLocked; return }
+        // Every tier may USE the Kernel — free is capped to one app (`appLimit`) with
+        // an in-hub upgrade card, paid tiers are unlimited. No door paywall: we
+        // monetize the NUMBER of protected apps, not access to the feature itself.
         gateState = auth.isAuthorized ? .ready : .needsAuthorization
     }
 }
