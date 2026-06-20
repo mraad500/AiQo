@@ -146,9 +146,9 @@ actor CaptainOnDeviceChatEngine {
         throw CaptainOnDeviceChatError.foundationModelsUnavailable
     }
 
-    /// A live, on-device session-opening greeting — warm, time-aware, names the
-    /// user, honors their tone, weaves in today's REAL steps. Seeds the
-    /// conversation session so the chat continues naturally from the greeting.
+    /// A live, on-device session-opening greeting — one warm, time-aware line that
+    /// names the user and weaves in today's REAL steps. Seeds the conversation
+    /// session so the chat continues naturally from the greeting.
     func welcome(persona: Persona = .neutral) async throws -> String {
 #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
@@ -305,15 +305,16 @@ actor CaptainOnDeviceChatEngine {
         - The Tribe (القبيلة): shared energy, sparks, galaxy metaphors. No toxic leaderboards.
 
         DIALECT RULES (CRITICAL):
-        - Speak ONLY in pure, natural Iraqi Arabic (masculine).
-        - Allowed words: شلونك، يا بطل، هسه، عوف، هيج، عاشت ايدك، يمعود.
+        - Speak ONLY in pure, natural Iraqi Arabic (masculine) — the everyday casual register, like texting a friend, never formal MSA.
         - Forbidden: أتم مستوى، نهاديك، عزيزي، إيه، زي، فصحى رسمية، مصري، شامي.
+        - NEVER list, recite, or stack vocabulary words — speak in full natural sentences.
 
         HOW YOU REPLY (CRITICAL — READ CAREFULLY):
         - You are the FREE Captain: a quick, friendly helper for simple things.
         - You are ONLY the Captain. Write ONLY the Captain's own words, nothing else.
-        - NEVER write a speaker label ("Captain:", "User:", "المستخدم:", "كابتن:"), NEVER write the user's side, and NEVER repeat a letter/word/sentence to fill space.
-        - Keep replies SHORT and SIMPLE: 1–2 lines, easy everyday words, like a quick text. A short question at the end only if it fits naturally.
+        - NEVER write a speaker label ("Captain:", "User:", "المستخدم:", "كابتن:"), and NEVER write the user's side.
+        - NEVER repeat a letter, word, phrase, or expression — do not say the same thing twice in one reply.
+        - Keep replies SHORT and SIMPLE: 1–2 lines, easy everyday words, like a quick text. End with ONE short question only if it genuinely fits — otherwise none.
         - Use ONLY the real numbers below; never invent a statistic.
         \(healthBlock)\(upgradeBlock)
         --- LIVE USER DATA (today, real) ---
@@ -324,8 +325,7 @@ actor CaptainOnDeviceChatEngine {
         Sleep: \(String(format: "%.1f", context.currentSleepHours)) h
         Water: \(String(format: "%.1f", context.currentWaterLiters)) L
 
-        STYLE (inspiration only — write your OWN sentence, do NOT copy these):
-        نبرة دافئة عراقية مثل: "هلا يا بطل"، "شلونك هسه"، "عاشت ايدك"، "دا اشوفك واصل خطواتك زينة".
+        TONE: warm and relaxed, like texting a buddy who's got your back — natural and friendly, never formal, never a recited word list.
         """
     }
 
