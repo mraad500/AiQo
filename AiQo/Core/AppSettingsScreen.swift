@@ -26,6 +26,10 @@ struct AppSettingsScreen: View {
     /// Hidden tester switch (DEBUG builds only) to flip the Captain between free
     /// and paid. Never visible to real users — see `TierGate.currentTier`.
     @AppStorage("debug.captainTierOverride") private var captainTierOverride = "auto"
+    /// Hidden screenshot mode (DEBUG only): freezes the Home cards to clean demo
+    /// numbers for App Store captures, via the existing `ScreenshotMode` (reads
+    /// the same `aiqo-screenshot-mode` key). Applies on next app launch.
+    @AppStorage("aiqo-screenshot-mode") private var screenshotMode = false
     #endif
 
     var body: some View {
@@ -390,10 +394,21 @@ struct AppSettingsScreen: View {
                     // avatar, voice, personality) updates without a relaunch.
                     EntitlementStore.shared.objectWillChange.send()
                 }
+
+                Toggle(isOn: $screenshotMode) {
+                    Text("📸 وضع التصوير (لقطات المتجر)")
+                }
+                .onChange(of: screenshotMode) { _, on in
+                    // Select the Home demo scenario; the existing ScreenshotMode
+                    // reads both keys at launch, so a relaunch applies the numbers.
+                    if on {
+                        UserDefaults.standard.set("home_sleep_8_5", forKey: "aiqo-screenshot-scenario")
+                    }
+                }
             } header: {
-                Text("🧪 اختبار الكابتن (DEBUG فقط)")
+                Text("🧪 أدوات الاختبار (DEBUG فقط)")
             } footer: {
-                Text("مخفي تماماً عن المستخدم — يظهر فقط ببناء التطوير.")
+                Text("مخفي تماماً عن المستخدم — يظهر فقط ببناء التطوير. وضع التصوير يحتاج إعادة تشغيل التطبيق حتى تنطبق الأرقام التجريبية على الشاشة الرئيسية.")
             }
             #endif
         }
