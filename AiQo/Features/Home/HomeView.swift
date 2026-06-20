@@ -30,7 +30,12 @@ struct HomeView: View {
     @StateObject private var dailyAuraViewModel = DailyAuraViewModel()
     #endif
     @StateObject private var vibeControlViewModel = VibeControlViewModel()
-    
+    #if DEBUG
+    /// Hidden screenshot mode (App Settings → DEBUG). Drives live demo numbers on
+    /// Home so App Store captures show clean values — no relaunch needed.
+    @AppStorage("aiqo-screenshot-mode") private var screenshotModeOn = false
+    #endif
+
     // MARK: - Environment
     
     @Environment(\.scenePhase) private var scenePhase
@@ -75,8 +80,16 @@ struct HomeView: View {
             topChrome
         }
         .task {
+            #if DEBUG
+            if screenshotModeOn { viewModel.setScreenshotMode(true) }
+            #endif
             await viewModel.onAppear()
         }
+        #if DEBUG
+        .onChange(of: screenshotModeOn) { _, on in
+            viewModel.setScreenshotMode(on)
+        }
+        #endif
         .onDisappear {
             viewModel.onDisappear()
         }

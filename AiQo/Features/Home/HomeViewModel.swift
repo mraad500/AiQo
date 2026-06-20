@@ -172,8 +172,8 @@ final class HomeViewModel: ObservableObject {
     // MARK: - Private Properties
     
     /// Demo mode toggle - set to true for video recording with fixed values
-    private let demoMode: Bool
-    private let demoConfig: DemoConfiguration
+    private var demoMode: Bool
+    private var demoConfig: DemoConfiguration
     
     /// HealthKit service reference
     private let healthService: HealthKitService
@@ -394,7 +394,20 @@ final class HomeViewModel: ObservableObject {
     }
     
     // MARK: - Demo Mode
-    
+
+    /// Runtime toggle for the hidden screenshot mode (App Settings → DEBUG). ON
+    /// freezes the cards to clean demo numbers (`DemoConfiguration.default`); OFF
+    /// resumes live HealthKit data. Applies LIVE — no app relaunch needed.
+    func setScreenshotMode(_ on: Bool) {
+        guard on != demoMode else { return }
+        demoMode = on
+        if on {
+            applyDemoSnapshot()
+        } else {
+            Task { [weak self] in await self?.setupHealthAndAutoRefresh() }
+        }
+    }
+
     private func applyDemoSnapshot() {
         stopLiveTimer()
         currentSummary = nil
