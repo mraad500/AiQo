@@ -9,33 +9,27 @@ Submission copy for App Store Connect. Arabic is the primary locale; English is 
 
 ---
 
-## العربية (ar) — "الجديد في هذا الإصدار"
+## العربية (ar) — "الجديد في هذا الإصدار"  ← PASTE THIS
 
-**كابتن حمودي صار مجاني للكل — وتكدر تصمّم شخصيته.**
+كابتن حمودي صار مجاني للكل — وأذكى.
 
-• الكابتن انفتح لكل المستخدمين، مجاناً وبلا حدود رسائل. يشتغل **كامل على جهازك** — بدون إنترنت وبدون حساب — فحچيك يضل خاص، ويرد بلهجة عراقية طبيعية.
-• المجاني **مساعد سريع وبسيط**: يتذكّر محادثتك، يناديك باسمك، وأي رقم صحي يذكره يتطابق مع بيانات صحتك الحقيقية — ما يخمّن.
-• **جديد — صمّم شخصية كابتنك (مع Max):** اختار من ٦ شخصيات — عملي، حنون، صارم، محلّل، واسع الأفق، أو مرشد — والكابتن يتغيّر فعلاً على ذوقك. ومع **Pro** تكدر **تكتب شخصيته بكلماتك**.
-• **كابتن حي:** صورة الكابتن تتنفّس وتتفاعل مع حركة جهازك؛ ومع الاشتراك تنوّر حوله هالة تتجاوب وية صوته.
-
-ولمن تطلب من الكابتن المجاني خطة كاملة أو نظام غذائي، يعطيك نبذة سريعة ويدلّك على Max للخطة الكاملة اللي يتابعها ويتذكّرها وياك.
-
-خصوصيتك أولاً — الكابتن المجاني وتحليلاتك الحسّاسة تظل على جهازك.
+• الكابتن مجاني الآن لكل المستخدمين وبلا حدود — يشتغل على جهازك، يحجي عراقي طبيعي، يتذكّر محادثتك، وكل رقم صحي يذكره مضبوط على بياناتك الحقيقية.
+• جديد: صمّم شخصية كابتنك (مع AiQo Max) — اختر من ٦ شخصيات: عملي، حنون، صارم، محلّل، واسع الأفق، أو مرشد. ومع Pro اكتب شخصيته بكلماتك.
+• كابتن حي: صورته تتنفّس وتتفاعل مع حركة جهازك، وبالاشتراك تنوّر حوله هالة تتجاوب مع صوته.
+• النواة: درّع تطبيقاتك وافتحها بحركتك الحقيقية — مجاناً تحمي تطبيقاً واحداً، ومع Max بلا حدود.
+• تحسينات وضوح ومعالجة هفوات عبر التطبيق.
 
 ---
 
-## English (en) — "What's New"
+## English (en) — "What's New"  ← PASTE THIS
 
-**Captain Hamoudi is now free for everyone — and you can shape his personality.**
+Captain Hamoudi is now free for everyone — and smarter.
 
-• The Captain is open to all users, free and with no message limits. He runs **entirely on your device** — no internet, no account — so your conversations stay private, in natural Iraqi Arabic.
-• The free Captain is a **quick, simple helper**: he remembers your chat, calls you by name, and keeps every health number honest against your real Health data — never guessed.
-• **New — design your Captain (with Max):** choose from 6 personalities — practical, caring, strict, analytical, visionary, or mentor — and he truly changes to match you. With **Pro**, you can even **write his personality in your own words**.
-• **A living Captain:** his portrait breathes and reacts to how you move your phone; subscribing lights up a living aura that responds to his voice.
-
-When you ask the free Captain for a full plan or nutrition program, he gives you a quick taste and points you to Max for the complete plan he tracks and remembers with you.
-
-Your privacy comes first — the free Captain and your sensitive insights stay on your device.
+• The Captain is now free for all users, with no limits — he runs on your device, speaks natural Iraqi Arabic, remembers your chat, and keeps every health number honest against your real data.
+• New: design your Captain's personality (with AiQo Max) — pick from 6 styles: practical, caring, strict, analytical, visionary, or mentor. With Pro, write his personality in your own words.
+• A living Captain: his portrait breathes and reacts to how you move your phone; subscribing lights up an aura that responds to his voice.
+• Kernel: shield your apps and open them with real movement — free protects one app, Max is unlimited.
+• Clarity improvements and bug fixes across the app.
 
 ---
 
