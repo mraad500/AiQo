@@ -26,3 +26,7 @@ Packages/
 
 # Local web app lives in its own Git repo; ignore it in the iOS app repo.
 /aiqo-web/
+
+# generated docs & tool caches
+__pycache__/
+output/
