@@ -1,0 +1,6 @@
+# Copy this file to local.properties when you want Android Supabase login enabled.
+# local.properties is ignored by git.
+
+sdk.dir=/Users/mohammedraad/Library/Android/sdk
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-public-anon-key
