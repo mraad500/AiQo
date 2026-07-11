@@ -43,8 +43,22 @@ final class LiveWorkoutSession: ObservableObject {
     // MARK: - Published State
     
     @Published var title: String = ""
-    @Published var phase: Phase = .idle
-    
+    @Published var phase: Phase = .idle {
+        didSet {
+            guard phase != oldValue else { return }
+            // The "ending" phase is the only one that depends on the watch
+            // sending back a terminal confirmation. If that confirmation is
+            // lost over the air (or the watch hangs finishing its HealthKit
+            // save) the user would be stuck on "جاري الإنهاء..." forever, so
+            // we arm a watchdog the moment we enter it and disarm on exit.
+            if phase == .ending {
+                armEndTimeoutWatchdog()
+            } else {
+                cancelEndTimeoutWatchdog()
+            }
+        }
+    }
+
     // Live workout data (updated in real-time from Watch)
     @Published var heartRate: Double = 0
     @Published var activeEnergy: Double = 0
@@ -82,6 +96,12 @@ final class LiveWorkoutSession: ObservableObject {
     private var captainWarmupAmbientPlayer: AVAudioPlayer?
     private var captainWarmupAmbientFadeTask: Task<Void, Never>?
     private var shouldIgnoreIncomingSnapshots = false
+    private var endTimeoutTask: Task<Void, Never>?
+
+    /// How long to wait for the watch to confirm an end before finalizing the
+    /// workout locally. The end command is already dispatched by then; this only
+    /// guards against a lost acknowledgement / terminal snapshot.
+    private static let endConfirmationTimeoutSeconds: UInt64 = 12
 
     private static let captainWarmupAmbientTrackName = "SoundOfEnergy"
     private static let captainWarmupAmbientLoopDurationSeconds = 360
@@ -308,6 +328,47 @@ final class LiveWorkoutSession: ObservableObject {
         guard canEnd else { return }
         lastError = nil
         connectivity.endWorkoutOnWatch()
+        // Reflect the ending state immediately (and arm the watchdog via the
+        // phase `didSet`) instead of waiting for the watch's first `.stopping`
+        // snapshot, which may never arrive on a flaky connection.
+        if phase != .ending {
+            withAnimation(.snappy) {
+                phase = .ending
+            }
+        }
+    }
+
+    // MARK: - End Watchdog
+
+    private func armEndTimeoutWatchdog() {
+        cancelEndTimeoutWatchdog()
+        endTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.endConfirmationTimeoutSeconds * 1_000_000_000)
+            guard !Task.isCancelled, let self, self.phase == .ending else { return }
+            self.finalizeStuckEnd()
+        }
+    }
+
+    private func cancelEndTimeoutWatchdog() {
+        endTimeoutTask?.cancel()
+        endTimeoutTask = nil
+    }
+
+    /// The watch never confirmed the end within the timeout. The end command
+    /// was already dispatched, so we reconcile the phone's mirror state and
+    /// drive the workout to completion through the normal end path — the user
+    /// is never left stuck on "جاري الإنهاء...".
+    private func finalizeStuckEnd() {
+        guard phase == .ending else { return }
+        print("⏱️ Workout end not confirmed by watch in time — finalizing locally")
+        // Asking the connectivity layer to go terminal publishes `.ended`,
+        // which routes back through `applyRemotePhaseFallback` → `handleRemoteEnded`.
+        connectivity.reconcileLostWorkoutEnd()
+        // Safety net: if that publish was de-duplicated (already terminal) and
+        // didn't drive us to idle, finalize directly so we never hang.
+        if phase != .idle {
+            handleRemoteEnded()
+        }
     }
 
     func forceEndFromPhoneImmediately() {

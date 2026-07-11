@@ -34,6 +34,13 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private var latestCommandSequenceNumber = 0
     private var lastLegacyPacketSequence = -1
     private var pendingCommandID: String?
+    private var pendingCommandType: WorkoutControlCommandType?
+    private var commandWatchdog: Task<Void, Never>?
+
+    /// How long an issued control command may stay in-flight before we clear
+    /// the pending flag locally. Without this, a lost watch acknowledgement
+    /// leaves controls permanently disabled (the "stuck ending" bug).
+    private static let commandAckTimeoutSeconds: UInt64 = 8
 
     @Published var isReachable = false
     @Published var isPaired = false
@@ -268,6 +275,23 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         sendWorkoutCommand(.end)
     }
 
+    /// Forces the phone's mirror state to terminal when the watch never
+    /// confirmed an end (lost acknowledgement / terminal snapshot). The end
+    /// command was already dispatched; this just stops the phone from waiting
+    /// forever and releases the session so a new workout can be launched.
+    func reconcileLostWorkoutEnd() {
+        guard !currentWorkoutPhase.isTerminal else { return }
+        logEvent("reconciling lost workout end — forcing terminal state locally")
+        cancelCommandWatchdog()
+        isCommandInFlight = false
+        pendingCommandID = nil
+        mirroredSessionID = nil
+        clearPersistedSnapshot()
+        currentWorkoutPhase = .ended
+        workoutConnectionState = .ended
+        detachMirroredSession(markDisconnected: false)
+    }
+
     func requestLatestSnapshot() {
         sendWorkoutCommand(.requestSnapshot)
     }
@@ -396,6 +420,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         mirroredSession?.delegate = nil
         mirroredSession = nil
         hasMirroredSession = false
+        cancelCommandWatchdog()
         isCommandInFlight = false
         pendingCommandID = nil
 
@@ -514,6 +539,38 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
             .joined(separator: "+")
         lastSent = "command=\(type.rawValue) via=\(transports)"
         logEvent("command dispatched: \(type.rawValue) via \(transports)")
+
+        if type != .requestSnapshot {
+            armCommandWatchdog(commandID: command.commandId, type: type)
+        }
+    }
+
+    private func armCommandWatchdog(commandID: String, type: WorkoutControlCommandType) {
+        pendingCommandType = type
+        commandWatchdog?.cancel()
+        commandWatchdog = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.commandAckTimeoutSeconds * 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.handleCommandWatchdogFired(commandID: commandID, type: type)
+        }
+    }
+
+    private func cancelCommandWatchdog() {
+        commandWatchdog?.cancel()
+        commandWatchdog = nil
+        pendingCommandType = nil
+    }
+
+    /// No acknowledgement arrived for an in-flight command. Release the pending
+    /// flag so controls are usable again. The terminal finalize for end/stop is
+    /// owned by `LiveWorkoutSession`'s end watchdog; here we only unblock.
+    private func handleCommandWatchdogFired(commandID: String, type: WorkoutControlCommandType) {
+        guard isCommandInFlight, pendingCommandID == commandID else { return }
+        logEvent("command \(type.rawValue) timed out without acknowledgement — clearing pending flag")
+        pendingCommandID = nil
+        pendingCommandType = nil
+        isCommandInFlight = false
+        lastError = "Watch did not acknowledge \(type.rawValue) in time"
     }
 
     private func sendCompanionMessage(_ message: WorkoutCompanionMessage, guaranteed: Bool) -> Bool {
@@ -709,6 +766,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
 
         if snapshot.currentState.isTerminal {
+            cancelCommandWatchdog()
             isCommandInFlight = false
             pendingCommandID = nil
             mirroredSessionID = nil
@@ -749,6 +807,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         lastReceived = "ack=\(acknowledgement.commandId) seq=\(sequenceNumber)"
 
         if acknowledgement.commandId == pendingCommandID {
+            cancelCommandWatchdog()
             pendingCommandID = nil
             isCommandInFlight = false
         }
