@@ -187,7 +187,7 @@ private enum class AiQoTab(val labelAr: String) {
     Home("الرئيسية"),
     Gym("النادي"),
     Kitchen("المطبخ"),
-    Captain("RoQo"),
+    Captain("Rafiqo"),
     ;
 
     // أيقونات مطابقة لرموز iOS: house.fill / figure.strengthtraining / fork.knife / wand.and.stars
@@ -495,7 +495,7 @@ private enum class GymTab(val ar: String) { Body("الجسم"), Plan("الخطة
 private data class Workout(val name: String, val subtitle: String?, val icon: ImageVector, val peach: Boolean)
 
 private val CARDIO_WORKOUTS = listOf(
-    Workout("كارديو ويا RoQo", "نبض Zone 2 لحرق دهون أذكى", Icons.AutoMirrored.Filled.DirectionsRun, peach = false),
+    Workout("كارديو ويا Rafiqo", "نبض Zone 2 لحرق دهون أذكى", Icons.AutoMirrored.Filled.DirectionsRun, peach = false),
     Workout("الجري بالخارج", null, Icons.Filled.Map, peach = true),
     Workout("الجري", null, Icons.AutoMirrored.Filled.DirectionsRun, peach = false),
     Workout("المشي", null, Icons.AutoMirrored.Filled.DirectionsWalk, peach = true),
@@ -662,7 +662,7 @@ private fun GymPlan() {
             Column(Modifier.weight(1f)) {
                 Text("خطة التمرين 🏋", color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("بلمسة وحدة، ابدي خطة تدريب يومية ويّا RoQo.", color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                Text("بلمسة وحدة، ابدي خطة تدريب يومية ويّا Rafiqo.", color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 13.sp)
             }
             Spacer(Modifier.width(12.dp))
             Box(Modifier.size(46.dp).clip(CircleShape).background(Color(0xFF2E2A26)), contentAlignment = Alignment.Center) {
@@ -1572,7 +1572,7 @@ private fun captainReply(user: String): String {
     fun any(vararg k: String) = k.any { t.contains(it) }
     return when {
         any("تمرين", "تدريب", "نادي", "اتمرن", "كارديو", "جري", "ركض", "قوة", "حديد", "رياضة") ->
-            "خوش قرار! نبدي بكارديو Zone 2 خفيف — 20 دقيقة مشي سريع وياها إحماء. روح للنادي وابدي «كارديو ويا RoQo» وأني وياك 💪"
+            "خوش قرار! نبدي بكارديو Zone 2 خفيف — 20 دقيقة مشي سريع وياها إحماء. روح للنادي وابدي «كارديو ويا Rafiqo» وأني وياك 💪"
         any("اكل", "أكل", "جوعان", "وجبة", "فطور", "غدا", "عشا", "رجيم", "دايت", "سعرات") ->
             "التغذية نص الطريق! افتح المطبخ وشوف وجبات اليوم — خلي البروتين عالي والسكر واطي، والباقي يمشي وحده."
         any("نوم", "تعبان", "تعب", "مرهق", "نايم", "سهران") ->
@@ -1681,7 +1681,7 @@ private fun CaptainHeader(subtitle: String, onOpenProfile: () -> Unit, onNewChat
         CaptainChromeButton(Icons.Filled.Book, "عن المحادثة", onInfo)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.End) { // End في RTL = حافة اليسار
-            Text("RoQo", color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 21.sp)
+            Text("Rafiqo", color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 21.sp)
             Text(subtitle, color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 11.5.sp)
         }
     }
@@ -1714,7 +1714,7 @@ private fun CaptainSafetyBanner(expanded: Boolean, onToggle: () -> Unit) {
         if (expanded) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "RoQo يساعدك بالتمرين والتغذية والنوم بشكل عام. لأي عرض صحي أو دواء، راجع طبيبك.",
+                "Rafiqo يساعدك بالتمرين والتغذية والنوم بشكل عام. لأي عرض صحي أو دواء، راجع طبيبك.",
                 color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 11.5.sp,
             )
         }
@@ -1770,7 +1770,7 @@ private fun CaptainTypingRow() {
             }
         }
         Spacer(Modifier.width(8.dp))
-        Text("RoQo يفكر...", color = AiQoMuted.copy(alpha = 0.85f), fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text("Rafiqo يفكر...", color = AiQoMuted.copy(alpha = 0.85f), fontWeight = FontWeight.Medium, fontSize = 13.sp)
     }
 }
 
@@ -1789,7 +1789,7 @@ private fun BreathingRoqo(modifier: Modifier = Modifier) {
                 .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.85f), AiQoMintCard.copy(alpha = 0.35f), Color.Transparent))),
         )
         Image(
-            painter = painterResource(R.drawable.roqo), contentDescription = "RoQo",
+            painter = painterResource(R.drawable.roqo), contentDescription = "Rafiqo",
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxHeight().offset(y = dy.dp),
         )
@@ -1805,7 +1805,7 @@ private fun MiniRoqo() {
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            painter = painterResource(R.drawable.roqo), contentDescription = "RoQo",
+            painter = painterResource(R.drawable.roqo), contentDescription = "Rafiqo",
             contentScale = ContentScale.Fit, modifier = Modifier.fillMaxHeight(0.92f),
         )
     }
