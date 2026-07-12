@@ -525,7 +525,7 @@ private fun GymScreen(onStartWorkout: (String) -> Unit = {}, onOpenProfile: () -
             GymTab.Plan -> Box(Modifier.padding(horizontal = 14.dp)) { GymPlan() }
             GymTab.Battle -> Box(Modifier.padding(horizontal = 14.dp)) { GymBattle() }
             GymTab.Trace -> Box(Modifier.padding(horizontal = 14.dp)) { GymTrace() }
-            GymTab.Peaks -> GymComingSoon("قِمَم")
+            GymTab.Peaks -> Box(Modifier.padding(horizontal = 14.dp)) { GymPeaks() }
         }
     }
 }
@@ -777,6 +777,87 @@ private fun HistoryCard(e: HistoryEntry) {
 private fun ThinBar(progress: Float, color: Color, modifier: Modifier = Modifier) {
     Box(modifier.height(7.dp).clip(RoundedCornerShape(50)).background(Color(0x18000000))) {
         Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(color))
+    }
+}
+
+// ── قِمَم (Peaks) — أرقامك القياسية، أعلى ما بلغت ─────────────────────────────
+
+private data class Peak(val emoji: String, val title: String, val value: String, val unit: String, val whenAr: String, val tint: Color)
+
+private val PEAKS = listOf(
+    Peak("🏃", "أطول جري", "12.4", "كم", "10 يوليو 2026", Color(0xFFF0603F)),
+    Peak("👟", "أعلى خطوات بيوم", "14,860", "خطوة", "3 يوليو 2026", AiQoGoldDeep),
+    Peak("🔥", "أعلى حرق بجلسة", "642", "سعرة", "8 يوليو 2026", Color(0xFFEF6C4D)),
+    Peak("💓", "أطول تركيز — زون 2", "58", "دقيقة", "5 يوليو 2026", Color(0xFFEF4D5E)),
+    Peak("✨", "أطول سلسلة نشاط", "18", "يوم", "مستمرة الآن", Color(0xFF6C6CE0)),
+)
+
+@Composable
+private fun GymPeaks() {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 120.dp)) {
+        Text("قِمَم", color = AiQoInk, fontWeight = FontWeight.Black, fontSize = 30.sp, modifier = Modifier.padding(top = 8.dp))
+        Text(
+            "أرقامك القياسية — أعلى ما بلغت ✦",
+            color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 14.sp,
+            modifier = Modifier.padding(top = 2.dp, bottom = 16.dp),
+        )
+        PeakHero(PEAKS.first())
+        Spacer(Modifier.height(18.dp))
+        Text("كل القِمَم", color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(bottom = 12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            PEAKS.drop(1).forEach { PeakCard(it) }
+        }
+    }
+}
+
+/** قمة الشهر — بطاقة بارزة بلون خوخيّ دافئ. */
+@Composable
+private fun PeakHero(p: Peak) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(AiQoPeachCard).padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
+            Text("🏔️", fontSize = 32.sp)
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text("قمة الشهر", color = AiQoGoldDeep, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(p.title, color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(p.whenAr, color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 12.sp)
+        }
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(p.value, color = AiQoInk, fontWeight = FontWeight.Black, fontSize = 30.sp)
+                Spacer(Modifier.width(4.dp))
+                Text(p.unit, color = AiQoMuted, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 5.dp))
+            }
+        }
+    }
+}
+
+/** بطاقة قِمّة واحدة — أيقونة ملوّنة يمينًا، والرقم القياسي يسارًا (LTR كي تقرأ الأرقام صح). */
+@Composable
+private fun PeakCard(p: Peak) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(AiQoMintCard.copy(alpha = 0.5f)).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(52.dp).clip(CircleShape).background(p.tint.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Text(p.emoji, fontSize = 24.sp)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(p.title, color = AiQoInk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(p.whenAr, color = AiQoMuted, fontWeight = FontWeight.Medium, fontSize = 12.sp)
+        }
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(p.value, color = AiQoInk, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                Spacer(Modifier.width(3.dp))
+                Text(p.unit, color = p.tint, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
     }
 }
 
