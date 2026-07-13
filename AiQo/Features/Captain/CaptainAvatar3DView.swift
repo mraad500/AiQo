@@ -10,12 +10,28 @@ import RealityKit
 
 struct CaptainAvatar3DView: View {
     @State private var anchor = AnchorEntity()
+    /// RealityKit 3D avatar vs. the lightweight 2D portrait. The 3D path runs a
+    /// per-frame `TimelineView(.animation)` + a RealityKit scene; on lower-end or
+    /// thermally-stressed devices we fall back to the static 2D Captain image
+    /// (`Hammoudi5`, the same asset used across the app) — never to nothing.
+    @State private var highFidelity3D = DevicePerformanceTier.shouldUseHighFidelity3D
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            avatar3DContent(time: timeline.date.timeIntervalSinceReferenceDate)
+        Group {
+            if highFidelity3D {
+                TimelineView(.animation) { timeline in
+                    avatar3DContent(time: timeline.date.timeIntervalSinceReferenceDate)
+                }
+            } else {
+                Image("Hammoudi5")
+                    .resizable()
+                    .scaledToFit()
+            }
         }
         .allowsHitTesting(false)
+        .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in
+            highFidelity3D = DevicePerformanceTier.shouldUseHighFidelity3D
+        }
     }
 
     private func avatar3DContent(time: TimeInterval) -> some View {

@@ -37,7 +37,13 @@ struct WorkoutHistoryEntry: Codable, Identifiable {
 final class WorkoutHistoryStore {
     static let shared = WorkoutHistoryStore()
 
-    private let maxEntries = 7
+    /// Rolling window kept for the engine's workout-to-workout comparison and
+    /// richer long-term memory. Expanded from 7 → 30 so the Captain remembers
+    /// far more training history.
+    private let maxEntries = 30
+    /// Only the most recent N are folded into the single `workout_history`
+    /// prompt memory, so a deeper store doesn't bloat the prompt budget.
+    private let memorySummaryLimit = 14
     private let minimumDurationSeconds = 60
     private let storageKey = "aiqo.workoutHistory.v1"
     private let memoryKey = "recent_workouts"
@@ -125,12 +131,14 @@ final class WorkoutHistoryStore {
         formatter.locale = Locale(identifier: isArabic ? "ar" : "en")
         formatter.dateFormat = "d MMM"
 
+        let rendered = Array(entries.prefix(memorySummaryLimit))
+
         let header = isArabic
-            ? "آخر \(entries.count) تمارين للمستخدم (من الأحدث للأقدم):"
-            : "User's last \(entries.count) workouts (newest first):"
+            ? "آخر \(rendered.count) تمارين للمستخدم (من الأحدث للأقدم):"
+            : "User's last \(rendered.count) workouts (newest first):"
 
         var lines: [String] = [header]
-        for (index, entry) in entries.enumerated() {
+        for (index, entry) in rendered.enumerated() {
             let dateStr = formatter.string(from: entry.date)
             let minutes = max(1, entry.durationSeconds / 60)
 

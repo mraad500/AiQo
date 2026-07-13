@@ -1,0 +1,582 @@
+# AiQo — Master Blueprint (المرجع الأساسي الكامل)
+
+> **هذا الملف هو المصدر الأول والأساسي للحقيقة عن تطبيق AiQo.**
+> The single source of truth for the AiQo product — its identity, founder/persona, architecture, every feature, backend, monetization, privacy, and growth strategy.
+>
+> **Owner:** Mohammed Raad (founder, solo) · **Persona:** Captain Hamoudi (كابتن حمودي)
+> **App version:** `1.0.8` (build `31`) — prepared on `program/world-class-completion`, **not yet submitted** · **Live on App Store:** `1.0.7` (approved + released 2026-06-16) · **Bundle:** `com.mraad500.aiqo` · **Platform:** iOS 26.2+ (SwiftUI)
+> **Active branch:** `program/world-class-completion` (v1.0.8 — deliberately simple free on-device Captain + paid personality customization + per-item memory delete + upgrade legibility; tier-differentiated avatar/voice; streaming dormant)
+> **Doc generated:** 2026-05-30 · **Last updated:** 2026-06-16 (v1.0.8: free Captain simplified + paid personality customization + memory delete + upgrade legibility) · **Repo:** `github.com/mraad500/AiQo`
+
+---
+
+## 0. كيف تستخدم هذا الملف · How to use this file
+
+**بالعربي:** هذا الملف صُمّم ليُرفَع كـ "Project Knowledge" في مشروع AiQo داخل Claude، ويُعتمد كـ**المرجع الأول والأساسي** في أي محادثة تبدأها داخل المشروع. عند أي تعارض بين هذا الملف وأي معلومة أخرى، **هذا الملف هو الحَكَم** (مع ملاحظة أن الكود في المستودع هو الحقيقة النهائية عند اختلافه عن الوصف هنا — حدّث الملف عندها).
+
+**To establish it as the primary source in your Claude Project:**
+1. Open the AiQo project on claude.ai → **Project knowledge** → add/upload `AiQo_Master_Blueprint.md`.
+2. In the project's **Custom instructions**, paste:
+   > «اعتمد `AiQo_Master_Blueprint.md` كمصدر أساسي وأول للحقيقة عن تطبيق AiQo في كل محادثة. عند أي تعارض، هذا الملف هو المرجع، والكود في المستودع هو الحقيقة النهائية.»
+3. Keep it current: when the app changes materially, update this file (it lives in the repo root next to `CHANGELOG.md`).
+
+**Companion source docs** (also in repo root): `AiQo_Hamoudi_Strategy.md` (v2.0 — current growth/persona strategy), `AiQo_Growth_Strategy_May-Aug_2026.md` (v1 — **obsolete**, superseded), `CHANGELOG.md`, `AIQO_TECH_DEBT.md`.
+
+---
+
+## Table of Contents
+1. [What AiQo is](#1-what-aiqo-is--ما-هو-aiqo)
+2. [Founder & the Hamoudi persona](#2-founder--the-hamoudi-persona)
+3. [Product overview & tech stack](#3-product-overview--tech-stack)
+4. [App architecture](#4-app-architecture)
+5. [The Captain (Hamoudi) AI Brain](#5-the-captain-hamoudi-ai-brain)
+6. [Feature catalog](#6-feature-catalog)
+7. [Data, backend & services](#7-data-backend--services)
+8. [Monetization & subscription tiers](#8-monetization--subscription-tiers)
+9. [Localization & internationalization](#9-localization--internationalization)
+10. [Configuration, capabilities & feature flags](#10-configuration-capabilities--feature-flags)
+11. [Privacy & compliance](#11-privacy--compliance)
+12. [Growth & content strategy](#12-growth--content-strategy)
+13. [Version history](#13-version-history)
+14. [Invariants & gotchas (do-not-break)](#14-invariants--gotchas-do-not-break)
+15. [Glossary](#15-glossary)
+16. [Repo map](#16-repo-map)
+
+---
+
+## 1. What AiQo is · ما هو AiQo
+
+**AiQo is an Arabic-first "Bio-Digital OS" — a personal health/wellness operating system for iOS, built around an AI coach with a distinct Iraqi personality (Captain Hamoudi / كابتن حمودي).** It is not a chatbot wrapper and not a translated Western fitness app: it is written Arabic-first, speaks authentic Iraqi (Mesopotamian) dialect, remembers the user durably, and unifies workouts, running, nutrition, sleep, hydration, music/mood, challenges, and a social arena under one coach.
+
+**One-line positioning (canonical):**
+> «حمودي — مؤسس AiQo. عراقي. بنى أول AI يحجي عراقي. بياناتك ملكك.»
+> *Hamoudi — founder of AiQo. Iraqi. Built the first AI that speaks Iraqi. Your data is yours.*
+
+**The defensible moats (what no competitor in the Arabic market has):**
+1. **Authentic Iraqi dialect AI** — "هلا بالذيب"، "هسّه"، "شلون"، "عاشت ايدك"، "بطل" — not translated ChatGPT.
+2. **Durable memory (up to ~1000–1200 facts)** — remembers goals, injuries, preferences, prior conversations over months.
+3. **Directives** — teach the Captain a standing rule once in dialect; it executes it forever (v1.0.5).
+4. **Bio-phases** — the Captain knows time-of-day/circadian state and shifts tone & timing.
+5. **Privacy by architecture** — PII is scrubbed *before* anything reaches the cloud; sleep stays 100% on-device.
+6. **Solo Iraqi founder** — one person built every line; no investor pressure.
+7. **Vision Kitchen** — photograph your fridge → AI meal plan (not "log every meal").
+8. **Peaks** — real 4–12 week periodized challenges (not TikTok "30-day" gimmicks).
+9. **Free, uncapped, on-device Iraqi Captain** — the free tier gets a *real* AI coach running fully on-device (Apple Intelligence / Foundation Models), **no message caps**. Monetization is on **depth** (cloud reasoning + durable memory + directives + premium voice + Peaks/Kitchen), never on gating the chat. Caps breed resentment and clash with «بياناتك ملكك» — so there are none (2026-06-15 strategy, see §5.10).
+
+**Anti-positioning (what AiQo explicitly is NOT):** not a ChatGPT wrapper, not "MyFitnessPal in Arabic," not Whoop-without-hardware, not a localized Apple Fitness+, not a generic "health app." It is a Bio-Digital OS.
+
+**Target users:** Gulf/Iraqi/Egyptian Arabic speakers, 18–35, iPhone owners, who want a coach that "speaks like them." Three personas: the returning gym-goer (highest conversion), the holistic wellness user (high LTV), and the Arabic AI/tech enthusiast (secondary amplifier).
+
+---
+
+## 2. Founder & the Hamoudi persona
+
+> This section is essential product context — AiQo's brand and the in-app AI share one identity. The strategy is documented fully in `AiQo_Hamoudi_Strategy.md` (v2.0, current).
+
+### 2.1 The founder
+Mohammed Raad (محمد رعد) — a former large-scale creator (≈2M TikTok / 280K Instagram at peak) who **deliberately stepped away from "fame without substance" to build AiQo**. Framing is strategic, not tragic: the withdrawal was a deliberate pivot toward building something with meaning, not a dramatic exit. He builds solo.
+
+### 2.2 The Hamoudi pivot (2026-05-20, current strategy = v2.0)
+The current go-to-market is **persona emergence, not a comeback**: a *new* character named **Hamoudi** emerges — Iraqi, builds AI, speaks dialect, visually transformed (short hair, full beard, serious/cinematic) — **without explaining the past**. Old accounts (`@mraad_`, `m_raad_3`) stay **dormant** (not deleted, not referenced). The mystery is the marketing; discovery ("is that…?") drives engagement.
+
+**Brand fusion:** the persona name **Hamoudi = Captain Hamoudi in the app**. Every piece of content about Hamoudi is content about AiQo. He is positioned as the first unified **Iraqi AI founder-persona**.
+
+### 2.3 Persona discipline — the 10 golden rules (do not break)
+1. **Never the name "Mohammed"** anywhere new — only "Hamoudi."
+2. **No reference to old accounts** (`@mraad_`, `m_raad_3`, "2M followers").
+3. **No "explanation"/comeback content** — he *emerged*, he didn't return.
+4. **If detected ("this is Mohammed Raad!") → neither confirm nor deny;** ignore or deflect to the product.
+5. **Visual transformation is fixed** (beard stays, hair stays short) — it's a brand asset.
+6. **No dance, lipsync, or comedy skits** (pattern-matches the old creator).
+7. **Camera content = product-first**, not selfie content.
+8. **Engagement is minimal but intentional** — not lazma-reply to every comment.
+9. **Religiously time-sensitive** — no light content during prayer/Ashura/Arafah.
+10. **Hamoudi uses AiQo** — every video shows the phone with the app open.
+
+### 2.4 The in-app Captain personality
+- **Name:** حمودي (Hamoudi). **Traits:** warm, direct, witty, protective, observant, humble, culturally-rooted.
+- **Values:** honesty over comfort, user wellbeing over engagement, respect for culture, privacy sacred, consent first, no medical claims.
+- **Forbidden phrasings:** "you should/must," "I know how you feel," "everything happens for a reason," "just be positive."
+- **Dialect:** Iraqi (Mesopotamian) primary; MSA fallback; English for tech terms. **The Captain must never speak in MSA in primary content — the Iraqi dialect is the moat.**
+- **Emoji policy:** reserved for celebration kinds only (personal record, Eid, achievement unlocked, etc.); serious nudges (inactivity, sleep debt) stay plain text.
+- **Personality customization (a Max/Pro feature, v1.0.8):** 6 selectable presets — `practical` (عملي), `caring` (حنون), `strict` (صارم), `analytical` (محلّل), `visionary` (واسع الأفق), `mentor` (مرشد) — each with a rich Iraqi `styleDirectiveArabic` injected into the cloud prompt; **Pro** adds a free-text custom persona (`customStyle`, overrides the preset). **Free has no style picker** — one fixed simple voice (§5.10, §8.3).
+
+---
+
+## 3. Product overview & tech stack
+
+| Attribute | Value |
+|---|---|
+| **App name** | AiQo |
+| **Marketing version** | `1.0.8` (build `31`) — prepared on `program/world-class-completion`, not yet submitted · live on App Store: `1.0.7` (approved 2026-06-16) |
+| **Bundle ID (app)** | `com.mraad500.aiqo` |
+| **Deployment target** | iOS **26.2** |
+| **Language** | Swift (project `SWIFT_VERSION = 5.0`; uses modern Swift concurrency — `actor`, `async/await`, `@MainActor`, `Sendable`) |
+| **UI** | SwiftUI-first (UIKit interop for a few legacy/bridge screens) |
+| **Persistence** | **SwiftData** (`@Model`) primary; UserDefaults; Keychain; file storage (JSON/JSONL) |
+| **Backend** | **Supabase** (auth, Postgres, Realtime, Storage, Edge Functions) |
+| **AI** | Google **Gemini** (cloud chat/vision) + **Apple Intelligence / Foundation Models** (on-device) + **MiniMax** TTS (premium voice) |
+| **Dependency mgr** | Swift Package Manager (no CocoaPods) |
+
+**Targets:** main iOS app (`AiQo`), `AiQoWatch Watch App` (watchOS), `AiQoWatchWidget`, `AiQoWidget` (iOS home-screen widget), plus test targets. There is a companion Next.js web app under `aiqo-web/` and the Supabase backend under `supabase/`.
+
+**Key SPM dependencies:** Supabase (Auth/PostgREST/Realtime/Storage), Firebase (Core + Crashlytics), SDWebImage (+ AVIF/WebP/SVG coders), Charts, SpotifyiOS, GoogleSignIn, plus Apple frameworks: HealthKit, CoreLocation, MapKit, WatchConnectivity, ActivityKit (Live Activities), AppIntents/SiriKit, UserNotifications, BackgroundTasks, Vision, NaturalLanguage (on-device embeddings), AVFoundation, WeatherKit, RealityKit (3D Captain avatar).
+
+### 3.1 Root navigation flow
+A state machine (`AppFlowController`) drives the root screen sequence:
+`languageSelection → login (Supabase auth or continue-without-account) → profileSetup → legacy (fitness baseline) → aiConsent → medicalDisclaimer → quickStart → featureIntro → subscriptionIntro (skippable paywall) → main`.
+
+### 3.2 Main tab bar — exactly **3 tabs**
+Defined in `AiQo/App/MainTabRouter.swift` (`enum Tab: Int`) and `MainTabScreen.swift`:
+| Tab | Index | Purpose | Gating |
+|---|---|---|---|
+| **Home** | `0` | Daily dashboard (metrics, Daily Aura, water, vibe, streaks, level) | Free |
+| **Gym** | `1` | Workout plans, live sessions, outdoor run, quests, challenges | Free (core); premium sub-features gated |
+| **Captain** | `2` | AI chat with Hamoudi | **Open to all tiers** — free = on-device (uncapped); Max+ = cloud depth (memory, directives, premium voice). The `CaptainLockedView` wall was removed 2026-06-15 (see §5.10) |
+
+Everything else (Kitchen, MyVibe, Sleep, Weekly Report, Profile, Tribe, etc.) is reached *within* these tabs or via navigation/sheets, not as top-level tabs.
+
+---
+
+## 4. App architecture
+
+**Pattern:** hybrid **MVVM + feature-folder modules**, with **actor-based concurrency** for the Captain Brain. A typical feature folder: `{Feature}View.swift` (SwiftUI) + `{Feature}ViewModel.swift` (`@MainActor` `ObservableObject`/`@Observable`, `@Published` state) + `{Feature}Models.swift` (Codable) + optional `Services/` and `Store`. Many cross-cutting services are singletons (`.shared`).
+
+### 4.1 Top-level layout under `AiQo/`
+```
+App/            App entry, AppDelegate/SceneDelegate, AppFlowController, MainTabScreen, MainTabRouter, MealModels
+AiQoCore/       Shared core module
+Core/           AppSettingsStore, Constants (K.Supabase…), Colors, HapticEngine, UserProfileStore,
+                Config/ (AiQoFeatureFlags), Models/ (AiQoDailyRecord, WorkoutTask…), Purchases/ (tiers, StoreKit),
+                Security/, Keychain/
+DesignSystem/   AiQoTheme, AiQoColors, AiQoTokens, Components/, Modifiers/  (mint+sand palette)
+Features/       All feature modules (see §6)
+Frameworks/     Vendored/auxiliary frameworks
+Premium/        FreeTrialManager, AccessManager, PremiumPaywallView
+Resources/      Assets.xcassets, ar.lproj / en.lproj (Localizable.strings, InfoPlist.strings), Specs/ (achievements_spec.json)
+Services/       SupabaseService, SupabaseArenaService, Analytics/, CrashReporting/, Notifications/, Location/, Trial/, Permissions/
+Shared/         HealthKitManager, LevelSystem, CoinManager, WorkoutSyncModels, MedicalDisclaimerView
+Tribe/          Social arena subsystem
+UI/             Shared components (headers, glass cards, toasts, offline banner), Purchases/ (PaywallView)
+watch/          watchOS app sources
++ loose: Info.plist, AiQo.entitlements, PrivacyInfo.xcprivacy, AppGroupKeys.swift, XPCalculator.swift, PhoneConnectivityManager.swift
+```
+
+### 4.2 Design system
+Brand palette (used in-app and across all marketing): Mint `#C4F0DB` / `#CDF4E4`, Sand/Gold `#F8D6A3` / `#EBCF97`, Beige `#FADEB3`, Lemon `#FFE68C`, accent yellow `#FFDF63`. Aesthetic: glassmorphism (ultra-thin material), 16–24pt corner radius, generous whitespace, SF Pro Rounded (system). Hierarchy via typography/spacing, not color noise.
+
+---
+
+## 5. The Captain (Hamoudi) AI Brain
+
+The Captain is AiQo's crown jewel and most complex subsystem. It lives under `AiQo/Features/Captain/`, with the cognitive engine under `Brain/` organized into **12 numbered layers (00–11)**.
+
+### 5.1 The 12-layer Brain — folders `00`–`11` (folder = responsibility)
+```
+00_Foundation/   BrainBus (event bus), TierGate (subscription gating), BrainError, DevOverride, DiagnosticsLogger, CaptainLockedView
+01_Sensing/      ContextSensor, BioStateEngine, BehavioralObserver, CaptainHealthSnapshotService; Bridges/ (HealthKit, Weather, Music)
+02_Memory/       MemoryStore + Stores/ (Semantic, Episodic, Emotional, Procedural, Relationship, WeeklyMetricsBuffer)
+                 Intelligence/ (MemoryRetriever, MemoryExtractor, FactExtractor, ChatMemoryEnricher, EmotionalMiner)
+                 Indexing/ (EmbeddingIndex, SalienceScorer, TemporalIndex); Models/ (schemas V1–V5, migration plan)
+03_Reasoning/    CognitivePipeline, CaptainContextBuilder, IntentClassifier, EmotionalEngine, SentimentDetector,
+                 TrendAnalyzer, ScreenContext, CulturalContextEngine, CoachingThesisSynthesizer, AppKnowledge
+04_Inference/    BrainOrchestrator (router), PromptComposer (7-layer prompt), PromptRouter, LLMJSONParser,
+                 DynamicWelcomeComposer, CaptainModels; Services/ (CloudBrain, LocalBrain, HybridBrain, FallbackBrain,
+                 CaptainProxyConfig); Validation/ (PersonaGuard)
+05_Privacy/      PrivacySanitizer (PII scrub), AuditLogger
+06_Proactive/    NotificationBrain, SmartNotificationScheduler, ProactiveEngine, TriggerEvaluator;
+                 Budget/ (GlobalBudget, CooldownManager, QuietHoursManager); Composition/ (MessageComposer, TemplateLibrary);
+                 Triggers/ (Health, Temporal, Behavioral, Emotional, Relationship, MemoryCallback, Cultural, Lifecycle)
+07_Learning/     BackgroundCoordinator, WeeklyMemoryConsolidator, FeedbackLearner
+08_Persona/      CaptainIdentity, CaptainPersonaBuilder, CaptainPersonalization, DialectLibrary, HumorEngine, WisdomLibrary
+09_Wellbeing/    CrisisDetector, SafetyNet, InterventionPolicy, ProfessionalReferral
+10_Observability/ BrainBusObserver, BrainDashboard, CaptainMemorySettingsView, CaptainMetricsCounter
+11_Directives/   DirectiveCoordinator, DirectiveEngine, DirectiveStore, DirectiveLearner, DirectiveTaxonomy
+```
+
+### 5.2 The cognitive pipeline (message → reply)
+1. **Intent detection** (`CaptainMessageIntent`): `.general / .workout / .nutrition / .sleep / .challenge / .vibe / .emotionalSupport / .recovery` — from keywords + screen context; each maps to memory-retrieval weights and a `coachingDirective`.
+2. **Emotional signal** (`CaptainEmotionalSignal`): `.neutral / .motivated / .tired / .stressed / .frustrated` → tone modulation.
+3. **Memory retrieval (RAG)** via `MemoryRetriever`, budget-split across the 5 stores; tier-aware depth.
+4. **Context building**: current health snapshot, screen context, circadian/bio state.
+5. **Prompt composition** (7-layer system prompt — see §5.4), including **conversation compaction**: the head of a long session (outside the verbatim window) is folded into a faithful `ConversationDigest` so the Captain never loses earlier context as the chat grows (see §5.6).
+6. **Routing**: the **free tier is intercepted at the `CaptainViewModel`** before the orchestrator and sent straight to `CaptainOnDeviceChatEngine` (on-device, §5.10). For paid, `BrainOrchestrator` routes **sleep → on-device**, everything else → cloud Gemini.
+7. **Generate**: cloud (`CloudBrain`→Gemini) or local (`LocalBrain` / `CaptainOnDeviceChatEngine`→Apple Intelligence). Cloud replies pass through the deterministic **`CaptainFactGuard`** (§5.3) before rendering.
+8. **Fallback chain**: cloud fail → local → hardcoded offline message.
+9. **Safety**: `CrisisDetector` + `SafetyNet` may short-circuit to a gentle check-in or professional referral.
+10. **Personalize** (name injection), **persist** (Episodic + background fact extraction), **stream** to UI.
+
+### 5.3 Inference routing & models
+| Path | Model | When | Privacy |
+|---|---|---|---|
+| **Cloud** | `gemini-2.5-flash` (Max default) · `gemini-3-flash-preview` (Pro / reasoning + memory extraction) | **Max+ chat**, gym, kitchen, peaks, myVibe, mainChat | Request sanitized (PII redacted, last 16 msgs / ~6000 chars; health metrics forwarded **exact**) before send |
+| **On-device (free chat)** | Apple Intelligence / Foundation Models — `CaptainOnDeviceChatEngine` (direct, dynamic) | **free-tier Captain chat (always)** — uncapped, text-only, no memory/persist/cloud | Nothing leaves the device; no cloud-consent needed (see §5.10) |
+| **On-device (sleep)** | Apple Intelligence **sleep agent** · on-device chat engine | **sleep analysis (always)**; cloud fallback | Raw sleep stages never leave the device |
+| **Voice** | Apple TTS / `.realtime` (free + latency-sensitive) · **MiniMax** cloud TTS / `.premium` (Max+) | spoken replies | Premium voice gated by `canAccess(.captainChat)`; free skips cloud-voice consent; key isolated per-user in Keychain |
+
+Cloud calls can route **directly** to Gemini/MiniMax **or** through Supabase Edge Functions (`captain-chat`, `captain-voice`) when the `USE_CLOUD_PROXY` flag is on (proxy holds server-side keys + validates the user JWT).
+
+> **Health fact-guard (LIVE, cloud path):** after generation, `CaptainFactGuard` (pure/deterministic, no model) scans the reply and rewrites any steps/active-calories/heart-rate figure that diverges **>15%** from the user's real current-day `CaptainContextData` snapshot — so the LLM can't confidently invent "مشيت ١٢ ألف خطوة" when the device recorded 4,962. Conservative: tolerates rounding, skips past-day references ("امبارح"/"yesterday"), never rewrites an unknown (0/nil) metric. This is the *output* guard; §7.5 / `project_captain_exact_metrics` is the *input* side (exact metrics into the prompt). On-device free path not guarded yet.
+>
+> **Real token streaming (DORMANT, flag-gated):** `CAPTAIN_REAL_STREAMING` (default **OFF**, ships `<false/>`) opts the paid cloud path into Gemini `streamGenerateContent` (SSE) so first text shows in ~1s instead of after the full 12–22s generation. `captain-chat` has an additive `stream:true` branch (`streamGenerateContent?alt=sse`; the blocking path is byte-for-byte unchanged). `HybridBrainService.generateReplyStreaming` consumes the SSE via `URLSession.bytes` and reuses the **same** `LLMJSONParser` for the authoritative final parse — so memory/plans/quick-replies are identical to the blocking path; the live preview is best-effort cosmetic. An `onMessagePreview` closure is threaded VM → `BrainOrchestrator` → `CloudBrainService` → `HybridBrainService` (all defaulted `nil` ⇒ zero change when off). **Before flipping ON:** deploy the updated edge function **and** device-test on a paid tier. On-device free path is not yet streamed.
+
+> **Model selection is centralized in `GeminiModelPolicy`** (`Brain/04_Inference/`) and gated by `GEMINI_3_PREVIEW_ENABLED` (default **OFF**). When OFF, every cloud path (chat, kitchen vision, memory extraction, weekly review) uses the stable `gemini-2.5-flash`; the preview model is opt-in only. `CloudBrain.generateReply` adds an **automatic fallback**: if a preview call errors/times out it silently retries once on `gemini-2.5-flash` and audits both attempts.
+
+### 5.4 The 7-layer system prompt (`PromptComposer`)
+Stacked, empty layers filtered out: **(1)** reply-language lock (Arabic *or* English only) · **(2)** safety rules · **(3)** identity ("أنت الكابتن حمودي" + traits/values) · **(4)** stable profile summary · **(5)** **injury constraints** (hard rules — e.g. knee injury ⇒ "ممنوع: سكوات عميق/لانجز/قفز" + safer alternatives) · **(6)** working memory (active directives — never filtered — + relevant facts + pinned constraints) · **conversation state** (`layerConversationState`: the compacted `ConversationDigest` of the session's head + an anti-hallucination grounding lock — see §5.6; skipped in sleep mode) · **(7)** coaching thesis (emotional + cultural modulation) + bio-state + circadian tone + app-knowledge + screen context + medical disclaimer + **output contract** (the JSON shape below).
+
+### 5.5 Structured output contract (`CaptainStructuredResponse`)
+Defined in `AiQo/Features/Captain/Brain/04_Inference/CaptainModels.swift`. The model is instructed to return JSON; the app parses it (with graceful text-only fallback):
+```jsonc
+{
+  "message": "string (required, short, natural, Iraqi dialect)",
+  "quickReplies": ["…"],                 // optional suggested follow-ups
+  "workoutPlan": {                        // WorkoutPlan: title, durationWeeks, exercises[] or days[]
+    "title": "…", "durationWeeks": 4,
+    "days": [{ "name": "Day 1 — Chest & Triceps", "focus": "…",
+               "exercises": [{ "name": "…", "sets": 3, "repsOrDuration": "8-10" }] }]
+  },
+  "mealPlan": { /* MealPlan: title, meals[] with calories/macros */ },
+  "spotifyRecommendation": { "trackId": "…", "trackName": "…", "artistName": "…", "reason": "…" },
+  "savedMemory": { "category": "goal|preference|injury|insight|…", "content": "…" },
+  "reminder": { "text": "…", "clockTime": "HH:mm", "repeatDaily": false }
+}
+```
+Rendered in chat by `WorkoutPlanCard.swift` (rich day-by-day plan card, RTL-aware) and `CaptainMessageText.swift` (hand-walked `**bold**` parsing to avoid Arabic/RTL Markdown issues). Multi-day plans decode backward-compatibly with older flat plans.
+
+### 5.6 Memory system (5 stores + RAG)
+- **SemanticStore** — durable facts (goals, preferences, injuries, relationships, health constraints) with category, source (extracted/explicit/inferred), confidence, salience, PII/sensitive flags, and a persisted on-device embedding (`embeddingJSON`).
+- **EpisodicStore** — conversation journal (turn + context + salience), feeds weekly consolidation.
+- **EmotionalStore** — mood patterns. **ProceduralStore** — learned routines. **RelationshipStore** — people the user mentions.
+- **Retrieval:** `MemoryRetriever` unifies all stores with a budget split (facts ~40%, episodes ~25%, patterns ~15%, emotions ~10%, relationships ~10%); embedding similarity (Apple `NLEmbedding`, Arabic + English, on-device) with **lexical fallback** for free tier / vector-less cases.
+- **Schema** versions V1→V5 with `CaptainSchemaMigrationPlan` (V5 adds `LearnedDirective`). **Weekly consolidation** compresses episodes into a digest in a background task.
+- **Conversation compaction (anti-hallucination, in-session continuity):** as a single chat grows past the verbatim window (≤24 messages **and** ≤9000 chars, floor 8), `ConversationCompactor` folds the head into a faithful, **deterministic** `ConversationDigest` — opening goal · user points · **the Captain's own commitments** (so it never contradicts/re-offers a plan it already gave) · **corrections** ("لا قصدي…") · last exchange. Every line is extracted/clipped from a real message, so the digest **cannot fabricate** (unlike an LLM summary). It is carried to the model via the dedicated, PII-sanitized `HybridBrainRequest.conversationState` field and rendered by `PromptComposer.layerConversationState` with a **grounding lock** ("if a detail isn't here or in the recent messages, don't invent it — ask or stay general; never contradict a commitment; never say 'I don't remember'"). **Lossless** even past the 80-message in-RAM cap (the evicted head is merged into a rolling `sessionDigest` before removal). All tiers (continuity is basic competence); skipped in strict sleep mode. Covered by `ConversationCompactorTests` incl. a no-fabrication faithfulness check.
+
+### 5.7 Directives (v1.0.5, layer 11)
+Teach the Captain a durable, executable rule in natural Iraqi/English (e.g. *"بعد كل تمرين حلّل تمريني وقارنه بالي قبله ودزّلي إشعار"*). Parsed **on-device** (no LLM round-trip), stored in `DirectiveStore` + Memory Schema V5, **mirrored into every prompt's working memory** (never forgotten, re-hydrated on relaunch), and executed automatically after each workout via `AIWorkoutSummaryService` (offline Iraqi analysis comparing the just-finished workout to the previous one). The learner is conservative: needs a recurrence marker **and** an action **and** a recognized trigger (so a one-off request never creates a permanent rule). Gated by `TierGate.captainDirectives` (Max+).
+
+### 5.8 Proactive notifications (layer 06)
+8 trigger types (Health, Temporal, Behavioral, Emotional, Relationship, MemoryCallback, Cultural, Lifecycle) emit intents across ~15 notification kinds (personal record, streak save/risk, hydration, workout summary, sleep-debt, inactivity, weekly insight, monthly reflection, Eid celebration, achievement, trial-day…). Every candidate passes a **budget chain**: trial lane → 4h hard cap → tier daily budget → per-kind cooldown → quiet hours (9pm–8am) → iOS pending-limit → PersonaGuard. Messages are composed bilingually from `TemplateLibrary` and sanitized before delivery.
+
+### 5.9 Chat UI
+`CaptainViewModel` (`@MainActor`) holds `messages`, `isLoading`, streaming state, `quickReplies`, `effectiveTier`. A `CoachCognitiveState` drives the "thinking" animation (`idle / readingMessage / thinkingOnDevice / shapingReply / typing`). Replies stream token-by-token (≈24-char chunks, ~16ms) for a typewriter effect; structured cards (plan, Spotify, quick replies) append after completion. History persists to SwiftData per session. The live model window is **token-budget-aware** (≤24 msgs / ≤9000 chars); when a session grows past it, conversation compaction (§5.6) keeps the full context and a single soft **"طويت بداية محادثتنا بذاكرتي" / "earlier chat folded into memory"** marker (`ChatMessage.isSystemNote` — a frosted sand-accent capsule, UI-only, never persisted or sent to the model) appears once at the seam so the continuity is visible, not a silent gap. Voice subsystem under `Captain/Voice/` (Apple + MiniMax providers, router, consent, cache, keychain). Scoped to its own conversation context (Plan has a separate Captain conversation).
+
+**Living avatar & speaking affordances (2026-06-15):** `CaptainScreen` renders the portrait through **`LivingCaptainAvatarView`** — a breathing idle, motion parallax (tilt → depth), and a tap reaction, with a brand-colored **aura that brightens while the Captain speaks** (aura/particles are **paid-only**; free gets breathing + parallax). The asset itself is tier-keyed via `CaptainAvatarAsset.current` (`Hammoudi4` free · `Hammoudi5` Max+) and re-renders the instant entitlement changes (observes `EntitlementStore`), so the Captain visibly levels up on subscribe. While a reply is being spoken, its bubble shows a live **`VoiceEqualizerBars`** audio meter (scoped to the one playing bubble via `CaptainVoiceRouter.speakingText`) + a `symbolEffect(.bounce)` on tap; Reduce Motion swaps in a static filled speaker.
+
+### 5.10 Free on-device Captain (2026-06-15→16, ships in **v1.0.8 / build 31**)
+The Captain tab is **open to every tier** — the `CaptainLockedView` wall was removed. The free experience is a deliberately **simple, private** coach; depth is the paid moat.
+- **Routing & engine:** free (`!canAccess(.captainChat)`) routes to `CaptainViewModel.respondInConversation` → **`CaptainOnDeviceChatEngine`** (Apple Intelligence / Foundation Models). **Uncapped — no message limits.** Replies are intentionally **short & simple** (1–2 lines, name only, **no style customization** — that's a paid feature). Paid cloud+memory path untouched.
+- **Within-session memory (native, not prompt-stuffed):** multi-turn is kept by reusing ONE `LanguageModelSession` per chat (`resetConversation()` on new chat); we do **not** inject a hand-built "User:/Captain:" transcript — the small model copies it (caused a live bug where it echoed the prompt scaffold + role labels). `respond(to:)` stays a stateless one-off for notifications/lab.
+- **Grounded + sanitized output:** today's real HealthKit metrics injected; **`CaptainFactGuard` runs on the free path too** (rewrites any number that contradicts the device). **`OnDeviceReplySanitizer`** (deterministic, unit-tested — `OnDeviceReplySanitizerTests`) strips leaked role labels, drops a hallucinated user turn, and collapses character/phrase repetition loops (the "هههه…×200" fix). GenerationOptions: temp 0.6, ≤200 tokens.
+- **Pure dynamic generation, zero templates:** the DEBUG `OnDeviceCaptainLab` proved direct generation writes excellent Iraqi while a template/bridge path = garbage → dropped (canonical "no static/canned responses", §14).
+- **Big asks → taste + invite (not a wall):** for a full workout program / meal-nutrition plan / deep analysis, the free Captain gives ONE genuine quick tip, then warmly invites to Max for the full plan it tracks + remembers — value-first, dynamic wording, never a fixed line, never prices. (Chosen over a hard "subscribe to answer" refusal, which would hit the anti-resentment + no-canned rules.)
+- **Dynamic welcome:** `welcome(persona:)` opens with a warm Iraqi greeting that names the user + cites today's real steps + is time-of-day aware; seeds the session as turn 1. Paid falls back to it if the cloud greeting fails.
+- **Upgrade legibility (free only, non-naggy):** a slim dismissible banner on the pre-chat screen → `CaptainGrowsSheet` (evolved avatar + aura + concrete unlocks) → paywall; snoozes 3 days after dismiss (`@AppStorage`); vanishes the instant the user subscribes (`viewModel.isFreeCaptain`). The free chat itself can also note its ceiling once, in-character, on a genuinely relevant turn.
+- **Tier-differentiated, instantly:** subscribing flips avatar (`Hammoudi4`→`Hammoudi5`) + living aura + voice (`.realtime`→`.premium`) **and** unlocks personality customization (§8.3) the moment `EntitlementStore` changes. DEBUG `forceFreeTier` (Settings → 🧪) exercises the free path.
+- **Strategy:** monetize on **depth, never message-count caps** (caps = resentment, off-brand for «بياناتك ملكك»). Capability tiering (plans / personality / durable memory = paid) IS in. **Origination:** "Captain levels up when you subscribe" is Mohammed Raad's idea (2026-06-15). Known follow-up: the engine always replies Iraqi (English-free-user → still Iraqi until parametrized).
+
+---
+
+## 6. Feature catalog
+
+> Tier legend: **Free** = all users · **Max** = `com.…aiqo.max` ($9.99/mo) · **Pro** = `…Intelligence.pro` ($19.99/mo) · **Trial** = 7-day Pro-equivalent.
+
+### Home (`Features/Home/`) — Free
+Daily dashboard: metrics grid (steps, calories, distance, stand, sleep, water, workouts via `MetricKind`), animated **Daily Aura** (24h activity visualization), interactive water bottle, **Spotify vibe card** (now-playing), streak badge, level-up celebration. `DJCaptainChatView` brings the DJ-mode Captain to Home. Key: `HomeView`, `HomeViewModel`, `DailyAuraView`, `WaterBottleView`, `VibeControlSheet`.
+
+### Gym (`Features/Gym/`) — Free core, premium sub-features (~104 files)
+The largest feature area. Subfolders:
+- **Club/Plan** — workout-plan hub & lifecycle. `WorkoutPlanDashboard` (pinned plan, day-picker, weekly progress strip, templates, history), `CaptainPlanChatView` (conversational plan creation with intake chips: goal/duration/equipment/level + optional body photo), `PlanWorkoutRunner` (live execution: per-set tracking, rest timer, session timer, completion celebration). Plans persist as `AiQoDailyRecord` + `WorkoutTask` (exercises serialized as `AIQEX1‖name‖sets‖reps`). **Multi-week plans (>1 week) are Pro.**
+- **Club/Body, Challenges, Impact, Components** — body photo/gratitude, challenge views, achievements/impact stats, shared nav rails.
+- **OutdoorRun** — GPS running with a **3D satellite map** (`OutdoorRunSessionView`), cinematic chase camera, live stats (distance/time/pace/HR/calories/elevation), per-km milestones, phone↔Watch GPS fusion. `OutdoorRunSession` (state machine), `ActiveRunStore` (keeps tracking when screen is dismissed), `RunLocationManager` (CLLocation, best-for-navigation, jitter filters), `RunRecordStore` (last 50 runs as JSON, matches `HKWorkout`), `RunSummaryView` (interactive route replay + shareable 1080×1920 card).
+- **QuestKit / Quests** — gamified daily/weekly quests (`QuestDefinition` with tiers + metrics: steps, plank, pushups, sleep, calories, distance, zone-2, mindfulness, kindness, streaks), `QuestEngine`, SwiftData stores (`PlayerStats`, `QuestRecord`, `QuestStage`), XP/aura rewards, completion celebrations.
+- **Quests/VisionCoach** — camera + Vision pose estimation for push-up form, rep counting, audio coaching.
+- **Quests/Learning** — see Learning Spark below.
+- **LiveWorkoutSession + Zone 2** — real-time coaching with HR zones (`Zone2AuraState`: warmingUp/inZone2/tooFast/tooSlow), Karvonen bounds, audio coach with ambient ducking (`HandsFreeZone2Manager`, `AudioCoachManager`), Live Activity / Dynamic Island (`WorkoutLiveActivityManager`).
+- **Guinness Encyclopedia** (`GuinnessEncyclopediaView`) — world-record categories (longest plank, fastest mile, most push-ups/hour, 100m) with a Coach chat that builds a personal challenge plan.
+- **Cinematic Grind, Active Recovery, Spotify workout player** — themed workout modes & music.
+- Exercise catalog: `GymExercise` (25+ exercises mapped to `HKWorkoutActivityType` + indoor/outdoor location). `WorkoutHistoryStore` keeps a rolling 30 workouts (14 folded into Captain memory).
+
+### Captain (`Features/Captain/`) — **Free (on-device) · Max+ (cloud depth)**
+See §5. The AI coach tab. **Free** = a real, uncapped but deliberately **simple** on-device Iraqi Captain (Apple Intelligence — §5.10); a big ask (full plan/nutrition/analysis) gets a quick taste + a Max invite. **Max+** unlocks the cloud brain (durable memory, directives, continuity, image input, premium MiniMax voice) **and Captain personality customization** (6 presets; Pro adds a free-text custom persona — §8.3). Avatar + voice + personality level up on subscribe.
+
+### Kitchen (`Features/Kitchen/`) — **Max**
+Nutrition & meal planning: interactive fridge inventory, **camera "smart fridge" scan** → Gemini vision → meal plan, recipe/ingredient catalog, composite plate visualization, bundled `meals_data.json`. AI plan generation via the Captain pipeline. Key: `KitchenView`, `SmartFridgeScannerView`/`SmartFridgeCameraViewModel`, `KitchenPlanGenerationService`, `Meal`, `KitchenMealType`.
+
+### MyVibe (`Features/MyVibe/`) — **Max**
+Music/mood powered by **DJ Hamoudi**. `DailyVibeState` (energized/calm/focus/recovery), `VibeOrchestrator` (audio engine + transitions + Spotify overrides), `HamoudiDJ`, now-playing Spotify integration, ambient frequency datasets (Gamma/Theta/Serotonin flows).
+
+### Sleep (`Features/Sleep/`) — Free basic; SmartWake premium
+HealthKit sleep tracking, quality score ring, **SmartWake** (optimal wake window from 90-min cycles → save as AlarmKit alarm), `AppleIntelligenceSleepAgent` (**on-device** analysis), `SleepSessionObserver`. Sleep AI is always on-device for privacy.
+
+### WeeklyReport (`Features/WeeklyReport/`) — Free
+7-day vs prior-week summary with overall score (0–100), daily chart, metric cards, workout summary, motivational message. `ShareCardRenderer` produces a shareable image/Story.
+
+### Smart Water Tracking (`Features/SmartWaterTracking/`) — Free (basic)
+Intelligent hydration goals/reminders based on activity/climate/time; widget bridge; `HydrationSettings`, `HydrationDailyState`, `HydrationService`.
+
+### Progress Photos (`Features/ProgressPhotos/`) — Free
+Before/after body transformation tracking with weight + notes, side-by-side compare; `ProgressPhotoStore` (SwiftData).
+
+### Challenges — Learning Spark (`Features/Challenges/LearningSpark/`) — Free
+Educational quest: complete a free online course (Edraak, Coursera, Rwaq, Maharah, edX, YouTube) and submit a certificate. **On-device** verification (Vision OCR + text matcher + `HamoudiVerificationReasoner`, zero-cloud), URL whitelist, rate limiting, consent sheet. Awards XP (Stage 1 +1000, Stage 2 +2000).
+
+### Legendary Challenges / Peaks (`Features/LegendaryChallenges/`) — **Pro (Peaks)**
+Multi-week (4–12) personal-record projects with weekly checkpoints, daily tasks, HR-reserve assessments, completion badges. This is the product surface marketed as **"Peaks / قِمم"** (paywall source `peaksGate`). `LegendaryProject`, `WeeklyCheckpoint`, `RecordProjectManager`.
+
+### Tribe / Arena / Battle (`Tribe/` + `Features/Tribe/`) — Free (view); **Battle = Max**
+Social leaderboard with 3 tabs (Global, Arena, Tribe). Live ranks via Supabase Realtime (Emara/Arena). Competitive "Battle" surfaces are Max (paywall source `battleGate`). Profile privacy (public/private) controls visibility. Note: `TRIBE_BACKEND_ENABLED` / `TRIBE_SUBSCRIPTION_GATE_ENABLED` flags gate rollout.
+
+### Profile / Settings (`Features/Profile/`) — Free
+Avatar, bio metrics (age/height/weight from HealthKit), level/XP, privacy toggle, links to Weekly Report / Progress Photos / paywall, language & consent settings.
+
+### Onboarding (`Features/Onboarding/`) — Free
+Language selection, health screening, **historical HealthKit bulk import** (`HistoricalHealthSyncEngine`), AI-consent + medical-disclaimer screens, points/level explainer, **skippable** subscription intro.
+
+### Compliance & Data Export (`Features/Compliance/`, `Features/DataExport/`) — Free
+AI data-use disclosure, voice consent, body-photo consent, medical disclaimer, health-source transparency; GDPR-style export to CSV/JSON/PDF.
+
+### Cardio (`Features/Cardio/`) — Free
+`ZoneCoachingVoiceService` — TTS heart-rate-zone coaching (Z1–Z5).
+
+### النواة (Kernel) (`Features/Kernel/`) — **Max** · escalating shields + live Captain trainer (LIVE in 1.0.7)
+A digital-wellbeing **app lock**: the user picks their own apps and shields them via **Family Controls**, unlocking by a physical action (real steps, via HealthKit). The lock **escalates** — 5 rising shields per day, then an infinite, gentler tail with a hard step cap so it stays physically possible. The `KERNEL_ENABLED` code default is **false**, but **`AiQo/Info.plist` ships it ON** — so the Kernel is **live + Max-gated** in v1.0.7 (build 30). The **Family Controls (Distribution)** entitlement is **Apple-approved (2026-05-31)** for all 4 bundle ids ✓ — the distribution archive provisions/signs/uploads.
+- **3 app-extension targets** (extension-point identifiers taken from Xcode's official templates):
+  - `KernelDeviceActivityMonitor` → `com.mraad500.aiqo.DeviceActivityMonitor` (`com.apple.deviceactivity.monitor-extension`)
+  - `KernelShieldConfiguration` → `com.mraad500.aiqo.ShieldConfiguration` (`com.apple.ManagedSettingsUI.shield-configuration-service`)
+  - `KernelShieldAction` → `com.mraad500.aiqo.ShieldAction` (`com.apple.ManagedSettings.shield-action-service` — note: `ManagedSettings`, **not** `…UI`)
+- **Wiring:** reuses the existing App Group **`group.aiqo`** (shared by the app + all 3 extensions); `com.apple.developer.family-controls` entitlement on the app + each extension.
+- **Gating:** `FeatureFlags.kernelEnabled` (`KERNEL_ENABLED`, default **false**) · `TierGate.Feature.kernel` (**Max**, mirrors `captainChat`) · `PaywallSource.kernelGate`. The reachable entry is a flag-gated row in **Profile → AiQo → `KernelView`** (a sheet).
+- **Code:** `Features/Kernel/` (`KernelView`/`KernelViewModel`/`KernelModels`, `Services/FamilyControlsAuthorizationService`, `Store/KernelSharedStore`). `KernelSharedStore` (+ `AppGroupKeys`) compiles into the app **and** all 3 extensions — one cross-process Codable `KernelState` blob under the App Group key `kernel.state`.
+- **Escalation (2026-06-01):** a daily `shieldsTriggeredToday` counter (App-Group-shared, `startOfDay`-reset, incremented atomically by `KernelShieldController.applyShield` on each fresh lock) drives rising difficulty through ONE control surface — **`KernelEscalation`** (all numbers live there, tunable). Per shield: base steps 40→90→160→260→400, then `+250`/shield **clamped to 2500** (always walkable); the bio modifier (sedentary/stressed/late-night) scales the base on top. Session after unlock shrinks 5→4→3→2→1.5 min; the SMART usage threshold before the next shield shrinks 15→8→5→3→2 (the **first** shield still uses the user's own `usageThresholdMinutes`). Earned-energy bypass (real `CoinManager`, zero IAP) escalates 20→700 and switches **OFF** past shield 5 (physical-effort only). From shield 5 the in-app screen leads with «كافي اليوم — تعال باچر», the hard challenge still available beneath it (never a jail). Replaces the old fixed daily wall + 500-step emergency exit.
+- **Captain integration (2026-06-01):** `KernelCaptainBridge` (app-only) is the awareness + personality layer. **Chat:** a compact, privacy-safe status line (counts/states only, never app tokens) is injected via `CaptainContextData.kernelStatus` → `PromptComposer.layerKernelStatus`, so the Captain answers "شلون نواتي؟" for real. **Live trainer:** `KernelChallengeView` shows the Captain (`Hammoudi5` photo + speech bubble) with an explicit "ابدأ التحدي" button that starts a live session — running clock + real live steps (`KernelBioEngine.liveTick`) + honest periodic HR (`refreshLiveHeartRate`, nil when no recent sample) + milestone encouragement spoken via **Apple on-device TTS (`.realtime`) — ZERO cloud in the loop**. Completion → one-moment celebration (Captain line + voice + honest "next is harder" read from `KernelEscalation`) → auto-unlock + energy as before. **Notifications:** shield-dropped + unlocked fire in the Captain's voice (Iraqi/English, varied) through the existing `NotificationBrain` (budget/quiet-hours) with a plain-local fallback, gated by `notificationBrainEnabled`.
+- **Status (v1.0.7 build 30, shipping LIVE — submission-ready 2026-06-01):** real shielding (ManagedSettings) + DeviceActivity + steps→unlock + escalation + Captain trainer + live CMPedometer steps + real Watch-workout HR + iOS 26 Liquid Glass UI, all build-green; unit suite green except 2 pre-existing `Date()`-flaky NotificationBrain/ProactiveEngine budget tests (unrelated). Authorization is **`.individual`** (self-control, not MDM `.child`). Off is always reachable — now behind a deliberate **calm-hold** friction: a **30s calm-heart-rate hold (≤80 bpm)** measured by **Apple Watch OR the back-camera PPG** (robust autocorrelation + confidence gate, no garbage BPM; the camera countdown waits for a finger), with the calm **60–80 bpm** range explained via a **non-medical disclaimer** (Apple-safe), a **1-minute guided-breathing fallback** guaranteed after two failed reads or by user choice, and an absolute **90s cap** so the user is never trapped (per Apple). Deleting the app / revoking Screen Time releases every shield (OS guarantee). Zero IAP, zero cloud in the challenge loop, no blocked-app tokens leave the device; HR/steps read on-device (HealthKit/CoreMotion, `NSMotionUsageDescription` added). **Family Controls (Distribution)** entitlement **Apple-approved 2026-05-31** for all 4 bundle ids ✓. Before archive: bump build if 30 is taken in App Store Connect, refresh signing profiles to include the entitlement, on-device shielding test, + App Review access for the Max gate.
+
+### Widgets & Watch
+iOS home-screen widget (`AiQoWidget`), Watch app (`AiQoWatch`) + Watch widget — live workout metrics, lock-screen/Dynamic Island Live Activities, hydration/quick-action surfaces. `PhoneConnectivityManager` / `WatchConnectivityService` sync workouts via `WatchConnectivity`.
+
+---
+
+## 7. Data, backend & services
+
+### 7.1 SwiftData models (primary persistence)
+`AiQoDailyRecord` (unique by date; steps/calories/water targets + `captainDailySuggestion`; cascade to `WorkoutTask`), `WorkoutTask` (title, isCompleted), `PlayerStats`, `QuestRecord`, `QuestStage`, `ProgressPhotoEntry`, and the Captain memory models (`SemanticFact`, `EpisodicEntry`, `EmotionalMemory`, `ProceduralPattern`, `Relationship`, `LearnedDirective`, `CaptainMemory`, schema V1–V5). Arena models: `ArenaTribe`, `ArenaTribeMember`, `ArenaWeeklyChallenge`, `ArenaTribeParticipation`, `ArenaHallOfFameEntry`.
+
+### 7.2 Other persistence
+- **UserDefaults:** settings, onboarding flags, `aiqo.purchases.currentTier`, `aiqo.app.language`, push token, captain calling name, memory-enabled flag.
+- **Keychain:** Spotify tokens, MiniMax API key (per-user, cleared on sign-out), trial start date (mirrored), voice audio profile.
+- **Files:** crash log (`CrashReports/crash_log.jsonl`, max 50), voice cache, audit log (`brain_audit.log.json`).
+
+### 7.3 Supabase
+Client in `Services/SupabaseService.swift` (URL/anon key from `K.Supabase`, resolved from Info.plist/env). **Auth:** Sign in with Apple / Google (id-token), JWT session. **Tables referenced:** `profiles` (incl. `device_token`, `is_private`), `arena_tribes`, `arena_tribe_members`, `arena_tribe_participations`, `arena_weekly_challenges`, `arena_hall_of_fame_entries`, `quest_wins`. **Edge Functions** (`supabase/functions/`):
+- `captain-chat` — Gemini proxy (model whitelist `gemini-2.5-flash`, `gemini-3-flash-preview`; JWT-authed; 256KB cap; secret `GEMINI_API_KEY`). Has an **additive `stream:true` branch** → `streamGenerateContent?alt=sse`, piping Gemini's SSE straight through (the default blocking `generateContent` path is byte-for-byte unchanged, so existing builds keep working). Consumed by the client only when `CAPTAIN_REAL_STREAMING` is on — **must be deployed before that flag flips** (see §5.3).
+- `captain-voice` — MiniMax TTS proxy (model whitelist; 16KB cap; secret `MINIMAX_API_KEY`).
+- `validate-receipt` — server-side StoreKit receipt validation.
+Shared `_shared/cors.ts`, `_shared/auth.ts`.
+
+### 7.4 AI/LLM details
+- **Gemini** base `https://generativelanguage.googleapis.com/v1beta/models`; models `gemini-2.5-flash` (default) / `gemini-3-flash-preview` (Pro + memory extraction). `URLSession` (request 35s / resource 40s timeouts). Tracks `finishReason: "MAX_TOKENS"`.
+- **MiniMax TTS** `https://api.minimax.io/v1/t2a_v2`; 8 model variants (speech-2.8/2.6/02/01 hd/turbo).
+- **Embeddings:** Apple `NLEmbedding`, **on-device only** (Arabic 0x0600–0x06FF + English), cosine similarity, ~500-entry cache.
+- **Three-tier brain fallback:** CloudBrain → LocalBrain → persona/offline.
+
+### 7.5 HealthKit
+Read: heartRate, activeEnergyBurned, distanceWalking/Running + cycling, stepCount, bodyMass, bodyFatPercentage, leanBodyMass, sleepAnalysis, ActivitySummary. Write: workoutType. `HealthKitManager` (singleton, observer query throttled ~60s). Captain health snapshots are forwarded **exact** (the Captain must report the user's real numbers, matching the dashboard) and time-boxed (2s/query); cloud use is gated by AI-Data consent, not by coarsening the metrics.
+
+### 7.6 Location, notifications, analytics, crash
+- **Location:** `RunLocationManager` (CoreLocation, `.fitness`, accuracy gate 50m, step gate 1.5–150m, elevation noise gate 1m, smoothed course).
+- **Notifications:** `NotificationService` + engines (Smart, MorningHabit, CaptainReminderScheduler, DirectiveNotificationScheduler, Inactivity, Alarm, PremiumExpiry); categories with action buttons; deep-link routing; APNs device token synced to `profiles.device_token`.
+- **Analytics:** `AnalyticsService` (multi-provider; super-properties: device/os/app version, locale, timezone, user_id).
+- **Crash:** `CrashReporter` (local JSONL + signal/exception handlers) mirrored to Firebase Crashlytics via privacy-sanitized `CrashReportingService`.
+
+### 7.7 Background tasks
+`aiqo.notifications.refresh`, `aiqo.notifications.inactivity-check`, `aiqo.brain.nightly` (nightly Captain consolidation + trigger evaluation). Orchestrators: MorningHabit, SleepSessionObserver, TrialJourney, AIWorkoutSummaryService.
+
+---
+
+## 8. Monetization & subscription tiers
+
+### 8.1 Tiers (`Core/Purchases/SubscriptionTier.swift`)
+**`enum SubscriptionTier: Int` — raw values are persisted; never renumber, rename only:**
+| Case | Raw | Display | Price | Notes |
+|---|---|---|---|---|
+| `.none` | `0` | — | Free | Base tier |
+| `.max` | `1` | **AiQo Max** | ~$9.99/mo | Captain + premium features |
+| `.trial` | `2` | تجربة مجانية | — | 7-day, **Pro-equivalent** access |
+| `.pro` | `3` | **AiQo Intelligence Pro** | ~$19.99/mo | Everything |
+
+Ranking: `.none(0) < .max(1) ≤ .trial/.pro(2)`. `effectiveAccessTier`: `.trial → .pro`.
+
+### 8.2 Tier-scaled capacity (verified, `SubscriptionTier`)
+| Capacity | none | max | trial/pro |
+|---|---|---|---|
+| Memory fact limit (user-visible) | 100 | 500 | 1000 |
+| Daily notification budget | 2 | 4 | 7 |
+| Memory retrieval depth | 5 | 10 | 25 |
+| Pattern-mining window (days) | 14 | 14 | 56 |
+| Gemini context budget (bytes) | 2,000 | 8,000 | 32,000 |
+
+> The Captain's `TierGate` enforces additional **hard ceilings** raised in v1.0.5 (e.g. Pro semantic-fact ceiling → 1200, retrieval depth → 40; Max retrieval depth → 18). When exact numbers matter, read `TierGate.swift` + `SubscriptionTier.swift` — they are the source of truth.
+
+### 8.3 Feature gating (`TierGate`, `Brain/00_Foundation/TierGate.swift`)
+`TierGate.shared.canAccess(_ feature:)` is the single gate.
+- **All tiers (incl. free):** `basicLifeNotifications` (water/streak/sleep/workout/weekly reminders — no AI reasoning); **Captain chat itself** (the tab is open to all — free falls through `canAccess(.captainChat) == false` to the on-device engine, §5.10).
+- **Max+ (max, trial, pro):** `captainChat` (now gates the **cloud** brain — memory, continuity, image input — not chat *access*), `captainMemory`, `captainNotifications`, `captainDirectives`, premium MiniMax voice, **Captain personality presets** (6 styles via the gated `CaptainPersonalityPicker`; free sees a locked card → paywall).
+- **Pro only:** `multiWeekPlan(weeks>1)`, `weeklyInsightsNarrative`, `monthlyReflection`, `photoAnalysis`, `premiumVoice` (MiniMax), `advancedCulturalAwareness`, **custom Captain persona** (`CaptainCustomization.customStyle` free-text, overrides the preset; gated by `viewModel.isProCaptain`).
+- **Product→tier mapping** (marketing): **Captain chat = Free** (on-device); **Captain cloud depth (memory/directives/voice)**, Kitchen, MyVibe, Battle, Kernel = **Max**; Peaks (Legendary Challenges) = **Pro**; multi-week plans / photo analysis / premium voice = **Pro**.
+
+### 8.4 Paywall
+`UI/Purchases/PaywallView.swift` (shows Max + Pro, RTL/LTR, restore + legal). `PaywallSource` enum tracks origin: `manual, featureGate, legendaryChallenges, day6Preview, trialEnded, tribeGate, captainGate, kitchenGate, myVibeGate, battleGate, peaksGate`. **Skippable** at onboarding and on trial-end (drops to free); feature gates dismiss without unlocking.
+
+### 8.5 Purchases & trial (StoreKit 2)
+`PurchaseManager` (observes `Transaction.updates`, loads products with retry, schedules expiry notifications) → `ReceiptValidator` (Supabase `validate-receipt`) → `EntitlementStore` (persists product + expiry, computes tier) → `TierGate` reads UserDefaults immediately. `FreeTrialManager`: 7-day trial, start date in UserDefaults + Keychain, `isTrialActiveSnapshot` readable from any context; captures real Apple intro-offer start.
+
+> ⚠️ **Product IDs contain intentional, immutable typos** (e.g. `mraad5000` vs `mraad500`, capital `I` in `Intelligence`). They are permanent in App Store Connect — **never "fix" them**; it would break StoreKit resolution. Canonical list lives in `Core/Purchases/SubscriptionProductIDs.swift` (current + legacy IDs retained for back-compat).
+
+---
+
+## 9. Localization & internationalization
+- **Languages:** Arabic (`ar`, default, RTL) + English (`en`, LTR). ~3,072 string keys each in `Resources/{ar,en}.lproj/Localizable.strings` (+ `InfoPlist.strings` for permission prompts).
+- **Storage:** `AppSettingsStore.appLanguage` ↔ UserDefaults `aiqo.app.language` (`"ar"`/`"en"`), default Arabic.
+- **RTL:** views set `.environment(\.layoutDirection, isArabic ? .rightToLeft : .leftToRight)`. Feature-local `L10n` helpers (Kitchen, Gym) and `L10n.t("key")`.
+- **Dialect:** UI strings are clear MSA-leaning Arabic; the **Captain speaks Iraqi dialect** (a product rule, not a localization string).
+
+---
+
+## 10. Configuration, capabilities & feature flags
+
+### 10.1 Info.plist / capabilities
+- **Background modes:** audio, remote-notification, fetch, processing, location.
+- **BGTask IDs:** `aiqo.notifications.refresh`, `aiqo.notifications.inactivity-check`, `aiqo.brain.nightly`.
+- **URL schemes:** `aiqo`, `aiqo-spotify`.
+- **Siri / NSUserActivityTypes:** startWalk, startRun, startHIIT, openCaptain, todaySummary, logWater, openKitchen, weeklyReport.
+- **Entitlements (`AiQo.entitlements`):** push (`aps-environment`), Sign in with Apple, HealthKit (+ background delivery), Siri, App Groups `group.com.aiqo.kernel2` & `group.aiqo`.
+- **Usage strings:** location (outdoor run, background), AlarmKit (SmartWake). PhotosPicker is out-of-process (no photo-library usage string needed). `PrivacyInfo.xcprivacy` declares photo data type with `AppFunctionality`.
+- **Secrets** injected from `Secrets.xcconfig` → Info.plist: `CAPTAIN_API_KEY`, `CAPTAIN_VOICE_*`, `COACH_BRAIN_LLM_API_KEY`, `SPOTIFY_CLIENT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, proxy flags.
+
+### 10.2 Feature flags (`Core/Config/AiQoFeatureFlags.swift`, read from Info.plist)
+**Default ON:** `MEMORY_V4_ENABLED`, `NOTIFICATION_BRAIN_ENABLED`, `CAPTAIN_BRAIN_V2_ENABLED`, `CRISIS_DETECTOR_ENABLED`, `AIQO_CHAT_V1_1_ENABLED`, `LEARNING_CHALLENGE_V2_ENABLED`, `LEARNING_VERIFICATION_ON_DEVICE_ENABLED`, `SAFARI_VIEW_CONTROLLER_ENABLED`, `LEARNING_SPARK_STAGE2_ENABLED`, `SMART_WATER_TRACKING_ENABLED`, `CAPTAIN_VOICE_CLOUD_ENABLED`, `HIGH_FIDELITY_3D_ENABLED`.
+**Default OFF:** `GEMINI_3_PREVIEW_ENABLED`, `CAPTAIN_REAL_STREAMING` (real SSE token streaming — dormant, needs edge-fn deploy + paid-device test; see §5.3), `HAMOUDI_BLEND_ENABLED`, `TRIBE_SUBSCRIPTION_GATE_ENABLED`, `PLANK_LADDER_CHALLENGE_ENABLED`, `USE_CLOUD_PROXY` (+ per-path `USE_CHAT_CLOUD_PROXY`, `USE_VOICE_CLOUD_PROXY`), `AIQO_DEV_UNLOCK_ALL`.
+- `GEMINI_3_PREVIEW_ENABLED` — gates the `gemini-3-flash-preview` model app-wide via `GeminiModelPolicy`; OFF ⇒ everything uses stable `gemini-2.5-flash`. `CloudBrain` also auto-falls-back to `gemini-2.5-flash` if a preview call errors/times out.
+- `HIGH_FIDELITY_3D_ENABLED` — gates full-fidelity 3D (OutdoorRun realistic-elevation map + cinematic chase camera, RealityKit avatar); `DevicePerformanceTier` additionally auto-downgrades on < ~5 GB-RAM devices and under thermal stress (`.serious`/`.critical`).
+**Remote kill switches:** Supabase `remote_flags` table (`flag_name` rows), fetched by `RemoteFlags.shared.refresh()` (cached, fail-safe to enabled). Live-disable rows: `memory_v4_globally_disabled` (`MemoryV4Gate.isOn`), `notification_brain_globally_disabled` (`NotificationBrainGate.isOn`), `captain_brain_v2_globally_disabled` (`CaptainBrainV2Gate.isOn`). DevPanel + `DevOverride` can unlock features in DEBUG.
+
+---
+
+## 11. Privacy & compliance
+Privacy is a first-class product value ("بياناتك ملكك"):
+- **Sanitize-before-cloud:** `PrivacySanitizer` redacts emails/phones/UUIDs/IPs, normalizes names to "User," truncates to last 16 messages / ~6000 chars, and forwards health metrics **exact** (no coarsening — the Captain reports the user's real numbers) — before any Gemini/MiniMax call.
+- **On-device guarantees:** sleep analysis, memory embeddings, Learning-Spark certificate OCR/verification, directive parsing, **the entire free-tier Captain chat** (Apple Intelligence — nothing sent to the cloud, no consent needed) — never leave the device.
+- **Per-purpose consent** (Apple 5.1.2(II)): independent classes for AI Data, Captain Voice, and **Body Photo** (`BodyPhotoConsent`, versioned UserDefaults keys) with grant/revoke + timestamps.
+- **Body/meal photos:** downsized, JPEG re-encoded, **EXIF/GPS stripped** (`sanitizeKitchenImageData`), sent once to Gemini, never written to disk or stored on AiQo servers.
+- **Audit logging:** `AuditLogger` records every cloud call (destination, tier, prompt/response bytes, latency, consent, purpose, outcome) to `brain_audit.log.json`.
+- **Wellbeing:** `CrisisDetector` + `SafetyNet` + `ProfessionalReferral` provide bilingual crisis support paths (passive, consent-respecting).
+
+---
+
+## 12. Growth & content strategy
+> Current strategy = **`AiQo_Hamoudi_Strategy.md` (v2.0, "Persona Emergence")**. The older `AiQo_Growth_Strategy_May-Aug_2026.md` (v1, "Mohammed Raad comeback") is **obsolete** — do not use it.
+
+**Thesis:** *We are not bringing back Mohammed Raad. We are birthing Hamoudi.* New accounts, new name, visual transformation, no explanation. The mystery is the marketing; brand fusion (Hamoudi the persona = Captain Hamoudi the app) means every piece of Hamoudi content is AiQo content.
+
+**3-month goal (May 20 → Aug 20, 2026):** TikTok 0→150k, Instagram 0→80k, 35,000 downloads, 1,200 paid subs, **$14,000 MRR**. North-star metric = **MRR growth rate** (conversion > vanity followers).
+
+**Phases:** Month 1 "Hamoudi Emerges" (build persona, test creative, ~5k followers / 150 subs) → Month 2 "Resonates" (scale winners + collabs, ~30k / 600 subs) → Month 3 "Lands" (breakout + annual tier, 150k+ / 1200+ subs). A possible "Reveal" documentary is **out of scope** for these 3 months.
+
+**4 content pillars:** Building (40%) · Hamoudi × the Captain (30%) · Iraqi AI Manifesto (15%) · Lifestyle Atmospheric (15%). **Channels:** TikTok (discovery), Instagram (depth), YouTube (authority/SEO), X (tech audience), LinkedIn (B2B). **Paid:** Apple Search Ads (money engine) + TikTok Spark Ads (boost organic winners) + Meta retargeting; ~$5–8k over 3 months. **Handle target:** `@hamoudi.ai`.
+
+**Marketing don'ts:** no buying followers/bots, no faking KPIs, no fake urgency/scarcity, no "Insha'Allah/MashaAllah" as decoration, Captain never speaks MSA, never confirm/deny the Mohammed link.
+
+---
+
+## 13. Version history (`CHANGELOG.md`)
+- **v1.0.8 (build 31) — branch `program/world-class-completion`, prepared 2026-06-16, NOT yet submitted** — headline: the Captain gets genuinely smart + free, with paid personality customization:
+  - **Free on-device Captain (uncapped, deliberately simple)** — Captain tab opened to all tiers; free routes to `CaptainOnDeviceChatEngine` (Apple Intelligence). Short/simple replies, name only (no style); **native within-session memory** (reused `LanguageModelSession`, NOT a prompt-stuffed transcript); `CaptainFactGuard` + `OnDeviceReplySanitizer` on the free path (fixed a live "role-label echo + هههه-loop" bug); big asks → quick taste + Max invite (not a wall); `welcome(persona:)` data-aware greeting. (§5.10, commits `ee854be`→`16e9ce6`)
+  - **Tier-differentiated Captain** — `LivingCaptainAvatarView` (breathing aura/parallax; aura paid-only), asset `Hammoudi4`→`Hammoudi5` + voice `.realtime`→`.premium`, all flipping instantly on subscribe. (§5.9)
+  - **Health fact-guard (LIVE)** — `CaptainFactGuard` rewrites cloud replies whose step/calorie/HR numbers diverge >15% from the real snapshot. (§5.3)
+  - **Real SSE streaming (DORMANT)** — `CAPTAIN_REAL_STREAMING` flag + `captain-chat` `stream` branch + `HybridBrainService.generateReplyStreaming`; first text ~1s. Needs edge-fn deploy + paid-device test before flip. (§5.3)
+  - **Speaker equalizer animation (LIVE)** — live `VoiceEqualizerBars` on the playing bubble, scoped via `CaptainVoiceRouter.speakingText`. (§5.9)
+  - **Captain personality customization (paid)** — `CaptainTone` expanded to 6 presets + `styleDirectiveArabic`; `CaptainCustomization.customStyle` (Pro free-text); gated `CaptainPersonalityPicker` (free locked → paywall · Max presets · Pro custom); cloud prompt injects the resolved style directive. (§2.4, §8.3, commit `05654ea`)
+  - **Per-item Captain memory delete** — the memory screen gained a native Edit button + hint so a single memory (an injury, leftover test data) is removable instead of only "clear all". (commit `4ae7f28`)
+  - **Upgrade legibility (free→paid), non-naggy** — a dismissible "Captain grows with Max" banner + visual `CaptainGrowsSheet` + an in-chat ceiling-reveal, so free users discover the paid depth without a wall. (commit `5cc661b`)
+  - **Release prep** — `MARKETING_VERSION`→1.0.8 / `CURRENT_PROJECT_VERSION`→31 across all 24 target slots; `CAPTAIN_REAL_STREAMING=false` shipped (dormant); `docs/appstore/{WhatsNew,Description,SUBMISSION}_v1.0.8.md`. Debug + Release builds green; sanitizer + fact-guard test suites green.
+  - **Watch↔iPhone sync fix (2026-06-14, `42e52b7`)** — phone-launched workouts now show the correct type on the watch (`WatchWorkoutManager.currentType` `@Published`); XP delivery made reliable (`sendMessage`→`transferUserInfo` fallback) **and exactly-once** (dedup by `workout_id`, persisted on phone); reachability via delegate (not a 2s timer); summary reads engine-frozen final metrics; faster home screen; 7 dead Apple-sample views deleted.
+  - Also: deleted dead `WinsView`/`RewardsView` (~900 lines), Reduce-Motion gating on loaders + Kernel breathing. (Tribe deferred; broad Dynamic Type / VoiceOver a11y still pending.)
+- **v1.0.7 (2026-05-31, build 30)** — **rejected by App Review 2026-06-15 under Guideline 3.1.2(c)**; root cause was a **404 Privacy Policy URL** in App Store Connect (`/privacy-policy` vs the live `/privacy`) — **metadata-only fix** (corrected URL + registered custom EULA + Description/Review-notes polish), **resubmitted with no new build** → "Waiting for Review" (`docs/appstore/REJECTION_FIX_3.1.2c_v1.0.7.md`). **Headline: النواة (Kernel) ships LIVE** — a Family-Controls digital-wellbeing app-lock you open with movement (escalating shields → unlock by real steps, a live Captain trainer, and calm-hold/PPG + breathing friction to disable); full detail in §6 "النواة (Kernel)". Plus a **world-class completion pass** (whole-app audit → fix). Eliminated English-mode localization leaks (raw keys + Arabic bleed-through) in Weekly Report, Progress Photos, the `VibeControlSheet` music surface, Kitchen a11y, and the language picker's bilingual label; localized all proactive + recurring notifications for the English cohort (were Iraqi-only). **Compliance:** inserted the `.quickStart` age/health gate (blocks under-18, Guideline 1.4.1) into `AppFlowController.resolveCurrentScreen`/`nextScreenAfterLogin` — it was previously reachable only from Profile (existing users grandfathered); account deletion now surfaces RPC failures instead of claiming success + signing out (Guideline 5.1.1(v)). **UX:** removed dead-end controls (3 inert Body "Clarity" cards, the decorative Plan filter rail), relabeled the misleading Captain "Start Workout" CTA → "Discuss Plan", and gated directive-confirmation honesty on `trigger.isExecutable`. **Fixes:** camera-quest tier-3 accuracy 100→95% (100% was unreachable, locked Stages 3–10); expanded `meals_data.json` 6→18 and made `Meal` decode `name_en`. Refreshed 5 stale tests (TierGate ceilings + removed obsolete Food_photos asset tests) → full suite green. (see §14)
+- **v1.0.6 (2026-05-30, build 28)** — **Captain conversation compaction** (anti-hallucination for long chats): faithful rolling `ConversationDigest` (opening goal · user points · the Captain's own commitments · corrections) + a prompt grounding lock, delivered via a new `conversationState` request field; **fixed a latent bug** where session continuity never reached Gemini on the cloud path (sanitizeForCloud overwrote `workingMemorySummary`); token-budget live window; a subtle "folded into memory" chat marker; `ConversationCompactorTests`. Bundles the earlier branch work since 1.0.5: rich in-chat workout-plan cards + cross-feature polish, and reliability/safety hardening (centralized `GeminiModelPolicy` with the `gemini-3-flash-preview` gate OFF by default + auto-fallback, Supabase remote kill switches for Brain V2 / Memory V4 / Notification Brain, `DevicePerformanceTier` 3D auto-downgrade). Also a DEBUG `CaptainBrainV2Gate.testOverride` test seam. (see §5.2, §5.4, §5.6, §5.9, §14.13)
+- **v1.0.5 (2026-05-12)** — **Directives** (layer 11, on-device, executed after every workout); bigger/sharper memory (Pro facts→1200, Max→500, retrieval 40/18, history 7→30, chat 200→400); **multi-day workout plans** + day-picker; optional **body photo** for tailored plans + dedicated consent surface; Plan "world-class" UI (PlanPalette mint·sand·lavender·lemon).
+- **v1.0.2 (2026-04-20)** — Learning Spark Stage 2 (5-course picker, Edraak+Coursera), challenge XP (+1000 / +2000), on-device verification extended, celebration redesign.
+- **v1.0.1 (2026-04-19)** — Crisis detection, proactive brain, regional safety resources.
+
+> Build number has advanced over time (project currently `CURRENT_PROJECT_VERSION = 31` at marketing version `1.0.8`; App Store **live** is `1.0.7`, approved + released 2026-06-16). Release branches `brain-refactor/*` and `release/*` may lag `main` and the active `program/world-class-completion` branch — a "missing Captain feature" is usually an unmerged branch, not a regression.
+
+---
+
+## 14. Invariants & gotchas (do-not-break)
+1. **`SubscriptionTier` raw values are persisted** — `none=0, max=1, trial=2, pro=3`. Never renumber; rename only.
+2. **Product IDs are immutable with intentional typos** — never "correct" `mraad5000`/capital-`I` Intelligence.
+3. **Captain must speak Iraqi dialect** (never MSA in primary content) — it is the moat.
+4. **Sleep AI is always on-device** — raw sleep stages never go to the cloud.
+5. **Injury constraints are hard rules**, not suggestions — surfaced in the prompt and never filtered out.
+6. **Active directives are mirrored into every prompt** and never filtered (unlike normal memories).
+7. **Sanitize before cloud** — never send raw PII/health/photos to Gemini/MiniMax.
+8. **Persona discipline** — no "Mohammed," no old-account references, no confirm/deny of the link (see §2.3).
+9. **3 tabs only** (Home/Gym/Captain). The **Captain tab is open to all tiers** — free runs on-device (uncapped); `TierGate.captainChat` now gates the *cloud* brain (memory/continuity/image input/premium voice), **not chat access**. Don't re-add a `CaptainLockedView` wall on the tab.
+10. **Don't lower timeouts to "fix" UI freezes** — find the real CPU/render hog (root-cause, not band-aid).
+11. **Ship at a premium/cinematic bar** — this is a flagship; MVP polish is not acceptable for hero features.
+12. **Free tier by design:** memory is lexical-only and episodes are excluded — that's intentional, not a bug.
+13. **Captain chat continuity rides `conversationState`, not `workingMemorySummary`** — `PrivacySanitizer.sanitizeForCloud` *rebuilds* `workingMemorySummary` from cloud-safe durable memories, so anything placed there is silently dropped on the cloud (main-chat) path. Session continuity / conversation compaction must use the dedicated `HybridBrainRequest.conversationState` field (rendered by `PromptComposer.layerConversationState`).
+14. **No static/canned responses to users** — all user-facing Captain/coach copy is generated dynamically (cloud Gemini *or* on-device direct generation), never assembled from a fixed phrase bank/template. Repeated stock lines read as a "dumb app" and break trust; the on-device lab proved the template path regurgitates stock dialect words. Hardcoded strings are acceptable only for rare non-conversational fallbacks (offline error), and even those stay minimal/varied.
+15. **Free Captain is on-device only** — the free path uses `CaptainOnDeviceChatEngine` with **no** memory, persistence, cross-session continuity, directives, cloud reasoning, or image input, and is **uncapped** (no message limits). That's the deliberate free/paid line, not a bug. Never add per-message caps to the Captain.
+16. **App Store URLs are `/privacy` and `/terms`** (not `/privacy-policy`) — the live aiqo.app routes. A 404 Privacy Policy URL caused the 2026-06-15 3.1.2(c) rejection; always verify the App Store Connect links resolve 200.
+
+---
+
+## 15. Glossary
+- **AiQo** — the app; an Arabic-first Bio-Digital OS.
+- **Captain Hamoudi / كابتن حمودي** — the in-app AI coach and the founder's public persona (same identity).
+- **Brain** — the Captain's 12-layer cognitive engine, folders `00`–`11` (`Features/Captain/Brain/`).
+- **Directive** — a user-taught standing rule the Captain executes forever (v1.0.5).
+- **Bio-phase / circadian tone** — time-of-day awareness that shifts the Captain's tone/timing.
+- **Peaks (قِمم)** — 4–12 week periodized record challenges (= Legendary Challenges; Pro).
+- **Tribe / Arena / Battle** — the social leaderboard + competitive layer (Supabase Realtime).
+- **Daily Aura** — Home's 24h animated activity visualization.
+- **Aura / XP / Level** — gamification currencies (`PlayerStats`, `XPCalculator`, `LevelSystem`).
+- **MyVibe / DJ Hamoudi** — music+mood feature (Max).
+- **Learning Spark** — complete-a-course + on-device certificate verification quest.
+- **TierGate** — the single subscription-feature gate. **EntitlementStore** — persisted purchase state.
+
+---
+
+## 16. Repo map (quick index)
+```
+AiQo/App/                          AppDelegate, SceneDelegate, AppFlowController, MainTabScreen, MainTabRouter, MealModels
+AiQo/Core/Constants.swift          K.Supabase (url/anonKey/functionsURL)
+AiQo/Core/AppSettingsStore.swift   AppLanguage, settings (UserDefaults)
+AiQo/Core/Config/AiQoFeatureFlags  All feature flags
+AiQo/Core/Purchases/               SubscriptionTier, SubscriptionProductIDs, EntitlementStore, PurchaseManager, ReceiptValidator
+AiQo/Premium/FreeTrialManager      7-day trial logic
+AiQo/Features/Captain/             Chat UI (CaptainScreen/ViewModel/ChatView), WorkoutPlanCard, CaptainMessageText, LivingCaptainAvatarView, Voice/
+  …/CaptainOnDeviceChatEngine      Free on-device Captain (Apple Intelligence, direct generation, dynamic welcome) — §5.10
+AiQo/Features/Captain/Brain/       12 numbered layers 00_Foundation … 11_Directives
+  …/04_Inference/CaptainModels     CaptainStructuredResponse, WorkoutPlan, WorkoutDay, Exercise, MealPlan, CaptainReminder, CaptainSavedMemory, SpotifyRecommendation
+  …/04_Inference/CaptainFactGuard  Deterministic post-gen health-number guard (>15% divergence → rewrite) — §5.3
+  …/04_Inference/PromptComposer    7-layer system prompt
+  …/04_Inference/Services/         CloudBrain (Gemini), LocalBrain, HybridBrain (+ generateReplyStreaming SSE), FallbackBrain, CaptainProxyConfig
+  …/00_Foundation/TierGate         Feature gating (captainChat now gates cloud depth, not chat access)
+AiQo/Features/Gym/                 Club/Plan, OutdoorRun, QuestKit, Quests (VisionCoach, Learning), Guinness, GymExercise
+AiQo/Features/Home/                HomeView, DailyAura, DJCaptainChatView
+AiQo/Features/Kitchen/             meals_data.json, SmartFridge…, KitchenPlanGenerationService
+AiQo/Features/Sleep/               SmartWake, AppleIntelligenceSleepAgent
+AiQo/Features/WeeklyReport/        ShareCardRenderer
+AiQo/Features/{MyVibe,SmartWaterTracking,ProgressPhotos,Challenges,LegendaryChallenges,Profile,Onboarding,Compliance,DataExport,Cardio}/
+AiQo/Services/                     SupabaseService, Analytics, CrashReporting, Notifications, Location
+AiQo/Resources/{ar,en}.lproj/      Localizable.strings; Resources/Specs/achievements_spec.json; Assets.xcassets
+supabase/functions/                captain-chat (+ stream branch), captain-voice, validate-receipt, _shared/
+docs/appstore/                     Submission packs, Description/WhatsNew, EULA, REJECTION_FIX_3.1.2c_v1.0.7.md
+Root: CHANGELOG.md, AIQO_TECH_DEBT.md, AiQo_Hamoudi_Strategy.md (current), AiQo_Growth_Strategy_May-Aug_2026.md (obsolete)
+```
+
+---
+
+*End of master blueprint. Keep this file authoritative and current; the repository code is the final truth when it diverges from this description.*

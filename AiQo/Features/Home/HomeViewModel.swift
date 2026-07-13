@@ -172,8 +172,8 @@ final class HomeViewModel: ObservableObject {
     // MARK: - Private Properties
     
     /// Demo mode toggle - set to true for video recording with fixed values
-    private let demoMode: Bool
-    private let demoConfig: DemoConfiguration
+    private var demoMode: Bool
+    private var demoConfig: DemoConfiguration
     
     /// HealthKit service reference
     private let healthService: HealthKitService
@@ -394,7 +394,20 @@ final class HomeViewModel: ObservableObject {
     }
     
     // MARK: - Demo Mode
-    
+
+    /// Runtime toggle for the hidden screenshot mode (App Settings → DEBUG). ON
+    /// freezes the cards to clean demo numbers (`DemoConfiguration.default`); OFF
+    /// resumes live HealthKit data. Applies LIVE — no app relaunch needed.
+    func setScreenshotMode(_ on: Bool) {
+        guard on != demoMode else { return }
+        demoMode = on
+        if on {
+            applyDemoSnapshot()
+        } else {
+            Task { [weak self] in await self?.setupHealthAndAutoRefresh() }
+        }
+    }
+
     private func applyDemoSnapshot() {
         stopLiveTimer()
         currentSummary = nil
@@ -427,7 +440,7 @@ final class HomeViewModel: ObservableObject {
         case .stand:    return Int(summary.standPercent).arabicFormatted + "%"
         case .water:    return (summary.waterML / 1000.0).aiqoMetricString + " L"
         case .sleep:    return summary.sleepHours.aiqoMetricString + " h"
-        case .distance: return (summary.distanceMeters / 1000.0).aiqoMetricString + " km"
+        case .distance: return (summary.distanceMeters / 1000.0).aiqoMetricString
         }
     }
     
@@ -498,7 +511,7 @@ final class HomeViewModel: ObservableObject {
         switch kind {
         case .steps:
             await loadHealthServiceQuantitySeries(kind: .steps, .stepCount, unit: .count(), scope: scope) { values, total in
-                ChartSeriesData(values: values, headerText: String(format: "%.0f", total))
+                ChartSeriesData(values: values, headerText: Int(total).arabicFormatted)
             }
             
         case .calories:
@@ -554,7 +567,7 @@ final class HomeViewModel: ObservableObject {
         _ identifier: HKQuantityTypeIdentifier,
         unit: HKUnit,
         scope: TimeScope,
-        transform: @escaping @Sendable ([Double], Double) -> ChartSeriesData
+        transform: @escaping ([Double], Double) -> ChartSeriesData
     ) async {
         let series = await healthService.fetchQuantitySeries(identifier, unit: unit, scope: scope)
         guard shouldApplyChartResult(for: kind, scope: scope) else { return }

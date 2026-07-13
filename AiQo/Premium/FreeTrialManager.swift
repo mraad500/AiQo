@@ -48,6 +48,24 @@ final class FreeTrialManager: ObservableObject {
         refreshState()
     }
 
+    /// Records the 7-day trial-journey anchor from a REAL StoreKit subscription
+    /// (Apple's card-required intro offer). Unlike `startTrialIfNeeded()` this
+    /// never mints a no-card trial — it only mirrors an Apple trial that has
+    /// already begun, so the onboarding hard wall is unaffected. Idempotent and
+    /// self-healing: it keeps the EARLIEST known start (a grandfathered legacy
+    /// trial, or the true `originalPurchaseDate` first seen on a late device) so
+    /// `TrialJourneyOrchestrator` is timed to the user's real subscription start
+    /// instead of "whenever this device first noticed it".
+    func captureStoreKitTrialStart(_ date: Date) {
+        if let existing = trialStartDate, existing <= date {
+            refreshState()
+            return
+        }
+        defaults.set(date, forKey: Keys.trialStartDate)
+        KeychainTrialHelper.writeTrialStartDate(date)
+        refreshState()
+    }
+
     /// هل المستخدم بفترة التجربة المجانية النشطة؟
     var isTrialActive: Bool {
         if case .active = trialState { return true }

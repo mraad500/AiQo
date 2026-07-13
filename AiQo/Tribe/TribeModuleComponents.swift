@@ -92,6 +92,10 @@ struct TribeTopSegmentedControl: View {
     }
 }
 
+// Dormant — not compiled into the v1.0.4 binary. The legacy Tribe surface was
+// replaced by the new `TribeView` (Features/Tribe/TribeView.swift:1028). Re-enable
+// by adding `-D LEGACY_TRIBE_VIEW_ENABLED` to Other Swift Flags.
+#if LEGACY_TRIBE_VIEW_ENABLED
 struct LegacyTribeView: View {
     let heroSummary: TribeSummary
     let featuredMembers: [TribeRingMember]
@@ -260,6 +264,7 @@ private struct TribeHeroBadge: View {
             }
     }
 }
+#endif // LEGACY_TRIBE_VIEW_ENABLED
 
 struct TribeMembersSection: View {
     let featuredMembers: [TribeRingMember]

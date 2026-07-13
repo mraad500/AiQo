@@ -247,6 +247,7 @@
 "kitchen.hotspot.plan.hint" = "Open meal plan";
 
 "kitchen.fridge.title" = "Fridge";
+"kitchen.fridge.itemCount" = "%d items";
 "kitchen.fridge.add" = "Add item";
 "kitchen.fridge.itemNamePlaceholder" = "Item name";
 "kitchen.fridge.quantityPlaceholder" = "Quantity";
@@ -262,6 +263,9 @@
 "kitchen.mealplan.generateButton" = "Generate plan with Captain Hamoudi";
 "kitchen.mealplan.pinned" = "Pinned Plan";
 "kitchen.mealplan.empty" = "No pinned plan yet.";
+"kitchen.mealplan.fallback.title" = "Temporary backup plan";
+"kitchen.mealplan.fallback.message" = "Couldn't reach the smart chef. This is a basic backup — try again.";
+"kitchen.mealplan.fallback.retry" = "Try again";
 "kitchen.mealplan.day" = "Day";
 "kitchen.mealplan.noMealsDay" = "No meals for this day.";
 "kitchen.mealplan.protein" = "Protein";
@@ -1358,10 +1362,20 @@
 /* Progress Photos */
 "screen.profile.progressPhotos.title" = "Progress Photos";
 "screen.profile.progressPhotos.subtitle" = "Track your body transformation";
+"screen.profile.kernel.title" = "Kernel";
+"screen.profile.kernel.subtitle" = "Lock apps, unlock with movement";
+"kernel.consent.title" = "Kernel";
+"kernel.consent.subtitle" = "Lock your apps, unlock them with movement.";
+"kernel.consent.point.familyControls" = "Uses Family Controls to block only the apps you choose.";
+"kernel.consent.point.health" = "Reads your steps and heart rate from Health to unlock with movement — it stays on your device.";
+"kernel.consent.point.control" = "You're in control: turn it on or off anytime.";
+"kernel.consent.agree" = "Agree & enable";
+"kernel.consent.later" = "Not now";
 
 /* Accessibility */
 "tab.home.hint" = "View daily health summary";
 "tab.gym.hint" = "Workouts and fitness challenges";
+"tab.kitchen.hint" = "Scan your fridge and plan meals for your goal";
 "tab.captain.hint" = "Talk to Captain Hamoudi";
 "accessibility.steps" = "Steps";
 "accessibility.calories" = "Calories burned";
@@ -1383,6 +1397,42 @@
 "vibe.intensity" = "Intensity";
 "vibe.djPick" = "DJ Hamoudi Pick";
 "vibe.openSpotify" = "Open in Spotify";
+
+/* Vibe Control Sheet */
+"vibe.done" = "Done";
+"vibe.ok" = "OK";
+"vibe.pause" = "Pause";
+"vibe.resume" = "Resume";
+"vibe.stop" = "Stop";
+"vibe.selectedMode" = "Selected Mode";
+"vibe.whyUnavailable" = "Why unavailable?";
+"vibe.mixAudio.subtitle" = "Keep AiQo Sounds active while music or podcasts play.";
+"vibe.status.aiqoActive" = "AiQo Sounds active";
+"vibe.status.aiqoPaused" = "AiQo Sounds paused";
+"vibe.status.aiqoReady" = "AiQo Sounds ready";
+"vibe.status.spotifyConnected" = "Spotify connected";
+"vibe.status.spotifyDisconnected" = "Spotify disconnected";
+"vibe.status.spotifyUnavailable" = "Spotify unavailable";
+"vibe.action.resumeAiqo" = "Resume AiQo Sounds";
+"vibe.action.playAiqo" = "Play AiQo Sounds";
+"vibe.action.playSpotify" = "Play in Spotify";
+"vibe.action.connectSpotify" = "Connect Spotify";
+"vibe.hint.spotifyLive" = "Spotify is live";
+"vibe.hint.tapControls" = "Tap for volume and text";
+"vibe.hint.paused" = "Paused";
+"vibe.hint.tapConfigureSpotify" = "Tap to configure Spotify";
+"vibe.playlist.deepWork.title" = "Deep Work Beats";
+"vibe.playlist.deepWork.subtitle" = "Low-noise focus selection";
+"vibe.playlist.morning.title" = "Morning Wakeup";
+"vibe.playlist.morning.subtitle" = "Bright start with forward motion";
+"vibe.playlist.zen.title" = "Zen Mode";
+"vibe.playlist.zen.subtitle" = "Still, clean, and spacious";
+"vibe.playButton.aiqoBackground" = "%@ in background";
+"vibe.cta.installSpotify" = "Install Spotify";
+"vibe.cta.spotifyAuthUnavailable" = "Spotify auth unavailable";
+"vibe.cta.startPlaylist" = "Start selected playlist";
+"vibe.cta.openSpotifyConnect" = "Open Spotify to connect";
+"vibe.error.audioStart" = "Something went wrong while starting audio.";
 
 /* Fridge */
 "fridge.addOne" = "Add one";
@@ -1536,6 +1586,9 @@
 "settings.deleteAccount.title" = "Delete Account";
 "settings.deleteAccount.confirm" = "Delete";
 "settings.deleteAccount.message" = "This will permanently delete your account and all associated data. This action cannot be undone.";
+"settings.deleteAccount.error.title" = "Couldn't delete account";
+"settings.deleteAccount.error.message" = "We couldn't delete your account right now. Please check your connection and try again, or contact support if this keeps happening.";
+"settings.ok" = "OK";
 "settings.cancel" = "Cancel";
 "settings.coachLanguage" = "Coach Language";
 "settings.section.captain" = "Captain Hamoudi";
@@ -1569,6 +1622,9 @@
 "nutrition.fat" = "Fat";
 "nutrition.fiber" = "Fiber";
 "nutrition.gram" = "g";
+"nutrition.dailySummary" = "Daily nutrition summary";
+"nutrition.calories.accessibility" = "%d of %d calories";
+"nutrition.listSeparator" = ", ";
 "nutrition.goals.calories" = "Calories";
 "nutrition.goals.calorieValue" = "%d cal";
 "nutrition.goals.protein" = "Protein (grams)";
@@ -2147,13 +2203,13 @@
 /* ─── Progress Photos ─── */
 "photos.title" = "Progress Photos";
 "photos.startJourney" = "Start your transformation journey";
-"photos.takeWeekly" = "Photo yourself weekly and see the difference with your own eyes.\nPhotos are saved on your device only.";
+"photos.emptyDescription" = "Photo yourself weekly and see the difference with your own eyes.\nPhotos are saved on your device only.";
 "photos.addFirst" = "Add first photo";
-"photos.photoUnit" = "photo";
-"photos.dayUnit" = "day";
-"photos.kgUnit" = "kg";
+"photos.photo" = "photo";
+"photos.day" = "day";
+"photos.kg" = "kg";
 "photos.compareProgress" = "Compare progress";
-"photos.compareDesc" = "See the difference between first and last photo";
+"photos.compareDescription" = "See the difference between first and last photo";
 "photos.album" = "Album";
 "photos.takePhoto" = "Take photo";
 "photos.useCamera" = "Use camera";
@@ -2167,11 +2223,13 @@
 "photos.weight" = "Weight";
 "photos.note" = "Note";
 "photos.from" = "from";
+"photos.since" = "Since";
+"photos.cancel" = "Cancel";
 "photos.deletePhoto" = "Delete photo";
-"photos.deleteConfirm" = "Delete photo?";
+"photos.deleteConfirmTitle" = "Delete photo?";
 "photos.delete" = "Delete";
 "photos.deleteMessage" = "This photo will be permanently deleted from the device.";
-"photos.start" = "Start";
+"photos.beginning" = "Beginning";
 "photos.now" = "Now";
 "photos.before" = "Before";
 "photos.after" = "After";
@@ -2193,6 +2251,17 @@
 "weeklyReport.avgPerWorkout" = "avg / workout";
 "weeklyReport.preparing" = "Preparing report...";
 "weeklyReport.aboutLastWeek" = "About last week";
+"weeklyReport.shareSubject" = "My AiQo Weekly Report";
+"weeklyReport.scoreLegendary" = "Legendary! 🔥";
+"weeklyReport.scoreExcellent" = "Excellent! 💪";
+"weeklyReport.scoreGood" = "Good! 👏";
+"weeklyReport.scoreKeepGoing" = "Keep going! 🚶";
+"weeklyReport.scoreNextWeek" = "Next week, stronger 🌱";
+"weeklyReport.motiveLegendary" = "A legendary week! Hold this level, champion.";
+"weeklyReport.motiveExcellent" = "Excellent work this week — keep the momentum.";
+"weeklyReport.motiveGood" = "Solid progress — let's build on it.";
+"weeklyReport.motiveKeepGoing" = "Good start — next week we push harder.";
+"weeklyReport.motiveNextWeek" = "Every start is hard — next week, a fresh page.";
 
 /* ─── Feature Intro ─── */
 "featureIntro.skip" = "Skip";
@@ -2247,6 +2316,10 @@
 "memory.cat.insight" = "Insights";
 "memory.cat.recordProject" = "Record projects";
 "memory.cat.hydration" = "Hydration";
+"memory.cat.saved" = "Saved Memories";
+"memory.saved.reminderTitle" = "Reminder";
+"memory.saved.noteTitle" = "Saved";
+"memory.saved.notifDisabled" = "Device notifications are off — enable them so reminders can fire.";
 "memory.key.hydrationGoal" = "Daily water goal";
 "memory.key.hydrationSmart" = "Smart tracking";
 "memory.key.hydrationPattern" = "Hydration pattern";
@@ -2350,7 +2423,7 @@
 "memory.key.smartWakeRecommendedTime" = "Smart wake recommendation";
 
 /* ─── Language Selection ─── */
-"lang.systemAr" = "System language";
+"lang.systemAr" = "لغة النظام";
 "lang.systemEn" = "System language";
 "lang.arabic" = "Arabic";
 "lang.english" = "English";
@@ -2699,7 +2772,6 @@
 "gym.plan.pinSuccess" = "Plan pinned successfully and will show in the daily schedule.";
 "gym.plan.pinConfirm" = "Done champ, I pinned %@ to the daily schedule.";
 "gym.plan.pinError" = "Could not pin the plan right now. Try again.";
-"gym.plan.kickoff" = "To build a personalized workout plan, write your current weight and goal like: 95 kg and cutting.";
 "gym.plan.preview" = "Preview";
 "gym.plan.setsFormat" = "%d sets";
 "gym.plan.taskFormat" = "%@ - %d sets - %@";
@@ -2766,10 +2838,6 @@
 "gym.session.status.paused" = "Paused";
 "gym.session.status.saving" = "Saving...";
 "gym.session.error.connectWatch" = "Connect your Apple Watch to start this workout.";
-
-/* ─── Gym: Heart View ─── */
-"gym.heart.title" = "Heart Rate Monitor";
-"gym.heart.comingSoon" = "Coming Soon";
 
 /* ─── Gym: Rewards ─── */
 "gym.rewards.title" = "Rewards";
@@ -3042,3 +3110,30 @@
 "onboarding.healthScreening.underAge.title" = "AiQo is 18+";
 "onboarding.healthScreening.underAge.body" = "AiQo provides general fitness and wellness coaching intended for adults. We can't offer you a personalised plan right now.";
 "onboarding.healthScreening.underAge.support" = "If you believe this is a mistake, reach out at support@aiqo.app.";
+
+/* MARK: - Outdoor Running (live 3D follow-map) */
+"gym.exercise.outdoor_running" = "Outdoor Running";
+"gym.exercise.outdoor_running.subtitle" = "A live 3D map that follows you like a drone while you run";
+"run.metrics.paceUnit" = "/km";
+"run.metrics.timeLabel" = "Time";
+"run.gps.searching" = "Finding GPS signal…";
+"run.gps.weak" = "Weak GPS — accuracy may be low";
+"run.permission.title" = "Location access needed";
+"run.permission.body" = "Outdoor Running uses your location to draw your route on the map and measure distance, pace and elevation. Your location never leaves your device.";
+"run.permission.allow" = "Allow location";
+"run.permission.openSettings" = "Open Settings";
+"run.control.start" = "Start run";
+"run.control.pause" = "Pause";
+"run.control.resume" = "Resume";
+"run.control.finish" = "Finish";
+"run.summary.title" = "Run complete";
+"run.summary.done" = "Done";
+"run.close.confirm.title" = "End this run?";
+"run.close.confirm.message" = "Your run is still active. Finishing will save it and close the map.";
+"run.close.confirm.finish" = "Finish & save";
+"run.close.confirm.keep" = "Keep running";
+"run.summary.shareButton" = "Share your win";
+"run.metrics.calories" = "Calories";
+"run.share.tagline" = "Tracked with AiQo";
+"run.share.caption" = "I just ran %@ with AiQo 🏃‍♂️🔥";
+"run.watch.connected" = "Apple Watch • live heart rate";

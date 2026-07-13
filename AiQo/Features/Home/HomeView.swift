@@ -30,7 +30,12 @@ struct HomeView: View {
     @StateObject private var dailyAuraViewModel = DailyAuraViewModel()
     #endif
     @StateObject private var vibeControlViewModel = VibeControlViewModel()
-    
+    #if DEBUG
+    /// Hidden screenshot mode (App Settings → DEBUG). Drives live demo numbers on
+    /// Home so App Store captures show clean values — no relaunch needed.
+    @AppStorage("aiqo-screenshot-mode") private var screenshotModeOn = false
+    #endif
+
     // MARK: - Environment
     
     @Environment(\.scenePhase) private var scenePhase
@@ -60,8 +65,9 @@ struct HomeView: View {
                     // Metrics Grid
                     metricsGrid
 
-                    // Kitchen Section
-                    kitchenSection
+                    // Kernel — sits in the Kitchen's former Home slot
+                    // (Kitchen now lives in the bottom tab bar).
+                    kernelEntrySection
 
                 }
                 .padding(.top, 6)
@@ -74,8 +80,16 @@ struct HomeView: View {
             topChrome
         }
         .task {
+            #if DEBUG
+            if screenshotModeOn { viewModel.setScreenshotMode(true) }
+            #endif
             await viewModel.onAppear()
         }
+        #if DEBUG
+        .onChange(of: screenshotModeOn) { _, on in
+            viewModel.setScreenshotMode(on)
+        }
+        #endif
         .onDisappear {
             viewModel.onDisappear()
         }
@@ -155,6 +169,16 @@ struct HomeView: View {
             .padding(.top, -19)
             .padding(.bottom, 16)
     }
+
+    @ViewBuilder
+    private var kernelEntrySection: some View {
+        if FeatureFlags.kernelEnabled {
+            KernelHomeCard()
+                // Drop it down from the metric cards; ~matches the 36pt row rhythm.
+                .padding(.top, 30)
+                .padding(.bottom, 8)
+        }
+    }
     
     private var metricsGrid: some View {
         let allRows = Array(viewModel.gridRows.enumerated())
@@ -208,20 +232,8 @@ struct HomeView: View {
         .onAppear { appeared = true }
     }
     
-    // MARK: - Kitchen Section
-    
-    private var kitchenSection: some View {
-        VStack(spacing: 0) {
-            KitchenShortcutButton {
-                viewModel.openKitchen()
-            }
-            .offset(y: 9)
-
-            Text(NSLocalizedString("tab.kitchen", comment: "Kitchen title under icon"))
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
-                .padding(.top, -4)
-        }
-    }
+    // Kitchen's Home shortcut moved to the bottom tab bar (see MainTabScreen).
+    // `KitchenShortcutButton` is kept below for reuse.
 
     // MARK: - Destination Views
     
@@ -263,15 +275,30 @@ struct HomeView: View {
 
 // MARK: - Profile Button View (Unified)
 
-private struct HomeKitchenRootView: View {
+struct HomeKitchenRootView: View {
     @State private var viewModel = KitchenViewModel(repository: LocalMealsRepository())
     @StateObject private var kitchenStore = KitchenPersistenceStore()
+    @ObservedObject private var entitlementStore = EntitlementStore.shared
+    @State private var showKitchenPaywall = false
 
     var body: some View {
-        KitchenScreen(
-            viewModel: viewModel,
-            kitchenStore: kitchenStore
-        )
+        if DevOverride.unlockAllFeatures || AccessManager.shared.canAccessKitchen {
+            KitchenScreen(
+                viewModel: viewModel,
+                kitchenStore: kitchenStore
+            )
+        } else {
+            CaptainLockedView(config: .init(
+                title: "المطبخ",
+                subtitle: "افتح المطبخ مع اشتراك AiQo Max — مسح الثلاجة وخطط الأكل على هدفك.",
+                iconSystemName: "refrigerator.fill",
+                tier: .max,
+                onUpgradeTap: { showKitchenPaywall = true }
+            ))
+            .sheet(isPresented: $showKitchenPaywall) {
+                PaywallView(source: .kitchenGate)
+            }
+        }
     }
 }
 
@@ -371,7 +398,33 @@ struct MetricDetailSheet: View {
 
         return "—"
     }
-    
+
+    /// Unit rendered as a smaller, secondary suffix after the value (e.g. "km" for distance).
+    /// Returns "" so the value stays unadorned for metrics without a trailing unit.
+    private var headerUnitSuffix: String {
+        guard resolvedHeaderValue != "—" else { return "" }
+        switch kind {
+        case .distance: return " km"
+        default:        return ""
+        }
+    }
+
+    /// The header value with its unit appended as a smaller, secondary run so the
+    /// number stays the focal point (e.g. a bold "94.29" trailed by a muted "km").
+    private var headerDisplay: AttributedString {
+        var value = AttributedString(resolvedHeaderValue)
+        value.font = .system(size: 32, weight: .bold, design: .rounded)
+
+        let suffix = headerUnitSuffix
+        guard !suffix.isEmpty else { return value }
+
+        var unit = AttributedString(suffix)
+        unit.font = .system(size: 18, weight: .semibold, design: .rounded)
+        unit.foregroundColor = .secondary
+        value.append(unit)
+        return value
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -392,8 +445,7 @@ struct MetricDetailSheet: View {
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary.opacity(0.7))
 
-                        Text(resolvedHeaderValue)
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                        Text(headerDisplay)
                             .contentTransition(.numericText())
 
                         Picker(NSLocalizedString("time.scope", value: "Time Scope", comment: ""), selection: $selectedScope) {

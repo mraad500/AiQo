@@ -4,16 +4,13 @@ import Foundation
 ///
 /// Before any data reaches the Gemini API, this service:
 /// 1. Fetches cloud-safe memories (no PII — only goals/preferences)
-/// 2. Sanitizes conversation (truncates to last 4 messages)
+/// 2. Sanitizes conversation (last 16 messages or ~6000 chars)
 /// 3. Redacts all PII (emails, phones, UUIDs, IPs)
 /// 4. Normalizes user names to "User"
-/// 5. Buckets health data (steps by 50, calories by 10)
+/// 5. Forwards health data (steps, calories, HR, sleep) at full precision so
+///    the Captain reports the user's exact numbers; privacy is governed by the
+///    cloud-AI consent gate, not by coarsening the user's own metrics.
 struct CloudBrainService: Sendable {
-    private enum GeminiModel {
-        static let fast = "gemini-2.5-flash"
-        static let reasoning = "gemini-3-flash-preview"
-    }
-
     private let transport: HybridBrainService
     private let sanitizer: PrivacySanitizer
     private let activeTierProvider: @Sendable () async -> SubscriptionTier
@@ -37,9 +34,15 @@ struct CloudBrainService: Sendable {
     ///
     /// The subsequent sanitization (`sanitizeForCloud`) runs on the caller's cooperative pool
     /// thread — never on MainActor — so regex processing cannot block the UI.
+    /// `onMessagePreview` (optional) opts this call into REAL SSE streaming:
+    /// when non-nil AND `CAPTAIN_REAL_STREAMING` is on, the primary Gemini call
+    /// streams live `message` previews through it. Defaulted nil so every
+    /// existing caller keeps the blocking path with zero change. The silent
+    /// workout-plan recovery + model fallback retries always stay blocking.
     func generateReply(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async throws -> HybridBrainServiceReply {
         if !DevOverride.unlockAllFeatures {
             guard TierGate.shared.canAccess(.captainChat) else {
@@ -49,6 +52,16 @@ struct CloudBrainService: Sendable {
         }
         let startedAt = Date()
         let latestUserMessage = request.conversation.last(where: { $0.role == .user })?.content ?? ""
+
+        // App-knowledge grounding: static, PII-free, deterministic on-device
+        // lexical retrieval — pure/sync, computed off-MainActor. Lets Captain
+        // answer "شنو Peaks؟ / شلون أستخدم المطبخ؟ / فرق الاشتراكات؟"
+        // accurately instead of hallucinating. nil on unrelated turns → no
+        // prompt bloat.
+        let appKnowledgeBlock = AppKnowledge.relevantBlock(
+            for: latestUserMessage,
+            screenHint: String(describing: request.screenContext).lowercased()
+        )
 
         // Single MainActor hop — tier, memories, consent, and coaching profile
         // in one round-trip.
@@ -88,51 +101,192 @@ struct CloudBrainService: Sendable {
             request,
             knownUserName: userName,
             cloudSafeProfile: cloudSafeProfile,
-            cloudSafeMemories: cloudSafeMemories
+            cloudSafeMemories: cloudSafeMemories,
+            cloudSafeAppKnowledge: appKnowledgeBlock ?? ""
         )
 
+        // Model is gated by `GEMINI_3_PREVIEW_ENABLED`: when the flag is OFF,
+        // `GeminiModelPolicy.reasoning == .fast`, so every tier uses the stable
+        // `gemini-2.5-flash` and no preview call is ever made.
         let aiModel = activeTier.effectiveAccessTier == .pro
-            ? GeminiModel.reasoning
-            : GeminiModel.fast
+            ? GeminiModelPolicy.reasoning
+            : GeminiModelPolicy.fast
         let promptBytes = Self.estimatedPromptBytes(of: sanitizedRequest)
 
-        do {
-            let reply = try await transport.generateReply(
-                request: sanitizedRequest,
-                model: aiModel
-            )
-            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+        // Audits a successful call and runs the silent workout-plan recovery, so
+        // the primary path and the fallback path get identical treatment.
+        func finalize(_ reply: HybridBrainServiceReply, model: String, callStartedAt: Date) async -> HybridBrainServiceReply {
             await AuditLogger.shared.record(AuditLogger.Entry(
                 id: UUID(),
-                timestamp: startedAt,
-                destination: aiModel,
+                timestamp: callStartedAt,
+                destination: model,
                 tier: activeTier.auditLabel,
                 promptBytes: promptBytes,
                 responseBytes: reply.message.utf8.count,
-                latencyMs: latencyMs,
+                latencyMs: Int(Date().timeIntervalSince(callStartedAt) * 1000),
                 consentGranted: true,
                 sanitizationApplied: true,
                 purpose: request.purpose.rawValue,
                 outcome: .success
             ))
+
+            // Reliability guarantee: when the user clearly asked for a workout
+            // plan (gym screen + plan-request phrasing) but the model replied
+            // with prose only and `workoutPlan == nil`, the user otherwise has
+            // to manually re-ask ("دز الخطة"). Do that one retry silently here
+            // so the failed first pass is never surfaced, then merge the rich
+            // first message with the recovered structured plan.
+            if reply.workoutPlan == nil, Self.looksLikePlanRequest(sanitizedRequest) {
+                let retryStartedAt = Date()
+                if let recovered = try? await Self.retryForWorkoutPlan(
+                    base: sanitizedRequest,
+                    firstReply: reply,
+                    transport: transport,
+                    model: model
+                ) {
+                    await AuditLogger.shared.record(AuditLogger.Entry(
+                        id: UUID(),
+                        timestamp: retryStartedAt,
+                        destination: model,
+                        tier: activeTier.auditLabel,
+                        promptBytes: promptBytes,
+                        responseBytes: recovered.message.utf8.count,
+                        latencyMs: Int(Date().timeIntervalSince(retryStartedAt) * 1000),
+                        consentGranted: true,
+                        sanitizationApplied: true,
+                        purpose: request.purpose.rawValue,
+                        outcome: recovered.workoutPlan == nil ? .failure : .success
+                    ))
+                    if recovered.workoutPlan != nil {
+                        return recovered
+                    }
+                }
+            }
+
             return reply
-        } catch {
-            let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+        }
+
+        // Audits a failed call (metadata only — never content).
+        func auditFailure(model: String, callStartedAt: Date) async {
             await AuditLogger.shared.record(AuditLogger.Entry(
                 id: UUID(),
-                timestamp: startedAt,
-                destination: aiModel,
+                timestamp: callStartedAt,
+                destination: model,
                 tier: activeTier.auditLabel,
                 promptBytes: promptBytes,
                 responseBytes: 0,
-                latencyMs: latencyMs,
+                latencyMs: Int(Date().timeIntervalSince(callStartedAt) * 1000),
                 consentGranted: true,
                 sanitizationApplied: true,
                 purpose: request.purpose.rawValue,
                 outcome: .failure
             ))
-            throw error
         }
+
+        do {
+            let reply: HybridBrainServiceReply
+            if let onMessagePreview, FeatureFlags.captainRealStreaming {
+                reply = try await transport.generateReplyStreaming(
+                    request: sanitizedRequest,
+                    model: aiModel,
+                    onMessagePreview: onMessagePreview
+                )
+            } else {
+                reply = try await transport.generateReply(request: sanitizedRequest, model: aiModel)
+            }
+            return await finalize(reply, model: aiModel, callStartedAt: startedAt)
+        } catch {
+            await auditFailure(model: aiModel, callStartedAt: startedAt)
+
+            // Automatic fallback: a preview-model failure/timeout retries once on
+            // the stable `gemini-2.5-flash` so the user never feels it. Only fires
+            // when the failed call actually used a non-fast (preview) model.
+            guard aiModel != GeminiModelPolicy.fast else { throw error }
+            diag.info("CloudBrainService: \(aiModel) failed (\(error.localizedDescription)); falling back to \(GeminiModelPolicy.fast)")
+            let fallbackStartedAt = Date()
+            do {
+                let fallbackReply = try await transport.generateReply(request: sanitizedRequest, model: GeminiModelPolicy.fast)
+                return await finalize(fallbackReply, model: GeminiModelPolicy.fast, callStartedAt: fallbackStartedAt)
+            } catch {
+                await auditFailure(model: GeminiModelPolicy.fast, callStartedAt: fallbackStartedAt)
+                throw error
+            }
+        }
+    }
+
+    /// True when the latest user message is asking for a workout — in the gym
+    /// screen OR the main Captain chat. The recovery retry only fires when the
+    /// first reply already came back with `workoutPlan == nil` (see call site),
+    /// so a correct first reply never pays the extra round-trip. Phrasings are
+    /// deliberately broad (conversational asks like "اكتبلي تمرين"، not just
+    /// "ابني خطة") because a paid user must never get a teaser instead of a
+    /// real workout.
+    private static func looksLikePlanRequest(_ request: HybridBrainRequest) -> Bool {
+        guard request.screenContext == .gym || request.screenContext == .mainChat else { return false }
+        guard let last = request.conversation
+            .last(where: { $0.role == .user })?
+            .content
+            .lowercased()
+        else { return false }
+
+        let needles = [
+            "أبني خطة", "ابني خطة", "خطة تمرين", "خطة تدريب",
+            "اعطني خطة", "اعطيني خطة", "سويلي خطة", "سو لي خطة",
+            "اكتبلي تمرين", "اكتب لي تمرين", "عطني تمرين", "عطيني تمرين",
+            "سويلي تمرين", "سو لي تمرين", "تمرين اليوم", "تمرين قوي",
+            "بدي اتمرن", "بدّي أتمرّن", "ريد تمرين", "أريد تمرين", "اريد اتمرن",
+            "build me a", "workout plan", "training plan", "personalized",
+            "write me a workout", "give me a workout", "workout for"
+        ]
+        return needles.contains { last.contains($0.lowercased()) }
+    }
+
+    /// One silent re-request that forces the structured `workoutPlan`. The
+    /// body image is intentionally NOT resent (the visual feedback is already
+    /// captured in `firstReply.message`; resending wastes bandwidth and a
+    /// vision round-trip). On success the rich first message is preserved and
+    /// the recovered plan is attached.
+    private static func retryForWorkoutPlan(
+        base: HybridBrainRequest,
+        firstReply: HybridBrainServiceReply,
+        transport: HybridBrainService,
+        model: String
+    ) async throws -> HybridBrainServiceReply {
+        let force = base.language == .arabic
+            ? "ضروري الحين ترجع نفس الخطة داخل حقل workoutPlan منظّم: title و durationWeeks و days[] (كل يوم: name و focus و exercises مع sets و repsOrDuration). خلّي message قصيرة وحط الخطة كاملة بـ workoutPlan. لا ترد نص فقط."
+            : "You MUST now return the same plan inside a structured workoutPlan object: title, durationWeeks, days[] (each day: name, focus, exercises with sets and repsOrDuration). Keep message short and put the full plan in workoutPlan. Do not reply with prose only."
+
+        var convo = base.conversation
+        convo.append(CaptainConversationMessage(role: .assistant, content: firstReply.message))
+        convo.append(CaptainConversationMessage(role: .user, content: force))
+
+        let retryRequest = HybridBrainRequest(
+            conversation: convo,
+            screenContext: base.screenContext,
+            language: base.language,
+            contextData: base.contextData,
+            userProfileSummary: base.userProfileSummary,
+            intentSummary: base.intentSummary,
+            workingMemorySummary: base.workingMemorySummary,
+            attachedImageData: nil,
+            purpose: base.purpose,
+            appKnowledge: base.appKnowledge,
+            conversationState: base.conversationState
+        )
+
+        let retry = try await transport.generateReply(request: retryRequest, model: model)
+
+        guard let plan = retry.workoutPlan else { return firstReply }
+
+        return HybridBrainServiceReply(
+            message: firstReply.message,
+            quickReplies: retry.quickReplies ?? firstReply.quickReplies,
+            workoutPlan: plan,
+            mealPlan: firstReply.mealPlan,
+            spotifyRecommendation: firstReply.spotifyRecommendation,
+            rawText: retry.rawText,
+            truncatedAtMaxTokens: retry.truncatedAtMaxTokens
+        )
     }
 
     private static func estimatedPromptBytes(of request: HybridBrainRequest) -> Int {
@@ -206,8 +360,8 @@ extension CloudBrainService {
         let startedAt = Date()
         let activeTier = await MainActor.run { AccessManager.shared.activeTier }
         let model = activeTier.effectiveAccessTier == .pro
-            ? "gemini-3-flash-preview"
-            : "gemini-2.5-flash"
+            ? GeminiModelPolicy.reasoning
+            : GeminiModelPolicy.fast
 
         guard let imageData = sanitizer.sanitizeKitchenImageData(rawImageData) else {
             throw HybridBrainServiceError.invalidResponse

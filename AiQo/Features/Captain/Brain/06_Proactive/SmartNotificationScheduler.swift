@@ -98,21 +98,25 @@ final class SmartNotificationScheduler {
 
     func refreshAutomationState() {
         Task {
-            if !DevOverride.unlockAllFeatures {
-                guard TierGate.shared.canAccess(.captainNotifications) else {
-                    diag.info("SmartNotificationScheduler.refreshAutomationState blocked by TierGate(.captainNotifications)")
-                    cancelAllAutomatedNotifications()
-                    cancelScheduledBackgroundTasks()
-                    return
-                }
-            }
+            // Basic life notifications (water / streak / sleep / workout /
+            // weekly reminder) are available to EVERY tier incl. `.none` —
+            // they keep free + post-trial users engaged. The "smart Captain"
+            // background nudges (coach nudge + AI inactivity) still require
+            // `.max`+ via `.captainNotifications`.
+            let canSmart = DevOverride.unlockAllFeatures
+                || TierGate.shared.canAccess(.captainNotifications)
 
             let granted = await requestPermission()
             guard granted else { return }
 
             if AppSettingsStore.shared.notificationsEnabled {
                 scheduleRecurringNotifications()
-                scheduleBackgroundTasksIfNeeded()
+                if canSmart {
+                    scheduleBackgroundTasksIfNeeded()
+                } else {
+                    diag.info("SmartNotificationScheduler: basic-life recurring only (TierGate.captainNotifications denied)")
+                    cancelScheduledBackgroundTasks()
+                }
             } else {
                 cancelAllAutomatedNotifications()
                 cancelScheduledBackgroundTasks()
@@ -269,19 +273,28 @@ final class SmartNotificationScheduler {
     private func scheduleWaterReminders() {
         cancelCategory("water_reminder")
 
-        let messages = [
-            "\(UserProfileStore.shared.current.name)! جسمك يحتاج ماء 💧 اشرب كوب الحين",
+        let isArabic = preferredCoachLanguage() == .arabic
+        let name = UserProfileStore.shared.current.name
+        let messages = isArabic ? [
+            "\(name)! جسمك يحتاج ماء 💧 اشرب كوب الحين",
             "وقت الماء! 💧 خلّي جسمك رطب",
             "كابتن حمّودي يقول: اشرب ماي يا بطل 💧",
             "هيدريشن تايم! 💧 كوب ماء وكمّل يومك",
             "ما تنسى الماء! جسمك يشكرك 💧",
+        ] : [
+            "\(name)! Your body needs water 💧 Have a glass now",
+            "Water time! 💧 Keep your body hydrated",
+            "Captain Hamoudi says: drink up, champ 💧",
+            "Hydration time! 💧 A glass of water and keep going",
+            "Don't forget your water! Your body will thank you 💧",
         ]
 
+        let title = isArabic ? "💧 وقت الماء" : "💧 Water time"
         let hours = [10, 12, 14, 16, 18, 20]
         for (index, hour) in hours.enumerated() {
             scheduleRecurringRequest(
                 identifier: "water_reminder_\(hour)",
-                title: "💧 وقت الماء",
+                title: title,
                 body: messages[index % messages.count],
                 categoryIdentifier: "water_reminder",
                 threadIdentifier: "aiqo.hydration",
@@ -297,7 +310,8 @@ final class SmartNotificationScheduler {
         let reminderTime = CaptainPersonalizationStore.shared.workoutReminderTime()
             ?? CaptainWorkoutTimePreference.evening.reminderTime
 
-        let messages = [
+        let isArabic = preferredCoachLanguage() == .arabic
+        let messages = isArabic ? [
             "يلا يا بطل! وقت التمرين 💪 جسمك ينتظرك",
             "كابتن حمّودي جاهز! يلا نتمرن 🔥",
             "30 دقيقة بس وبتحس بفرق هائل 💪",
@@ -305,11 +319,19 @@ final class SmartNotificationScheduler {
             "ما في عذر اليوم! يلا قوم 🔥",
             "جسمك يستاهل أحسن نسخة منك 💪",
             "كابتن حمّودي يقول: يلا نشغّل المحرك! 🚀"
+        ] : [
+            "Let's go, champ! Workout time 💪 your body's waiting",
+            "Captain Hamoudi's ready! Let's train 🔥",
+            "Just 30 minutes and you'll feel a huge difference 💪",
+            "Today's workout builds tomorrow's body 🏋️",
+            "No excuses today! Get up 🔥",
+            "Your body deserves the best version of you 💪",
+            "Captain Hamoudi says: let's start the engine! 🚀"
         ]
 
         scheduleRecurringRequest(
             identifier: "workout_motivation_daily",
-            title: "💪 وقت التمرين!",
+            title: isArabic ? "💪 وقت التمرين!" : "💪 Workout time!",
             body: messages.randomElement() ?? messages[0],
             categoryIdentifier: "workout_motivation",
             threadIdentifier: "aiqo.workout",
@@ -324,10 +346,13 @@ final class SmartNotificationScheduler {
         let reminderTime = CaptainPersonalizationStore.shared.sleepReminderTime(calendar: calendar)
             ?? CaptainReminderTime(hour: 22, minute: 30)
 
+        let isArabic = preferredCoachLanguage() == .arabic
         scheduleRecurringRequest(
             identifier: "sleep_reminder_nightly",
-            title: "😴 وقت النوم",
-            body: "كابتن حمّودي يقول: النوم أهم من التمرين! خلّي جسمك ينتعش الليلة. تصبح على خير 🌙",
+            title: isArabic ? "😴 وقت النوم" : "😴 Bedtime",
+            body: isArabic
+                ? "كابتن حمّودي يقول: النوم أهم من التمرين! خلّي جسمك ينتعش الليلة. تصبح على خير 🌙"
+                : "Captain Hamoudi says: sleep matters more than training! Let your body recover tonight. Good night 🌙",
             categoryIdentifier: "sleep_reminder",
             threadIdentifier: "aiqo.sleep",
             hour: reminderTime.hour,
@@ -338,10 +363,13 @@ final class SmartNotificationScheduler {
     private func scheduleStreakProtection() {
         cancelCategory("streak_protection")
 
+        let isArabic = preferredCoachLanguage() == .arabic
         scheduleRecurringRequest(
             identifier: "streak_protection_evening",
-            title: "🔥 الـ Streak بخطر!",
-            body: "لسه ما حققت هدفك اليوم! مشي سريع 15 دقيقة يكفي. لا تخلي الـ streak ينكسر 💪",
+            title: isArabic ? "🔥 الـ Streak بخطر!" : "🔥 Your streak's at risk!",
+            body: isArabic
+                ? "لسه ما حققت هدفك اليوم! مشي سريع 15 دقيقة يكفي. لا تخلي الـ streak ينكسر 💪"
+                : "You haven't hit today's goal yet! A brisk 15-minute walk is enough. Don't let the streak break 💪",
             categoryIdentifier: "streak_protection",
             threadIdentifier: "aiqo.streak",
             hour: 20,
@@ -353,10 +381,13 @@ final class SmartNotificationScheduler {
     private func scheduleWeeklyReportReminder() {
         cancelCategory("weekly_report")
 
+        let isArabic = preferredCoachLanguage() == .arabic
         scheduleRecurringRequest(
             identifier: "weekly_report_friday",
-            title: "📊 تقريرك الأسبوعي جاهز!",
-            body: "كابتن حمّودي حضّر ملخص أسبوعك. تعال شوف شلون كان أداءك! 🏆",
+            title: isArabic ? "📊 تقريرك الأسبوعي جاهز!" : "📊 Your weekly report is ready!",
+            body: isArabic
+                ? "كابتن حمّودي حضّر ملخص أسبوعك. تعال شوف شلون كان أداءك! 🏆"
+                : "Captain Hamoudi prepared your week's summary. Come see how you did! 🏆",
             categoryIdentifier: "weekly_report",
             threadIdentifier: "aiqo.report",
             hour: 10,
@@ -394,8 +425,8 @@ final class SmartNotificationScheduler {
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         if !DevOverride.unlockAllFeatures {
-            guard TierGate.shared.canAccess(.captainNotifications) else {
-                diag.info("SmartNotificationScheduler recurring add blocked by TierGate(.captainNotifications)")
+            guard TierGate.shared.canAccess(.basicLifeNotifications) else {
+                diag.info("SmartNotificationScheduler recurring add blocked by TierGate(.basicLifeNotifications)")
                 return
             }
         }
@@ -515,10 +546,22 @@ final class SmartNotificationScheduler {
             let decision = ProactiveEngine.shared.evaluate(context: context)
             switch decision {
             case .sendNotification(let content, _, _):
+                // Brain V2 generates Iraqi-Arabic content. Honor it verbatim for
+                // Arabic users; the English cohort gets a localized body via the
+                // proven template path so they never receive an Arabic-only push
+                // (the Brain V2 timing decision still applies to both).
+                let language = preferredCoachLanguage()
+                let body: String
+                if language == .arabic {
+                    body = content
+                } else {
+                    let healthContext = await loadHealthContext()
+                    body = coachTemplateBody(for: healthContext, language: language)
+                }
                 do {
                     try await scheduleLocalNotification(
-                        title: "كابتن حمودي",
-                        body: content,
+                        title: language == .arabic ? "كابتن حمودي" : "Captain Hamoudi",
+                        body: body,
                         timeInterval: 2,
                         notificationType: "coach_nudge"
                     )
@@ -558,12 +601,10 @@ final class SmartNotificationScheduler {
         language: CoachNotificationLanguage
     ) -> String {
         let input = IraqiCoachTemplates.Input(
-            steps: (context.steps / 500) * 500,
+            steps: max(0, context.steps),
             stepGoal: defaultStepGoal,
-            heartRate: context.heartRate.map { ($0 / 5) * 5 },
-            sleepHours: context.sleepHours > 0
-                ? (context.sleepHours * 2).rounded() / 2
-                : nil,
+            heartRate: context.heartRate.map { max(0, $0) },
+            sleepHours: context.sleepHours > 0 ? max(0, context.sleepHours) : nil,
             timeOfDay: currentTimeOfDay()
         )
 
@@ -616,10 +657,24 @@ final class SmartNotificationScheduler {
             let decision = ProactiveEngine.shared.evaluate(context: context)
             switch decision {
             case .sendNotification(let content, _, _):
+                // Brain V2 content is Iraqi-Arabic; localize the body for the
+                // English cohort so they never get an Arabic-only push.
+                let language = preferredCoachLanguage()
+                let notifBody: String
+                if language == .arabic {
+                    notifBody = content
+                } else {
+                    notifBody = await notificationComposer.composeInactivityNotification(
+                        metrics: metrics,
+                        now: now,
+                        language: .english,
+                        level: await MainActor.run { max(LevelStore.shared.level, 1) }
+                    )
+                }
                 do {
                     try await scheduleLocalNotification(
-                        title: "كابتن حمودي",
-                        body: content,
+                        title: language == .arabic ? "كابتن حمودي" : "Captain Hamoudi",
+                        body: notifBody,
                         timeInterval: 1,
                         notificationType: "midday_inactivity"
                     )
@@ -635,16 +690,17 @@ final class SmartNotificationScheduler {
         }
 
         // Legacy fallback
+        let language = preferredCoachLanguage()
         let body = await notificationComposer.composeInactivityNotification(
             metrics: metrics,
             now: now,
-            language: .arabic,
+            language: language == .arabic ? .arabic : .english,
             level: await MainActor.run { max(LevelStore.shared.level, 1) }
         )
 
         do {
             try await scheduleLocalNotification(
-                title: "كابتن حمودي",
+                title: language == .arabic ? "كابتن حمودي" : "Captain Hamoudi",
                 body: body,
                 timeInterval: 1,
                 notificationType: "midday_inactivity"

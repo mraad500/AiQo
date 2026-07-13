@@ -368,7 +368,7 @@ struct WeeklyReviewView: View {
                 ?? normalized(env["COACH_BRAIN_LLM_API_KEY"])
                 ?? normalized(info["COACH_BRAIN_LLM_API_KEY"] as? String)
 
-            guard let apiKey, let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=\(apiKey)") else {
+            guard let apiKey, let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(GeminiModelPolicy.reasoning):generateContent?key=\(apiKey)") else {
                 return nil
             }
 

@@ -7,10 +7,80 @@
     "meal_type": "breakfast"
   },
   {
+    "id": 4,
+    "name_ar": "شوفان بالحليب والموز",
+    "name_en": "Oatmeal with Milk & Banana",
+    "calories_kcal": 320,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 6,
+    "name_ar": "لبنة مع زيت زيتون وخبز",
+    "name_en": "Labneh with Olive Oil & Bread",
+    "calories_kcal": 340,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 7,
+    "name_ar": "زبادي يوناني مع عسل ومكسرات",
+    "name_en": "Greek Yogurt with Honey & Nuts",
+    "calories_kcal": 290,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 8,
+    "name_ar": "فول مدمس مع خبز",
+    "name_en": "Ful Medames with Bread",
+    "calories_kcal": 360,
+    "meal_type": "breakfast"
+  },
+  {
+    "id": 9,
+    "name_ar": "بيض مقلي مع جبن",
+    "name_en": "Fried Eggs with Cheese",
+    "calories_kcal": 380,
+    "meal_type": "breakfast"
+  },
+  {
     "id": 2,
     "name_ar": "ستيك لحم مشوي",
     "name_en": "Grilled Beef Steak",
     "calories_kcal": 520,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 5,
+    "name_ar": "دجاج مشوي مع رز",
+    "name_en": "Grilled Chicken with Rice",
+    "calories_kcal": 480,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 10,
+    "name_ar": "سمك مشوي مع خضار",
+    "name_en": "Grilled Fish with Vegetables",
+    "calories_kcal": 430,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 11,
+    "name_ar": "كباب مع رز",
+    "name_en": "Kebab with Rice",
+    "calories_kcal": 610,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 12,
+    "name_ar": "مجدرة (عدس مع رز)",
+    "name_en": "Mujaddara (Lentils & Rice)",
+    "calories_kcal": 400,
+    "meal_type": "lunch"
+  },
+  {
+    "id": 13,
+    "name_ar": "دجاج بالكاري مع رز",
+    "name_en": "Chicken Curry with Rice",
+    "calories_kcal": 540,
     "meal_type": "lunch"
   },
   {
@@ -21,24 +91,38 @@
     "meal_type": "dinner"
   },
   {
-    "id": 4,
-    "name_ar": "بياض بيض مع خضار - نسخة ثانية",
-    "name_en": "Egg Whites with Veggies - 2",
-    "calories_kcal": 300,
-    "meal_type": "breakfast"
-  },
-  {
-    "id": 5,
-    "name_ar": "ستيك لحم مشوي مع صلصة",
-    "name_en": "Grilled Beef Steak with Sauce",
-    "calories_kcal": 566,
-    "meal_type": "lunch"
-  },
-  {
     "id": 1009,
     "name_ar": "دجاج مشوي مع سلطة",
     "name_en": "Grilled Chicken with Salad",
     "calories_kcal": 400,
+    "meal_type": "dinner"
+  },
+  {
+    "id": 14,
+    "name_ar": "شوربة عدس مع خبز",
+    "name_en": "Lentil Soup with Bread",
+    "calories_kcal": 300,
+    "meal_type": "dinner"
+  },
+  {
+    "id": 15,
+    "name_ar": "فتوش مع دجاج مشوي",
+    "name_en": "Fattoush with Grilled Chicken",
+    "calories_kcal": 360,
+    "meal_type": "dinner"
+  },
+  {
+    "id": 16,
+    "name_ar": "بيض مسلوق مع خضار",
+    "name_en": "Boiled Eggs with Veggies",
+    "calories_kcal": 260,
+    "meal_type": "dinner"
+  },
+  {
+    "id": 17,
+    "name_ar": "تبولة مع حمص",
+    "name_en": "Tabbouleh with Hummus",
+    "calories_kcal": 340,
     "meal_type": "dinner"
   }
 ]

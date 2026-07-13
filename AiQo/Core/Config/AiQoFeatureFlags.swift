@@ -52,8 +52,40 @@ enum FeatureFlags {
     @FeatureFlag("MEMORY_V4_ENABLED", default: false)
     static var memoryV4Enabled: Bool
 
+    /// Master switch for the NotificationBrain proactive notification pipeline
+    /// (`NotificationBrain.shared.subscribe()`). When ON, XP grants, streak
+    /// increments, and streak-risk windows can fire local notifications routed
+    /// through the same 4-gate budget/cooldown/persona/privacy pipeline used
+    /// by trigger-driven nudges.
+    @FeatureFlag("NOTIFICATION_BRAIN_ENABLED", default: false)
+    static var notificationBrainEnabled: Bool
+
     @FeatureFlag("CAPTAIN_BRAIN_V2_ENABLED", default: false)
     static var brainV2Enabled: Bool
+
+    /// Master kill switch for the `gemini-3-flash-preview` reasoning model.
+    /// OFF by default: preview models can change behavior, hit tighter rate
+    /// limits, or be withdrawn by Google without notice, so we don't bind the
+    /// paid Pro tier to one unless we explicitly opt in. When OFF, every cloud
+    /// call uses the stable `gemini-2.5-flash` (see `GeminiModelPolicy`). The
+    /// `captain-chat` Edge Function whitelists both models, so this flip is
+    /// purely client-side.
+    @FeatureFlag("GEMINI_3_PREVIEW_ENABLED", default: false)
+    static var gemini3PreviewEnabled: Bool
+
+    /// Master switch for full-fidelity 3D rendering (OutdoorRun realistic-
+    /// elevation satellite map + pitched chase camera, and the RealityKit Captain
+    /// avatar). ON by default. `DevicePerformanceTier` additionally auto-downgrades
+    /// on lower-RAM devices and when the device is thermally stressed — set this to
+    /// NO to force the lighter path (flat imagery, fixed camera, 2D avatar) everywhere.
+    @FeatureFlag("HIGH_FIDELITY_3D_ENABLED", default: true)
+    static var highFidelity3DEnabled: Bool
+
+    /// As of v1.0.4, controls whether `CrisisDetector.shared` is registered in
+    /// AppDelegate. CrisisDetector is a passive safety-net actor — instantiating
+    /// it via the singleton is sufficient to put it in the DI graph.
+    @FeatureFlag("CRISIS_DETECTOR_ENABLED", default: false)
+    static var crisisDetectorEnabled: Bool
 
     /// Master kill switch for the Captain Chat v1.1 rebuild (Apple rejection fix
     /// submission 49728905 — guidelines 1.4.1, 2.1.0, 4.0.0). When ON, the chat
@@ -70,6 +102,17 @@ enum FeatureFlags {
 
     @FeatureFlag("TRIBE_SUBSCRIPTION_GATE_ENABLED", default: false)
     static var tribeSubscriptionGateEnabled: Bool
+
+    /// Master switch for the Kernel (النواة) — a digital-wellbeing app lock built
+    /// on Family Controls + DeviceActivity. The code-level default is OFF, but
+    /// `AiQo/Info.plist` ships it ON, so the Kernel is LIVE + Max-gated as of
+    /// v1.0.7 (build 30): real shielding (ManagedSettings/DeviceActivity),
+    /// steps→unlock escalation, a live on-device Captain trainer, and the
+    /// calm-hold + guided-breathing friction to disable. When ON, the Max-gated
+    /// Kernel entry (Profile → AiQo) becomes reachable. Flip the Info.plist value
+    /// to NO to dark-launch a rollback without a code change.
+    @FeatureFlag("KERNEL_ENABLED", default: false)
+    static var kernelEnabled: Bool
 
     // MARK: - Learning Spark (Stage 1) — flag group added 2026-04-19
     //
@@ -213,6 +256,28 @@ enum FeatureFlags {
     // See `/supabase/functions/README.md` (runbook) for the full deploy flow.
     @FeatureFlag("USE_CLOUD_PROXY", default: false)
     static var useCloudProxy: Bool
+
+    // MARK: - Captain real token streaming (SSE) — 2026-06-15
+    //
+    // When ON, paid-tier cloud Captain replies stream LIVE token-by-token from
+    // Gemini's `streamGenerateContent` (SSE) — first text appears in ~1s
+    // instead of the user staring at a typing indicator for the full 12–22s
+    // generation, then seeing a client-side fake "reveal" of an
+    // already-complete reply.
+    //
+    // OFF by default (ship-safe): the proven blocking path + progressive-reveal
+    // animation stays the default. The streamed live text is best-effort
+    // cosmetic; the authoritative reply is always re-parsed from the complete
+    // stream by `LLMJSONParser`, so memory/plans/quick-replies are unchanged.
+    //
+    // Requirements before flipping ON:
+    //   1. Deploy the updated `captain-chat` Edge Function (adds the `stream`
+    //      branch → `streamGenerateContent?alt=sse`).
+    //   2. Verify on a physical device on the paid tier (simulator + Apple
+    //      Intelligence + live proxy can't exercise the full path).
+    // Falls back to the blocking path automatically on any streaming error.
+    @FeatureFlag("CAPTAIN_REAL_STREAMING", default: false)
+    static var captainRealStreaming: Bool
 
     // MARK: - Per-path proxy overrides — 2026-04-26
     //

@@ -5,12 +5,10 @@ import Combine
 struct MainTabScreen: View {
     @ObservedObject private var tabRouter = MainTabRouter.shared
     @ObservedObject private var appRootManager = AppRootManager.shared
-    private let tierGate = TierGate.shared
-    private let appTint = Color.aiqoAccent
+    private let appTint = Color(hex: "FFDF63")
 
     @State private var showLevelUp = false
     @State private var levelUpLevel = 0
-    @State private var showCaptainPaywall = false
 
     var body: some View {
         Group {
@@ -51,24 +49,27 @@ struct MainTabScreen: View {
             .accessibilityHint(L10n.t("tab.gym.hint"))
 
             NavigationStack {
+                HomeKitchenRootView()
+            }
+            .tag(MainTabRouter.Tab.kitchen)
+            .tabItem {
+                Label(
+                    L10n.t("tab.kitchen"),
+                    systemImage: "fork.knife"
+                )
+            }
+            .accessibilityHint(L10n.t("tab.kitchen.hint"))
+
+            NavigationStack {
                 Group {
-                    if DevOverride.unlockAllFeatures || tierGate.canAccess(.captainChat) {
-                        CaptainScreen()
-                            .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
-                                CaptainChatView()
-                            }
-                    } else {
-                        CaptainLockedView(config: .init(
-                            title: "محادثة حمودي",
-                            subtitle: "افتح الكابتن حمودي كامل مع اشتراك AiQo. كل الميزات، بلهجتك، في أي وقت.",
-                            iconSystemName: "message.badge.waveform.fill",
-                            tier: tierGate.requiredTier(for: .captainChat),
-                            onUpgradeTap: { showCaptainPaywall = true }
-                        ))
-                        .sheet(isPresented: $showCaptainPaywall) {
-                            PaywallView(source: .captainGate)
+                    // Captain is open to EVERY tier: free runs fully on-device
+                    // (Apple Intelligence — dynamic, private, uncapped); Max+ adds
+                    // the cloud brain + durable memory. The tier split lives in
+                    // CaptainViewModel, not here.
+                    CaptainScreen()
+                        .navigationDestination(isPresented: $appRootManager.isCaptainChatPresented) {
+                            CaptainChatView()
                         }
-                    }
                 }
             }
             .tag(MainTabRouter.Tab.captain)
@@ -111,12 +112,13 @@ struct MainTabScreen: View {
         appearance.shadowColor = .clear
         appearance.shadowImage = UIImage()
 
-        let selectedColor = Colors.accent
+        let selectedColor = UIColor(Color(hex: "FFDF63"))
         let unselectedColor = UIColor.systemGray
 
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: selectedColor
+            .foregroundColor: selectedColor,
+            .font: UIFont.boldSystemFont(ofSize: 10)
         ]
 
         appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor

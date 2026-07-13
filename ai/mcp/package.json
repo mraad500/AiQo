@@ -1,0 +1,21 @@
+{
+  "name": "aiqo-knowledge-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Model Context Protocol server exposing the AiQo public knowledge API (features, pricing, Captain Hamoudi, glossary, FAQ, search) as MCP tools.",
+  "bin": {
+    "aiqo-knowledge-mcp": "server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "inspect": "npx @modelcontextprotocol/inspector node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

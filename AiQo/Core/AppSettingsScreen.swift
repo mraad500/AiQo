@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UserNotifications
 import Supabase
 
@@ -9,9 +10,14 @@ struct AppSettingsScreen: View {
     /// Observed so the "Captain Voice" row's subtitle updates live when the
     /// user grants or revokes cloud-voice consent from `VoiceSettingsScreen`.
     @StateObject private var voiceConsent = CaptainVoiceConsent.shared
+    /// Body-photo consent observer. Drives the subtitle of `bodyPhotoRow`
+    /// so the user can tell at a glance whether the dedicated cloud-vision
+    /// path for plan tailoring is opted in.
+    @StateObject private var bodyPhotoConsent = BodyPhotoConsent.shared
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
+    @State private var deleteAccountErrorMessage: String?
     @State private var showAcknowledgements = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
@@ -212,6 +218,7 @@ struct AppSettingsScreen: View {
                 }
 
                 captainVoiceRow
+                bodyPhotoRow
 
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -361,6 +368,7 @@ struct AppSettingsScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+
         }
         .navigationTitle(
             NSLocalizedString(
@@ -444,6 +452,19 @@ struct AppSettingsScreen: View {
                 )
             )
         }
+        .alert(
+            NSLocalizedString("settings.deleteAccount.error.title", value: "Couldn't delete account", comment: ""),
+            isPresented: Binding(
+                get: { deleteAccountErrorMessage != nil },
+                set: { if !$0 { deleteAccountErrorMessage = nil } }
+            )
+        ) {
+            Button(NSLocalizedString("settings.ok", value: "OK", comment: ""), role: .cancel) {
+                deleteAccountErrorMessage = nil
+            }
+        } message: {
+            Text(deleteAccountErrorMessage ?? "")
+        }
         .sheet(isPresented: $showAcknowledgements) {
             LegalView(type: .acknowledgements)
         }
@@ -465,11 +486,22 @@ struct AppSettingsScreen: View {
                     .rpc("delete_user_account")
                     .execute()
             } catch {
-                // Even if the server-side deletion fails, sign out locally.
-                // The user can contact support if server-side cleanup is needed.
                 #if DEBUG
                 print("Account deletion RPC failed:", error)
                 #endif
+                // The confirmation promised PERMANENT deletion. If the server
+                // call fails we must NOT sign the user out and imply success —
+                // their data still exists. Surface the failure so they can retry
+                // (App Store Guideline 5.1.1(v): deletion must actually work).
+                await MainActor.run {
+                    isDeletingAccount = false
+                    deleteAccountErrorMessage = NSLocalizedString(
+                        "settings.deleteAccount.error.message",
+                        value: "We couldn't delete your account right now. Please check your connection and try again, or contact support if this keeps happening.",
+                        comment: "Account deletion failure"
+                    )
+                }
+                return
             }
 
             await MainActor.run {
@@ -538,6 +570,41 @@ private extension AppSettingsScreen {
             return isArabic ? "الصوت المحسّن مفعّل" : "Enhanced voice on"
         }
         return isArabic ? "الصوت المحلي فقط" : "Local voice only"
+    }
+
+    /// Dedicated row for the body-photo consent (Plan tailoring via Gemini
+    /// vision). Sibling of `captainVoiceRow` under Privacy & AI Data; the
+    /// subtitle reflects live `BodyPhotoConsent` state.
+    @ViewBuilder
+    var bodyPhotoRow: some View {
+        NavigationLink {
+            BodyPhotoSettingsScreen()
+        } label: {
+            let isArabic = AppSettingsStore.shared.appLanguage == .arabic
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isArabic ? "صورة الجسم (الخطة)" : "Body photo (Plan)")
+                        .foregroundStyle(.primary)
+
+                    Text(bodyPhotoSubtitle(isArabic: isArabic))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "person.crop.rectangle.stack")
+                    .foregroundStyle(AiQoColors.mintSoft)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    func bodyPhotoSubtitle(isArabic: Bool) -> String {
+        if bodyPhotoConsent.isGranted {
+            return isArabic ? "إرسال صورة الجسم مفعّل" : "Body photo sending on"
+        }
+        return isArabic ? "الخطط بدون صورة" : "Plans without a photo"
     }
 }
 

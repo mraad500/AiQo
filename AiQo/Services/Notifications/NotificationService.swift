@@ -656,7 +656,25 @@ final class AIWorkoutSummaryService {
         guard !shouldSkipFingerprint(fingerprint, endedAt: endedAt) else { return }
 
         let language = preferredLanguage()
-        let message = fallbackMessage(
+
+        // 11_Directives — if the user taught a standing "after every workout"
+        // directive, the engine composes the analyze+compare body and we send
+        // THAT instead of the generic line. This is the execution arm of the
+        // learn → save → remember → execute loop. Falls back to the static
+        // summary when no directive is active or the tier gate is closed.
+        let workoutSnapshot = DirectiveWorkoutSnapshot(
+            workoutType: workoutType,
+            durationSeconds: Int(duration.rounded()),
+            activeCalories: keyMetrics["calories"] ?? 0,
+            averageHeartRate: keyMetrics["averageHeartRate"] ?? 0,
+            distanceKm: keyMetrics["distanceKm"] ?? 0,
+            zone2Percent: keyMetrics["zone2Percent"] ?? 0,
+            peakPercent: keyMetrics["peakPercent"] ?? 0,
+            endedAt: endedAt
+        )
+        let directiveBody = await DirectiveEngine.shared.handleWorkoutCompleted(workoutSnapshot)
+
+        let message = directiveBody ?? fallbackMessage(
             language: language,
             workoutType: workoutType,
             duration: duration,

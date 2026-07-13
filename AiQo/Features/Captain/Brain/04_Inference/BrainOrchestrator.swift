@@ -36,7 +36,8 @@ struct BrainOrchestrator: Sendable {
 
     func processMessage(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async throws -> HybridBrainServiceReply {
         let routedRequest = interceptSleepIntent(request)
         let safetyDecision = await wellbeingDecision(for: routedRequest)
@@ -64,7 +65,11 @@ struct BrainOrchestrator: Sendable {
             baseReply = await processLocalRoute(request: routedRequest, userName: userName)
 
         case .cloud:
-            baseReply = await processCloudRoute(request: routedRequest, userName: userName)
+            baseReply = await processCloudRoute(
+                request: routedRequest,
+                userName: userName,
+                onMessagePreview: onMessagePreview
+            )
         }
 
         let personalizedReply = personalizeReply(
@@ -90,7 +95,9 @@ struct BrainOrchestrator: Sendable {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
 
         return HybridBrainStreamingSession(
@@ -222,11 +229,16 @@ private extension BrainOrchestrator {
 
     func processCloudRoute(
         request: HybridBrainRequest,
-        userName: String?
+        userName: String?,
+        onMessagePreview: (@Sendable (String) async -> Void)? = nil
     ) async -> HybridBrainServiceReply {
         do {
             logger.notice("cloud_request_started")
-            let reply = try await cloudService.generateReply(request: request, userName: userName)
+            let reply = try await cloudService.generateReply(
+                request: request,
+                userName: userName,
+                onMessagePreview: onMessagePreview
+            )
             logger.notice("cloud_request_succeeded")
             await persistIfMemoryEnabled(request: request, reply: reply)
             return reply
@@ -553,7 +565,9 @@ private extension BrainOrchestrator {
             quickReplies: screenContext == .sleepAnalysis ? nil : reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
         let rawText = try? encode(structuredResponse)
 
@@ -563,6 +577,8 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
+            savedMemory: structuredResponse.savedMemory,
+            reminder: structuredResponse.reminder,
             rawText: rawText ?? reply.rawText,
             // Pass through — name injection does not change generation.
             truncatedAtMaxTokens: reply.truncatedAtMaxTokens
@@ -603,7 +619,9 @@ private extension BrainOrchestrator {
             quickReplies: reply.quickReplies,
             workoutPlan: reply.workoutPlan,
             mealPlan: reply.mealPlan,
-            spotifyRecommendation: reply.spotifyRecommendation
+            spotifyRecommendation: reply.spotifyRecommendation,
+            savedMemory: reply.savedMemory,
+            reminder: reply.reminder
         )
         let rawText = (try? encode(structuredResponse)) ?? message
 
@@ -613,6 +631,8 @@ private extension BrainOrchestrator {
             workoutPlan: structuredResponse.workoutPlan,
             mealPlan: structuredResponse.mealPlan,
             spotifyRecommendation: structuredResponse.spotifyRecommendation,
+            savedMemory: structuredResponse.savedMemory,
+            reminder: structuredResponse.reminder,
             rawText: rawText,
             // Pass through — wellbeing prefix does not change generation.
             truncatedAtMaxTokens: reply.truncatedAtMaxTokens
@@ -820,13 +840,15 @@ private extension BrainOrchestrator {
 
 private extension BrainOrchestrator {
     /// Persists a successful LLM exchange to EpisodicStore and kicks off non-blocking
-    /// fact extraction into SemanticStore. Only runs when MEMORY_V4_ENABLED.
-    /// Never called on error / fallback paths — we don't poison memory with canned replies.
+    /// fact extraction into SemanticStore. Only runs when `MemoryV4Gate.isOn`
+    /// (Info.plist flag AND remote kill switch off AND no local migration-failure
+    /// fallback). Never called on error / fallback paths — we don't poison memory
+    /// with canned replies.
     func persistIfMemoryEnabled(
         request: HybridBrainRequest,
         reply: HybridBrainServiceReply
     ) async {
-        guard FeatureFlags.memoryV4Enabled else { return }
+        guard MemoryV4Gate.isOn else { return }
 
         let userMessage = latestUserMessage(in: request)
         let captainResponse = reply.message

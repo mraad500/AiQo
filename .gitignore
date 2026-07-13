@@ -21,6 +21,12 @@ Packages/
 
 # Local Codex/Claude worktrees should not be tracked by the app repo.
 .claude/worktrees/
+# Transient scheduled-tasks lock (tool artifact, not project state).
+.claude/scheduled_tasks.lock
 
 # Local web app lives in its own Git repo; ignore it in the iOS app repo.
 /aiqo-web/
+
+# generated docs & tool caches
+__pycache__/
+output/

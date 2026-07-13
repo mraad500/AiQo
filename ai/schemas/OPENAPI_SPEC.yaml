@@ -1,0 +1,664 @@
+openapi: 3.1.0
+
+# =============================================================================
+# AiQo Public API — OpenAPI 3.1 specification
+# -----------------------------------------------------------------------------
+# This is the canonical, machine-readable contract for connecting external AI
+# systems (OpenAI Custom GPTs / Actions, MCP servers, autonomous agents) to
+# AiQo.
+#
+# It defines THREE surfaces, deliberately separated by trust level:
+#
+#   1. PUBLIC KNOWLEDGE API  (tag: knowledge)  — no authentication.
+#      Static + lightweight dynamic endpoints that describe the product:
+#      features, pricing, the Captain Hamoudi persona, glossary, FAQ, and a
+#      keyword search over the AiQo knowledge base. SAFE to expose to a public
+#      Custom GPT. Carries NO user data and never spends LLM quota. This is the
+#      surface you import into the GPT Builder today.
+#      → see ai/actions/OPENAI_ACTIONS_SCHEMA.json for the import-ready subset.
+#
+#   2. PERSONAL API          (tag: personal)   — OAuth 2.0 (PLANNED).
+#      Lets a user connect their own AiQo account to a GPT/agent and ask about
+#      THEIR health summary, log water, or talk to Captain Hamoudi with their
+#      context. Designed here; not yet deployed. Requires the OAuth flow and
+#      the new edge functions described in GPT_INTEGRATION_GUIDE.md.
+#
+#   3. INTERNAL PROXIES      (tag: internal)    — Supabase JWT, app-only.
+#      The two live Supabase Edge Functions the iOS app already uses
+#      (captain-chat → Gemini, captain-voice → MiniMax). Documented for
+#      completeness and marked x-internal. NOT intended as OpenAI Actions:
+#      they require a first-party app session JWT and would expose raw model
+#      quota. Do NOT import these into a Custom GPT.
+#
+# Implementation note: the public knowledge endpoints are designed to be served
+# as static JSON from the marketing site (aiqo-web/public/ai/*.json) plus one
+# Next.js route handler for /api/knowledge/search. That makes the whole public
+# surface deployable by pushing the aiqo-web repo — no new infrastructure.
+# =============================================================================
+
+info:
+  title: AiQo Public API
+  version: 1.0.0
+  summary: Knowledge, persona, and (planned) personal-data API for the AiQo Bio-Digital OS.
+  description: |
+    **AiQo** is an Arabic-first, AI-native health companion for iOS — positioned
+    as a *Bio-Digital Operating System* rather than a fitness tracker. Its core is
+    **Captain Hamoudi**, a personality-driven AI coach that speaks the user's own
+    Arabic dialect, remembers their journey, and reasons over their HealthKit data
+    on-device.
+
+    This API exposes AiQo to external AI systems. Today it serves a **public,
+    read-only knowledge surface** intended to power a Custom GPT that can answer
+    questions about AiQo (features, pricing, the Captain, how-to). A **personal,
+    OAuth-gated surface** is specified for a future release so a user can connect
+    their own account.
+
+    - Brand & product knowledge: `/ai/*.json`
+    - Search: `GET /api/knowledge/search?q=`
+    - Personal data (planned): `/api/v1/me/*` (OAuth 2.0)
+
+    See `ai/documentation/GPT_INTEGRATION_GUIDE.md` for step-by-step setup.
+  contact:
+    name: AiQo
+    url: https://aiqo.app/support
+  license:
+    name: Proprietary — © 2026 AiQo. All rights reserved.
+    url: https://aiqo.app/terms
+
+externalDocs:
+  description: AiQo GPT Integration Guide
+  url: https://aiqo.app/ai/
+
+servers:
+  - url: https://aiqo.app
+    description: >-
+      Production. Public knowledge JSON is served statically under /ai; the
+      search route under /api; the planned personal API under /api/v1.
+  - url: https://{projectRef}.supabase.co/functions/v1
+    description: >-
+      Supabase Edge Functions base (INTERNAL proxies only — see the `internal`
+      tag). Not for Actions.
+    variables:
+      projectRef:
+        default: YOUR_PROJECT_REF
+        description: Your Supabase project reference.
+
+tags:
+  - name: knowledge
+    description: >-
+      Public, unauthenticated product knowledge. Safe for a public Custom GPT.
+      No user data, no LLM quota.
+  - name: personal
+    description: >-
+      PLANNED. Per-user data behind OAuth 2.0. Lets a user connect their AiQo
+      account to a GPT/agent.
+  - name: internal
+    description: >-
+      App-only Supabase Edge Functions (first-party JWT). Documented for
+      completeness — NOT OpenAI Actions.
+
+paths:
+  # ----------------------------------------------------------------- knowledge
+  /ai/info.json:
+    get:
+      operationId: getProductInfo
+      tags: [knowledge]
+      summary: Get the AiQo product overview.
+      description: >-
+        Returns the high-level product identity: name, tagline, the Bio-Digital
+        OS philosophy, supported platforms, primary language, and a one-paragraph
+        description. Call this first to ground any answer about what AiQo is.
+      security: []
+      responses:
+        "200":
+          description: Product overview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductInfo"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/features.json:
+    get:
+      operationId: listFeatures
+      tags: [knowledge]
+      summary: List every AiQo feature.
+      description: >-
+        Returns all product features (Home, Sleep, Kitchen, Peaks, Daily
+        Challenges, Workouts, My Vibe, Tribe, Battle, Progress Photos, Weekly
+        Report, Captain Hamoudi, Apple Watch) with a description and the minimum
+        subscription tier each requires. Use to answer "what can AiQo do?" or
+        "is X free?".
+      security: []
+      responses:
+        "200":
+          description: Feature catalogue.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  features:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Feature"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/pricing.json:
+    get:
+      operationId: getPricing
+      tags: [knowledge]
+      summary: Get subscription tiers and pricing.
+      description: >-
+        Returns the subscription ladder (Free, the 7-day Trial, AiQo Max at
+        $9.99/mo, AiQo Intelligence Pro at $19.99/mo), what each unlocks, and
+        trial mechanics. Use to answer pricing and "what do I get" questions.
+        Note: Pro is the HIGHER tier (superset of Max).
+      security: []
+      responses:
+        "200":
+          description: Pricing tiers.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency: { type: string, example: USD }
+                  tiers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PricingTier"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/captain.json:
+    get:
+      operationId: getCaptainProfile
+      tags: [knowledge]
+      summary: Get the Captain Hamoudi persona profile.
+      description: >-
+        Returns who Captain Hamoudi is: his role, Iraqi-Arabic dialect, tone,
+        memory and context capabilities, safety posture, and what makes him
+        different from a generic chatbot. Use to answer questions about the AI
+        coach itself.
+      security: []
+      responses:
+        "200":
+          description: Captain Hamoudi profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaptainProfile"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/glossary.json:
+    get:
+      operationId: getGlossary
+      tags: [knowledge]
+      summary: Get the AiQo glossary.
+      description: >-
+        Returns AiQo-specific terms and their definitions (Bio-Digital OS, Peaks,
+        Engine Test, My Vibe, Tribe, Legendary Challenges, tiers, etc.). Use to
+        resolve product vocabulary before answering.
+      security: []
+      responses:
+        "200":
+          description: Glossary terms.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  terms:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GlossaryTerm"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/faq.json:
+    get:
+      operationId: listFaq
+      tags: [knowledge]
+      summary: List frequently asked questions.
+      description: >-
+        Returns the full FAQ as question/answer pairs grouped by category
+        (privacy, billing, features, account, health data). Prefer
+        `searchKnowledge` for a specific user question; use this to enumerate.
+      security: []
+      responses:
+        "200":
+          description: FAQ entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  faq:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FaqEntry"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /api/knowledge/search:
+    get:
+      operationId: searchKnowledge
+      tags: [knowledge]
+      summary: Search the AiQo knowledge base.
+      description: >-
+        Keyword search across the entire AiQo knowledge base (features, pricing,
+        Captain persona, glossary, FAQ, product vision). Returns the most
+        relevant chunks with a title, snippet, source, and score. This is the
+        primary retrieval action — call it to ground any specific answer about
+        AiQo, then synthesize from the returned snippets and cite the `source`.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The user's natural-language question or keywords.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 256
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of chunks to return (1–10, default 5).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+      responses:
+        "200":
+          description: Ranked knowledge chunks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query: { type: string }
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/KnowledgeChunk"
+        "400":
+          $ref: "#/components/responses/Error"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /ai/openapi.json:
+    get:
+      operationId: getOpenApiSpec
+      tags: [knowledge]
+      summary: Fetch this OpenAPI specification.
+      description: Returns this OpenAPI document as JSON, for agents that self-configure.
+      security: []
+      responses:
+        "200":
+          description: This OpenAPI document.
+          content:
+            application/json:
+              schema: { type: object }
+
+  # ------------------------------------------------------------------ personal
+  /api/v1/me/health-summary:
+    get:
+      operationId: getMyHealthSummary
+      tags: [personal]
+      summary: "[PLANNED] Get the authenticated user's daily health summary."
+      description: >-
+        PLANNED — not yet deployed. With the user's consent (OAuth scope
+        `health:read`), returns today's high-level metrics: steps, active energy,
+        sleep duration, hydration, resting heart rate. Values are surfaced exactly
+        (never bucketed). Requires the user to have connected their AiQo account.
+      x-planned: true
+      security:
+        - aiqoOAuth: [health:read]
+      responses:
+        "200":
+          description: Daily health summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthSummary"
+        "401":
+          $ref: "#/components/responses/Error"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/me/captain/ask:
+    post:
+      operationId: askCaptain
+      tags: [personal]
+      summary: "[PLANNED] Ask Captain Hamoudi a question with your context."
+      description: >-
+        PLANNED — not yet deployed. Sends a message to Captain Hamoudi with the
+        authenticated user's health context and memory, returning a Captain-style
+        coaching reply. Server-side this routes through the hardened captain-chat
+        pipeline with safety guardrails. Requires OAuth scope `captain:chat`.
+      x-planned: true
+      security:
+        - aiqoOAuth: [captain:chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AskCaptainRequest"
+      responses:
+        "200":
+          description: Captain Hamoudi's reply.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AskCaptainResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/me/water:
+    post:
+      operationId: logWater
+      tags: [personal]
+      summary: "[PLANNED] Log a water intake for the authenticated user."
+      description: >-
+        PLANNED — not yet deployed. Records a hydration entry (milliliters) for
+        the user. Requires OAuth scope `log:write`.
+      x-planned: true
+      security:
+        - aiqoOAuth: [log:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [milliliters]
+              properties:
+                milliliters:
+                  type: integer
+                  minimum: 1
+                  maximum: 5000
+                  description: Volume of water in milliliters.
+                loggedAt:
+                  type: string
+                  format: date-time
+                  description: When the water was consumed. Defaults to now.
+      responses:
+        "201":
+          description: Logged.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  totalTodayMl: { type: integer }
+        "401":
+          $ref: "#/components/responses/Error"
+        "default":
+          $ref: "#/components/responses/Error"
+
+  # ------------------------------------------------------------------ internal
+  /functions/v1/captain-chat:
+    post:
+      operationId: internalCaptainChat
+      tags: [internal]
+      summary: "[INTERNAL] Gemini chat proxy (app-only)."
+      description: >-
+        INTERNAL — do NOT use as an Action. The iOS app's hardened proxy to
+        Google Gemini `generateContent`. Validates the first-party Supabase
+        session JWT, enforces a model allowlist (gemini-2.5-flash,
+        gemini-3-flash-preview) and a 256 KB body cap, then forwards with the
+        server-held GEMINI_API_KEY. Exposing this externally would leak model
+        quota and bypass app safety; it is documented here only for completeness.
+      x-internal: true
+      security:
+        - supabaseJWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, payload]
+              properties:
+                model:
+                  type: string
+                  enum: [gemini-2.5-flash, gemini-3-flash-preview]
+                payload:
+                  type: object
+                  description: Opaque Gemini generateContent request body.
+      responses:
+        "200":
+          description: Passed-through Gemini response.
+          content:
+            application/json:
+              schema: { type: object }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+
+  /functions/v1/captain-voice:
+    post:
+      operationId: internalCaptainVoice
+      tags: [internal]
+      summary: "[INTERNAL] MiniMax text-to-speech proxy (app-only)."
+      description: >-
+        INTERNAL — do NOT use as an Action. The iOS app's hardened proxy to
+        MiniMax TTS. Validates the Supabase JWT, enforces a model allowlist and a
+        16 KB body cap, then forwards with the server-held MINIMAX_API_KEY.
+      x-internal: true
+      security:
+        - supabaseJWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, text]
+              properties:
+                model: { type: string }
+                text: { type: string }
+      responses:
+        "200":
+          description: Passed-through MiniMax TTS response.
+          content:
+            application/json:
+              schema: { type: object }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    aiqoOAuth:
+      type: oauth2
+      description: >-
+        PLANNED. OAuth 2.0 Authorization Code flow, backed by AiQo's Supabase
+        Auth. Lets a user grant a GPT/agent scoped access to their AiQo account.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://aiqo.app/oauth/authorize
+          tokenUrl: https://aiqo.app/oauth/token
+          scopes:
+            health:read: Read the user's daily health summary.
+            captain:chat: Send messages to Captain Hamoudi with the user's context.
+            log:write: Log entries (e.g. water) on the user's behalf.
+    supabaseJWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: INTERNAL. First-party Supabase session JWT issued to the iOS app.
+
+  responses:
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    ProductInfo:
+      type: object
+      properties:
+        name: { type: string, example: AiQo }
+        tagline:
+          type: string
+          example: "Not just an app — a new dimension for health."
+        category:
+          type: string
+          example: Bio-Digital Operating System
+        description: { type: string }
+        platforms:
+          type: array
+          items: { type: string }
+          example: [iOS, watchOS]
+        primaryLanguage:
+          type: string
+          example: Arabic (dialect-aware)
+        supportedLanguages:
+          type: array
+          items: { type: string }
+          example: [ar, en]
+        website: { type: string, format: uri, example: "https://aiqo.app" }
+        company: { type: string, example: "AiQo (UAE)" }
+      required: [name, tagline, category, description]
+
+    Feature:
+      type: object
+      properties:
+        id: { type: string, example: kitchen }
+        name: { type: string, example: Kitchen }
+        nameAr: { type: string, example: "المطبخ" }
+        summary:
+          type: string
+          example: "Generate a meal plan from a photo of your fridge."
+        minTier:
+          type: string
+          enum: [free, trial, max, pro]
+          description: Minimum subscription tier required.
+        platform:
+          type: array
+          items: { type: string, enum: [iOS, watchOS] }
+      required: [id, name, summary, minTier]
+
+    PricingTier:
+      type: object
+      properties:
+        id: { type: string, enum: [free, trial, max, pro] }
+        name: { type: string, example: AiQo Intelligence Pro }
+        priceMonthlyUsd:
+          type: [number, "null"]
+          example: 19.99
+        rank:
+          type: integer
+          description: Ordering — higher unlocks more (free=0, max=2, pro=3).
+        highlights:
+          type: array
+          items: { type: string }
+        trialDays:
+          type: [integer, "null"]
+          example: 7
+      required: [id, name, rank]
+
+    CaptainProfile:
+      type: object
+      properties:
+        name: { type: string, example: Captain Hamoudi }
+        nameAr: { type: string, example: "كابتن حمودي" }
+        role: { type: string, example: "Personal AI health coach" }
+        dialect: { type: string, example: "Iraqi Arabic (dialect-aware)" }
+        personality: { type: string }
+        capabilities:
+          type: array
+          items: { type: string }
+          example: [daily conversation, real memory, contextual intelligence, voice]
+        safety:
+          type: string
+          description: How the Captain handles medical/safety-sensitive topics.
+        differentiators:
+          type: array
+          items: { type: string }
+      required: [name, role, dialect]
+
+    GlossaryTerm:
+      type: object
+      properties:
+        term: { type: string }
+        termAr: { type: string }
+        definition: { type: string }
+      required: [term, definition]
+
+    FaqEntry:
+      type: object
+      properties:
+        category: { type: string }
+        question: { type: string }
+        answer: { type: string }
+      required: [question, answer]
+
+    KnowledgeChunk:
+      type: object
+      properties:
+        title: { type: string }
+        snippet: { type: string }
+        source:
+          type: string
+          description: The source document, e.g. AIQO_FEATURES.md#kitchen.
+        score:
+          type: number
+          description: Relevance score, 0–1.
+      required: [title, snippet, source]
+
+    HealthSummary:
+      type: object
+      description: PLANNED. Exact daily metrics (never bucketed).
+      properties:
+        date: { type: string, format: date }
+        steps: { type: integer }
+        activeEnergyKcal: { type: number }
+        sleepHours: { type: number }
+        hydrationMl: { type: integer }
+        restingHeartRateBpm: { type: [integer, "null"] }
+
+    AskCaptainRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+          description: The user's message to Captain Hamoudi.
+        locale:
+          type: string
+          example: ar
+          description: Preferred reply language/dialect.
+
+    AskCaptainResponse:
+      type: object
+      properties:
+        reply: { type: string }
+        usedContext:
+          type: array
+          items: { type: string }
+          description: Which context signals informed the reply (e.g. steps, sleep).
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A short machine-readable error code.
+        message:
+          type: string
+          description: Optional human-readable detail.
+      required: [error]

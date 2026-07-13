@@ -5,6 +5,7 @@ import Foundation
 struct Meal: Codable, Identifiable, Equatable {
     let id: Int
     let name_ar: String
+    let name_en: String?
     let calories_kcal: Int
     let meal_type: MealType
 
@@ -17,22 +18,20 @@ struct Meal: Codable, Identifiable, Equatable {
             return name_ar
         }
 
-        // إنكليزي → من Localizable حسب الـ id
+        // إنكليزي → نفضّل name_en من الـ JSON (يغطي كل الوجبات الجديدة)
+        if let name_en, !name_en.isEmpty {
+            return name_en
+        }
+
+        // Legacy fallback for older entries that predate name_en.
         switch id {
-        // بياض بيض مع خضار (نسختين)
         case 1, 4:
             return NSLocalizedString("meal.eggVeggies", comment: "")
-
-        // ستيك لحم مشوي (نسخ مختلفة)
         case 2, 5, 36, 63:
             return NSLocalizedString("meal.steak", comment: "")
-
-        // تونة / دجاج مع سلطة إلخ (نستخدم نفس النص الإنكليزي)
         case 3, 69, 100, 1009:
             return NSLocalizedString("meal.tunaSalad", comment: "")
-
         default:
-            // أي وجبة جديدة ما ضفناها بعد
             return name_ar
         }
     }

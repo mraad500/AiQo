@@ -1,11 +1,14 @@
 import Foundation
 
 /// Determines whether the current time falls in the user's quiet window.
-/// Defaults: 22:00 - 07:00 local. Respects user preferences if set.
+/// Defaults: 23:00 - 07:00 local — unified with
+/// `SmartNotificationScheduler.quietHoursStartHour` so a brain-routed and a
+/// directly-scheduled notification agree on the same window (and the 22:30
+/// sleep reminder isn't deferred to morning). Respects user preferences if set.
 public actor QuietHoursManager {
     public static let shared = QuietHoursManager()
 
-    private var startHour: Int = 22
+    private var startHour: Int = 23
     private var endHour: Int = 7
 
     private init() {}

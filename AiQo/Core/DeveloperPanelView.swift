@@ -87,6 +87,9 @@ struct DeveloperPanelView: View {
             NavigationLink("Open Brain Dashboard") {
                 BrainDashboard()
             }
+            NavigationLink("🧪 مختبر حمودي على الجهاز") {
+                OnDeviceCaptainLabView()
+            }
         }
     }
     #endif

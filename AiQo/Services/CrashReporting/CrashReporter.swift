@@ -54,6 +54,13 @@ final class CrashReporter {
             domain: context.isEmpty ? "unknown" : context,
             message: error.localizedDescription
         ))
+
+        mirrorToCrashlytics(
+            message: error.localizedDescription,
+            context: context,
+            site: "\((file as NSString).lastPathComponent):\(line)",
+            error: error
+        )
     }
 
     /// سجّل خطأ من نص
@@ -71,6 +78,13 @@ final class CrashReporter {
             deviceModel: Self.deviceModel
         )
         persistEntry(entry)
+
+        mirrorToCrashlytics(
+            message: message,
+            context: context,
+            site: "\((file as NSString).lastPathComponent):\(line)",
+            error: nil
+        )
     }
 
     /// يرجّع كل التقارير المحفوظة (للتصدير أو الإرسال)
@@ -92,6 +106,26 @@ final class CrashReporter {
         try? FileManager.default.removeItem(at: logFileURL)
     }
     #endif
+
+    // MARK: - Crashlytics Bridge
+
+    /// Forwards non-fatals to Firebase Crashlytics **via `CrashReportingService`**
+    /// — the privacy-sanitized wrapper that runs `PrivacySanitizer` before any
+    /// data leaves the device. Routing through it (instead of calling
+    /// Crashlytics directly) keeps the privacy contract intact and avoids
+    /// duplicating Firebase logic. This sends EVERY existing
+    /// `CrashReporter.recordError(...)` call site — including the SwiftData
+    /// container-recovery telemetry — to Crashlytics with zero per-call-site
+    /// changes. No-op until the Firebase SDK is linked (the service guards
+    /// internally). Local JSONL persistence is kept as defense-in-depth.
+    private func mirrorToCrashlytics(message: String, context: String, site: String, error: Error?) {
+        let ctx = context.isEmpty ? site : "\(context) @ \(site)"
+        if let error {
+            CrashReportingService.shared.record(error, context: ctx)
+        } else {
+            CrashReportingService.shared.record(message: message, context: ctx)
+        }
+    }
 
     // MARK: - Setup
 

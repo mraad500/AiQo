@@ -1,54 +1,23 @@
 import Foundation
 import Combine
-import WatchConnectivity
 
-/// Thin wrapper that exposes phone reachability from the existing
-/// `WatchConnectivityManager.shared` for the new SwiftUI views.
-/// All actual connectivity work is handled by `WatchConnectivityManager`.
+/// Exposes phone reachability to the new SwiftUI views by mirroring the
+/// authoritative `WatchConnectivityManager.shared` — the single `WCSession`
+/// delegate on the watch. Reachability is delivered by the session delegate, so
+/// this just forwards its published state instead of polling on a timer.
 @MainActor
-class WatchConnectivityService: NSObject, ObservableObject {
+final class WatchConnectivityService: ObservableObject {
     @Published var isPhoneReachable = false
 
-    private var timer: Timer?
+    private var cancellable: AnyCancellable?
 
-    override init() {
-        super.init()
-        _ = WatchConnectivityManager.shared
-        refreshReachability()
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
-            Task { @MainActor [weak self] in
-                self?.refreshReachability()
+    init() {
+        let manager = WatchConnectivityManager.shared
+        isPhoneReachable = manager.isPhoneReachable
+        cancellable = manager.$isPhoneReachable
+            .receive(on: RunLoop.main)
+            .sink { [weak self] reachable in
+                self?.isPhoneReachable = reachable
             }
-        }
-    }
-
-    deinit {
-        timer?.invalidate()
-    }
-
-    private func refreshReachability() {
-        guard WCSession.isSupported() else { return }
-        isPhoneReachable = WCSession.default.isReachable
-    }
-
-    /// Send workout result to iPhone for XP processing.
-    func sendWorkoutCompleted(calories: Double, durationMinutes: Double, workoutType: String, distance: Double) {
-        guard WCSession.isSupported() else { return }
-
-        let data: [String: Any] = [
-            "event": "workout_completed",
-            "calories": calories,
-            "duration_minutes": durationMinutes,
-            "workout_type": workoutType,
-            "distance_km": distance,
-            "timestamp": Date().timeIntervalSince1970
-        ]
-
-        let session = WCSession.default
-        if session.isReachable {
-            session.sendMessage(data, replyHandler: nil, errorHandler: nil)
-        } else {
-            session.transferUserInfo(data)
-        }
     }
 }

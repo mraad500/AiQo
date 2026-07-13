@@ -3,6 +3,7 @@ import SwiftUI
 /// شاشة إعدادات ذاكرة الكابتن — تعرض كل المعلومات المحفوظة
 struct CaptainMemorySettingsView: View {
     @State private var memories: [CaptainMemorySnapshot] = []
+    @State private var savedMemories: [CaptainMemorySnapshot] = []
     @State private var isEnabled: Bool = MemoryStore.shared.isEnabled
     @State private var showClearConfirmation = false
     @State private var weeklyReports: [WeeklyReportEntry] = []
@@ -16,12 +17,24 @@ struct CaptainMemorySettingsView: View {
         return grouped.sorted { $0.key < $1.key }
     }
 
+    /// True when there is at least one individually-removable memory (saved note,
+    /// reminder, or any extracted fact that isn't read-only profile/workout data).
+    /// Gates the Edit button + the "swipe to delete" hint.
+    private var hasDeletableMemories: Bool {
+        if !savedMemories.isEmpty { return true }
+        return memories.contains {
+            $0.category != "identity" && $0.category != "workout_history" && $0.category != "saved"
+        }
+    }
+
     var body: some View {
         List {
             headerSection
             toggleSection
 
             if isEnabled {
+                savedSection
+
                 if !weeklyReports.isEmpty {
                     Section {
                         ForEach(weeklyReports, id: \.id) { report in
@@ -36,7 +49,7 @@ struct CaptainMemorySettingsView: View {
                 identitySection
                 workoutsSection
 
-                ForEach(groupedMemories.filter { $0.0 != "identity" && $0.0 != "workout_history" }, id: \.0) { category, items in
+                ForEach(groupedMemories.filter { $0.0 != "identity" && $0.0 != "workout_history" && $0.0 != "saved" }, id: \.0) { category, items in
                     Section(categoryLabel(category)) {
                         ForEach(items, id: \.id) { memory in
                             memoryRow(memory)
@@ -52,6 +65,16 @@ struct CaptainMemorySettingsView: View {
         }
         .navigationTitle(NSLocalizedString("memory.title", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isEnabled && hasDeletableMemories {
+                ToolbarItem(placement: .topBarTrailing) {
+                    // Native Edit/Done — turns every memory row into a tap-to-delete
+                    // control, so the user can remove individual memories (and keep
+                    // the rest) instead of only "clear all". Localized by the system.
+                    EditButton()
+                }
+            }
+        }
         .environment(\.layoutDirection, .rightToLeft)
         .onAppear {
             loadMemories()
@@ -93,6 +116,16 @@ struct CaptainMemorySettingsView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(GymTheme.mint.opacity(0.12)))
+                }
+
+                if isEnabled && hasDeletableMemories {
+                    Text(isArabicUI
+                         ? "تكدر تحذف أي معلومة لحالها — اضغط \u{201C}تعديل\u{201D} فوق وامسح اللي تريد، أو اسحب المعلومة. الباقي يبقى."
+                         : "You can delete any single item — tap \u{201C}Edit\u{201D} above and remove what you want, or swipe a row. The rest stays.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.45))
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -243,6 +276,76 @@ struct CaptainMemorySettingsView: View {
         return parts.joined(separator: " • ")
     }
 
+    // MARK: - Saved Memories Section (pinned — explicit saves + reminders)
+
+    @ViewBuilder
+    private var savedSection: some View {
+        if !savedMemories.isEmpty {
+            Section {
+                ForEach(savedMemories, id: \.id) { memory in
+                    savedRow(memory)
+                }
+                .onDelete { indexSet in
+                    deleteSavedMemories(at: indexSet)
+                }
+            } header: {
+                Text(NSLocalizedString("memory.cat.saved", comment: ""))
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+            }
+        }
+    }
+
+    private func savedRow(_ memory: CaptainMemorySnapshot) -> some View {
+        let reminder = CaptainMemoryActionHandler.reminderRecord(
+            forKey: memory.key,
+            value: memory.value
+        )
+        let isReminder = reminder != nil
+        let bodyText = reminder?.body ?? memory.value
+        let dateText = (reminder?.fireAt ?? memory.updatedAt)
+            .formatted(date: .abbreviated, time: .shortened)
+        let title = NSLocalizedString(
+            isReminder ? "memory.saved.reminderTitle" : "memory.saved.noteTitle",
+            comment: ""
+        )
+
+        return VStack(alignment: .trailing, spacing: 4) {
+            HStack {
+                Image(systemName: isReminder ? "bell.fill" : "bookmark.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(GymTheme.mint)
+                Spacer()
+                Text(title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.primary)
+            }
+
+            Text(bodyText)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.primary.opacity(0.7))
+                .multilineTextAlignment(.trailing)
+
+            Text(dateText)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.3))
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func deleteSavedMemories(at offsets: IndexSet) {
+        for index in offsets {
+            let memory = savedMemories[index]
+            if let reminder = CaptainMemoryActionHandler.reminderRecord(
+                forKey: memory.key,
+                value: memory.value
+            ) {
+                CaptainReminderScheduler.cancel(identifier: reminder.notificationID)
+            }
+            MemoryStore.shared.remove(memory.key)
+        }
+        loadMemories()
+    }
+
     // MARK: - Memory Row
 
     private func memoryRow(_ memory: CaptainMemorySnapshot) -> some View {
@@ -300,6 +403,7 @@ struct CaptainMemorySettingsView: View {
 
     private func loadMemories() {
         memories = MemoryStore.shared.allMemories()
+        savedMemories = MemoryStore.shared.getByCategory("saved")
     }
 
     private func deleteMemories(at offsets: IndexSet, in items: [CaptainMemorySnapshot]) {
@@ -323,6 +427,7 @@ struct CaptainMemorySettingsView: View {
         case "sleep": return NSLocalizedString("memory.cat.sleep", comment: "")
         case "insight": return NSLocalizedString("memory.cat.insight", comment: "")
         case "active_record_project": return NSLocalizedString("memory.cat.recordProject", comment: "")
+        case "saved": return NSLocalizedString("memory.cat.saved", comment: "")
         case "weekly": return NSLocalizedString("memory.cat.weekly", comment: "")
         case "challenge": return NSLocalizedString("memory.cat.challenge", comment: "")
         case "hydration": return NSLocalizedString("memory.cat.hydration", comment: "")

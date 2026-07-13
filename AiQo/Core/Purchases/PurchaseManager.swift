@@ -167,6 +167,11 @@ final class PurchaseManager: ObservableObject {
             case .success(let verification):
                 let transaction = try Self.verifiedTransaction(from: verification)
                 applySuccessfulPurchase(productId: transaction.productID)
+                // Anchor the trial-journey notifications to this real Apple
+                // trial and kick the orchestrator so Day-1 schedules in-session
+                // (the user just left the hard-wall paywall — no relaunch yet).
+                FreeTrialManager.shared.captureStoreKitTrialStart(transaction.originalPurchaseDate)
+                TrialJourneyOrchestrator.shared.refresh()
                 scheduleNotificationsIfNeeded()
                 await transaction.finish()
                 lastOutcome = .success
@@ -228,6 +233,14 @@ final class PurchaseManager: ObservableObject {
 
         entitlementStore.setEntitlement(productId: state.productId, expiresAt: state.expiresAt)
         logger.info("entitlement_refreshed product=\(state.productId ?? "nil", privacy: .public)")
+
+        // Safety net for restore / new device / background renewal: anchor the
+        // trial journey to the subscription's true original start so a user who
+        // subscribed elsewhere still gets the 7-day arc, correctly timed.
+        if let trialAnchor = transactions.map(\.originalPurchaseDate).min() {
+            FreeTrialManager.shared.captureStoreKitTrialStart(trialAnchor)
+            TrialJourneyOrchestrator.shared.refresh()
+        }
     }
 
     private func applySuccessfulPurchase(productId: String) {

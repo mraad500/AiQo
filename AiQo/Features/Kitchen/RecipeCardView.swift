@@ -45,6 +45,7 @@ struct RecipeCardView_Previews: PreviewProvider {
             meal: Meal(
                 id: 1,
                 name_ar: "بياض بيض مع خضار",
+                name_en: "Egg Whites with Veggies",
                 calories_kcal: 250,
                 meal_type: .breakfast
             )

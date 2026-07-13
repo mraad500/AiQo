@@ -21,6 +21,7 @@ struct ProfileScreen: View {
     @State var showWeeklyReport = false
     @State var showProgressPhotos = false
     @State var showSubscriptionPaywall = false
+    @State var showKernel = false
 
     @ObservedObject private var entitlementStore = EntitlementStore.shared
 
@@ -186,6 +187,26 @@ struct ProfileScreen: View {
                                 showProgressPhotos = true
                             }
 
+                            if FeatureFlags.kernelEnabled {
+                                AppActionRow(
+                                    icon: "lock.shield.fill",
+                                    iconFill: ProfilePalette.mint.opacity(0.34),
+                                    title: NSLocalizedString(
+                                        "screen.profile.kernel.title",
+                                        value: "Kernel",
+                                        comment: ""
+                                    ),
+                                    subtitle: NSLocalizedString(
+                                        "screen.profile.kernel.subtitle",
+                                        value: "Lock apps, unlock with movement",
+                                        comment: ""
+                                    ),
+                                    tone: .mint
+                                ) {
+                                    showKernel = true
+                                }
+                            }
+
                             AppActionRow(
                                 icon: "message.fill",
                                 iconFill: ProfilePalette.sand.opacity(0.36),
@@ -292,6 +313,9 @@ struct ProfileScreen: View {
         .sheet(isPresented: $showProgressPhotos) {
             ProgressPhotosView()
                 .aiQoSheetStyle()
+        }
+        .sheet(isPresented: $showKernel) {
+            KernelView()
         }
         .sheet(isPresented: $showSettingsSheet) {
             NavigationStack {

@@ -1,0 +1,198 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AiQo Knowledge Actions",
+    "version": "1.0.0",
+    "description": "Import-ready OpenAI Actions schema for a public AiQo Custom GPT. Every operation is unauthenticated and read-only, serving product knowledge about AiQo — an Arabic-first, AI-native health companion built around Captain Hamoudi. No user data, no model quota. Paste this whole file into the GPT Builder > Actions > Schema box. (The full API, including the planned OAuth personal endpoints and the internal proxies, is in ../schemas/OPENAPI_SPEC.yaml.)"
+  },
+  "servers": [
+    {
+      "url": "https://aiqo.app",
+      "description": "AiQo production. Knowledge JSON is served statically under /ai; search under /api."
+    }
+  ],
+  "paths": {
+    "/ai/info.json": {
+      "get": {
+        "operationId": "getProductInfo",
+        "summary": "Get the AiQo product overview.",
+        "description": "Returns the high-level product identity: name, tagline, the Bio-Digital OS philosophy, platforms, primary language, and a short description. Call this first to ground any answer about what AiQo is.",
+        "responses": {
+          "200": {
+            "description": "Product overview.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductInfo" } } }
+          }
+        }
+      }
+    },
+    "/ai/features.json": {
+      "get": {
+        "operationId": "listFeatures",
+        "summary": "List every AiQo feature with its required tier.",
+        "description": "Returns all features (Home, Sleep, Kitchen, Peaks, Daily Quests, Workouts, My Vibe, Tribe, Battle, Progress Photos, Weekly Report, Captain Hamoudi, Apple Watch) with a description and the minimum subscription tier each needs. Use to answer 'what can AiQo do?' or 'is X free?'.",
+        "responses": {
+          "200": {
+            "description": "Feature catalogue.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "features": { "type": "array", "items": { "$ref": "#/components/schemas/Feature" } } } } } }
+          }
+        }
+      }
+    },
+    "/ai/pricing.json": {
+      "get": {
+        "operationId": "getPricing",
+        "summary": "Get subscription tiers and pricing.",
+        "description": "Returns the subscription ladder: Free, the 7-day Trial, AiQo Max at $9.99/mo, and AiQo Intelligence Pro at $19.99/mo, with what each unlocks. Note: Pro is the HIGHER tier (a superset of Max).",
+        "responses": {
+          "200": {
+            "description": "Pricing tiers.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "currency": { "type": "string" }, "tiers": { "type": "array", "items": { "$ref": "#/components/schemas/PricingTier" } } } } } }
+          }
+        }
+      }
+    },
+    "/ai/captain.json": {
+      "get": {
+        "operationId": "getCaptainProfile",
+        "summary": "Get the Captain Hamoudi persona profile.",
+        "description": "Returns who Captain Hamoudi is: his role, Iraqi-Arabic dialect, tone, memory and context abilities, safety posture, and what makes him different from a generic chatbot.",
+        "responses": {
+          "200": {
+            "description": "Captain Hamoudi profile.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaptainProfile" } } }
+          }
+        }
+      }
+    },
+    "/ai/glossary.json": {
+      "get": {
+        "operationId": "getGlossary",
+        "summary": "Get the AiQo glossary of terms.",
+        "description": "Returns AiQo-specific terms and definitions (Bio-Digital OS, Peaks, Engine Test, My Vibe, Tribe, Directives, tiers, etc.). Use to resolve product vocabulary before answering.",
+        "responses": {
+          "200": {
+            "description": "Glossary terms.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "terms": { "type": "array", "items": { "$ref": "#/components/schemas/GlossaryTerm" } } } } } }
+          }
+        }
+      }
+    },
+    "/ai/faq.json": {
+      "get": {
+        "operationId": "listFaq",
+        "summary": "List frequently asked questions and answers.",
+        "description": "Returns the FAQ as question/answer pairs grouped by category (availability, Captain & AI, privacy, billing, features, health & safety).",
+        "responses": {
+          "200": {
+            "description": "FAQ entries.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "faq": { "type": "array", "items": { "$ref": "#/components/schemas/FaqEntry" } } } } } }
+          }
+        }
+      }
+    },
+    "/api/knowledge/search": {
+      "get": {
+        "operationId": "searchKnowledge",
+        "summary": "Search the AiQo knowledge base.",
+        "description": "Keyword search across the entire AiQo knowledge base (features, pricing, Captain persona, glossary, FAQ, product vision). Returns the most relevant chunks with a title, snippet, source, and score. This is the primary retrieval action — call it to ground any specific question about AiQo, then synthesize from the snippets and cite the source.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "The user's natural-language question or keywords.",
+            "schema": { "type": "string", "minLength": 2, "maxLength": 256 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of chunks to return (1-10, default 5).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 10, "default": 5 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked knowledge chunks.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "query": { "type": "string" }, "results": { "type": "array", "items": { "$ref": "#/components/schemas/KnowledgeChunk" } } } } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProductInfo": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "tagline": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "platforms": { "type": "array", "items": { "type": "string" } },
+          "primaryLanguage": { "type": "string" },
+          "website": { "type": "string" },
+          "appStoreUrl": { "type": "string" }
+        }
+      },
+      "Feature": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "nameAr": { "type": "string" },
+          "summary": { "type": "string" },
+          "minTier": { "type": "string", "enum": ["free", "trial", "max", "pro"] }
+        }
+      },
+      "PricingTier": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "enum": ["free", "trial", "max", "pro"] },
+          "name": { "type": "string" },
+          "priceMonthlyUsd": { "type": ["number", "null"] },
+          "rank": { "type": "integer" },
+          "highlights": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "CaptainProfile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "nameAr": { "type": "string" },
+          "role": { "type": "string" },
+          "dialect": { "type": "string" },
+          "personality": { "type": "string" },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "safety": { "type": "string" },
+          "differentiators": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "GlossaryTerm": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string" },
+          "termAr": { "type": "string" },
+          "definition": { "type": "string" }
+        }
+      },
+      "FaqEntry": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string" },
+          "question": { "type": "string" },
+          "answer": { "type": "string" }
+        }
+      },
+      "KnowledgeChunk": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "snippet": { "type": "string" },
+          "source": { "type": "string" },
+          "score": { "type": "number" }
+        }
+      }
+    }
+  }
+}

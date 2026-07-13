@@ -27,8 +27,13 @@ public actor EmbeddingIndex {
         let embedding = detectArabic(trimmed) ? arabicEmbedding : englishEmbedding
         guard let emb = embedding else { return nil }
 
+        // Apple's Arabic word-embedding vocabulary is keyed on unvowelized,
+        // tatweel-free forms. Without this, harakat / kashida cause
+        // `emb.vector(for:)` to miss on nearly every Arabic token and the
+        // sentence vector silently collapses to nil → semantic recall dies.
         let words = trimmed.split(whereSeparator: { $0.isWhitespace || $0.isPunctuation })
-            .map(String.init)
+            .map { Self.normalizeForLookup(String($0)) }
+            .filter { !$0.isEmpty }
         guard !words.isEmpty else { return nil }
 
         var sum = [Double](repeating: 0, count: emb.dimension)
@@ -70,6 +75,16 @@ public actor EmbeddingIndex {
             }
         }
         return false
+    }
+
+    /// Strips Arabic harakat (combining diacritics) and tatweel so a token
+    /// matches Apple's unvowelized embedding vocabulary. Diacritic folding is
+    /// also harmless for Latin ("café" → "cafe").
+    private static func normalizeForLookup(_ word: String) -> String {
+        word
+            .folding(options: [.diacriticInsensitive], locale: .current)
+            .replacingOccurrences(of: "ـ", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func normalize(_ v: [Double]) -> [Double] {

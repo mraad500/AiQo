@@ -50,6 +50,16 @@ final class AppFlowController: ObservableObject {
             UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteSubscriptionIntro)
         }
 
+        // Migration: the QuickStart age/health screen was previously reachable
+        // only from Profile; it is now a required onboarding step (Guideline
+        // 1.4.1 — block under-18). Users who had already finished onboarding
+        // (reached the subscription step) before this change are grandfathered
+        // so the new step doesn't re-interrupt them on upgrade.
+        let hasQuickStartKey = UserDefaults.standard.object(forKey: OnboardingKeys.didCompleteQuickStart) != nil
+        if UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteSubscriptionIntro) && !hasQuickStartKey {
+            UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteQuickStart)
+        }
+
         Task { @MainActor in
             await Task.yield()
             QuestPersistenceController.shared.installQuestPersistence()
@@ -118,7 +128,12 @@ final class AppFlowController: ObservableObject {
 
     private func finalizeLegacyStep() {
         UserDefaults.standard.set(true, forKey: OnboardingKeys.didCompleteLegacyCalculation)
-        FreeTrialManager.shared.startTrialIfNeeded()
+        // No auto-started no-card trial anymore. Access is gated on a real
+        // StoreKit subscription (Apple's card-required 7-day intro offer)
+        // begun from the non-skippable paywall. Users who already have a
+        // legacy custom trial on file keep it until it expires — TierGate
+        // still honors `FreeTrialManager.isTrialActiveSnapshot`, we just stop
+        // minting new ones here.
         TrialJourneyOrchestrator.shared.refresh()
         transition(to: .aiConsent)
     }
@@ -286,6 +301,12 @@ final class AppFlowController: ObservableObject {
             return .medicalDisclaimer
         }
 
+        // Age gate + health screening (Guideline 1.4.1). The screen itself
+        // blocks under-18 and is interactive-dismiss-disabled.
+        if !UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart) {
+            return .quickStart
+        }
+
         if !didCompleteFeatureIntro {
             return .featureIntro
         }
@@ -319,6 +340,12 @@ final class AppFlowController: ObservableObject {
 
         if !didAcknowledgeMedicalDisclaimer {
             return .medicalDisclaimer
+        }
+
+        // Age gate + health screening (Guideline 1.4.1). The screen itself
+        // blocks under-18 and is interactive-dismiss-disabled.
+        if !UserDefaults.standard.bool(forKey: OnboardingKeys.didCompleteQuickStart) {
+            return .quickStart
         }
 
         if !didCompleteFeatureIntro {
@@ -356,6 +383,12 @@ struct AppRootView: View {
         }
         .environment(\.layoutDirection, currentDirection)
         .environment(\.locale, Locale(identifier: AppSettingsStore.shared.appLanguage.rawValue))
+        // The launch / login / onboarding screens use a FIXED light palette
+        // (`AuthFlowBackground`) but their text is semantic `.primary`, which
+        // turns white in Dark Mode and vanishes on the light background. Force
+        // `.light` for the whole pre-main flow so they're always legible whatever
+        // the device appearance; the main app keeps the device's light/dark.
+        .preferredColorScheme(flow.currentScreen == .main ? nil : .light)
         .withOfflineBanner()
         .animation(.easeInOut(duration: 0.4), value: flow.currentScreen)
         .modelContainer(QuestPersistenceController.shared.container)
@@ -364,6 +397,14 @@ struct AppRootView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             globalBrain.handleScenePhaseTransition(newPhase)
+            // Kernel re-shield layer (a): on every foreground, re-apply the shield
+            // if an earned access window has expired (decode-safe, gated). Also
+            // verify the bio challenge so opening AiQo completes a met one instantly.
+            if newPhase == .active, FeatureFlags.kernelEnabled {
+                KernelShieldController.shared.reshieldIfNeeded()
+                KernelBioEngine.shared.startIfEnabled()
+                Task { await KernelBioEngine.shared.refresh() }
+            }
         }
         .sheet(isPresented: $aiConsentManager.isPresentingConsentSheet) {
             AIDataConsentView()

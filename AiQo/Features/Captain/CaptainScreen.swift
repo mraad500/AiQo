@@ -18,6 +18,9 @@ struct CaptainCustomization: Codable {
     var weight: String
     var calling: String
     var tone: CaptainTone
+    /// Pro-only free-text persona ("describe your Captain"). Empty = use the
+    /// selected preset `tone`.
+    var customStyle: String = ""
 
     static let `default` = CaptainCustomization(
         name: "",
@@ -25,23 +28,83 @@ struct CaptainCustomization: Codable {
         height: "",
         weight: "",
         calling: "",
-        tone: .practical
+        tone: .practical,
+        customStyle: ""
     )
+
+    /// The persona directive injected into the PAID (cloud) Captain prompt: the
+    /// user's free-text custom persona (Pro) when set, otherwise the selected
+    /// preset style's directive. Free users never reach the cloud path.
+    var captainStyleDirective: String {
+        let custom = customStyle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            return "شخصية الكابتن (حسب طلب المستخدم بالضبط): \(custom)"
+        }
+        return tone.styleDirectiveArabic
+    }
 }
 
+/// The Captain's selectable personality (a Max/Pro feature). Free uses one fixed
+/// simple voice and never picks a style.
 enum CaptainTone: String, Codable, CaseIterable {
     case practical = "عملي"
     case caring = "حنون"
     case strict = "صارم"
+    case analytical = "محلل"
+    case visionary = "واسع الأفق"
+    case mentor = "مرشد"
+
+    private var isArabic: Bool { AppSettingsStore.shared.appLanguage == .arabic }
 
     var displayName: String {
         switch self {
+        case .practical:  return isArabic ? "عملي" : "Practical"
+        case .caring:     return isArabic ? "حنون" : "Caring"
+        case .strict:     return isArabic ? "صارم" : "Strict"
+        case .analytical: return isArabic ? "محلّل" : "Analytical"
+        case .visionary:  return isArabic ? "واسع الأفق" : "Visionary"
+        case .mentor:     return isArabic ? "مرشد" : "Mentor"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .practical:  return "🎯"
+        case .caring:     return "💚"
+        case .strict:     return "🔥"
+        case .analytical: return "🧠"
+        case .visionary:  return "🔭"
+        case .mentor:     return "🦉"
+        }
+    }
+
+    /// One-line description shown under the style name.
+    var blurb: String {
+        switch self {
+        case .practical:  return isArabic ? "مباشر وحلول سريعة" : "Direct, quick solutions"
+        case .caring:     return isArabic ? "دافئ وداعم" : "Warm and supportive"
+        case .strict:     return isArabic ? "يدفعك بقوة" : "Pushes you hard"
+        case .analytical: return isArabic ? "أرقام و\u{2018}ليش\u{2019}" : "Data and the why"
+        case .visionary:  return isArabic ? "صورة كبيرة بعيدة المدى" : "Big-picture, long-term"
+        case .mentor:     return isArabic ? "حكمة أخ كبير" : "Wise big-brother"
+        }
+    }
+
+    /// Rich Iraqi directive for the cloud Captain prompt.
+    var styleDirectiveArabic: String {
+        switch self {
         case .practical:
-            return NSLocalizedString("captain.tone.practical", value: "Practical", comment: "")
+            return "النبرة: عملية ومباشرة — حلول واضحة وخطوات قصيرة، بدون لف ودوران."
         case .caring:
-            return NSLocalizedString("captain.tone.caring", value: "Caring", comment: "")
+            return "النبرة: حنونة دافئة — شجّعه واحتويه وخفّف عليه، كن سند مو ضاغط."
         case .strict:
-            return NSLocalizedString("captain.tone.strict", value: "Strict", comment: "")
+            return "النبرة: صارمة ومحفّزة — ادفعه بقوة وما تقبل الأعذار، بس بدون قسوة جارحة."
+        case .analytical:
+            return "النبرة: تحليلية — اربط نصيحتك بالأرقام، فسّر 'ليش'، وأعطِ سبب واضح لكل خطوة."
+        case .visionary:
+            return "النبرة: واسعة الأفق — اربط فعل اليوم بهويته وأهدافه الكبيرة، وصوّرله الصورة الكاملة."
+        case .mentor:
+            return "النبرة: مرشد حكيم — هادئ، بحكمة وخبرة، مثل أخ كبير يوجّه بثقة وعمق."
         }
     }
 }
@@ -199,6 +262,17 @@ struct CaptainScreen: View {
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     @State private var showHealthSources = false
     @Namespace private var avatarNamespace
+    @State private var showGrowsSheet = false
+    @AppStorage("captain.growsBanner.dismissedAtEpoch") private var growsBannerDismissedAtEpoch: Double = 0
+
+    /// Free-tier "Captain grows with Max" teaser — shown only on the pre-chat
+    /// meet-the-Captain screen (never interrupts an active chat), and snoozed for
+    /// a cooldown after dismissal.
+    private var shouldShowUpgradeBanner: Bool {
+        viewModel.isFreeCaptain
+            && !hasUserStartedChat
+            && CaptainUpgradeNudge.shouldShow(dismissedAtEpoch: growsBannerDismissedAtEpoch)
+    }
 
     /// Flips to true the moment the user sends their first message this session.
     /// Resets to false on `startNewChat()` and on cold launch (which calls `loadPersistedHistory()` → `startNewChat()`).
@@ -235,8 +309,23 @@ struct CaptainScreen: View {
                 topChrome
                 CaptainSafetyBanner()
                     .padding(.horizontal, 16)
+
+                if shouldShowUpgradeBanner {
+                    CaptainUpgradeBanner(
+                        isArabic: isArabicUI,
+                        onOpen: { showGrowsSheet = true },
+                        onDismiss: {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                growsBannerDismissedAtEpoch = Date().timeIntervalSince1970
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
             .padding(.bottom, 4)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: shouldShowUpgradeBanner)
             .background {
                 // Opaque layer behind the header + safety banner so the chat
                 // can't bleed through when the user scrolls messages up.
@@ -276,6 +365,19 @@ struct CaptainScreen: View {
         .sheet(isPresented: $viewModel.showPaywall) {
             PaywallView(source: .captainGate)
         }
+        .sheet(isPresented: $showGrowsSheet) {
+            CaptainGrowsSheet(isArabic: isArabicUI) {
+                // Hand off to the paywall: close this sheet, then present it on the
+                // next runloop (two sheets can't be presented simultaneously).
+                showGrowsSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.showPaywall = true
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+        }
         .onAppear {
             viewModel.consumePendingCaptainNotificationIfAny()
             Task {
@@ -299,7 +401,7 @@ struct CaptainScreen: View {
                     VStack {
                         Spacer()
 
-                        CaptainAvatarView()
+                        LivingCaptainAvatarView()
                             .frame(height: layout.avatarHeight)
                             .offset(y: layout.avatarOffset)
                             .matchedGeometryEffect(id: "captain-avatar", in: avatarNamespace)
@@ -310,7 +412,11 @@ struct CaptainScreen: View {
                             messages: viewModel.messages,
                             isTyping: viewModel.isTyping,
                             coachState: viewModel.coachState,
-                            scrollEnabled: layout.chatScrollEnabled
+                            scrollEnabled: layout.chatScrollEnabled,
+                            workoutPlan: viewModel.currentWorkoutPlan,
+                            onStartWorkoutTap: handleStartWorkoutTap,
+                            streamingText: viewModel.streamingText,
+                            hasStreamingBubble: viewModel.streamingMessageID != nil
                         )
                         .frame(height: layout.chatHeight)
                         .offset(y: layout.chatOffset)
@@ -339,7 +445,11 @@ struct CaptainScreen: View {
                 messages: viewModel.messages,
                 isTyping: viewModel.isTyping,
                 coachState: viewModel.coachState,
-                scrollEnabled: true
+                scrollEnabled: true,
+                workoutPlan: viewModel.currentWorkoutPlan,
+                onStartWorkoutTap: handleStartWorkoutTap,
+                streamingText: viewModel.streamingText,
+                hasStreamingBubble: viewModel.streamingMessageID != nil
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 12)
@@ -366,6 +476,15 @@ struct CaptainScreen: View {
             )
             .padding(.bottom, 16)
         }
+    }
+
+    /// Tapped from the in-chat `WorkoutPlanCard`. v1 hops into the
+    /// detailed Captain chat view (where the existing plan tooling lives);
+    /// when the dedicated workout runner ships we'll route there instead.
+    /// Lives on the screen instead of the card so the card stays reusable
+    /// across surfaces (Captain main, future Club preview, etc.).
+    private func handleStartWorkoutTap() {
+        AppRootManager.shared.openCaptainChat()
     }
 
     private var topChrome: some View {
@@ -395,7 +514,7 @@ struct CaptainScreen: View {
 
                 Spacer(minLength: 0)
 
-                VStack(alignment: .trailing, spacing: 1) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text(NSLocalizedString("screen.captain.title", value: "Captain Hamoudi", comment: ""))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.text)
@@ -509,7 +628,24 @@ struct ChatContainerView: View {
     var isTyping: Bool = false
     var coachState: CoachCognitiveState = .idle
     var scrollEnabled: Bool = false
+    /// When non-nil, a premium `WorkoutPlanCard` renders inline below the
+    /// last message. Owned by `CaptainViewModel.currentWorkoutPlan` — the
+    /// card shows the day-by-day breakdown so the bubble can stay short.
+    var workoutPlan: WorkoutPlan? = nil
+    /// Tap target for the card's "Start workout" CTA. Hand back navigation
+    /// to the host screen (e.g. push into the Club runner).
+    var onStartWorkoutTap: (() -> Void)? = nil
+    /// Active progressive-reveal stream. When the Captain's reply is being
+    /// streamed out char-by-char, `streamingText` carries the running prefix
+    /// and `streamingMessageID` is the row identity. The bubble is rendered
+    /// in place of the (not-yet-committed) final row so the user sees the
+    /// Captain "talking" instead of a silent gap between their message and
+    /// the plan card. Owned by `CaptainViewModel`.
+    var streamingText: String = ""
+    var hasStreamingBubble: Bool = false
     private let thinkingIndicatorID = "captain-thinking-indicator"
+    private let planCardID = "captain-workout-plan-card"
+    private let streamingBubbleID = "captain-streaming-bubble"
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -527,7 +663,26 @@ struct ChatContainerView: View {
                         ))
                     }
 
-                    if isTyping {
+                    // Progressive-reveal bubble. Rendered ABOVE the workout
+                    // card so the Captain's voice arrives in the same visual
+                    // position the finalized row will take (no jump on swap).
+                    if hasStreamingBubble {
+                        StreamingCaptainBubbleRow(text: streamingText)
+                            .id(streamingBubbleID)
+                            .padding(.top, 2)
+                    }
+
+                    if let workoutPlan {
+                        WorkoutPlanCard(plan: workoutPlan, onStartTap: onStartWorkoutTap)
+                            .id(planCardID)
+                            .padding(.top, 4)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                                removal: .opacity
+                            ))
+                    }
+
+                    if isTyping && !hasStreamingBubble {
                         HStack {
                             TypingIndicatorView(state: coachState)
                             Spacer()
@@ -545,6 +700,7 @@ struct ChatContainerView: View {
                 .padding(.bottom, 20)
                 .animation(.spring(response: 0.38, dampingFraction: 0.82), value: messages.count)
                 .animation(.easeInOut(duration: 0.22), value: isTyping)
+                .animation(.spring(response: 0.4, dampingFraction: 0.84), value: workoutPlan != nil)
             }
             .scrollDisabled(!scrollEnabled)
             .scrollDismissesKeyboard(.immediately)
@@ -557,11 +713,38 @@ struct ChatContainerView: View {
             .onChange(of: isTyping) {
                 scrollToBottom(using: proxy)
             }
+            .onChange(of: hasStreamingBubble) {
+                scrollToBottom(using: proxy)
+            }
+            .onChange(of: streamingText) {
+                // Pin the live bubble to the bottom as it grows char-by-char.
+                // No animation on purpose — a spring per tick janks; an
+                // instant scrollTo tracks it buttery-smooth.
+                guard hasStreamingBubble else { return }
+                proxy.scrollTo(streamingBubbleID, anchor: .bottom)
+            }
+            .onChange(of: workoutPlan != nil) { _, hasPlan in
+                guard hasPlan else { return }
+                withAnimation(.smooth(duration: 0.32)) {
+                    proxy.scrollTo(planCardID, anchor: .bottom)
+                }
+            }
         }
     }
 
     private func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool = true) {
-        let targetID: AnyHashable? = isTyping ? AnyHashable(thinkingIndicatorID) : messages.last.map { AnyHashable($0.id) }
+        let targetID: AnyHashable? = {
+            if hasStreamingBubble {
+                return AnyHashable(streamingBubbleID)
+            }
+            if isTyping {
+                return AnyHashable(thinkingIndicatorID)
+            }
+            if workoutPlan != nil {
+                return AnyHashable(planCardID)
+            }
+            return messages.last.map { AnyHashable($0.id) }
+        }()
         guard let targetID else { return }
 
         guard animated else {
@@ -577,6 +760,41 @@ struct ChatContainerView: View {
 
 // MARK: - Chat Bubble
 
+/// A compact, continuously-animating "now playing" equalizer shown on a
+/// Captain bubble while its voice is being spoken — the premium affordance that
+/// replaces a flat speaker glyph. Desynced bar periods give the organic bob of
+/// a real audio meter. Reduce Motion is honored by the caller (it swaps in a
+/// static filled speaker instead of mounting this view).
+private struct VoiceEqualizerBars: View {
+    var color: Color
+    @State private var animating = false
+
+    // (restHeight, peakHeight, period) per bar.
+    private let bars: [(min: CGFloat, max: CGFloat, period: Double)] = [
+        (4, 12, 0.52),
+        (6, 15, 0.40),
+        (3, 11, 0.64),
+        (5, 13, 0.48)
+    ]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2.5) {
+            ForEach(bars.indices, id: \.self) { index in
+                Capsule(style: .continuous)
+                    .fill(color)
+                    .frame(width: 2.5, height: animating ? bars[index].max : bars[index].min)
+                    .animation(
+                        .easeInOut(duration: bars[index].period).repeatForever(autoreverses: true),
+                        value: animating
+                    )
+            }
+        }
+        .frame(height: 16)
+        .onAppear { animating = true }
+        .accessibilityHidden(true)
+    }
+}
+
 struct ChatBubbleView: View {
     let text: String
     let isUser: Bool
@@ -588,12 +806,20 @@ struct ChatBubbleView: View {
     /// MiniMax takes over when consent + feature flag + configuration allow.
     /// Observed for the mint-dot badge + accessibility label variant.
     @ObservedObject private var voiceRouter = CaptainVoiceRouter.shared
+    /// Bumped on each speaker tap to retrigger the SF Symbol bounce.
+    @State private var speakBounce = 0
     private var theme: CaptainTheme { CaptainTheme(colorScheme: colorScheme) }
     private var canSpeakReply: Bool {
         !isUser && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     private var enhancedVoiceActive: Bool {
         voiceRouter.activeProvider == .miniMax && voiceRouter.isSpeaking
+    }
+    /// True only when THIS bubble's text is the one currently being spoken —
+    /// scopes the live equalizer to the right row (router state is global).
+    private var isThisBubbleSpeaking: Bool {
+        voiceRouter.isSpeaking
+            && voiceRouter.speakingText == text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private var speakerAccessibilityLabel: String {
         let arabic = AppSettingsStore.shared.appLanguage == .arabic
@@ -607,8 +833,8 @@ struct ChatBubbleView: View {
     }
 
     // v1.1 brand tokens — Apple resubmission palette.
-    private let mintFill = Color(red: 0.718, green: 0.898, blue: 0.824) // #B7E5D2
-    private let sandFill = Color(red: 0.922, green: 0.812, blue: 0.592).opacity(0.35) // #EBCF97 @ 35%
+    private let mintFill = Color(red: 0.77, green: 0.94, blue: 0.86) // #C4F0DB
+    private let sandFill = Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3
     private let ink      = Color(red: 0.059, green: 0.090, blue: 0.129) // #0F1721
 
     /// Cap on bubble width. Avoids `UIScreen.main` (deprecated in iOS 26) by
@@ -642,7 +868,7 @@ struct ChatBubbleView: View {
             if !isUser { Spacer(minLength: 52) }
 
             VStack(alignment: isUser ? .leading : .trailing, spacing: 4) {
-                Text(text)
+                Text.captainMessage(text)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(ink)
                     .lineSpacing(3)
@@ -651,24 +877,47 @@ struct ChatBubbleView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .frame(maxWidth: maxBubbleWidth, alignment: isUser ? .leading : .trailing)
-                    .background(bubbleShape.fill(isUser ? mintFill : sandFill))
+                    .background(
+                        bubbleShape.fill(
+                            LinearGradient(
+                                colors: isUser
+                                    ? [mintFill, mintFill.opacity(0.85)]
+                                    : [sandFill, sandFill.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    )
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(isUser ? "User message" : "Captain message")
                     .accessibilityValue(text)
 
                 if canSpeakReply {
                     Button {
+                        // Free → Apple voice (Siri-like, on-device). Paid → MiniMax API voice.
+                        HapticEngine.light()
+                        speakBounce += 1
                         Task {
-                            await CaptainVoiceRouter.shared.speak(text: text, tier: .premium)
+                            let isPaid = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat)
+                            await CaptainVoiceRouter.shared.speak(text: text, tier: isPaid ? .premium : .realtime)
                         }
                     } label: {
                         ZStack(alignment: .bottomTrailing) {
-                            Image(systemName: voiceRouter.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .contentShape(Rectangle())
+                            Group {
+                                if isThisBubbleSpeaking, !UIAccessibility.isReduceMotionEnabled {
+                                    // Live audio meter while this reply plays.
+                                    VoiceEqualizerBars(color: ink.opacity(0.7))
+                                } else {
+                                    Image(systemName: isThisBubbleSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(ink.opacity(voiceService.isTTSAvailable ? 0.55 : 0.35))
+                                        .symbolEffect(.bounce, value: speakBounce)
+                                }
+                            }
+                            .frame(minWidth: 22, minHeight: 16)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .contentShape(Rectangle())
                             if enhancedVoiceActive {
                                 Circle()
                                     .fill(AiQoColors.mintSoft)
@@ -687,6 +936,88 @@ struct ChatBubbleView: View {
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Streaming Captain Bubble
+
+/// The live progressive-reveal row shown while the Captain's reply types out
+/// in `CaptainScreen`. Mirrors `ChatBubbleView`'s assistant layout (right-
+/// aligned in RTL, sand bubble, ink text) so when the reveal finishes and
+/// the real row is appended, the swap is seamless — same text, same
+/// position, no jump. Required because the parent screen hosts the workout
+/// card inline; without an explicit streaming bubble, the Captain looks
+/// mute between the user's message and the card while the text streams.
+struct StreamingCaptainBubbleRow: View {
+    let text: String
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private let sandFill = Color(red: 0.97, green: 0.84, blue: 0.64) // #F8D6A3
+    private let ink      = Color(red: 0.059, green: 0.090, blue: 0.129) // #0F1721
+
+    private var maxBubbleWidth: CGFloat {
+        sizeClass == .regular ? 520 : 300
+    }
+
+    private var bubbleShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: 18,
+            bottomLeadingRadius: 6,
+            bottomTrailingRadius: 18,
+            topTrailingRadius: 18,
+            style: .continuous
+        )
+    }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            Spacer(minLength: 52)
+
+            HStack(alignment: .bottom, spacing: 3) {
+                Text.captainMessage(text)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(ink)
+                    .lineSpacing(3)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                CaptainScreenStreamingCaret()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: maxBubbleWidth, alignment: .trailing)
+            .background(
+                bubbleShape.fill(
+                    LinearGradient(
+                        colors: [sandFill, sandFill.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            )
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}
+
+/// Reveal caret for the streaming bubble. Named with the screen prefix so
+/// it doesn't collide with the same-named primitive inside CaptainChatView.
+private struct CaptainScreenStreamingCaret: View {
+    @State private var on = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(Color(hex: "5ECDB7"))
+            .frame(width: 2, height: 16)
+            .padding(.bottom, 2)
+            .opacity(on ? 1 : 0.15)
+            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: on)
+            .onAppear { on = true }
+            .accessibilityHidden(true)
     }
 }
 
@@ -1118,13 +1449,30 @@ struct BreathingRingIndicatorView: View {
 
 // MARK: - Avatar View
 
+/// The Captain's outfit reflects tier — the SAME grown Hamoudi for everyone,
+/// only the look changes: free wears the plain fit (`Hammoudi4`), paid (Max+)
+/// wears the premium fit (`Hammoudi5`) and gets the living aura treatment
+/// (`LivingCaptainAvatarView`). One fixed adult character protects the brand.
+/// `DevOverride` unlocks the paid look.
+enum CaptainAvatarAsset {
+    static var current: String {
+        (DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat))
+            ? "Hammoudi5"
+            : "Hammoudi4"
+    }
+}
+
 struct CaptainAvatarView: View {
     var breathes: Bool = true
 
+    /// Re-render the moment entitlement changes so the Captain visibly "grows"
+    /// right when the user subscribes (free `Hammoudi4` → paid `Hammoudi5`).
+    @ObservedObject private var entitlements = EntitlementStore.shared
     @State private var breathingOffset: CGFloat = 0
 
     var body: some View {
-        Image("Hammoudi5")
+        let _ = entitlements
+        Image(CaptainAvatarAsset.current)
             .resizable()
             .aspectRatio(contentMode: .fit)
             .offset(y: breathes ? breathingOffset : 0)
@@ -1256,18 +1604,21 @@ struct CustomizationSheetView: View {
                             CustomInputField(placeholder: NSLocalizedString("captain.customize.calling", value: "How should the captain call you?", comment: ""), text: $viewModel.customization.calling)
                         }
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(NSLocalizedString("captain.customize.tone", value: "Captain tone", comment: ""))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(theme.subtext)
-
-                            Picker("", selection: $viewModel.customization.tone) {
-                                ForEach(CaptainTone.allCases, id: \.self) { tone in
-                                    Text(tone.displayName).tag(tone)
+                        CaptainPersonalityPicker(
+                            tone: $viewModel.customization.tone,
+                            customStyle: $viewModel.customization.customStyle,
+                            isPaid: viewModel.isPaidCaptain,
+                            isPro: viewModel.isProCaptain,
+                            isArabic: AppSettingsStore.shared.appLanguage == .arabic,
+                            onUpgrade: {
+                                // Close this sheet, then present the paywall on the
+                                // next runloop (two sheets can't show at once).
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                    viewModel.showPaywall = true
                                 }
                             }
-                            .pickerStyle(.segmented)
-                        }
+                        )
 
                         Button(action: { viewModel.saveCustomization() }) {
                             Text(NSLocalizedString("action.save", value: "Save", comment: ""))

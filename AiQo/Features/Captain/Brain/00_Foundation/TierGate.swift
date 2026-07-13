@@ -15,10 +15,23 @@ final class TierGate: @unchecked Sendable {
     // MARK: - Feature catalogue
 
     nonisolated enum Feature: Hashable, Sendable {
+        // Basic life notifications (water / streak / sleep / workout / weekly
+        // reminder). Available to EVERY tier incl. `.none` — these keep a free
+        // or post-trial user engaged and are not "smart Captain" intelligence.
+        case basicLifeNotifications
+
         // Captain core (Max-tier and above)
         case captainChat
         case captainMemory
         case captainNotifications
+
+        // User-taught standing directives (learn / save / remember / execute).
+        // A "smart Captain" intelligence feature, gated like captainMemory.
+        case captainDirectives
+
+        // Kernel (digital-wellbeing app lock via Family Controls). Max+,
+        // mirrored on captainChat. Structure-only in v1.0.7 — no shielding yet.
+        case kernel
 
         // Intelligence Pro exclusives
         case multiWeekPlan(weeks: Int)
@@ -30,9 +43,12 @@ final class TierGate: @unchecked Sendable {
 
         nonisolated var logName: String {
             switch self {
+            case .basicLifeNotifications:    return "basicLifeNotifications"
             case .captainChat:               return "captainChat"
             case .captainMemory:             return "captainMemory"
             case .captainNotifications:      return "captainNotifications"
+            case .captainDirectives:         return "captainDirectives"
+            case .kernel:                    return "kernel"
             case .multiWeekPlan(let w):      return "multiWeekPlan(\(w)w)"
             case .weeklyInsightsNarrative:   return "weeklyInsightsNarrative"
             case .monthlyReflection:         return "monthlyReflection"
@@ -74,6 +90,15 @@ final class TierGate: @unchecked Sendable {
     nonisolated var currentTier: SubscriptionTier {
         #if DEBUG
         if let testOverride { return testOverride }
+        // Hidden DEBUG-only tier override (App Settings → testing). Lets the whole
+        // app — Captain chat routing, avatar, voice, personality — flip between
+        // free and paid live, without a relaunch. NEVER present in Release builds.
+        switch defaults.string(forKey: "debug.captainTierOverride") {
+        case "free": return .none
+        case "max":  return .max
+        case "pro":  return .pro
+        default:     break
+        }
         #endif
 
         if trialProvider() { return .trial }
@@ -86,7 +111,11 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated func requiredTier(for feature: Feature) -> SubscriptionTier {
         switch feature {
-        case .captainChat, .captainMemory, .captainNotifications:
+        case .basicLifeNotifications:
+            return .none
+        case .captainChat, .captainMemory, .captainNotifications, .captainDirectives:
+            return .max
+        case .kernel:
             return .max
         case .multiWeekPlan(let weeks):
             return weeks > 1 ? .pro : .max
@@ -127,17 +156,22 @@ final class TierGate: @unchecked Sendable {
 
     nonisolated var maxMemoryRetrievalDepth: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 25
-        case .max: return 10
+        case .pro: return 40
+        case .max: return 18
         default:   return 0
         }
     }
 
+    /// Hard storage ceiling that triggers lowest-confidence eviction. Kept
+    /// above the user-visible `memoryFactLimit` (100/500/1000) so the displayed
+    /// cap is comfortably reachable. Free is intentionally non-zero so the
+    /// user-requested "Saved Memories" + reminders persist for every tier
+    /// (product decision 2026-05-18).
     nonisolated var maxSemanticFacts: Int {
         switch currentTier.effectiveAccessTier {
-        case .pro: return 500
-        case .max: return 200
-        default:   return 0
+        case .pro: return 1_200
+        case .max: return 600
+        default:   return 120
         }
     }
 
@@ -180,6 +214,18 @@ final class TierGate: @unchecked Sendable {
         case .max: return 1
         default:   return 0
         }
+    }
+
+    /// Max distinct apps/categories/web-domains the Kernel may shield.
+    ///
+    /// Free (`.none`, incl. post-trial) gets exactly ONE — enough to feel the
+    /// walk-to-unlock loop on your single worst app; any paid tier (Max/Pro, and
+    /// the trial at Pro-equivalent) is unlimited (`Int.max`). Mirrors
+    /// `requiredTier(.kernel)` (`.max`): `effectiveAccessTier >= .max` ⇒ unlimited.
+    /// Monetization here is the *number* of apps, not access to the feature — every
+    /// tier may open the Kernel and protect at least one app.
+    nonisolated var kernelAppLimit: Int {
+        currentTier.effectiveAccessTier >= .max ? .max : 1
     }
 
     // MARK: - Back-compat async hooks (existing callers: EpisodicStore, SemanticStore)

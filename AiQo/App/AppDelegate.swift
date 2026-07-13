@@ -21,7 +21,7 @@ struct AiQoApp: App {
 
         // ربط الـ stores بالـ container
         MemoryStore.shared.configure(container: captainContainer, storageMode: Self.captainStorageMode)
-        if FeatureFlags.memoryV4Enabled {
+        if MemoryV4Gate.isOn {
             let v4Container = captainContainer
             Task {
                 await EpisodicStore.shared.configure(container: v4Container)
@@ -29,6 +29,11 @@ struct AiQoApp: App {
                 await ProceduralStore.shared.configure(container: v4Container)
                 await EmotionalStore.shared.configure(container: v4Container)
                 await RelationshipStore.shared.configure(container: v4Container)
+                // 11_Directives — user-taught standing instructions.
+                await DirectiveStore.shared.configure(container: v4Container)
+                // Re-surface every still-active standing order into the prompt
+                // mirror so it survives relaunch and the Captain never forgets.
+                await DirectiveCoordinator.shared.hydratePromptMirror()
             }
             BackgroundCoordinator.shared.registerTasks()
             BackgroundCoordinator.shared.scheduleNextNightly()
@@ -53,6 +58,12 @@ struct AiQoApp: App {
                 ])
             }
         }
+
+        // Observability subscribes to BrainBus so directive-lifecycle signals
+        // (learned / fired / workout-seen) are auditable instead of silently
+        // dropped. Unconditional + single call site (see BrainBusObserver).
+        Task { await BrainBusObserver.start() }
+
         CaptainPersonalizationStore.shared.configure(container: captainContainer)
         RecordProjectManager.shared.configure(container: captainContainer)
         WeeklyMetricsBufferStore.shared.configure(container: captainContainer)
@@ -64,11 +75,11 @@ struct AiQoApp: App {
     }
 
     private static var captainStorageMode: MemoryStore.StorageMode {
-        FeatureFlags.memoryV4Enabled ? .schemaV4 : .legacyV3
+        MemoryV4Gate.storageMode
     }
 
     private static func makeCaptainContainer() -> ModelContainer {
-        if !FeatureFlags.memoryV4Enabled {
+        if !MemoryV4Gate.isOn {
             return makeCaptainContainerV3()
         }
 
@@ -107,7 +118,10 @@ struct AiQoApp: App {
     }
 
     private static func makeCaptainContainerV4() -> ModelContainer {
-        let schema = Schema(versionedSchema: MemorySchemaV4.self)
+        // Target the latest versioned schema (V5 adds LearnedDirective).
+        // The migration plan carries the full V1→…→V5 chain, so existing
+        // V3/V4 stores migrate forward via the lightweight V4→V5 stage.
+        let schema = Schema(versionedSchema: MemorySchemaV5.self)
 
         do {
             let config = ModelConfiguration(
@@ -121,9 +135,12 @@ struct AiQoApp: App {
                 configurations: [config]
             )
         } catch {
-            diag.error("Captain V4 container creation failed", error: error)
-            CrashReporter.shared.recordError(error, context: "captain_container_v4_failed")
-            return makeInMemoryCaptainContainer(schema: schema)
+            // V4 container init failed (most commonly a migration error). Trip the
+            // local fallback flag so subsequent launches use V3 directly, then load
+            // V3 right now so this user keeps their data instead of dropping into
+            // an in-memory store that loses everything on next launch.
+            MemoryV4Gate.recordMigrationFailure(error, context: "captain_container_v4_failed")
+            return makeCaptainContainerV3()
         }
     }
 
@@ -132,7 +149,20 @@ struct AiQoApp: App {
             let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             return try ModelContainer(for: schema, configurations: [memoryConfig])
         } catch {
-            fatalError("Failed to create even an in-memory ModelContainer: \(error)")
+            // Even an in-memory container failed — effectively "SwiftData is
+            // broken on this device". This last resort previously had NO
+            // telemetry (unlike the V3 path) and a bare fatalError. Record it,
+            // retry once with an isolated config, then keep a controlled,
+            // REPORTED failure rather than a silent crash.
+            CrashReporter.shared.recordError(error, context: "captain_in_memory_container_failed")
+            if let retry = try? ModelContainer(
+                for: schema,
+                configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]
+            ) {
+                return retry
+            }
+            CrashReporter.shared.recordError(error, context: "captain_container_unrecoverable")
+            preconditionFailure("Captain memory container unrecoverable even in-memory: \(error)")
         }
     }
 
@@ -183,6 +213,29 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ = NetworkMonitor.shared
         AnalyticsService.shared.track(.appLaunched)
         _ = FreeTrialManager.shared
+
+        // Remote kill switches. Fire-and-forget; cached UserDefaults value is what
+        // the gate reads synchronously. Changes propagate to the next cold launch.
+        Task.detached(priority: .utility) {
+            await RemoteFlags.shared.refresh()
+        }
+
+        // Subscribe NotificationBrain to XP / streak events so proactive Captain
+        // notifications can fire. `NotificationBrainGate` combines the Info.plist
+        // flag with the Supabase remote kill switch so it can be disabled live
+        // (for the real users it already shipped to) without an App Store release.
+        if NotificationBrainGate.isOn {
+            Task {
+                await NotificationBrain.shared.subscribe()
+            }
+        }
+
+        // Register CrisisDetector when the flag is on. Previously declared but unread
+        // (dead flag pre-v1.0.4). The singleton init is sufficient — CrisisDetector
+        // listens passively to emotional patterns + bio signals via its dependencies.
+        if FeatureFlags.crisisDetectorEnabled {
+            _ = CrisisDetector.shared
+        }
 
         LocalizationManager.shared.applySavedLanguage()
 

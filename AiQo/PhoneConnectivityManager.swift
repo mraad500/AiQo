@@ -5,7 +5,7 @@
 
 import Foundation
 import WatchConnectivity
-import HealthKit
+@preconcurrency import HealthKit
 import Combine
 import os
 
@@ -21,6 +21,8 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private enum Constants {
         static let snapshotStoreKey = "aiqo.workout.snapshot"
         static let sessionIDStoreKey = "aiqo.workout.session-id"
+        static let awardedWatchWorkoutsKey = "aiqo.watch.awarded-workouts"
+        static let awardedWatchWorkoutsLimit = 30
         static let logLimit = 40
     }
 
@@ -32,6 +34,13 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private var latestCommandSequenceNumber = 0
     private var lastLegacyPacketSequence = -1
     private var pendingCommandID: String?
+    private var pendingCommandType: WorkoutControlCommandType?
+    private var commandWatchdog: Task<Void, Never>?
+
+    /// How long an issued control command may stay in-flight before we clear
+    /// the pending flag locally. Without this, a lost watch acknowledgement
+    /// leaves controls permanently disabled (the "stuck ending" bug).
+    private static let commandAckTimeoutSeconds: UInt64 = 8
 
     @Published var isReachable = false
     @Published var isPaired = false
@@ -115,6 +124,14 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         watchStartConnectionStatus == .connected
     }
 
+    /// True only when a real, OS-delivered mirrored `HKWorkoutSession` is held.
+    /// A snapshot restored from `UserDefaults` sets `hasMirroredSession` but
+    /// leaves this nil — that distinction is what stops a stale persisted run
+    /// from masquerading as a live workout and blocking new launches.
+    private var hasLiveMirroredSession: Bool {
+        mirroredSession != nil
+    }
+
     var currentWorkoutId: String? {
         mirroredSessionID
     }
@@ -147,33 +164,31 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
+    @discardableResult
     func launchWatchAppForWorkout(
         activityType: HKWorkoutActivityType,
         locationType: HKWorkoutSessionLocationType
-    ) {
+    ) -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else {
             lastError = "HealthKit not available"
-            return
+            return false
         }
 
         if let availabilityError = watchAvailabilityError() {
             lastError = availabilityError
             workoutConnectionState = .failed
             logEvent("launch skipped: \(availabilityError)")
-            return
+            return false
         }
 
-        if hasMirroredSession, !currentWorkoutPhase.isTerminal {
+        if hasLiveMirroredSession, !currentWorkoutPhase.isTerminal {
             lastError = "A workout is already active"
             logEvent("launch skipped: mirrored workout already active")
-            return
+            return false
         }
 
         prepareForFreshWorkoutLaunch()
 
-        let config = HKWorkoutConfiguration()
-        config.activityType = activityType
-        config.locationType = locationType
         let startRequest = WorkoutCompanionStartRequest(
             companionCommand: .startWorkout,
             requestedAt: Date(),
@@ -183,30 +198,59 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
         workoutConnectionState = .launching
         logEvent("authorization requested")
-        logEvent("launching watch app for workout")
 
-        healthStore.startWatchApp(with: config) { [weak self] success, error in
+        // `startWatchApp(with:)` does nothing unless the iOS app is authorized
+        // to SHARE workouts. The onboarding HealthKit prompt is skippable, so we
+        // must request it here every time — pressing Start is explicit intent,
+        // and the call is a no-op when authorization already exists.
+        let shareTypes: Set<HKSampleType> = [HKObjectType.workoutType()]
+        let readTypes = Set(
+            [HKQuantityTypeIdentifier.heartRate,
+             .activeEnergyBurned,
+             .distanceWalkingRunning,
+             .distanceCycling]
+                .compactMap { HKObjectType.quantityType(forIdentifier: $0) }
+        )
+
+        healthStore.requestAuthorization(toShare: shareTypes, read: readTypes) { [weak self] _, authError in
             Task { @MainActor [weak self] in
                 guard let self else { return }
 
-                if let error {
-                    self.lastError = "startWatchApp error: \(error.localizedDescription)"
-                    self.workoutConnectionState = .failed
-                    self.logEvent("startWatchApp failed: \(error.localizedDescription)")
-                } else if success {
-                    self.lastError = "None"
-                    self.workoutConnectionState = .awaitingMirror
-                    self.logEvent("watch app launched, awaiting mirrored session")
-                    if self.sendStartRequestToWatch(startRequest) {
-                        self.lastSent = "start=\(activityType.rawValue)"
+                if let authError {
+                    self.logEvent("healthkit auth error: \(authError.localizedDescription)")
+                }
+
+                let config = HKWorkoutConfiguration()
+                config.activityType = activityType
+                config.locationType = locationType
+
+                self.logEvent("launching watch app for workout")
+                self.healthStore.startWatchApp(with: config) { [weak self] success, error in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+
+                        if let error {
+                            self.lastError = "startWatchApp error: \(error.localizedDescription)"
+                            self.workoutConnectionState = .failed
+                            self.logEvent("startWatchApp failed: \(error.localizedDescription)")
+                        } else if success {
+                            self.lastError = "None"
+                            self.workoutConnectionState = .awaitingMirror
+                            self.logEvent("watch app launched, awaiting mirrored session")
+                            if self.sendStartRequestToWatch(startRequest) {
+                                self.lastSent = "start=\(activityType.rawValue)"
+                            }
+                        } else {
+                            self.lastError = "startWatchApp returned false"
+                            self.workoutConnectionState = .failed
+                            self.logEvent("startWatchApp returned false")
+                        }
                     }
-                } else {
-                    self.lastError = "startWatchApp returned false"
-                    self.workoutConnectionState = .failed
-                    self.logEvent("startWatchApp returned false")
                 }
             }
         }
+
+        return true
     }
 
     func startWorkoutOnWatch(activityTypeRaw: Int, locationTypeRaw: Int) {
@@ -229,6 +273,23 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
     func endWorkoutOnWatch() {
         sendWorkoutCommand(.end)
+    }
+
+    /// Forces the phone's mirror state to terminal when the watch never
+    /// confirmed an end (lost acknowledgement / terminal snapshot). The end
+    /// command was already dispatched; this just stops the phone from waiting
+    /// forever and releases the session so a new workout can be launched.
+    func reconcileLostWorkoutEnd() {
+        guard !currentWorkoutPhase.isTerminal else { return }
+        logEvent("reconciling lost workout end — forcing terminal state locally")
+        cancelCommandWatchdog()
+        isCommandInFlight = false
+        pendingCommandID = nil
+        mirroredSessionID = nil
+        clearPersistedSnapshot()
+        currentWorkoutPhase = .ended
+        workoutConnectionState = .ended
+        detachMirroredSession(markDisconnected: false)
     }
 
     func requestLatestSnapshot() {
@@ -359,6 +420,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         mirroredSession?.delegate = nil
         mirroredSession = nil
         hasMirroredSession = false
+        cancelCommandWatchdog()
         isCommandInFlight = false
         pendingCommandID = nil
 
@@ -477,6 +539,38 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
             .joined(separator: "+")
         lastSent = "command=\(type.rawValue) via=\(transports)"
         logEvent("command dispatched: \(type.rawValue) via \(transports)")
+
+        if type != .requestSnapshot {
+            armCommandWatchdog(commandID: command.commandId, type: type)
+        }
+    }
+
+    private func armCommandWatchdog(commandID: String, type: WorkoutControlCommandType) {
+        pendingCommandType = type
+        commandWatchdog?.cancel()
+        commandWatchdog = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.commandAckTimeoutSeconds * 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.handleCommandWatchdogFired(commandID: commandID, type: type)
+        }
+    }
+
+    private func cancelCommandWatchdog() {
+        commandWatchdog?.cancel()
+        commandWatchdog = nil
+        pendingCommandType = nil
+    }
+
+    /// No acknowledgement arrived for an in-flight command. Release the pending
+    /// flag so controls are usable again. The terminal finalize for end/stop is
+    /// owned by `LiveWorkoutSession`'s end watchdog; here we only unblock.
+    private func handleCommandWatchdogFired(commandID: String, type: WorkoutControlCommandType) {
+        guard isCommandInFlight, pendingCommandID == commandID else { return }
+        logEvent("command \(type.rawValue) timed out without acknowledgement — clearing pending flag")
+        pendingCommandID = nil
+        pendingCommandType = nil
+        isCommandInFlight = false
+        lastError = "Watch did not acknowledge \(type.rawValue) in time"
     }
 
     private func sendCompanionMessage(_ message: WorkoutCompanionMessage, guaranteed: Bool) -> Bool {
@@ -560,6 +654,11 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
                 )
                 applySnapshotContext(snapshotContext, source: "persisted-legacy")
             }
+            // The persisted snapshot is last-known display state, not proof of a
+            // live link. A genuine in-progress workout re-attaches through
+            // `workoutSessionMirroringStartHandler`; until then we must not
+            // report a mirrored session or it blocks the next launch.
+            hasMirroredSession = false
             logEvent("recovered persisted snapshot")
         } catch {
             defaults.removeObject(forKey: Constants.snapshotStoreKey)
@@ -577,7 +676,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     }
 
     private var shouldReplaceStaleSessionContext: Bool {
-        !hasMirroredSession || currentWorkoutPhase.isTerminal || workoutConnectionState == .ended || workoutConnectionState == .failed
+        !hasLiveMirroredSession || currentWorkoutPhase.isTerminal || workoutConnectionState == .ended || workoutConnectionState == .failed
     }
 
     private func clearSessionContextForNextWorkout(resetMetrics: Bool) {
@@ -611,6 +710,22 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     private func clearPersistedSnapshot() {
         defaults.removeObject(forKey: Constants.snapshotStoreKey)
         defaults.removeObject(forKey: Constants.sessionIDStoreKey)
+    }
+
+    private func hasAwardedWatchWorkout(_ id: String) -> Bool {
+        (defaults.stringArray(forKey: Constants.awardedWatchWorkoutsKey) ?? []).contains(id)
+    }
+
+    /// Records that XP was credited for a watch workout. Persisted (so a relaunch
+    /// can't double-credit a queued duplicate) and capped to the most recent ids.
+    private func markWatchWorkoutAwarded(_ id: String) {
+        var awarded = defaults.stringArray(forKey: Constants.awardedWatchWorkoutsKey) ?? []
+        guard !awarded.contains(id) else { return }
+        awarded.append(id)
+        if awarded.count > Constants.awardedWatchWorkoutsLimit {
+            awarded.removeFirst(awarded.count - Constants.awardedWatchWorkoutsLimit)
+        }
+        defaults.set(awarded, forKey: Constants.awardedWatchWorkoutsKey)
     }
 
     private func applyApplicationContextIfAvailable(_ applicationContext: [String: Any], source: String) {
@@ -651,6 +766,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
 
         if snapshot.currentState.isTerminal {
+            cancelCommandWatchdog()
             isCommandInFlight = false
             pendingCommandID = nil
             mirroredSessionID = nil
@@ -691,6 +807,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         lastReceived = "ack=\(acknowledgement.commandId) seq=\(sequenceNumber)"
 
         if acknowledgement.commandId == pendingCommandID {
+            cancelCommandWatchdog()
             pendingCommandID = nil
             isCommandInFlight = false
         }
@@ -744,17 +861,27 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     }
 
     private func handleIncomingWCData(_ message: [String: Any]) {
-        // Handle standalone Watch workout completion (from WatchConnectivityService)
+        // Standalone Watch workout completion (sent by WatchConnectivityManager
+        // when a watch session ends) — drives XP on the phone.
         if let event = message["event"] as? String, event == "workout_completed" {
             let cal = message["calories"] as? Double ?? 0
             let dur = message["duration_minutes"] as? Double ?? 0
             let type = message["workout_type"] as? String ?? ""
             let dist = message["distance_km"] as? Double ?? 0
+            let workoutID = (message["workout_id"] as? String).flatMap { $0.isEmpty ? nil : $0 }
 
-            Task { @MainActor in
-                // Award XP: same formula as Watch summary
-                let xp = Int(cal * 0.8 + dur * 2)
-                guard xp > 0 else { return }
+            // Exactly-once XP: the watch reports completion over both
+            // `sendMessage` and a `transferUserInfo` fallback, so the same
+            // workout can arrive twice. Credit each workout id only once.
+            if let workoutID, hasAwardedWatchWorkout(workoutID) {
+                logEvent("watch workout XP already awarded, ignored: \(workoutID)")
+                return
+            }
+            if let workoutID { markWatchWorkoutAwarded(workoutID) }
+
+            // Award XP: same formula as Watch summary
+            let xp = Int(cal * 0.8 + dur * 2)
+            if xp > 0 {
                 os_log("Watch XP received: %d", xp)
                 LevelStore.shared.addXP(xp)
             }
@@ -880,112 +1007,163 @@ final class PhoneConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
-    func session(
+    /// WatchConnectivity and HealthKit deliver delegate callbacks on a
+    /// background queue. This type is `@MainActor`, so every callback hops
+    /// here before touching `@Published` state — otherwise SwiftUI emits
+    /// "Publishing changes from background threads is not allowed".
+    nonisolated private static func runOnMain(_ operation: @escaping @MainActor () -> Void) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { operation() }
+            return
+        }
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { operation() }
+        }
+    }
+
+    nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith state: WCSessionActivationState,
         error: Error?
     ) {
-        applyWatchSessionStatus(from: session)
-        activationState = state
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.applyWatchSessionStatus(from: session)
+            self.activationState = state
 
-        if let error {
-            logEvent("WCSession activation error: \(error.localizedDescription)")
-        } else {
-            logEvent("WCSession activated")
+            if let error {
+                self.logEvent("WCSession activation error: \(error.localizedDescription)")
+            } else {
+                self.logEvent("WCSession activated")
+            }
+
+            self.applyApplicationContextIfAvailable(
+                session.receivedApplicationContext,
+                source: "activation"
+            )
         }
-
-        applyApplicationContextIfAvailable(session.receivedApplicationContext, source: "activation")
     }
 
-    func sessionReachabilityDidChange(_ session: WCSession) {
-        applyWatchSessionStatus(from: session)
-        logEvent("WCSession reachability changed: \(session.isReachable)")
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.applyWatchSessionStatus(from: session)
+            self.logEvent("WCSession reachability changed: \(session.isReachable)")
+        }
     }
 
-    func sessionWatchStateDidChange(_ session: WCSession) {
-        applyWatchSessionStatus(from: session)
-        logEvent("watch state changed")
+    nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.applyWatchSessionStatus(from: session)
+            self.logEvent("watch state changed")
+        }
     }
 
-    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        handleIncomingWCData(message)
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        Self.runOnMain { [weak self] in
+            self?.handleIncomingWCData(message)
+        }
     }
 
-    func session(
+    nonisolated func session(
         _ session: WCSession,
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        handleIncomingWCData(message)
+        Self.runOnMain { [weak self] in
+            self?.handleIncomingWCData(message)
+        }
         replyHandler(["status": "received"])
     }
 
-    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        handleIncomingWCData(userInfo)
-    }
-
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        if applicationContext[WorkoutSyncDictionaryKey.snapshotContext] != nil {
-            applyApplicationContextIfAvailable(applicationContext, source: "delegate")
-            return
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        Self.runOnMain { [weak self] in
+            self?.handleIncomingWCData(userInfo)
         }
-        handleIncomingWCData(applicationContext)
     }
 
-    func sessionDidBecomeInactive(_ session: WCSession) {
-        logEvent("WCSession became inactive")
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            if applicationContext[WorkoutSyncDictionaryKey.snapshotContext] != nil {
+                self.applyApplicationContextIfAvailable(applicationContext, source: "delegate")
+                return
+            }
+            self.handleIncomingWCData(applicationContext)
+        }
     }
 
-    func sessionDidDeactivate(_ session: WCSession) {
-        logEvent("WCSession deactivated, reactivating")
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
+        Self.runOnMain { [weak self] in
+            self?.logEvent("WCSession became inactive")
+        }
+    }
+
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+        Self.runOnMain { [weak self] in
+            self?.logEvent("WCSession deactivated, reactivating")
+        }
         WCSession.default.activate()
     }
 
-    func workoutSession(
+    nonisolated func workoutSession(
         _ workoutSession: HKWorkoutSession,
         didChangeTo toState: HKWorkoutSessionState,
         from fromState: HKWorkoutSessionState,
         date: Date
     ) {
-        currentWorkoutPhase = Self.phase(for: toState)
-        if currentWorkoutPhase.isTerminal {
-            mirroredSessionID = nil
-            workoutConnectionState = .ended
-            detachMirroredSession(markDisconnected: false)
-            clearPersistedSnapshot()
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.currentWorkoutPhase = Self.phase(for: toState)
+            if self.currentWorkoutPhase.isTerminal {
+                self.mirroredSessionID = nil
+                self.workoutConnectionState = .ended
+                self.detachMirroredSession(markDisconnected: false)
+                self.clearPersistedSnapshot()
+            }
+            self.logEvent("mirrored session state: \(fromState.rawValue) -> \(toState.rawValue)")
         }
-        logEvent("mirrored session state: \(fromState.rawValue) -> \(toState.rawValue)")
     }
 
-    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
-        lastError = error.localizedDescription
-        workoutConnectionState = .failed
-        logEvent("mirrored session failure: \(error.localizedDescription)")
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.lastError = error.localizedDescription
+            self.workoutConnectionState = .failed
+            self.logEvent("mirrored session failure: \(error.localizedDescription)")
+        }
     }
 
-    func workoutSession(
+    nonisolated func workoutSession(
         _ workoutSession: HKWorkoutSession,
         didReceiveDataFromRemoteWorkoutSession data: [Data]
     ) {
-        for item in data {
-            do {
-                let payload = try WorkoutSyncCodec.decode(item)
-                handleWorkoutPayload(payload)
-            } catch {
-                lastError = error.localizedDescription
-                logEvent("payload decode failure: \(error.localizedDescription)")
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            for item in data {
+                do {
+                    let payload = try WorkoutSyncCodec.decode(item)
+                    self.handleWorkoutPayload(payload)
+                } catch {
+                    self.lastError = error.localizedDescription
+                    self.logEvent("payload decode failure: \(error.localizedDescription)")
+                }
             }
         }
     }
 
-    func workoutSession(
+    nonisolated func workoutSession(
         _ workoutSession: HKWorkoutSession,
         didDisconnectFromRemoteDeviceWithError error: Error?
     ) {
         let reason = error?.localizedDescription ?? "no error"
-        detachMirroredSession(markDisconnected: !currentWorkoutPhase.isTerminal)
-        workoutConnectionState = currentWorkoutPhase.isTerminal ? .ended : .disconnected
-        logEvent("remote device disconnected: \(reason)")
+        Self.runOnMain { [weak self] in
+            guard let self else { return }
+            self.detachMirroredSession(markDisconnected: !self.currentWorkoutPhase.isTerminal)
+            self.workoutConnectionState = self.currentWorkoutPhase.isTerminal ? .ended : .disconnected
+            self.logEvent("remote device disconnected: \(reason)")
+        }
     }
 
     private static func phase(for state: HKWorkoutSessionState) -> WorkoutSessionPhase {

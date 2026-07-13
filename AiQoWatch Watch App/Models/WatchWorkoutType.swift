@@ -14,6 +14,33 @@ enum WatchWorkoutType: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Best-effort reverse mapping used when a workout is launched from the
+    /// iPhone: the companion only hands us an `HKWorkoutActivityType` plus a
+    /// location, so we recover the closest watch-facing type (preserving the
+    /// indoor/outdoor distinction the iPhone chose). `.unknown` locations are
+    /// treated as outdoor, matching how the iPhone launch flows request them.
+    init(hkType: HKWorkoutActivityType, locationType: HKWorkoutSessionLocationType) {
+        let isIndoor = locationType == .indoor
+        switch hkType {
+        case .walking:
+            self = isIndoor ? .walkIndoor : .walkOutdoor
+        case .running:
+            self = isIndoor ? .runIndoor : .runOutdoor
+        case .cycling:
+            self = .cycling
+        case .highIntensityIntervalTraining:
+            self = .hiit
+        case .traditionalStrengthTraining, .functionalStrengthTraining, .coreTraining:
+            self = .strengthTraining
+        case .yoga, .mindAndBody, .flexibility:
+            self = .yoga
+        case .swimming:
+            self = .swimming
+        default:
+            self = .runOutdoor
+        }
+    }
+
     func localizedName(locale: Locale) -> String {
         switch self {
         case .walkOutdoor:

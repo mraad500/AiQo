@@ -66,6 +66,12 @@ struct CaptainChatView: View {
                 .onChange(of: globalBrain.currentWorkoutPlan != nil) {
                     scrollToBottom(using: proxy)
                 }
+                .onChange(of: globalBrain.streamingText) {
+                    // Keep the growing live bubble pinned to the bottom while
+                    // it types out. No animation on purpose — a spring per
+                    // tick janks; an instant scrollTo tracks it buttery-smooth.
+                    proxy.scrollTo("streaming-bubble", anchor: .bottom)
+                }
             }
         }
         .overlay(alignment: .bottom) {
@@ -167,7 +173,7 @@ private extension CaptainChatView {
 
             Spacer()
 
-            VStack(spacing: 2) {
+            VStack(spacing: 5) {
                 Text(isArabicUI ? "كابتن حمودي" : "Captain Hamoudi")
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(AiQoTheme.Colors.textPrimary)
@@ -287,13 +293,17 @@ private extension CaptainChatView {
                         // back to Apple TTS — the user pressed the speaker
                         // because they want voice, hiding the gate behind
                         // Settings makes that intent unreachable.
-                        if FeatureFlags.captainVoiceCloudEnabled,
-                           !voiceConsent.isGranted {
+                        // Free → Apple voice (no cloud consent needed). Paid → MiniMax API voice.
+                        let isPaid = DevOverride.unlockAllFeatures || TierGate.shared.canAccess(.captainChat)
+                        if isPaid, FeatureFlags.captainVoiceCloudEnabled, !voiceConsent.isGranted {
                             showVoiceConsent = true
                             return
                         }
                         Task {
-                            await CaptainVoiceRouter.shared.speak(text: message.text, tier: .premium)
+                            await CaptainVoiceRouter.shared.speak(
+                                text: message.text,
+                                tier: isPaid ? .premium : .realtime
+                            )
                         }
                     },
                     onAccessoryTap: message.accessory == .morningGratitude ? {
@@ -328,7 +338,11 @@ private extension CaptainChatView {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            if globalBrain.isLoading {
+            if globalBrain.streamingMessageID != nil {
+                StreamingMessageRow(text: globalBrain.streamingText)
+                    .id("streaming-bubble")
+                    .padding(.top, 8)
+            } else if globalBrain.isLoading {
                 CaptainTypingRow()
                     .id("typing-indicator")
                     .padding(.top, 8)
@@ -467,12 +481,51 @@ private struct ChatMessageRow: View {
     var enhancedVoiceActive: Bool = false
 
     var body: some View {
+        if message.isSystemNote {
+            compactionNoteRow
+                .onAppear { onAppearRead?() }
+        } else {
+            standardRow
+        }
+    }
+
+    /// A soft, centered "earlier chat folded into memory" divider. Premium and
+    /// quiet on purpose — a frosted capsule with the Captain's sand accent, a
+    /// small sparkle, and a gentle fade/scale in. It reassures the user that the
+    /// thread is intact when the session grows past the live window.
+    private var compactionNoteRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+            Text(message.text)
+                .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(AiQoColors.sandSoft.opacity(0.85))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 6.5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(AiQoColors.sandSoft.opacity(0.22), lineWidth: 0.5)
+                )
+        )
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 4)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .accessibilityLabel(message.text)
+    }
+
+    private var standardRow: some View {
         HStack(alignment: .bottom, spacing: 10) {
             if message.isUser {
                 Spacer(minLength: 26)
 
                 MessageBubble(isUser: true, timestamp: message.timestamp) {
-                    Text(message.text)
+                    Text.captainMessage(message.text)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.trailing)
                 }
@@ -481,7 +534,7 @@ private struct ChatMessageRow: View {
 
                 MessageBubble(isUser: false, timestamp: message.timestamp) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(message.text)
+                        Text.captainMessage(message.text)
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .multilineTextAlignment(.leading)
 
@@ -552,6 +605,49 @@ private struct ChatMessageRow: View {
             return arabic ? "استمع بالصوت المحسّن" : "Play with enhanced voice"
         }
         return arabic ? "استمع بالصوت المحلي" : "Play with local voice"
+    }
+}
+
+/// The single live bubble shown while the reply types out. Mirrors the
+/// assistant `ChatMessageRow` layout (avatar + bubble + leading alignment) so
+/// that when the reveal finishes and the real row is appended, the swap is
+/// seamless — same text, same position, no jump.
+private struct StreamingMessageRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            CaptainChatAvatarView(size: 28)
+
+            MessageBubble(isUser: false, timestamp: Date()) {
+                HStack(alignment: .bottom, spacing: 3) {
+                    Text.captainMessage(text)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .multilineTextAlignment(.leading)
+                    StreamingCaret()
+                }
+            }
+
+            Spacer(minLength: 26)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}
+
+private struct StreamingCaret: View {
+    @State private var on = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(Color(hex: "5ECDB7"))
+            .frame(width: 2, height: 17)
+            .padding(.bottom, 2)
+            .opacity(on ? 1 : 0.15)
+            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: on)
+            .onAppear { on = true }
+            .accessibilityHidden(true)
     }
 }
 
@@ -700,7 +796,7 @@ private struct CaptainChatAvatarView: View {
     let size: CGFloat
 
     private var captainImage: UIImage? {
-        UIImage(named: "Hammoudi5")
+        UIImage(named: CaptainAvatarAsset.current)
     }
 
     var body: some View {
@@ -921,6 +1017,7 @@ private struct ChatComposerBar: View {
     private func send() {
         let message = trimmed
         guard !message.isEmpty else { return }
+        HapticEngine.light()
         onSend(message)
         text = ""
         isFocused = false

@@ -40,6 +40,11 @@ const MAX_BODY_BYTES = 256 * 1024;
 interface ProxyRequestBody {
   model?: unknown;
   payload?: unknown;
+  // When `true`, the function calls Gemini's `streamGenerateContent` (SSE) and
+  // pipes the token stream straight back to the client as `text/event-stream`.
+  // Absent / false → the original blocking `generateContent` path (unchanged),
+  // so every existing TestFlight build keeps working byte-for-byte.
+  stream?: unknown;
 }
 
 Deno.serve(async (request: Request) => {
@@ -90,12 +95,21 @@ Deno.serve(async (request: Request) => {
     return jsonError(500, "upstream_key_missing");
   }
 
-  const upstreamURL = new URL(`${GEMINI_BASE}/${model}:generateContent`);
+  // Streaming vs blocking. `stream: true` → `streamGenerateContent?alt=sse`
+  // (Server-Sent Events); otherwise the original blocking `generateContent`.
+  const wantsStream = body.stream === true;
+  const method = wantsStream ? "streamGenerateContent" : "generateContent";
+  const upstreamURL = new URL(`${GEMINI_BASE}/${model}:${method}`);
+  if (wantsStream) {
+    upstreamURL.searchParams.set("alt", "sse");
+  }
+
   const upstreamResponse = await fetch(upstreamURL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": geminiKey,
+      ...(wantsStream ? { "Accept": "text/event-stream" } : {}),
     },
     body: JSON.stringify(body.payload),
   });
@@ -107,12 +121,36 @@ Deno.serve(async (request: Request) => {
       event: "captain_chat_proxy",
       user: user.id,
       model,
+      stream: wantsStream,
       status: upstreamResponse.status,
     }),
   );
 
-  // Pass the upstream response body straight through. Gemini returns a JSON
-  // object the app already knows how to decode; we don't rewrap.
+  // Streaming path: pipe Gemini's SSE body straight through to the client with
+  // no buffering, so the first token reaches the device the moment Gemini
+  // emits it. On an upstream error we fall back to a normal JSON body so the
+  // client surfaces the status code instead of an empty stream.
+  if (wantsStream) {
+    if (!upstreamResponse.ok || upstreamResponse.body == null) {
+      const errorBody = await upstreamResponse.text();
+      return new Response(errorBody, {
+        status: upstreamResponse.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(upstreamResponse.body, {
+      status: upstreamResponse.status,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
+  // Blocking path: pass the upstream JSON body straight through. Gemini returns
+  // a JSON object the app already knows how to decode; we don't rewrap.
   const upstreamBody = await upstreamResponse.text();
   return new Response(upstreamBody, {
     status: upstreamResponse.status,

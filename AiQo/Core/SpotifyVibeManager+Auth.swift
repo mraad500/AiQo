@@ -397,10 +397,22 @@ extension SpotifyVibeManager: SPTSessionManagerDelegate {
 
 extension SpotifyVibeManager: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
+        let windowScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) ?? ASPresentationAnchor(windowScene: UIApplication.shared.connectedScenes.first as! UIWindowScene)
+        if let keyWindow = windowScenes.flatMap(\.windows).first(where: \.isKeyWindow) {
+            return keyWindow
+        }
+        if let existingWindow = windowScenes.flatMap(\.windows).first {
+            return existingWindow
+        }
+        if let scene = windowScenes.first {
+            return ASPresentationAnchor(windowScene: scene)
+        }
+        // Unreachable in practice: the system only requests an auth-session
+        // anchor while a window scene is active. Both scene-less UIWindow
+        // initializers (`init()`, `init(frame:)`) are deprecated in iOS 26,
+        // so assert the invariant instead of shipping a deprecated call.
+        preconditionFailure("presentationAnchor(for:) requested with no active UIWindowScene")
     }
 }
 #endif

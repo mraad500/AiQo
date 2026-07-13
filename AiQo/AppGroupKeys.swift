@@ -9,6 +9,10 @@ struct AppGroupKeys {
     static let savedSelection = "savedSelection"
     static let userCoins = "userCoins"
 
+    /// Kernel (digital-wellbeing) shared state blob — a single JSON-encoded
+    /// `KernelState` read/written by the app and all three Kernel extensions.
+    static let kernelState = "kernel.state"
+
     static func defaults() -> UserDefaults? {
         UserDefaults(suiteName: appGroupID)
     }

@@ -26,11 +26,11 @@ struct ShimmeringSkeletonModifier: ViewModifier {
                 .clipped()
             }
             .onAppear {
-                withAnimation(.linear(duration: 1.35).repeatForever(autoreverses: false)) {
+                withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .linear(duration: 1.35).repeatForever(autoreverses: false)) {
                     shimmerOffset = 1.25
                 }
 
-                withAnimation(.spring(duration: 1.2, bounce: 0).repeatForever(autoreverses: true)) {
+                withAnimation(AiQoAccessibility.prefersReducedMotion ? .none : .spring(duration: 1.2, bounce: 0).repeatForever(autoreverses: true)) {
                     breathingOpacity = 0.94
                 }
             }

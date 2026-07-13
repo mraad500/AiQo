@@ -80,6 +80,47 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         }
     }
 
+    /// Reports a finished workout to the iPhone so it can award XP. Delivery is
+    /// guaranteed: when the phone is reachable we try the live `sendMessage` and
+    /// fall back to `transferUserInfo` on failure; otherwise we queue it
+    /// directly. `workoutId` lets the iPhone award XP exactly once even if both
+    /// the live message and the queued copy arrive.
+    func sendWorkoutCompleted(
+        workoutId: String,
+        calories: Int,
+        durationMinutes: Double,
+        workoutType: String,
+        distanceKm: Double
+    ) {
+        guard WCSession.isSupported() else { return }
+
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            print("⌚️ [WatchConnectivity] Completion skipped: session not activated")
+            return
+        }
+
+        let payload: [String: Any] = [
+            "event": "workout_completed",
+            "workout_id": workoutId,
+            "calories": Double(calories),
+            "duration_minutes": durationMinutes,
+            "workout_type": workoutType,
+            "distance_km": distanceKm,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { error in
+                print("⌚️ [WatchConnectivity] Completion sendMessage failed: \(error.localizedDescription)")
+                session.transferUserInfo(payload)
+                print("⌚️ [WatchConnectivity] Completion fallback queued")
+            }
+        } else {
+            session.transferUserInfo(payload)
+        }
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,
@@ -230,6 +271,16 @@ final class WatchConnectivityManager: ObservableObject {
     func updateWorkoutSnapshotContext(_ snapshot: WorkoutSyncSnapshot) {
         lastMessage = "snapshot=\(snapshot.currentState.rawValue)"
         print("⌚️ [WatchConnectivity] Snapshot context unavailable in fallback runtime")
+    }
+
+    func sendWorkoutCompleted(
+        workoutId: String,
+        calories: Int,
+        durationMinutes: Double,
+        workoutType: String,
+        distanceKm: Double
+    ) {
+        print("⌚️ [WatchConnectivity] Completion send unavailable in fallback runtime (\(workoutType))")
     }
 }
 #endif

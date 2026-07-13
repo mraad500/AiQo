@@ -8,4 +8,9 @@ enum PaywallSource: String {
     case trialEnded
     case tribeGate
     case captainGate
+    case kitchenGate
+    case myVibeGate
+    case battleGate
+    case peaksGate
+    case kernelGate
 }

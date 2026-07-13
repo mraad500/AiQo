@@ -45,6 +45,10 @@ final class CaptainVoiceRouter: ObservableObject {
     }
 
     @Published private(set) var isSpeaking = false
+    /// The exact (trimmed) text currently being spoken, or `nil` when idle.
+    /// Lets a specific chat bubble know whether IT is the one playing — without
+    /// it, `isSpeaking` is global and every bubble would animate at once.
+    @Published private(set) var speakingText: String?
     @Published private(set) var activeProvider: VoiceProviderKind = .appleTTS
     /// Set to true when a `.premium` request is rejected because cloud-voice
     /// consent has not been granted yet. Views observe this and present
@@ -115,7 +119,11 @@ final class CaptainVoiceRouter: ObservableObject {
         let provider = resolveProvider(for: tier)
         activeProvider = provider.kind
         isSpeaking = true
-        defer { isSpeaking = false }
+        speakingText = trimmed
+        defer {
+            isSpeaking = false
+            speakingText = nil
+        }
 
         logger.notice("voice_router_speak tier=\(String(describing: tier), privacy: .public) provider=\(String(describing: provider.kind), privacy: .public) chars=\(trimmed.count)")
 

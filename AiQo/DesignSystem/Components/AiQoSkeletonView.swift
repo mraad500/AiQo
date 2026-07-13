@@ -24,7 +24,8 @@ struct AiQoSkeletonView: View {
             .frame(maxWidth: width == .infinity ? .infinity : width, minHeight: height, maxHeight: height)
             .onAppear {
                 withAnimation(
-                    .linear(duration: 1.2)
+                    AiQoAccessibility.prefersReducedMotion ? .none :
+                        .linear(duration: 1.2)
                         .repeatForever(autoreverses: false)
                 ) {
                     phase = 2
